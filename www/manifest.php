@@ -2,7 +2,7 @@
 
 $keyprefix = $_REQUEST['keyprefix'];
 $tmpfile = tempnam("/tmp", "mogextract.");
-exec ("mogtool listkey ".escapeshellarg($keyprefix), $keylist)
+exec ("mogtool listkey ".escapeshellarg($keyprefix), $keylist);
 foreach ($keylist as $key)
 {
   exec ("mogtool extract --overwrite ".escapeshellarg($key)." ".escapeshellarg($tmpfile)." || rm -f ".escapeshellarg($tmpfile));
