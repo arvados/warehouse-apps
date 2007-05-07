@@ -4,6 +4,8 @@ header("Content-type: text/plain");
 set_time_limit(120);
 
 require_once 'inc-mogilefs.php';
+$domain = defined($_REQUEST['domain'])? $_REQUEST['domain'] : $mogilefs_domain;
+$class = defined($_REQUEST['class'])? $_REQUEST['class'] : $mogilefs_class;
 
 $keyprefix = $_REQUEST['keyprefix'];
 $q = mysql_query("select
@@ -16,8 +18,12 @@ $q = mysql_query("select
      left join file_on on file_on.fid=file.fid
      left join device on device.devid=file_on.devid
      left join host on host.hostid=device.hostid
+     left join domain on domain.dmid=file.dmid
+     left join class on class.classid=file.classid
      left outer join md5 on md5.fid=file.fid
      where dkey like '$keyprefix%'
+     and domain.namespace='$domain'
+     and class.classname='$class'
      order by dkey, rand()");
 echo mysql_error();
 $lastfid = -1;
