@@ -1,5 +1,7 @@
 <?php
 
+header("Content-type: text/plain");
+
 $keyprefix = $_REQUEST['keyprefix'];
 $tmpfile = tempnam("/tmp", "mogextract.");
 exec ("mogtool listkey ".escapeshellarg($keyprefix), $keylist);
