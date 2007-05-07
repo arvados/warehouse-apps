@@ -1,0 +1,18 @@
+#!/bin/sh
+
+key=${1#mogilefs://}
+
+tmp=/tmp/mogextract.$$
+echo mogtool extract "$key" "$tmp" >&2
+if mogtool extract "$key" "$tmp" >&2 && [ -s "$tmp" ]
+then
+  cat "$tmp"
+  r=0
+else
+  r=1
+fi
+rm -f "$tmp"
+
+exit $r
+
+# arch-tag: 6e929d84-f8d7-11db-9207-0015f2b17887

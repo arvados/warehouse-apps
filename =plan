@@ -1,0 +1,21 @@
+the big "join"
+
+  26mers.dat -> 26mers.index
+
+  stream(chr18.candidates.dat) + mem(26mers.dat) + mem(26mers.hash)
+    -> placements
+
+
+
+
+
+
+
+tools for params, comments, etc.
+
+
+
+
+
+
+/* arch-tag: Thomas Lord Thu Oct 26 16:29:20 2006 (libtaql/=plan)

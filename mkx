@@ -1,0 +1,48 @@
+#!/bin/sh
+
+set -e
+
+
+abspath="`pwd`"
+relpath=""
+
+while [ "$abspath" != / ] ; do
+  if [ -e "$abspath/ROOTPATHS" ] ; then
+    break
+  else
+    if [ "$relpath" != "" ] ; then
+      relpath="`basename \"$abspath\"`/$relpath"
+    else
+      relpath="`basename \"$abspath\"`"
+    fi
+    abspath="`dirname \"$abspath\"`"
+  fi
+done
+
+
+if [ ! -e "$abspath/ROOTPATHS" ] ; then
+  echo "no ROOTPATHS file found" 1>&2
+  echo "(in an object directory?)" 1>&2
+  echo "(has the configure script been run?)" 1>&2
+  exit 2
+fi
+
+
+if [ -z "$MAKE" ] ; then
+  MAKE=make
+fi
+
+
+. "$abspath/ROOTPATHS"
+
+$MAKE -f "$srcroot/$relpath/Makefile.x" \
+     "srcroot=$srcroot" \
+     "objroot=$objroot" \
+     "relpath=$relpath" \
+     "$@"
+
+
+exit 0
+
+# arch-tag: Thomas Lord Sat Aug 19 12:46:10 2006 (polony-tools/mkx)
+

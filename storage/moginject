@@ -1,0 +1,71 @@
+#!/usr/bin/perl
+
+if (fork() > 0)
+{
+    # my parent will think I'm done as soon as my child closes stdin/stdout/stderr
+    exit 0;
+}
+
+for (qw(DOMAIN CLASS))
+{
+    if (!defined $ENV{$_})
+    {
+        $ENV{$_} = lc("test".$_);
+    }
+}
+
+my $key = scalar <STDIN>;
+chomp $key;
+
+my $md5 = scalar <STDIN>;
+chomp $md5;
+
+my $tempfile = "/tmp/moginject.$$";
+
+`mogtool --domain=$ENV{DOMAIN} --class=$ENV{CLASS} extract "$key" "$tempfile" >/dev/null 2>/dev/null`;
+my $mogmd5 = `md5sum $tempfile 2>/dev/null`;
+chomp ($mogmd5);
+$mogmd5 =~ s/\s.*//;
+if ($mogmd5 eq $md5)
+{
+    print STDERR "$md5 $key already here.\n";
+    unlink $tempfile;
+    exit 0;
+}
+elsif ($mogmd5 =~ /\S/ && $md5 =~ /\S/)
+{
+    print STDERR "$md5 replacing $mogmd5 $key\n";
+}
+
+open TMP, ">$tempfile" or die "$ARGV0: can't open $tempfile: $!\n";
+my $bytes = 1;
+while ($bytes) {
+    my $data;
+    $bytes = read STDIN, $data, 1048576;
+    if ($bytes) {
+        print TMP $data;
+    }
+}
+close TMP;
+
+open STDIN, "</dev/null";
+open STDOUT, ">/dev/null";
+open STDERR, ">/dev/null";
+system("mogtool",
+       "--domain=".$ENV{DOMAIN},
+       "--class=".$ENV{CLASS},
+       "inject",
+       $tempfile,
+       $key
+       );
+unlink($tempfile);
+if ($? == 0)
+{
+    exit 0;
+}
+else
+{
+    die ("$ARGV0: child exited " . ($? >> 8) . "\n");
+}
+
+# arch-tag: 35295a3f-f9c6-11db-9207-0015f2b17887

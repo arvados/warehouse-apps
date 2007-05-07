@@ -1,0 +1,32 @@
+#!/bin/sh
+
+set -e
+
+srcroot=`dirname $0`
+srcroot="`(cd "$srcroot" ; pwd)`"
+objroot="`pwd`"
+
+if [ $srcroot = $objroot ] ; then
+  echo "Please do not build in the source directory." 1>&2
+  echo "Thank you" 1>&2
+  exit 2
+fi
+
+if [ $# != 0 ] ; then
+  echo "This configure script accepts no arguments." 1>&2
+  echo "You probably meant to edit Params.mk.in in the source." 1>&2
+  echo "Thank you" 1>&2
+  exit 2
+fi
+
+rm -f ROOTPATHS
+
+cat > ROOTPATHS <<- EOF
+	srcroot="$srcroot"
+	objroot="$objroot"
+EOF
+
+exit 0
+
+# arch-tag: Thomas Lord Sat Aug 19 12:46:02 2006 (polony-tools/configure)
+
