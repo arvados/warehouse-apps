@@ -12,7 +12,7 @@ foreach ($keylist as $key)
     {
       $md5 = md5(file_get_contents($tmpfile));
       unlink($tmpfile);
-      echo "$md5 $key";
+      echo "$md5 $key\n";
     }
 }
 // arch-tag: 5175c8f5-fccd-11db-9207-0015f2b17887
