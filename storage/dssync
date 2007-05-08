@@ -4,12 +4,14 @@ use strict;
 use Digest::MD5 'md5_hex';
 use HTTP::Request::Common;
 use LWP::UserAgent;
+use Fcntl ':flock';
 
 my %defopts = qw(
 		 domain    images
 		 class     single
 		 positions ./position_list.dat
 		 cycles    ./all_cycles.cfg
+		 lockfile  ./dssync.lock
 		 localdir  .
 		 );
 my %opts = %defopts;
@@ -33,6 +35,7 @@ if (@ARGV != 2)
 usage:
        $0 [options] keyprefix http://host/path/to/uploadscripts
 options:
+       --lockfile=/path/to/lockfile            default = $defopts{lockfile}
        --localdir=/path/to/images/raw          default = $defopts{localdir}
        --cycles=/path/to/all_cycles.cfg        default = $defopts{cycles}
        --positions=/path/to/position_list.dat  default = $defopts{positions}
@@ -48,17 +51,23 @@ EOF
     exit 1;
 }
 
+if (!open (LOCKFILE, ">>$opts{lockfile}")
+    ||
+    !flock (LOCKFILE, LOCK_EX | LOCK_NB))
+{
+    die "$0: Couldn't lock $opts{lockfile} -- exiting.\n";
+}
+
 my ($keyprefix, $remote) = @ARGV;
 for ($keyprefix)
 {
   s|/*$||;
 }
 
-my $ua = LWP::UserAgent->new;
-
 if ($opts{v}) { warn "Getting manifest.\n"; }
 
 my %storedmd5;
+my $ua = LWP::UserAgent->new;
 my $r = $ua->request(POST $remote."/manifest.php",
 		     [ "keyprefix" => $keyprefix."/",
 		       "domain" => $opts{domain},
