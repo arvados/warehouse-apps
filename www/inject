@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+
+use strict;
+use MogileFS::Client;
+
+die "@ARGV" if @ARGV != 5;
+
+my ($trackers, $domain, $class, $key, $infile) = @ARGV;
+my (@trackers) = split (/ *, */, $trackers);
+
+my $mogc = MogileFS::Client->new(domain => $domain,
+				 hosts => [@trackers]);
+my $fh = $mogc->new_file ($key, $class);
+my $data;
+do {
+    undef $/;
+    open IN, "<$infile" or die "$infile: $!";
+    $data = <IN>;
+    close IN;
+};
+print $fh $data;
+unless ($fh->close)
+{
+    die "writing: ".$mogc->errcode.": ".$mogc->errstr;
+}

@@ -1,23 +1,21 @@
 <?php
 
 require_once 'inc-mogilefs.php';
-$domain = defined($_REQUEST['domain'])? $_REQUEST['domain'] : $mogilefs_domain;
-$class = defined($_REQUEST['class'])? $_REQUEST['class'] : $mogilefs_class;
+$domain = isset($_REQUEST['domain'])? $_REQUEST['domain'] : "default";
+$class = isset($_REQUEST['class'])? $_REQUEST['class'] : "default";
 
 $key = $_POST['key'];
-$tmpfile = tempnam("/tmp", "upload.");
-if (move_uploaded_file ($_FILES['upload']['tmp_name'], $tmpfile))
-{
-  exec ("(mogtool "
-	."--domain=".escapeshellarg($domain)
-	." --class=".escapeshellarg($class)
-	." inject ".escapeshellarg($tmpfile)
-	." ".escapeshellarg($key)
-	."; rm -f ".escapeshellarg($tmpfile)
-	.") </dev/null >/dev/null 2>/dev/null &");
-}
-?>
+$tmpfile = $_FILES['upload']['tmp_name'];
+exec ("./inject"
+      ." ".escapeshellarg($mogilefs_trackers)
+      ." ".escapeshellarg($domain)
+      ." ".escapeshellarg($class)
+      ." ".escapeshellarg($key)
+      ." ".escapeshellarg($tmpfile));
+exec ("php-cgi checkmd5.php"
+      ." domain=".escapeshellarg($domain)
+      ." key=".escapeshellarg($key));
+unlink($tmpfile);
 
-<?php
 // arch-tag: 74aa41a2-f9a2-11db-9207-0015f2b17887
 ?>

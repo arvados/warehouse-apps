@@ -8,11 +8,9 @@ $dbpass = $regs[1];
 preg_match("/db_dsn *= *(\S+)/", $serverconf, $regs);
 list($x,$x,$dbname,$x) = explode(":", $regs[1]);
 
-$clientconf = file_get_contents("/etc/mogilefs/mogtool.conf");
-preg_match("/domain *= *(\S+)/", $clientconf, $regs);
-$mogilefs_domain = $regs[1];
-preg_match("/class *= *(\S+)/", $clientconf, $regs);
-$mogilefs_class = $regs[1];
+$clientconf = file_get_contents("/etc/mogilefs/mogilefs.conf");
+preg_match("/trackers *= *(\S+)/", $clientconf, $regs);
+$mogilefs_trackers = $regs[1];
 
 mysql_connect("localhost",$dbuser,$dbpass);
 echo mysql_error();
@@ -27,21 +25,14 @@ mysql_query("create table if not exists md5
 )");
 echo mysql_error();
 
-function mogilefs_getfid($dkey,
-			 $domain=undef,
-			 $class=undef)
+function mogilefs_getfid($dkey, $domain="default")
 {
-  global $mogilefs_domain, $mogilefs_class;
-  if ($domain === undef) $domain = $mogilefs_domain;
-  if ($class === undef) $class = $mogilefs_class;
   $q = mysql_query("select
      file.fid
      from file
      left join domain on domain.dmid=file.dmid
-     left join class on class.classid=file.classid
      where file.dkey='$dkey'
-     and domain.namespace='$domain'
-     and class.classname='$class'");
+     and domain.namespace='$domain'");
   $row = mysql_fetch_row($q);
   if ($row)
     return $row[0];
