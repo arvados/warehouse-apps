@@ -148,11 +148,16 @@ foreach my $subdir (sort (readdir DIR))
 		close FILE;
 	    };
 
-	    my $md5 = md5_hex($data);
-	    if ($storedmd5{$key} eq $md5)
+	    my $md5 = " " x 32;
+
+	    if (!$opts{quick})
 	    {
-		print STDERR "skip:    $md5 $key\n";
-		next;
+		$md5 = md5_hex($data);
+		if ($storedmd5{$key} eq $md5)
+		{
+		    print STDERR "skip:    $md5 $key\n";
+		    next;
+		}
 	    }
 
 	    if (length($storedmd5{$key}) == 32)
