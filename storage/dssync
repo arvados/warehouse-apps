@@ -202,7 +202,7 @@ sub upload
     {
 	warn "flush\n" if $opts{v} && $opts{batch} > 1;
 	my $r = $ua->request
-	    (POST $remote."/upload.php",
+	    (POST $remote."/upload.cgi",
 	     "Content-Type" => "form-data",
 	     "Content"
 	     => [ "domain" => $opts{domain},
@@ -216,8 +216,7 @@ sub upload
 	my $n = $queuesize;
 	if ($n == 0) { $n = ""; }
 	push (@uploadqueue,
-	      "key$n" => $key,
-	      "upload$n" => [ undef, $filename,
+	      "upload$n" => [ undef, $key,
 			      "Content-Type" => "application/binary",
 			      "Content" => $data ]);
 	++$queuesize;
