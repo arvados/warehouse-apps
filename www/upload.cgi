@@ -7,6 +7,7 @@ use Digest::MD5 'md5_hex';
 my @trackers = qw(localhost:6001);
 my $hdr;
 my $boundary;
+my $lastboundary;
 my $mogc;
 my %part;
 my %param;
@@ -18,14 +19,15 @@ while(<>)
     if (!defined ($boundary))
     {
 	$boundary = $_;
+	s/(\r?\n)/--$1/;
+	$lastboundary = $_;
 	$hdr = 1;
     }
-    elsif ($_ eq $boundary)
+    elsif ($_ eq $boundary || $_ eq $lastboundary)
     {
 	$part{content} =~ s/\r?\n$//;
 	if (defined($part{filename}))
 	{
-	    print STDERR "$part{filename} $param{class} $param{domain}\n";
 	    if (!defined ($mogc))
 	    {
 		$mogc = MogileFS::Client->new (domain => $param{domain},
@@ -35,12 +37,14 @@ while(<>)
 	    print $fh $part{content};
 	    if ($fh->close)
 	    {
+		print STDERR "$part{filename} $param{class} $param{domain}\n";
 		# my $md5 = md5_hex($part{content});
 		# could insert in md5 table
 	    }
 	    else
 	    {
 		$mogc->delete($part{filename});
+		print STDERR "$part{filename} DELETED\n";
 	    }
 	}
 	else
