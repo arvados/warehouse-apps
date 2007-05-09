@@ -129,6 +129,16 @@ foreach my $subdir (sort (readdir DIR))
     opendir SUBDIR, $subdir
 	or die "$0: Can't read dir $opts{localdir}/$subdir: $!\n";
     my @raw = grep (/\.raw$/i, readdir SUBDIR);
+    if (@raw == 0)
+    {
+	rewinddir SUBDIR;
+	@raw = grep (/\.tif$/i, readdir SUBDIR);
+    }
+    if (@raw == 0)
+    {
+	rewinddir SUBDIR;
+	@raw = grep (/\.tif.gz$/i, readdir SUBDIR);
+    }
     if (@raw == ($subdir eq '999' ? $nframes : $nframes * 4))
     {
 	unshift (@warn, "Subdir \"$subdir\" is complete.\n");
