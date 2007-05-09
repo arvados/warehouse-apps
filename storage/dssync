@@ -7,6 +7,7 @@ use LWP::UserAgent;
 use Fcntl ':flock';
 
 my %defopts = qw(
+		 batch     12
 		 domain    images
 		 class     single
 		 positions ./position_list.dat
@@ -41,6 +42,7 @@ options:
        --positions=/path/to/position_list.dat  default = $defopts{positions}
        --domain=mogilefsdomain        default = $defopts{domain}
        --class=mogilefsclass          default = $defopts{class}
+       --batch=maxfilesperrequest     default = $defopts{batch}
        --quick                        don't compare md5 of existing files
        -n                             don't really upload anything
        -v                             verbose
@@ -106,6 +108,8 @@ foreach (@cycles_cfg)
 
 if ($opts{v}) { warn "Checking local files.\n"; }
 
+my $queuesize = 0;
+my @uploadqueue;
 my @warn;
 chdir ($opts{localdir}) or die "$0: Can't chdir to $opts{localdir}: $!\n";
 opendir DIR, "."
@@ -178,24 +182,7 @@ foreach my $subdir (sort (readdir DIR))
 		print STDERR "new:     $md5 $key\n";
 	    }
 
-	    if (!$opts{n})
-	    {
-		my $r = $ua->request
-		    (POST $remote."/upload.php",
-		     "Content-Type" => "form-data",
-		     "Content"
-		     => [ "key" => $key,
-			  "domain" => $opts{domain},
-			  "class" => $opts{class},
-			  "upload"
-			  => [ undef,
-			       $file,
-			       "Content-Type" => "application/binary",
-			       "Content" => $data
-			       ]
-			  ]
-		     );
-	    }
+	    upload($key, $file, $data) unless $opts{n};
 	}
     }
     else
@@ -205,6 +192,36 @@ foreach my $subdir (sort (readdir DIR))
     }
 }
 
+upload() unless $opts{n};
 print STDERR @warn;
+
+sub upload
+{
+    my ($key, $filename, $data) = @_;
+    if ($queuesize >= $opts{batch} || (!defined($key) && $queuesize > 0))
+    {
+	warn "flush\n" if $opts{v} && $opts{batch} > 1;
+	my $r = $ua->request
+	    (POST $remote."/upload.php",
+	     "Content-Type" => "form-data",
+	     "Content"
+	     => [ "domain" => $opts{domain},
+		  "class" => $opts{class},
+		  @uploadqueue ]);
+	@uploadqueue = ();
+	$queuesize = 0;
+    }
+    if (defined ($key))
+    {
+	my $n = $queuesize;
+	if ($n == 0) { $n = ""; }
+	push (@uploadqueue,
+	      "key$n" => $key,
+	      "upload$n" => [ undef, $filename,
+			      "Content-Type" => "application/binary",
+			      "Content" => $data ]);
+	++$queuesize;
+    }
+}
 
 # arch-tag: ae2f054a-fd2d-11db-9207-0015f2b17887
