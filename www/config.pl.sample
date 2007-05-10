@@ -1,0 +1,4 @@
+my $mogilefs_dsn = "DBI:mysql:database=mogilefs;host=localhost";
+my $mogilefs_username = "mogile";
+my $mogilefs_password = "secXret";
+1;

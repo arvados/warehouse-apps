@@ -1,2 +1,5 @@
 Increase post_max_size in php.ini to at least 32M; with the php4
 default of 8M, the dssync default of --batch=10 is too big.
+
+Copy config.pl.sample to /etc/polony-tools/config.pl and edit to suit.
+

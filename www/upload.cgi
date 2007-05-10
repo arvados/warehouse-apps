@@ -3,6 +3,9 @@
 use strict;
 use MogileFS::Client;
 use Digest::MD5 'md5_hex';
+use DBI;
+
+do '/etc/polony-tools/config.pl';
 
 my @trackers = qw(localhost:6001);
 my $hdr;
@@ -11,6 +14,10 @@ my $lastboundary;
 my $mogc;
 my %part;
 my %param;
+
+my $dbh = DBI->connect($main::mogilefs_dsn,
+		       $main::mogilefs_username,
+		       $main::mogilefs_password);
 
 print "Content-type: text/plain\n\n";
 
@@ -33,13 +40,21 @@ while(<>)
 		$mogc = MogileFS::Client->new (domain => $param{domain},
 					       hosts => [@trackers]);
 	    }
-	    my $fh = $mogc->new_file($part{filename}, $param{class});
-	    print $fh $part{content};
-	    if ($fh->close)
+	    if ($mogc->store_content($part{filename},
+				     $param{class},
+				     $part{content})
+		== length($part{content}))
 	    {
 		print STDERR "$part{filename} $param{class} $param{domain}\n";
-		# my $md5 = md5_hex($part{content});
-		# could insert in md5 table
+		my $md5 = md5_hex($part{content});
+		$dbh->do("insert delayed into md5 select fid, "
+			 . $dbh->quote($md5)
+			 . " from file"
+			 . " left join domain on domain.dmid=file.dmid"
+			 . " where dkey="
+			 . $dbh->quote($part{filename})
+			 . " and domain.namespace="
+			 . $dbh->quote($param{domain}));
 	    }
 	    else
 	    {
