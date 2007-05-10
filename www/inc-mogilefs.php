@@ -65,7 +65,7 @@ function mogilefs_getmd5($fid)
 	.substr($fid,4,3)."/"
 	.$fid.".fid";
       $md5 = md5_file($url);
-      mysql_query("replace into md5 (fid,md5) values ('$fid','$md5')");
+      mysql_query("replace delayed into md5 (fid,md5) values ('$fid','$md5')");
     }
   return $md5;
 }

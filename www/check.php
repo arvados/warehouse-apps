@@ -32,7 +32,7 @@ while($row = mysql_fetch_row($q))
     .$fid.".fid";
   $md5 = md5_file($url);
   echo "$md5 $dkey $url $length\n";
-  mysql_query("replace into md5 (fid,md5) values ('$fid','$md5')");
+  mysql_query("replace delayed into md5 (fid,md5) values ('$fid','$md5')");
 }
 
 // arch-tag: bba641c3-fce6-11db-9207-0015f2b17887
