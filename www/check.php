@@ -2,6 +2,7 @@
 
 header("Content-type: text/plain");
 ini_set("output_buffering",0);
+set_time_limit(600);
 
 require_once 'inc-mogilefs.php';
 
