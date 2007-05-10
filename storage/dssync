@@ -12,6 +12,7 @@ my %defopts = qw(
 		 class     single
 		 positions ./position_list.dat
 		 cycles    ./all_cycles.cfg
+		 hybrid    000
 		 lockfile  ./dssync.lock
 		 localdir  .
 		 quick     0
@@ -43,6 +44,8 @@ options:
        --localdir=/path/to/images/raw          default = $defopts{localdir}
        --cycles=/path/to/all_cycles.cfg        default = $defopts{cycles}
        --positions=/path/to/position_list.dat  default = $defopts{positions}
+       --hybrid=hybridsubdir                   default = $defopts{hybrid}
+       --include=subdir,subdir,subdir          default = $defopts{include}
        --domain=mogilefsdomain        default = $defopts{domain}
        --class=mogilefsclass          default = $defopts{class}
        --batch=maxfilesperrequest     default = $defopts{batch}
@@ -118,6 +121,12 @@ foreach (@cycles_cfg)
 
 if ($opts{v}) { warn "Checking local files.\n"; }
 
+my %include;
+foreach (split ($opts{include}))
+{
+    $include{$_} = 1;
+}
+
 my $queuesize = 0;
 my @uploadqueue;
 my @warn;
@@ -130,7 +139,9 @@ foreach my $subdir (sort (readdir DIR))
     if ($subdir eq '.') { next; }
     if ($subdir eq '..') { next; }
 
-    if ($subdir ne '999' && !defined($cycle{$subdir}))
+    if ($subdir ne '999'
+	&& $subdir ne $opts{hybrid}
+	&& !defined($cycle{$subdir}))
     {
 	push (@warn, "Subdir \"$subdir\" is not listed in $opts{cycles}\n");
     }
@@ -149,10 +160,19 @@ foreach my $subdir (sort (readdir DIR))
 	rewinddir SUBDIR;
 	@raw = grep (/\.tif.gz$/i, readdir SUBDIR);
     }
-    if (@raw == ($subdir eq '999' ? $nframes : $nframes * 4))
+    my $complete = (@raw == (($subdir eq '999' || $subdir eq $opts{hybrid})
+			     ? $nframes : $nframes * 4));
+    if ($complete)
     {
 	unshift (@warn, "Subdir \"$subdir\" is complete.\n");
-
+    }
+    else
+    {
+	my $nraw = scalar @raw;
+	push (@warn, "Subdir \"$subdir\" is incomplete ($nraw images)\n");
+    }
+    if ($complete || $include{$subdir})
+    {
 	foreach my $file (@raw)
 	{
 	    $file = $subdir . "/" . $file;
@@ -204,11 +224,6 @@ foreach my $subdir (sort (readdir DIR))
 
 	    upload($key, $file, $data) unless $opts{n};
 	}
-    }
-    else
-    {
-	my $nraw = scalar @raw;
-	push (@warn, "Subdir \"$subdir\" is incomplete ($nraw images)\n");
     }
 }
 
