@@ -68,6 +68,7 @@ for ($keyprefix)
 
 if ($opts{v}) { warn "Getting manifest.\n"; }
 
+my $manifestok;
 my %storedmd5;
 my $ua = LWP::UserAgent->new;
 my $r = $ua->request(POST $remote."/manifest.php",
@@ -77,7 +78,12 @@ my $r = $ua->request(POST $remote."/manifest.php",
 foreach (split (/\n/, $r->content))
 {
     my ($md5, $key) = split;
-    $storedmd5{$key} = $md5;
+    if ($md5 eq "--------------------------------") { $manifestok = 1; }
+    else { $storedmd5{$key} = $md5; }
+}
+if (!$manifestok)
+{
+    die "Error retrieving manifest from $remote/manifest.php -- stopping.\n";
 }
 
 if ($opts{v}) { warn "Reading position list.\n"; }

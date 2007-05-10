@@ -42,6 +42,7 @@ while($row = mysql_fetch_row($q))
     }
   echo "$md5 $dkey\n";
 }
+echo "-------------------------------- eof\n";
 
 // arch-tag: 5175c8f5-fccd-11db-9207-0015f2b17887
 ?>
