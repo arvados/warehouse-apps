@@ -5,7 +5,7 @@ $domain = isset($_REQUEST['domain'])? $_REQUEST['domain'] : "default";
 $grok = array();
 $lengthtotal = 0;
 
-function grok ($fid=undef, $length=undef, $dkey=undef)
+function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
 {
   global $grok;
   global $lengthtotal;
@@ -49,24 +49,28 @@ function grok ($fid=undef, $length=undef, $dkey=undef)
     }
 }
 
-$keyprefix = $_REQUEST['keyprefix'];
+$namespace = array();
+$q = mysql_query("select dmid,namespace from domain");
+while ($row = mysql_fetch_row($q))
+{
+  $namespace[$row[0]] = $row[1];
+}
+
 $q = mysql_query("select
      file.fid,
      file.length,
+     file.dmid,
      file.dkey
      from file
-     left join domain on domain.dmid=file.dmid
-     where dkey like '$keyprefix%'
-     and domain.namespace='$domain'
-     order by dkey");
+     order by dmid,dkey");
 echo mysql_error();
 $lastfid = -1;
 while($row = mysql_fetch_row($q))
 {
-  list ($fid, $length, $dkey) = $row;
+  list ($fid, $length, $dmid, $dkey) = $row;
   if ($fid == $lastfid) continue;
   $lastfid = $fid;
-  grok($fid, $length, $dkey);
+  grok($fid, $length, $dmid, $dkey);
 }
 grok();
 
