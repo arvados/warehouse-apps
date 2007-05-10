@@ -2,6 +2,7 @@
 
 use strict; 
 use Fcntl ':flock';
+use MogileFS::Client;
 
 my $localfs = 1;
 my $fetchprogram;
@@ -9,8 +10,34 @@ my ($stem) = @ARGV;
 
 if ($stem =~ s/^mogilefs:\/\///)
 {
-    $fetchprogram = "mogextract";
-    $localfs = 0;
+    my $mogc = MogileFS::Client->new
+	(domain => $ENV{MOGILEFS_DOMAIN},
+	 hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+    my $filter = "";
+    my @urls = $mogc->get_paths ("$stem.raw");
+    if (!@urls) {
+	@urls = $mogc->get_paths ("$stem.tif");
+	$filter = "| convert tif:- -endian lsb gray:-";
+    }
+    if (!@urls) {
+	@urls = $mogc->get_paths ("$stem.tif.gz");
+	$filter = "| zcat | convert tif:- -endian lsb gray:-";
+    }
+    if (!@urls) {
+	print STDERR "No raw/tif/tif.gz, skipping $stem\n";
+	exit;
+    }
+    if (!defined($filter))
+    {
+	exec("wget -q -O - $urls[0]");
+    }
+    for (1..4)
+    {
+	exit 0 if 0 == system ("wget -q -O - $urls[0] $filter");
+	next if (($? >> 8) != 0 && ($? & 127) == 11);
+	exit 1;
+    }
+    exit 1;
 }
 elsif ($stem =~ /:\/\//)
 {
