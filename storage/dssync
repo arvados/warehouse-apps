@@ -14,6 +14,9 @@ my %defopts = qw(
 		 cycles    ./all_cycles.cfg
 		 lockfile  ./dssync.lock
 		 localdir  .
+		 quick     0
+		 n         0
+		 v         0
 		 );
 my %opts = %defopts;
 while ($ARGV[0] =~ /^-/)
@@ -74,7 +77,8 @@ my $ua = LWP::UserAgent->new;
 my $r = $ua->request(POST $remote."/manifest.php",
 		     [ "keyprefix" => $keyprefix."/",
 		       "domain" => $opts{domain},
-		       "class" => $opts{class} ]);
+		       "class" => $opts{class},
+		       "quick" => $opts{quick} ]);
 foreach (split (/\n/, $r->content))
 {
     my ($md5, $key) = split;

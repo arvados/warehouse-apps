@@ -30,6 +30,10 @@ while($row = mysql_fetch_row($q))
   if ($fid == $lastfid) continue;
   $lastfid = $fid;
   $fid = sprintf("%010d", $fid);
+  if ("$md5" == "" && $_REQUEST['quick'])
+    {
+      $md5 = "oooooooooooooooooooooooooooooooo";
+    }
   if ("$md5" == "")
     {
       $url = $devpath."/"
