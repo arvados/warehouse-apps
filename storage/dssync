@@ -108,7 +108,7 @@ foreach (@positions)
 if (!$opts{n})
 {
     warn "Uploading position list.\n" if $opts{v};
-    upload($keyprefix."/positions", $opts{positions}, join("",@positions));
+    maybe_upload($keyprefix."/positions", $opts{positions});
 }
 
 if ($opts{v}) { warn "Reading cycle list.\n"; }
@@ -127,9 +127,10 @@ foreach (@cycles)
 if (!$opts{n})
 {
     warn "Uploading cycle list.\n" if $opts{v};
-    upload($keyprefix."/cycles", $opts{cycles}, join("",@cycles_orig));
+    maybe_upload($keyprefix."/cycles", $opts{cycles});
 }
-upload();
+upload();			# must flush here before chdir or paths to
+				# positions/cycles might not work any more
 
 if ($opts{v}) { warn "Checking local files.\n"; }
 
@@ -194,54 +195,8 @@ foreach my $subdir (sort (readdir DIR))
     {
 	foreach my $file (@raw)
 	{
-	    $file = $subdir . "/" . $file;
-
-	    my $key = $keyprefix . "/" . $file;
-
-	    if ($opts{quick})
-	    {
-		if (exists($storedmd5{$key}))
-		{
-		    print STDERR "skip:    ".(" "x32)." $key\n";
-		    next;
-		}
-		if ($opts{n})
-		{
-		    print STDERR "new:     ".(" "x32)." $key\n";
-		    next;
-		}
-	    }
-
-	    my $data;
-	    do {
-		local $/ = undef;
-		open FILE, "<$file" or die "$0: Can't open $file: $!\n";
-		$data = <FILE>;
-		close FILE;
-	    };
-
-	    my $md5 = " " x 32;
-
-	    if (!$opts{quick})
-	    {
-		$md5 = md5_hex($data);
-		if ($storedmd5{$key} eq $md5)
-		{
-		    print STDERR "skip:    $md5 $key\n";
-		    next;
-		}
-	    }
-
-	    if (length($storedmd5{$key}) == 32)
-	    {
-		print STDERR "update:  $md5 $key\n";
-	    }
-	    else
-	    {
-		print STDERR "new:     $md5 $key\n";
-	    }
-
-	    upload($key, $file, $data) unless $opts{n};
+	    maybe_upload ($keyprefix."/".$subdir."/".$file,
+			  $subdir."/".$file);
 	}
     }
 }
@@ -249,6 +204,56 @@ foreach my $subdir (sort (readdir DIR))
 upload();
 print STDERR @warn;
 print STDERR "$uploadtotal files uploaded.\n";
+
+sub maybe_upload
+{
+    my ($key, $file) = @_;
+
+    if ($opts{quick})
+    {
+	if (exists($storedmd5{$key}))
+	{
+	    print STDERR "skip:    ".(" "x32)." $key\n";
+	    return;
+	}
+	if ($opts{n})
+	{
+	    print STDERR "new:     ".(" "x32)." $key\n";
+	    return;
+	}
+    }
+
+    my $data;
+    do {
+	local $/ = undef;
+	open FILE, "<$file" or die "$0: Can't open $file: $!\n";
+	$data = <FILE>;
+	close FILE;
+    };
+
+    my $md5 = " " x 32;
+
+    if (!$opts{quick})
+    {
+	$md5 = md5_hex($data);
+	if ($storedmd5{$key} eq $md5)
+	{
+	    print STDERR "skip:    $md5 $key\n";
+	    return;
+	}
+    }
+
+    if (length($storedmd5{$key}) == 32)
+    {
+	print STDERR "update:  $md5 $key\n";
+    }
+    else
+    {
+	print STDERR "new:     $md5 $key\n";
+    }
+
+    upload($key, $file, $data) unless $opts{n};
+}
 
 sub upload
 {
