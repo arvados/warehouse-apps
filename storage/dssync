@@ -105,19 +105,31 @@ foreach (@positions)
     if ($frame_id !~ /^\d+$/) { next; }
     ++$nframes;
 }
+if (!$opts{n})
+{
+    warn "Uploading position list.\n" if $opts{v};
+    upload($keyprefix."/positions", $opts{positions}, join("",@positions));
+}
 
 if ($opts{v}) { warn "Reading cycle list.\n"; }
 
 my %cycle;
-open CYCLES_CFG, "<$opts{cycles}" or die "Can't open $opts{cycles}: $!\n";
-my @cycles_cfg = <CYCLES_CFG>;
-close CYCLES_CFG;
-foreach (@cycles_cfg)
+open CYCLES, "<$opts{cycles}" or die "Can't open $opts{cycles}: $!\n";
+my @cycles = <CYCLES>;
+my @cycles_orig = @cycles;
+close CYCLES;
+foreach (@cycles)
 {
     s/\;.*//;
     my ($datasetname, $cycle_id, $wellnumber, $x, $x, @exposures) = split(",");
     $cycle{$cycle_id} = 0;
 }
+if (!$opts{n})
+{
+    warn "Uploading cycle list.\n" if $opts{v};
+    upload($keyprefix."/cycles", $opts{cycles}, join("",@cycles_orig));
+}
+upload();
 
 if ($opts{v}) { warn "Checking local files.\n"; }
 
@@ -234,7 +246,7 @@ foreach my $subdir (sort (readdir DIR))
     }
 }
 
-upload() unless $opts{n};
+upload();
 print STDERR @warn;
 print STDERR "$uploadtotal files uploaded.\n";
 
