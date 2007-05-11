@@ -161,7 +161,8 @@ foreach my $subdir (sort (readdir DIR))
 
     if ($subdir ne '999'
 	&& !defined($hybrid{$subdir})
-	&& !defined($cycle{$subdir}))
+	&& !defined($cycle{$subdir})
+	&& !defined($include{$subdir}))
     {
 	push (@warn, "Subdir \"$subdir\" is not listed in $opts{cycles}\n");
     }
