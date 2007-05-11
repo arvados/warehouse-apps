@@ -44,7 +44,7 @@ options:
        --localdir=/path/to/images/raw          default = $defopts{localdir}
        --cycles=/path/to/all_cycles.cfg        default = $defopts{cycles}
        --positions=/path/to/position_list.dat  default = $defopts{positions}
-       --hybrid=hybridsubdir                   default = $defopts{hybrid}
+       --hybrid=subdir,subdir,subdir           default = $defopts{hybrid}
        --include=subdir,subdir,subdir          default = $defopts{include}
        --domain=mogilefsdomain        default = $defopts{domain}
        --class=mogilefsclass          default = $defopts{class}
@@ -121,6 +121,12 @@ foreach (@cycles_cfg)
 
 if ($opts{v}) { warn "Checking local files.\n"; }
 
+my %hybrid;
+foreach (split ($opts{hybrid}))
+{
+    $hybrid{$_} = 1;
+}
+
 my %include;
 foreach (split ($opts{include}))
 {
@@ -141,7 +147,7 @@ foreach my $subdir (sort (readdir DIR))
     if ($subdir eq '..') { next; }
 
     if ($subdir ne '999'
-	&& $subdir ne $opts{hybrid}
+	&& !defined($hybrid{$subdir})
 	&& !defined($cycle{$subdir}))
     {
 	push (@warn, "Subdir \"$subdir\" is not listed in $opts{cycles}\n");
@@ -161,7 +167,7 @@ foreach my $subdir (sort (readdir DIR))
 	rewinddir SUBDIR;
 	@raw = grep (/\.tif.gz$/i, readdir SUBDIR);
     }
-    my $complete = (@raw == (($subdir eq '999' || $subdir eq $opts{hybrid})
+    my $complete = (@raw == (($subdir eq '999' || defined($hybrid{$subdir}))
 			     ? $nframes : $nframes * 4));
     if ($complete)
     {
