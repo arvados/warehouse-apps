@@ -108,7 +108,7 @@ foreach (@positions)
 if (!$opts{n})
 {
     warn "Uploading position list.\n" if $opts{v};
-    maybe_upload($keyprefix."/positions", $opts{positions});
+    maybe_upload($keyprefix."/positions", $opts{positions}, 0);
 }
 
 if ($opts{v}) { warn "Reading cycle list.\n"; }
@@ -127,7 +127,7 @@ foreach (@cycles)
 if (!$opts{n})
 {
     warn "Uploading cycle list.\n" if $opts{v};
-    maybe_upload($keyprefix."/cycles", $opts{cycles});
+    maybe_upload($keyprefix."/cycles", $opts{cycles}, 0);
 }
 upload();			# must flush here before chdir or paths to
 				# positions/cycles might not work any more
@@ -196,7 +196,8 @@ foreach my $subdir (sort (readdir DIR))
 	foreach my $file (@raw)
 	{
 	    maybe_upload ($keyprefix."/".$subdir."/".$file,
-			  $subdir."/".$file);
+			  $subdir."/".$file,
+			  $opts{quick});
 	}
     }
 }
@@ -207,9 +208,9 @@ print STDERR "$uploadtotal files uploaded.\n";
 
 sub maybe_upload
 {
-    my ($key, $file) = @_;
+    my ($key, $file, $quick) = @_;
 
-    if ($opts{quick})
+    if ($quick)
     {
 	if (exists($storedmd5{$key}))
 	{
@@ -233,7 +234,7 @@ sub maybe_upload
 
     my $md5 = " " x 32;
 
-    if (!$opts{quick})
+    if (!$quick)
     {
 	$md5 = md5_hex($data);
 	if ($storedmd5{$key} eq $md5)
