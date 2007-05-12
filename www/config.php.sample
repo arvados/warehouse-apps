@@ -1,5 +1,9 @@
 <?php
 
+$update_lockfile = "/var/lock/cluster-update";
+
+$mogilefs_trackers = array ("trackerhost1:6001","trackerhost2:6001");
+
 $mogilefs_mysql_host = "localhost";
 $mogilefs_mysql_database = "mogilefs";
 $mogilefs_mysql_username = "mogile";

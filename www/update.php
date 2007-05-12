@@ -10,6 +10,16 @@ echo mysql_error();
 mysql_select_db($mogilefs_mysql_database);
 echo mysql_error();
 
+$lockfp = fopen($update_lockfile, "w+");
+if (!flock($lockfp, LOCK_EX|LOCK_NB))
+{
+  fclose($lockfp);
+  echo "Someone else has lock on $update_lockfile so I quit.\n";
+  exit;
+}
+
+putenv("MOGILEFS_TRACKERS=".join(",",$mogilefs_trackers));
+
 function dbsetup()
 {
   global $analysis_mysql_host,
@@ -164,6 +174,7 @@ while($row = mysql_fetch_row($q))
   grok($fid, $length, $dmid, $dkey);
 }
 grok();
+fclose($lockfp);
 
 // arch-tag: acc56792-0004-11dc-9207-0015f2b17887
 ?>

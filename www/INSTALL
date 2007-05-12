@@ -11,3 +11,7 @@ Create "analysis" account and database:
  create database analysis;
  grant all privileges on analysis.* to analysis@localhost;
  set password for analysis@localhost = old_password('secXret');
+
+Make sure this happens periodically:
+
+ cd /path/to/www/ && php-cgi update.php
