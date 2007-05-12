@@ -13,7 +13,7 @@ my $boundary;
 my $lastboundary;
 my $mogc;
 my %part;
-my %param;
+my %param = (domain => $mogilefs_default_domain);
 
 my $dbh = DBI->connect($main::mogilefs_dsn,
 		       $main::mogilefs_username,

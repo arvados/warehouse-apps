@@ -1,4 +1,5 @@
-my $mogilefs_dsn = "DBI:mysql:database=mogilefs;host=localhost";
-my $mogilefs_username = "mogile";
-my $mogilefs_password = "secXret";
+$main::mogilefs_default_domain = "images";
+$main::mogilefs_dsn = "DBI:mysql:database=mogilefs;host=localhost";
+$main::mogilefs_username = "mogile";
+$main::mogilefs_password = "secXret";
 1;

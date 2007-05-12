@@ -1,0 +1,13 @@
+<?php
+
+$mogilefs_mysql_host = "localhost";
+$mogilefs_mysql_database = "mogilefs";
+$mogilefs_mysql_username = "mogile";
+$mogilefs_mysql_password = "secXret";
+
+$analysis_mysql_host = "localhost";
+$analysis_mysql_database = "analysis";
+$analysis_mysql_username = "analysis";
+$analysis_mysql_password = "secXret";
+
+?>

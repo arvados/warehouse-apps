@@ -3,3 +3,11 @@ default of 8M, the dssync default of --batch=10 is too big.
 
 Copy config.pl.sample to /etc/polony-tools/config.pl and edit to suit.
 
+Copy config.php.sample to /etc/polony-tools/config.php and edit to suit.
+
+Create "analysis" account and database:
+
+ create database analysis;
+ create database analysis;
+ grant all privileges on analysis.* to analysis@localhost;
+ set password for analysis@localhost = old_password('secXret');
