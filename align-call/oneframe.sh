@@ -2,6 +2,10 @@
 
 frame="$1"; shift
 
+export IMAGEDIR="${IMAGEDIR-$DATASETDIR/IMAGES/RAW}"
+export SEGMENT_PROGRAM="${SEGMENT_PROGRAM-cat}"
+export DIRORDER=`echo "$BASEORDER" | tr "," " "`
+
 fn=$((1$frame-10000))
 echo >&2 "# frame $frame hostname `hostname`"
 imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn-1)*4+3)) $((($fn-1)*4+4))`
