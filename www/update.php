@@ -77,6 +77,8 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
       dbsetup();
       echo "Updating dataset and cycle tables.\n";
       mysql_query("lock tables dataset write, cycle write");
+      mysql_query("delete * from dataset");
+      mysql_query("delete * from cycle");
       foreach ($grok as $dataset => $d)
 	{
 	  putenv("MOGILEFS_DOMAIN=".$namespaceof[$dataset]);
@@ -96,6 +98,7 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
 	  $cycleinfo = array();
 	  foreach (explode("\n", $cycles) as $c)
 	    {
+	      if ($c == "") continue;
 	      $csv = explode(",", $c);
 	      ++$ncycles;
 	      mysql_query ("
@@ -156,6 +159,8 @@ while($row = mysql_fetch_row($q))
   list ($fid, $length, $dmid, $dkey) = $row;
   if ($fid == $lastfid) continue;
   $lastfid = $fid;
+  if (ereg("/IMAGES/RAW/positions$", $dkey)) continue;
+  if (ereg("/IMAGES/RAW/cycles$", $dkey)) continue;
   grok($fid, $length, $dmid, $dkey);
 }
 grok();
