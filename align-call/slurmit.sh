@@ -37,7 +37,7 @@ then
 fi
 
 export IMAGEDIR="${IMAGEDIR-$DATASETDIR/IMAGES/RAW}"
-export SEGMENT_PROGRAM="${SEGMENT_PROGRAME-cat}"
+export SEGMENT_PROGRAM="${SEGMENT_PROGRAM-cat}"
 export DIRORDER=`echo "$BASEORDER" | tr "," " "`
 
 ln -sf $src/align-call/Makefile.slurm Makefile
