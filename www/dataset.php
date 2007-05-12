@@ -27,11 +27,13 @@ $q = mysql_query("select *,
  order by cid");
 while ($cycle = mysql_fetch_assoc ($q))
 {
+  $exposure = $cycle[exposure];
+  $exposure = ereg_replace("^[^,]*,[^,]*,", "", $exposure);
   echo "<tr><td>".$cycle[cid]."</td>"
     ."<td>".$cycle[iscomplete]."</td>"
     ."<td align=right>".addcommas($cycle[nfiles])."</td>"
     ."<td align=right>".addcommas($cycle[nbytes])."</td>"
-    ."<td>".$cycle[exposure]."</td>"
+    ."<td>".$exposure."</td>"
     ."</tr>\n";
   $totalbytes += $cycle[nbytes];
 }
