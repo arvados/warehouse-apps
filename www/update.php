@@ -75,6 +75,8 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
   else
     {
       dbsetup();
+      echo "Updating dataset and cycle tables.\n";
+      mysql_query("lock tables dataset write, cycle write");
       foreach ($grok as $dataset => $d)
 	{
 	  putenv("MOGILEFS_DOMAIN=".$namespaceof[$dataset]);
@@ -127,6 +129,8 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
 		where dsid='$dataset' and cid='$subdir'");
 	    }
 	}
+      mysql_query("unlock tables");
+      echo "Done.\n";
     }
 }
 
