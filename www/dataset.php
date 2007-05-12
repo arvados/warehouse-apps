@@ -6,18 +6,27 @@ require_once 'connect.php';
 
 $dsid = $_REQUEST[dsid];
 
-echo "<h1><a href=\"./\">".trim(`hostname`)."</a> / $dsid</h1>\n";
+?>
+<html>
+<head><title><?=htmlspecialchars($dsid)?></title></head>
+<body>
+<h1><a href="./"><?=htmlspecialchars(trim(`hostname`))?></a> / <?=htmlspecialchars($dsid)?></h1>
 
-echo "<table border=0>\n";
-echo "<tr>
+<form method=get action="jobform.php">
+<input type=hidden name="dsid" value="<?=htmlspecialchars($dsid)?>">
+Select cycles, then <input type=submit value="Continue">
+
+<table border=0>
+<tr>
+  <td></td>
   <td valign=bottom>cycle</td>
   <td valign=bottom>complete?</td>
   <td valign=bottom align=right>#files</td>
   <td valign=bottom align=right>#bytes</td>
-  <td valign=bottom>exposure info from all_cycles.cfg</td>
+  <td valign=bottom colspan=14>exposure info from all_cycles.cfg</td>
 </tr>
-";
 
+<?php
 $totalbytes = 0;
 $q = mysql_query("select *,
  if(nframes*4=nfiles,'Y','-') iscomplete
@@ -29,15 +38,27 @@ while ($cycle = mysql_fetch_assoc ($q))
 {
   $exposure = $cycle[exposure];
   $exposure = ereg_replace("^[^,]*,[^,]*,", "", $exposure);
-  echo "<tr><td>".$cycle[cid]."</td>"
+  $exposure = ereg_replace(",", "</td><td align=right>", $exposure);
+  echo "<tr><td>";
+  if ($cycle[iscomplete] == 'Y')
+    {
+      echo "<input type=checkbox name=\"cid[]\" value=\""
+	.htmlspecialchars($cycle[cid])
+	."\" checked>";
+    }
+  echo "</td><td>".$cycle[cid]."</td>"
     ."<td>".$cycle[iscomplete]."</td>"
     ."<td align=right>".addcommas($cycle[nfiles])."</td>"
     ."<td align=right>".addcommas($cycle[nbytes])."</td>"
-    ."<td>".$exposure."</td>"
+    ."<td align=right>".$exposure."</td>"
     ."</tr>\n";
   $totalbytes += $cycle[nbytes];
 }
 echo "<tr><td/><td/><td/><td>".addcommas($totalbytes)."</td></tr>\n";
-echo "</table>\n";
-
 ?>
+
+</table>
+</form>
+
+</body>
+</html>
