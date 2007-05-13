@@ -12,9 +12,47 @@ $dsid = $_REQUEST[dsid];
 <body>
 <h1><a href="./"><?=htmlspecialchars(trim(`hostname`))?></a> / <?=htmlspecialchars($dsid)?></h1>
 
+<h2>reports</h2>
+
+<table>
+<tr>
+ <td align=right>id</td>
+ <td align=right>#jobs</td>
+ <td>finished</td>
+ <td>baseorder/knobs</td>
+</tr>
+<?php
+$q = mysql_query("select
+ report.*,
+ count(jid) njobs,
+ date_format(max(job.finished),'%Y-%m-%d %H:%i') last_finished,
+ max(job.finished is null) unfinished
+ from report
+ left outer join job on report.rid=job.rid
+ where dsid='$dsid'
+ group by report.rid
+ order by last_finished desc");
+echo mysql_error();
+while ($row = mysql_fetch_assoc ($q))
+{
+  echo "<tr>";
+  echo "<td valign=top align=right><a href=\"jobstatus.php?rid=$row[rid]\">$row[rid]</a></td>";
+  echo "<td valign=top align=right>$row[njobs]</td>";
+  if ($row[unfinished])
+    echo "<td valign=top><b>".mysql_one_value("select count(*) from job where rid='$row[rid]' and finished is not null")."</b></td>";
+  else
+    echo "<td valign=top>$row[last_finished]</td>";
+  echo "<td valign=top><code>".nl2br(htmlspecialchars(ereg_replace(","," ",$row[baseorder])."\n".$row[knobs]))."</code></td>";
+  echo "</tr>\n";
+}
+?>
+</table>
+
+<h2>new job</h2>
+
 <form method=get action="jobform.php">
 <input type=hidden name="dsid" value="<?=htmlspecialchars($dsid)?>">
-Select cycles, then <input type=submit value="Continue">
+To submit a job, select cycles, then press <input type=submit value="Next"> to set knobs.
 
 <table border=0>
 <tr>
