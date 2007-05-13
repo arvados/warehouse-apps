@@ -6,6 +6,7 @@ export IMAGEDIR="${IMAGEDIR-$DATASETDIR/IMAGES/RAW}"
 export SEGMENT_PROGRAM="${SEGMENT_PROGRAM-cat}"
 export DIRORDER=`echo "$BASEORDER" | tr "," " "`
 
+(
 fn=$((1$frame-10000))
 echo >&2 "# frame $frame hostname `hostname`"
 imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn-1)*4+3)) $((($fn-1)*4+4))`
@@ -30,8 +31,9 @@ imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn
  $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
                                hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
  $mogc->store_content($ENV{OUTPUT_KEY}, $ENV{OUTPUT_CLASS}, <STDIN>);
- ' \
-2>stderr.$$
+ '
+) 2>stderr.$$
+
 cat stderr.$$ | perl -e '
  use MogileFS::Client;
  undef $/;
