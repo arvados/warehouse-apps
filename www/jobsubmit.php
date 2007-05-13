@@ -11,7 +11,8 @@ mysql_query("create table if not exists report
  rid bigint not null auto_increment primary key,
  dsid char(32),
  baseorder varchar(255),
- knobs text
+ knobs text,
+ index(dsid)
 )");
 
 mysql_query("create table if not exists job
@@ -26,7 +27,9 @@ mysql_query("create table if not exists job
  wc_stderr char(32),
  cmd text,
  submittime datetime,
- finished datetime
+ finished datetime,
+ index(rid),
+ index(finished)
 )");
 
 $nframes = mysql_one_value ("select nframes from dataset where dsid='$dsid'");
