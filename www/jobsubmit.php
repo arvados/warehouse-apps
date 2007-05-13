@@ -32,7 +32,7 @@ if(!$rid)
   exit;
 }
 
-for ($f=1; $f<=$nframes && $f<20; $f++)
+for ($f=1; $f<=$nframes; $f++)
 {
   $fid = sprintf ("%04d", $f);
   $cmd = "FRAMENUMBER=$fid \
@@ -49,7 +49,7 @@ for ($f=1; $f<=$nframes && $f<20; $f++)
  OBJECTTHRESHOLD=9000 \
  SORTEDTAGS=\"\" \
  PATH=\"/tmp/polony-tools/src/align-call:/tmp/polony-tools/install/bin:\$PATH\" \
- srun -D /tmp/polony-tools -b /tmp/polony-tools/src/align-call/oneframe.sh";
+ srun -b -D /tmp/polony-tools -o none `pwd`/../align-call/oneframe.sh";
   $cmdout = `$cmd 2>&1`;
   ereg("srun: jobid ([0-9]+) submitted", $cmdout, $regs);
   $sjid = $regs[1];
@@ -58,10 +58,8 @@ for ($f=1; $f<=$nframes && $f<20; $f++)
  sjid='$sjid',
  rid='$rid',
  fid='$fid',
- cmd='$cmd',
+ cmd='".addslashes($cmd)."',
  submittime=now()");
-  $jid = mysql_insert_id();
-  echo "job: $jid $sjid $rid $fid<br>";
 }
 
 header("Location: ./dataset.php?dsid=".urlencode($dsid));
