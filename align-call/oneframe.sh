@@ -26,16 +26,19 @@ imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn
 | (if [ -z "$SORTEDTAGS" ]; then cat; else join - $SORTEDTAGS; fi) \
 | perl -e '
  use MogileFS::Client;
+ undef $/;
  $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
                                hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
- $mogc->store_file($ENV{OUTPUT_KEY}, $ENV{OUTPUT_CLASS}, *STDIN);
+ $mogc->store_content($ENV{OUTPUT_KEY}, $ENV{OUTPUT_CLASS}, <STDIN>);
  ' \
 2>stderr.$$
 cat stderr.$$ | perl -e '
  use MogileFS::Client;
+ undef $/;
  $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
                                hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
- $mogc->store_file($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, *STDIN);
+ $mogc->store_content($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, <STDIN>);
  '
+rm stderr.$$
 
 # arch-tag: Tom Clegg Thu Apr 12 19:41:24 PDT 2007 (align-call/oneframe.sh)
