@@ -9,6 +9,7 @@ echo "<h1>".trim(`hostname`)."</h1>\n";
 echo "<table border=0>\n";
 echo "<tr>
   <td valign=bottom>dataset</td>
+  <td valign=bottom align=right>reports</td>
   <td valign=bottom align=right>frames</td>
   <td valign=bottom align=right>complete<br>cycles</td>
   <td valign=bottom align=right>imagesets</td>
@@ -18,7 +19,10 @@ echo "<tr>
 ";
 
 $totalbytes = 0;
-$q = mysql_query("select * from dataset order by dsid");
+$q = mysql_query("select dataset.*, count(report.rid) as nreports from dataset
+ left outer join report on report.dsid=dataset.dsid
+ group by dataset.dsid
+ order by dataset.dsid");
 while ($dataset = mysql_fetch_assoc ($q))
 {
   $dsid = $dataset[dsid];
@@ -33,6 +37,7 @@ while ($dataset = mysql_fetch_assoc ($q))
    from cycle
    where dsid='$dsid'");
   echo "<tr><td><a href=\"dataset.php?dsid=$dsid\">$dsid</a></td>"
+    ."<td align=right>".($dataset[nreports]?$dataset[nreports]:"")."</td>"
     ."<td align=right>".$dataset[nframes]."</td>"
     ."<td align=right>".$ccomplete."</td>"
     ."<td align=right>".addcommas($cyclesum[ncycles])."</td>"
