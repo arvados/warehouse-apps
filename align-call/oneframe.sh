@@ -1,6 +1,6 @@
 #!/bin/sh
 
-frame="$1"; shift
+frame=${1-$FRAMENUMBER}; shift
 
 export IMAGEDIR="${IMAGEDIR-$DATASETDIR/IMAGES/RAW}"
 export SEGMENT_PROGRAM="${SEGMENT_PROGRAM-cat}"
