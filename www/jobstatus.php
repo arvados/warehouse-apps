@@ -50,7 +50,7 @@ $elapsed = mysql_one_value("select unix_timestamp(max(finished))-unix_timestamp(
 <html>
 <head><title><?=htmlspecialchars("report $rid detail")?></title></head>
 <body>
-<h1><a href="./"><?=htmlspecialchars(trim(`hostname`))?></a> / <?=htmlspecialchars("jobs $where")?></h1>
+<h1><a href="./"><?=htmlspecialchars(trim(`hostname`))?></a> / report <?=$rid?> detail</h1>
 
 <h2>jobs</h2>
 
