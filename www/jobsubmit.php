@@ -9,6 +9,7 @@ $dsid = $_POST[dsid];
 mysql_query("create table if not exists report
 (
  rid bigint not null auto_increment primary key,
+ dsid char(32),
  baseorder varchar(255),
  knobs text
 )");
@@ -35,6 +36,7 @@ for($i=0; $i<1024; $i++) { echo "    "; } echo "\n";
 flush();
 
 mysql_query("insert into report set
+ dsid='".addslashes($dsid)."',
  baseorder='".addslashes(join(",",$_POST[cid]))."',
  knobs='".addslashes($_POST[knobs])."'");
 $rid = mysql_insert_id();
