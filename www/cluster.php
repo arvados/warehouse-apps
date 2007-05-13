@@ -98,7 +98,7 @@ while($row = mysql_fetch_row($q))
 grok();
 
 echo "<PRE>";
-echo htmlspecialchars(`mogadm check`);
+echo htmlspecialchars(`mogadm check 2>/dev/null`);
 echo "</PRE>\n";
 
 // arch-tag: b76f244a-fd8f-11db-9207-0015f2b17887

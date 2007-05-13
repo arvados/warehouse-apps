@@ -20,6 +20,8 @@ mysql_query("create table if not exists job
  fid char(4),
  dkey_stdout char(32),
  dkey_stderr char(32),
+ wc_stdout char(32),
+ wc_stderr char(32),
  cmd text,
  submittime datetime,
  finished datetime

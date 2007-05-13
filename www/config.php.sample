@@ -1,6 +1,6 @@
 <?php
 
-$update_lockfile = "/var/lock/cluster-update";
+$lockfile_prefix = "/var/lock/lock.polony-tools.";
 
 $mogilefs_trackers = array ("trackerhost1:6001","trackerhost2:6001");
 

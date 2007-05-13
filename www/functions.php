@@ -27,4 +27,17 @@ function mysql_one_value ($sql)
   return $r[0];
 }
 
+function lock_or_exit ($lockname)
+{
+  global $lockfile_prefix;
+  $lockfile = $lockfile_prefix.$lockname;
+  $lockfp = fopen($lockfile, "w+");
+  if (!flock($lockfp, LOCK_EX|LOCK_NB))
+    {
+      fclose($lockfp);
+      echo "Someone else has lock on $lockfile so I quit.\n";
+      exit;
+    }
+}
+
 ?>

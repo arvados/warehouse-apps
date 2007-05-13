@@ -15,4 +15,4 @@ Create "analysis" account and database:
 Make sure these run periodically (eg. every five minutes):
 
  cd /path/to/www/ && php-cgi update.php
- cd /path/to/www/ && php-cgi jobstatus.php
+ cd /path/to/www/ && php-cgi jobstatus-update.php

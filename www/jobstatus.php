@@ -4,6 +4,9 @@ require_once '/etc/polony-tools/config.php';
 require_once 'functions.php';
 require_once 'connect.php';
 
+putenv("MOGILEFS_DOMAIN=reports");
+putenv("MOGILEFS_TRACKERS=".join(",", $mogilefs_trackers));
+
 $rid = $_REQUEST[rid] + 0;
 if ($rid)
 {
@@ -34,14 +37,9 @@ while ($row = mysql_fetch_assoc ($q))
 	  ++$njobs_running;
 	}
     }
-  else
-    {
-      if (!isset($row[finished]))
-	{
-	  mysql_query("update job set finished=now() where jid='$row[jid]'");
-	}
-    }
 }
+
+$elapsed = mysql_one_value("select unix_timestamp(max(finished))-unix_timestamp(min(submittime)) from job $where");
 
 ?>
 <html>
@@ -56,7 +54,39 @@ while ($row = mysql_fetch_assoc ($q))
   <td align=right>running jobs</td><td><?=$njobs_running?></td>
 </tr><tr>
   <td align=right>waiting jobs</td><td><?=$njobs_queued-$njobs_running?></td>
+</tr><tr>
+  <td align=right>elapsed</td><td><?=$elapsed?>s</td>
 </tr>
 </table>
+
+<table>
+<tr>
+  <td>frame</td>
+  <td>stdout#lines</td>
+  <td>stderr#lines</td>
+  <td>seconds</td>
+</tr>
+<?php
+
+$q = mysql_query("select *, floor(finished-submittime) sec
+ from job
+ $where
+ order by fid");
+while ($row = mysql_fetch_assoc($q))
+{
+  echo "<tr>";
+  echo "<td>$row[fid]</td>";
+  if ($row[finished])
+    {
+      echo "<td><a href=\"get.php?domain=reports&dkey=".htmlspecialchars($row[dkey_stdout])."\">".ereg_replace(" .*","",$row[wc_stdout])."</a></td>\n";
+      echo "<td><a href=\"get.php?domain=reports&dkey=".htmlspecialchars($row[dkey_stderr])."\">".ereg_replace(" .*","",$row[wc_stderr])."</a></td>\n";
+      echo "<td>$row[sec]</td>\n";
+    }
+  echo "</tr>\n";
+}
+
+?>
+</table>
+
 </body>
 </html>
