@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 frame=${1-$FRAMENUMBER}; shift
 
 export FOCUSPIXELS="${USER_FOCUSPIXELS-$FOCUSPIXELS}"
