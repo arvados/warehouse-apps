@@ -23,18 +23,23 @@ foreach (explode("\n", trim(`squeue|sort -n`)) as $sj)
   $squeue[$sj[0]] = $sj[4];
 }
 
+$unfinished = 0;
 $njobs = 0;
 $njobs_running = 0;
 $q = mysql_query ("select * from job $where order by sjid");
 while ($row = mysql_fetch_assoc ($q))
 {
   ++$njobs;
-  if (isset($squeue[$row[sjid]]))
+  if (!isset($row[finished]))
     {
-      ++$njobs_queued;
-      if (ereg("R", $squeue[$row[sjid]]))
+      $unfinished = 1;
+      if (isset($squeue[$row[sjid]]))
 	{
-	  ++$njobs_running;
+	  ++$njobs_queued;
+	  if (ereg("R", $squeue[$row[sjid]]))
+	    {
+	      ++$njobs_running;
+	    }
 	}
     }
 }
@@ -47,17 +52,29 @@ $elapsed = mysql_one_value("select unix_timestamp(max(finished))-unix_timestamp(
 <body>
 <h1><a href="./"><?=htmlspecialchars(trim(`hostname`))?></a> / <?=htmlspecialchars("jobs $where")?></h1>
 
+<h2>jobs</h2>
+
 <table>
 <tr>
   <td align=right>total jobs</td><td><?=$njobs?></td>
+<?php if ($unfinished) { ?>
 </tr><tr>
   <td align=right>running jobs</td><td><?=$njobs_running?></td>
 </tr><tr>
   <td align=right>waiting jobs</td><td><?=$njobs_queued-$njobs_running?></td>
+<?php } ?>
 </tr><tr>
   <td align=right>elapsed</td><td><?=$elapsed?>s</td>
 </tr>
 </table>
+
+<h2>knobs</h2>
+
+<pre>BASEORDER=<?=htmlspecialchars(mysql_one_value("select baseorder from report where rid='$rid'"))?></pre>
+
+<pre><?=htmlspecialchars(mysql_one_value("select knobs from report where rid='$rid'"))?></pre>
+
+<h2>blobs</h2>
 
 <table>
 <tr>
