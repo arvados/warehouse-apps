@@ -85,9 +85,11 @@ $elapsed = mysql_one_value("select unix_timestamp(max(finished))-unix_timestamp(
 </tr>
 <?php
 
+if (!$where) $where = "where 1=1";
 $q = mysql_query("select *, floor(finished-submittime) sec
  from job
  $where
+ and finished is not null
  order by fid");
 while ($row = mysql_fetch_assoc($q))
 {
