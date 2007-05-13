@@ -80,8 +80,8 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
       dbsetup();
       echo "Updating dataset and cycle tables.\n";
       mysql_query("lock tables dataset write, cycle write");
-      mysql_query("delete * from dataset");
-      mysql_query("delete * from cycle");
+      mysql_query("delete from dataset");
+      mysql_query("delete from cycle");
       foreach ($grok as $dataset => $d)
 	{
 	  putenv("MOGILEFS_DOMAIN=images");
