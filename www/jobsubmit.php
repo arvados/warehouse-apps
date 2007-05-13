@@ -9,6 +9,7 @@ $dsid = $_POST[dsid];
 mysql_query("create table if not exists report
 (
  rid bigint not null auto_increment primary key,
+ baseorder varchar(255),
  knobs text
 )");
 
@@ -33,7 +34,9 @@ echo "<p>Job will run on $nframes frames.\n";
 for($i=0; $i<1024; $i++) { echo "    "; } echo "\n";
 flush();
 
-mysql_query("insert into report set knobs='".addslashes($_POST[knobs])."'");
+mysql_query("insert into report set
+ baseorder='".addslashes(join(",",$_POST[cid]))."',
+ knobs='".addslashes($_POST[knobs])."'");
 $rid = mysql_insert_id();
 if(!$rid)
 {
