@@ -28,8 +28,15 @@ $dsid = $_REQUEST[dsid];
 <input type=hidden name="cid[]" value="<?=join("\">\n<input type=hidden name=\"cid[]\" value=\"", $_REQUEST[cid])?>">
 
 <tr>
+ <td valign=top>knobs</td>
+ <td><textarea name="knobs" wrap="none" cols="80" rows="7">FOCUSPIXELS=
+ALIGNWINDOW=
+OBJECTTHRESHOLD=</textarea>
+</tr>
+
+<tr>
  <td></td>
- <td><input type=submit value="Start">
+ <td><input type=submit value="Start">  Just click once!  It might take a few seconds before you get any feedback.</td>
 </tr>
 
 </table>

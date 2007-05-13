@@ -4,12 +4,12 @@ require_once '/etc/polony-tools/config.php';
 require_once 'functions.php';
 require_once 'connect.php';
 
-$dsid = $_REQUEST[dsid];
-$cid = $_REQUEST[cid];
+$dsid = $_POST[dsid];
 
 mysql_query("create table if not exists report
 (
- rid bigint not null auto_increment primary key
+ rid bigint not null auto_increment primary key,
+ knobs text
 )");
 
 mysql_query("create table if not exists job
@@ -18,13 +18,20 @@ mysql_query("create table if not exists job
  sjid bigint,
  rid bigint references report.rid,
  fid char(4),
+ dkey_stdout char(32),
+ dkey_stderr char(32),
  cmd text,
- submittime datetime
+ submittime datetime,
+ finished datetime
 )");
 
 $nframes = mysql_one_value ("select nframes from dataset where dsid='$dsid'");
 
-mysql_query("insert into report set rid=null");
+echo "<p>Job will run on $nframes frames.\n";
+for($i=0; $i<1024; $i++) { echo "    "; } echo "\n";
+flush();
+
+mysql_query("insert into report set knobs='".addslashes($_POST[knobs])."'");
 $rid = mysql_insert_id();
 if(!$rid)
 {
@@ -32,24 +39,32 @@ if(!$rid)
   exit;
 }
 
+foreach (split ("\n", $_POST[knobs]) as $knob)
+{
+  $knob = trim($knob);
+  putenv("USER_".$knob);
+}
+putenv ("BASEORDER=".join(",", $_POST[cid]));
+
+putenv ("OUTPUT_TRACKERS=".join(",",$mogilefs_trackers));
+putenv ("OUTPUT_DOMAIN=reports");
+putenv ("OUTPUT_CLASS=reports");
+putenv ("DATASETDIR=mogilefs:///$dsid");
+putenv ("MOGILEFS_DOMAIN=images");
+putenv ("MOGILEFS_TRACKERS=".join(",",$mogilefs_trackers));
+putenv ("PATH=/tmp/polony-tools/src/align-call:/tmp/polony-tools/install/bin:".getenv("PATH"));
+
+echo "<p>Submitting jobs.\n<p>";
+flush();
+
 for ($f=1; $f<=$nframes; $f++)
 {
   $fid = sprintf ("%04d", $f);
-  $cmd = "FRAMENUMBER=$fid \
- OUTPUT_TRACKERS=".escapeshellarg(join(",",$mogilefs_trackers))." \
- OUTPUT_DOMAIN=reports \
- OUTPUT_CLASS=reports \
- OUTPUT_KEY=/$rid/frame/$fid \
- DATASETDIR=mogilefs:///$dsid \
- MOGILEFS_DOMAIN=images \
- MOGILEFS_TRACKERS=tomc:6001 \
- BASEORDER=".escapeshellarg(join(",",$cid))." \
- FOCUSPIXELS=4000 \
- ALIGNWINDOW=15 \
- OBJECTTHRESHOLD=9000 \
- SORTEDTAGS=\"\" \
- PATH=\"/tmp/polony-tools/src/align-call:/tmp/polony-tools/install/bin:\$PATH\" \
- srun -b -D /tmp/polony-tools -o none `pwd`/../align-call/oneframe.sh";
+  $dkey_stdout="/$rid/frame/$fid";
+  $dkey_stderr="/$rid/frame/$fid.stderr";
+  putenv("FRAMENUMBER=$fid");
+  putenv("OUTPUT_KEY=$dkey_stdout");
+  $cmd = "srun -b -D /tmp/polony-tools -o /tmp/stdout -e /tmp/stderr `pwd`/../align-call/oneframe.sh";
   $cmdout = `$cmd 2>&1`;
   ereg("srun: jobid ([0-9]+) submitted", $cmdout, $regs);
   $sjid = $regs[1];
@@ -58,10 +73,21 @@ for ($f=1; $f<=$nframes; $f++)
  sjid='$sjid',
  rid='$rid',
  fid='$fid',
+ dkey_stdout='$dkey_stdout',
+ dkey_stderr='$dkey_stderr',
  cmd='".addslashes($cmd)."',
  submittime=now()");
+  echo ".";
+  if ($f % 80 == 0) echo "<br>\n";
+  flush();
 }
 
-header("Location: ./dataset.php?dsid=".urlencode($dsid));
-exit;
 ?>
+
+<p>Finished.
+<p>You may proceed to the
+<a href="jobstatus.php?rid=<?=$rid?>">job <?=$rid?> status</a>
+page.
+
+</body>
+</html>

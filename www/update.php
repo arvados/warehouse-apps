@@ -1,6 +1,7 @@
 <?php
 
 require_once '/etc/polony-tools/config.php';
+require_once 'functions.php';
 
 mysql_connect($mogilefs_mysql_host,
 	      $mogilefs_mysql_username,
@@ -60,7 +61,6 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
 {
   global $grok;
   global $namespace;
-  global $namespaceof;
   global $positions;
   global $cycles;
   if ($fid !== undef)
@@ -68,7 +68,6 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
       $dkey = explode("/", ereg_replace("^/*","",$dkey));
       $subdir = $dkey[count($dkey)-2];
       $dataset = $dkey[0];
-      $namespaceof[$dataset] = $namespace[$dmid];
       if (!isset($grok[$dataset]))
 	{
 	  $grok[$dataset] = array();
@@ -91,7 +90,7 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
       mysql_query("delete * from cycle");
       foreach ($grok as $dataset => $d)
 	{
-	  putenv("MOGILEFS_DOMAIN=".$namespaceof[$dataset]);
+	  putenv("MOGILEFS_DOMAIN=images");
 	  $key = escapeshellarg("/".$dataset."/IMAGES/RAW/cycles");
 	  $cycles = file_get_contents(`./moggetpaths $key`);
 	  $key = escapeshellarg("/".$dataset."/IMAGES/RAW/positions");
@@ -148,12 +147,7 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
 }
 
 $namespace = array();
-$namespaceof = array();
-$q = mysql_query("select dmid,namespace from domain");
-while ($row = mysql_fetch_row($q))
-{
-  $namespace[$row[0]] = $row[1];
-}
+$dmid_images = mysql_one_value("select dmid from domain where namespace='images'");
 
 $q = mysql_query("select
      file.fid,
@@ -161,6 +155,7 @@ $q = mysql_query("select
      file.dmid,
      file.dkey
      from file
+     where dmid='$dmid_images'
      order by dmid,dkey");
 echo mysql_error();
 $lastfid = -1;
