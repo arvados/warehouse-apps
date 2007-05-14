@@ -37,7 +37,7 @@ for (my $pos = 0; $pos < $PIXELS; $pos++) {
 warn "There are $count ($#object_pixels) pixels (objects) in the mask\n";
 
 my @object_intensities;
-for (my $object = 1; $object < $#object_pixels ; $object++) {
+for (my $object = 1; $object <= $#object_pixels ; $object++) {
     my @pixels = unpack "N*", $object_pixels[$object];
 
     $object_intensities[$object] = pack "N", $#pixels+1;
