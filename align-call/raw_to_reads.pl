@@ -65,7 +65,7 @@ for (my $object = 1; $object <= $#object_pixels ; $object++) {
     }
 }
 
-for (my $object = 1; $object < $#object_pixels ; $object++) {
+for (my $object = 1; $object <= $#object_pixels ; $object++) {
     my @intensities = unpack "N*", $object_intensities[$object];
     my $call ="";
     for (my $bp = 1; $bp <$num_flor; $bp+=4) {
