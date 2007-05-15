@@ -46,9 +46,11 @@ while ($dataset = mysql_fetch_assoc ($q))
     ."</tr>\n";
   $totalbytes += $cyclesum[nbytes];
 }
-echo "<tr><td/><td/><td/><td/><td/><td>".addcommas($totalbytes)."</td></tr>\n";
+echo "<tr><td/><td/><td/><td/><td/><td/><td>".addcommas($totalbytes)."</td></tr>\n";
 echo "</table>\n";
 
-echo "<pre>" . `mogadm check` . "</pre>\n";
-
 ?>
+
+<iframe src="installrevision.php" width=800 height=300></iframe>
+
+<pre><?=htmlspecialchars(`mogadm check`)?></pre>

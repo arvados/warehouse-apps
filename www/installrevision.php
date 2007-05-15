@@ -52,7 +52,7 @@ foreach (explode ("\n", $listall) as $rev)
  <td valign=bottom>revision</td>
  <td>tested/<br>fetched/<br>started</td>
  <td></td>
- <td valign=bottom>svn log</td>
+ <td valign=bottom colspan=3>commit log</td>
 </tr>
 <?php
 $log = `svn log $source`;
@@ -65,7 +65,8 @@ foreach (explode("--------------------------------------------------------------
 
       list ($line1, $msg) = explode ("\n\n", $logentry, 2);
       list ($x, $committer, $date, $x) = explode (" | ", $line1);
-      $date = ereg_replace (" \(.*", "", $date);
+      $date = ereg_replace (" [-+].*", "", $date);
+      $htmlspecialdate = ereg_replace (" ", "&nbsp;", htmlspecialchars($date));
 
       echo "<tr>";
       echo "<td valign=top>$ready</td>";
@@ -93,7 +94,7 @@ foreach (explode("--------------------------------------------------------------
       echo "</td>";
 
       echo "<td valign=top>".htmlspecialchars($committer)."</td>";
-      echo "<td valign=top>".htmlspecialchars($date)."</td>";
+      echo "<td valign=top>$htmlspecialdate</td>";
       echo "<td valign=top>".htmlspecialchars($msg)."</td>";
       echo "</tr>\n";
     }
