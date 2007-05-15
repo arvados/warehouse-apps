@@ -4,6 +4,8 @@ set -e
 
 export LC_ALL=POSIX
 
+export "CC=${CC-cc -O3}"
+
 base="`pwd`"
 install="$base"/install
 BUILD="$base"/build
