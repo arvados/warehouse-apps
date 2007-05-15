@@ -70,7 +70,9 @@ $elapsed = mysql_one_value("select unix_timestamp(max(finished))-unix_timestamp(
 
 <h2>knobs</h2>
 
-<pre>BASEORDER=<?=htmlspecialchars(mysql_one_value("select baseorder from report where rid='$rid'"))?></pre>
+<pre>BASEORDER=<?=htmlspecialchars(mysql_one_value("select baseorder from report where rid='$rid'"))?>
+
+REVISION=<?=htmlspecialchars(mysql_one_value("select revision from report where rid='$rid'"))?></pre>
 
 <pre><?=htmlspecialchars(mysql_one_value("select knobs from report where rid='$rid'"))?></pre>
 

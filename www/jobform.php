@@ -3,6 +3,7 @@
 require_once '/etc/polony-tools/config.php';
 require_once 'functions.php';
 require_once 'connect.php';
+$source = escapeshellarg($svn_repos);
 
 $dsid = $_REQUEST[dsid];
 
@@ -33,6 +34,43 @@ $dsid = $_REQUEST[dsid];
 ALIGNWINDOW=
 OBJECTTHRESHOLD=</textarea>
 </tr>
+
+<tr>
+ <td valign=top>Revision</td>
+ <td valign=top><select size=8 name=revision><?php
+
+$nnodes = 0;
+foreach(explode("\n", `sinfo --noheader --format=%D`) as $n)
+{
+  $nnodes += $n;
+}
+$listall = `srun --overcommit -N$nnodes --chdir=/tmp sh -c 'ls -d1 /usr/local/polony-tools/*/.tested'`;
+foreach (explode ("\n", $listall) as $rev)
+{
+  if (ereg("/([0-9]+)/\.tested$", $rev, $regs))
+    {
+      $tested[$regs[1]]++;
+    }
+}
+$log = `svn log $source`;
+$selected = "selected";
+foreach (explode("------------------------------------------------------------------------\n", $log) as $logentry)
+{
+  if (ereg ("^r([0-9]+)", $logentry, $regs))
+    {
+      $revision = $regs[1];
+      if ($tested[$revision] == $nnodes)
+	{
+	  list ($line1, $msg) = explode ("\n\n", $logentry, 2);
+	  list ($x, $committer, $date, $x) = explode (" | ", $line1);
+	  $date = ereg_replace (" \(.*", "", $date);
+	  echo "\n<option value=\"$revision\" $selected>".htmlspecialchars("r$revision $date ($committer) $msg")."</option>";
+	  $selected = "";
+	}
+    }
+}
+
+?></select></td>
 
 <tr>
  <td></td>

@@ -1,6 +1,7 @@
 <?php
 
-$source = "http://tomc/repos/tomc/polony-tools/trunk";
+require_once '/etc/polony-tools/config.php';
+$source = escapeshellarg($svn_repos);
 
 $nnodes = 0;
 foreach(explode("\n", `sinfo --noheader --format=%D`) as $n)
@@ -11,7 +12,6 @@ foreach(explode("\n", `sinfo --noheader --format=%D`) as $n)
 if ($_POST[revision] > 0)
 {
   $revision = 0 + $_POST[revision];
-  $source = escapeshellarg($source);
 
   $pwd = escapeshellarg(trim(`pwd`));
   `srun --overcommit -N$nnodes --chdir=/tmp --output=/usr/local/polony-tools/$revision.log --batch $pwd/installrevision.sh $revision $source 2>&1`;

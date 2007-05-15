@@ -5,11 +5,21 @@ require_once 'functions.php';
 require_once 'connect.php';
 
 $dsid = $_POST[dsid];
+$revision = $_POST[revision];
+
+if (!($revision > 0))
+{
+  if (ereg ("\nRevision: ([0-9]+)\n", `svn info $svn_repos`, $regs))
+    {
+      $revision = $regs[1];
+    }
+}
 
 mysql_query("create table if not exists report
 (
  rid bigint not null auto_increment primary key,
  dsid char(32),
+ revision int,
  baseorder varchar(255),
  knobs text,
  index(dsid)
@@ -40,6 +50,7 @@ flush();
 
 mysql_query("insert into report set
  dsid='".addslashes($dsid)."',
+ revision='$revision',
  baseorder='".addslashes(join(",",$_POST[cid]))."',
  knobs='".addslashes($_POST[knobs])."'");
 $rid = mysql_insert_id();
@@ -49,11 +60,15 @@ if(!$rid)
   exit;
 }
 
+$revisiondir = "/usr/local/polony-tools/$revision";
+
 foreach (split ("\n", $_POST[knobs]) as $knob)
 {
   $knob = trim($knob);
   putenv("USER_".$knob);
 }
+putenv ("REVISION=".$revision);
+putenv ("REVISIONDIR=".$revisiondir);
 putenv ("BASEORDER=".join(",", $_POST[cid]));
 
 putenv ("OUTPUT_TRACKERS=".join(",",$mogilefs_trackers));
@@ -62,7 +77,7 @@ putenv ("OUTPUT_CLASS=reports");
 putenv ("DATASETDIR=mogilefs:///$dsid");
 putenv ("MOGILEFS_DOMAIN=images");
 putenv ("MOGILEFS_TRACKERS=".join(",",$mogilefs_trackers));
-putenv ("PATH=/tmp/polony-tools/src/align-call:/tmp/polony-tools/install/bin:".getenv("PATH"));
+putenv ("PATH=$revisiondir/src/align-call:$revisiondir/install/bin:".getenv("PATH"));
 
 echo "<p>Submitting jobs.\n<p>";
 flush();
@@ -74,7 +89,7 @@ for ($f=1; $f<=$nframes; $f++)
   $dkey_stderr="/$rid/frame/$fid.stderr";
   putenv("FRAMENUMBER=$fid");
   putenv("OUTPUT_KEY=$dkey_stdout");
-  $cmd = "srun -b -D /tmp/polony-tools -o /tmp/stdout -e /tmp/stderr `pwd`/../align-call/oneframe.sh";
+  $cmd = "srun -b -D $revisiondir -o /tmp/stdout -e /tmp/stderr `pwd`/../align-call/oneframe.sh";
   $cmdout = `$cmd 2>&1`;
   ereg("srun: jobid ([0-9]+) submitted", $cmdout, $regs);
   $sjid = $regs[1];
