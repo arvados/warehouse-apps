@@ -2,7 +2,6 @@
 
 require_once '/etc/polony-tools/config.php';
 require_once 'functions.php';
-require_once 'connect.php';
 
 putenv("MOGILEFS_DOMAIN=".$_REQUEST[domain]);
 putenv("MOGILEFS_TRACKERS=".join(",", $mogilefs_trackers));

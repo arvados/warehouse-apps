@@ -78,6 +78,9 @@ REVISION=<?=htmlspecialchars(mysql_one_value("select revision from report where 
 
 <h2>blobs</h2>
 
+<p><a href="map.php?rid=<?=$rid?>"><b>Show readcount map</b></a>
+
+<p>
 <table>
 <tr>
   <td>frame</td>
