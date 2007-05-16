@@ -17,6 +17,7 @@ $dsid = $_REQUEST[dsid];
 <table>
 <tr>
  <td align=right>id</td>
+ <td colspan=2></td>
  <td align=right>#jobs</td>
  <td>finished</td>
  <td>baseorder/knobs</td>
@@ -36,7 +37,9 @@ echo mysql_error();
 while ($row = mysql_fetch_assoc ($q))
 {
   echo "<tr>";
-  echo "<td valign=top align=right><a href=\"jobstatus.php?rid=$row[rid]\">$row[rid]</a></td>";
+  echo "<td valign=top align=right>$row[rid]</td>";
+  echo "<td valign=top><a href=\"map.php?rid=$row[rid]\">map</a></td>";
+  echo "<td valign=top><a href=\"jobstatus.php?rid=$row[rid]\">detail</a></td>";
   echo "<td valign=top align=right>$row[njobs]</td>";
   if ($row[unfinished])
     echo "<td valign=top><b>".mysql_one_value("select count(*) from job where rid='$row[rid]' and finished is not null")."</b></td>";
