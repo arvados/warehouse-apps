@@ -14,7 +14,7 @@ if ($_POST[revision] > 0)
   $revision = 0 + $_POST[revision];
 
   $pwd = escapeshellarg(trim(`pwd`));
-  `srun --overcommit -N$nnodes --chdir=/tmp --output=/usr/local/polony-tools/$revision.log --batch $pwd/installrevision.sh $revision $source 2>&1`;
+  `srun --immediate --share --overcommit -N$nnodes --chdir=/tmp --output=/usr/local/polony-tools/$revision.log --batch $pwd/installrevision.sh $revision $source 2>&1`;
 
   sleep(1);
   header("Location: installrevision.php");
@@ -29,7 +29,7 @@ if ($_POST[revision] > 0)
 
 <?php
 $fetched = array();
-$listall = `srun --overcommit -N$nnodes --chdir=/tmp sh -c 'ls -d1 /usr/local/polony-tools/*/. /usr/local/polony-tools/*/.tested /usr/local/polony-tools/*/.fetched'`;
+$listall = `srun --immediate --share --overcommit -N$nnodes --chdir=/tmp sh -c 'ls -d1 /usr/local/polony-tools/*/. /usr/local/polony-tools/*/.tested /usr/local/polony-tools/*/.fetched'`;
 foreach (explode ("\n", $listall) as $rev)
 {
   if (ereg("/([0-9]+)/\.$", $rev, $regs))
