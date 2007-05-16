@@ -20,6 +20,6 @@ else
 }
 
 $safekey = escapeshellarg($_REQUEST[dkey]);
-echo file_get_contents(trim(`./moggetpaths $safekey`));
+echo_file_get_contents(trim(`./moggetpaths $safekey`));
 
 ?>

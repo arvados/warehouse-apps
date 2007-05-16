@@ -40,4 +40,16 @@ function lock_or_exit ($lockname)
     }
 }
 
+function echo_file_get_contents ($filename)
+{
+  if ($fh = fopen ($filename, "r"))
+    {
+      while (strlen($buf = fread ($fh, 8192)))
+	{
+	  echo $buf;
+	}
+      fclose ($fh);
+    }
+}
+
 ?>
