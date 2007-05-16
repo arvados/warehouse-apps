@@ -14,7 +14,7 @@ if ($_POST[revision] > 0)
   $revision = 0 + $_POST[revision];
 
   $pwd = escapeshellarg(trim(`pwd`));
-  `srun --immediate --share --overcommit -N$nnodes --chdir=/tmp --output=/usr/local/polony-tools/$revision.log --batch $pwd/installrevision.sh $revision $source 2>&1`;
+  `srun --overcommit -N$nnodes --chdir=/tmp --output=/usr/local/polony-tools/$revision.log --batch $pwd/installrevision.sh $revision $source 2>&1`;
 
   sleep(1);
   header("Location: installrevision.php");
