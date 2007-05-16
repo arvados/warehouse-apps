@@ -46,7 +46,7 @@ foreach ($framexy as $f => $xy)
 {
   foreach ($xall as $x)
     {
-      if (10 < ($x - $xmin) && ($x - $xmin) < $framesize)
+      if (25 < ($x - $xmin) && ($x - $xmin) < $framesize)
 	{
 	  $framesize = $x - $xmin;
 	}
@@ -74,7 +74,8 @@ $datacolor_light = imagecolorallocate ($i, 0xaa, 0xaa, 0xff);
 $datacolor_dark = imagecolorallocate ($i, 0x77, 0x77, 0xff);
 $legendcolor = imagecolorallocate ($i, 0, 0, 0);
 
-$zmax = mysql_one_value ("select max(substring(wc_stdout,1,locate(' ',wc_stdout))) from job where rid='$rid'");
+$zmax = mysql_one_value ("select max(cast(substring(wc_stdout,1,locate(' ',wc_stdout)) as unsigned)) from job where rid='$rid'");
+if ($zmax == 0) $zmax = 9999999;
 
 $q = mysql_query ("select fid, wc_stdout from job where rid='$rid'");
 while ($row = mysql_fetch_row ($q))
@@ -97,11 +98,14 @@ while ($row = mysql_fetch_row ($q))
 
   //  imagestring ($i, 3, 512, 10*$fid, "$fid $x $y $x2 $y2 $z $zmax", $gridcolor);
   imagerectangle ($i, $x, $y, $x2, $y2, $gridcolor);
-  $radius = $framesize*$scale*sqrt($z/$zmax);
-  imagefilledellipse ($i, ($x+$x2)/2, ($y+$y2)/2, $radius, $radius,
-		      $datacolor_light);
-  imageellipse ($i, ($x+$x2)/2, ($y+$y2)/2, $radius, $radius,
-		$datacolor_dark);
+  $radius = ceil($framesize*$scale*sqrt($z/$zmax));
+  if ($radius > 0)
+    {
+      imagefilledellipse ($i, ($x+$x2)/2, ($y+$y2)/2, $radius, $radius,
+			  $datacolor_light);
+      imageellipse ($i, ($x+$x2)/2, ($y+$y2)/2, $radius, $radius,
+		    $datacolor_dark);
+    }
 }
 
 imagestring ($i, 3, $framesize*$scale/2, $h+2, "max(z) = $zmax", $legendcolor);
