@@ -6,6 +6,19 @@ require_once 'connect.php';
 $source = escapeshellarg($svn_repos);
 
 $dsid = $_REQUEST[dsid];
+$cid = $_REQUEST[cid];
+
+if (!is_array($cid))
+{
+  if (isset($cid))
+    {
+      $cid = array($cid);
+    }
+  else
+    {
+      $cid = array();
+    }
+}
 
 ?>
 <html>
@@ -24,9 +37,9 @@ $dsid = $_REQUEST[dsid];
 
 <tr>
  <td valign=top>Cycles</td>
- <td valign=top><?=nl2br(htmlspecialchars(join("\n",$_REQUEST[cid])))?></td>
+ <td valign=top><?=nl2br(htmlspecialchars(join("\n",$cid)))?></td>
 </tr>
-<input type=hidden name="cid[]" value="<?=join("\">\n<input type=hidden name=\"cid[]\" value=\"", $_REQUEST[cid])?>">
+<input type=hidden name="cid[]" value="<?=join("\">\n<input type=hidden name=\"cid[]\" value=\"", $cid)?>">
 
 <tr>
  <td valign=top>knobs</td>
@@ -44,7 +57,7 @@ foreach(explode("\n", `sinfo --noheader --format=%D`) as $n)
 {
   $nnodes += $n;
 }
-$listall = `srun --overcommit -N$nnodes --chdir=/tmp sh -c 'ls -d1 /usr/local/polony-tools/*/.tested'`;
+$listall = `srun --immediate --overcommit -N$nnodes --chdir=/tmp sh -c 'ls -d1 /usr/local/polony-tools/*/.tested'`;
 foreach (explode ("\n", $listall) as $rev)
 {
   if (ereg("/([0-9]+)/\.tested$", $rev, $regs))
@@ -59,14 +72,16 @@ foreach (explode("--------------------------------------------------------------
   if (ereg ("^r([0-9]+)", $logentry, $regs))
     {
       $revision = $regs[1];
+      $installed = "";
       if ($tested[$revision] == $nnodes)
 	{
-	  list ($line1, $msg) = explode ("\n\n", $logentry, 2);
-	  list ($x, $committer, $date, $x) = explode (" | ", $line1);
-	  $date = ereg_replace (" \(.*", "", $date);
-	  echo "\n<option value=\"$revision\" $selected>".htmlspecialchars("r$revision $date ($committer) $msg")."</option>";
-	  $selected = "";
+	  $installed = "(*)";
 	}
+      list ($line1, $msg) = explode ("\n\n", $logentry, 2);
+      list ($x, $committer, $date, $x) = explode (" | ", $line1);
+      $date = ereg_replace (" \(.*", "", $date);
+      echo "\n<option value=\"$revision\" $selected>".htmlspecialchars("r$revision $date ($committer) $msg $installed")."</option>";
+      $selected = "";
     }
 }
 

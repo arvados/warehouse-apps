@@ -5,7 +5,8 @@ require_once 'functions.php';
 require_once 'connect.php';
 
 $dsid = $_POST[dsid];
-$revision = $_POST[revision];
+$revision = $_POST[revision] + 0;
+$source = escapeshellarg($svn_repos);
 
 if (!($revision > 0))
 {
@@ -60,6 +61,15 @@ if(!$rid)
   exit;
 }
 
+$depends = "";
+$pwd = escapeshellarg(trim(`pwd`));
+$srunout = `srun --job-name='r$revision' --overcommit -N$nnodes --chdir=/tmp --output=none --batch $pwd/installrevision.sh $revision $source 2>&1`;
+if (ereg ("jobid ([0-9]+) submitted", $srunout, $regs))
+{
+  $depends = "--dependency=$regs[1]";
+}
+echo "<p>Submitted install job $regs[1] ($srunout)\n";
+
 $revisiondir = "/usr/local/polony-tools/$revision";
 
 foreach (split ("\n", $_POST[knobs]) as $knob)
@@ -89,7 +99,8 @@ for ($f=1; $f<=$nframes; $f++)
   $dkey_stderr="/$rid/frame/$fid.stderr";
   putenv("FRAMENUMBER=$fid");
   putenv("OUTPUT_KEY=$dkey_stdout");
-  $cmd = "srun -b -D $revisiondir -o /tmp/stdout -e /tmp/stderr `pwd`/../align-call/oneframe.sh";
+  $jobname = escapeshellarg("$rid:$fid:$dsid");
+  $cmd = "srun --job-name=$jobname $depends --batch --chdir=$revisiondir --output=/tmp/stdout --error=/tmp/stderr `pwd`/../align-call/oneframe.sh";
   $cmdout = `$cmd 2>&1`;
   ereg("srun: jobid ([0-9]+) submitted", $cmdout, $regs);
   $sjid = $regs[1];
