@@ -63,12 +63,17 @@ if(!$rid)
 
 $depends = "";
 $pwd = escapeshellarg(trim(`pwd`));
+$nnodes = 0;
+foreach(explode("\n", `sinfo --noheader --format=%D`) as $n)
+{
+  $nnodes += $n;
+}
 $srunout = `srun --job-name='r$revision' --overcommit -N$nnodes --chdir=/tmp --output=none --batch $pwd/installrevision.sh $revision $source 2>&1`;
 if (ereg ("jobid ([0-9]+) submitted", $srunout, $regs))
 {
   $depends = "--dependency=$regs[1]";
 }
-echo "<p>Submitted install job $regs[1] ($srunout)\n";
+echo "<p>Submitted install job $regs[1]\n";
 
 $revisiondir = "/usr/local/polony-tools/$revision";
 
