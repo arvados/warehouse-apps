@@ -1,7 +1,7 @@
 <?php
 
 header("Content-type: text/plain");
-set_time_limit(120);
+set_time_limit($_REQUEST['recompute_all_md5'] ? 86400 : 120);
 
 require_once 'inc-mogilefs.php';
 $domain = isset($_REQUEST['domain'])? $_REQUEST['domain'] : "default";
