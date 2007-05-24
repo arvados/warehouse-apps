@@ -34,7 +34,7 @@ while($row = mysql_fetch_row($q))
     {
       $md5 = "oooooooooooooooooooooooooooooooo";
     }
-  if ("$md5" == "")
+  if ("$md5" == "" || $_REQUEST['recompute_all_md5'])
     {
       $url = $devpath."/"
 	.substr($fid,0,1)."/"
