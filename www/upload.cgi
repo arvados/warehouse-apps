@@ -13,7 +13,7 @@ my $boundary;
 my $lastboundary;
 my $mogc;
 my %part;
-my %param = (domain => $mogilefs_default_domain);
+my %param = (domain => $main::mogilefs_default_domain);
 
 my $dbh = DBI->connect($main::mogilefs_dsn,
 		       $main::mogilefs_username,
@@ -40,6 +40,13 @@ while(<>)
 		$mogc = MogileFS::Client->new (domain => $param{domain},
 					       hosts => [@trackers]);
 	    }
+	    $dbh->do("delete md5 from md5,file,domain"
+		     . " where md5.fid=file.fid"
+		     . " and file.dmid=domain.dmid"
+		     . " and file.dkey="
+		     . $dbh->quote($part{filename})
+		     . " and domain.namespace="
+		     . $dbh->quote($param{domain}));
 	    if ($mogc->store_content($part{filename},
 				     $param{class},
 				     $part{content})
@@ -47,7 +54,7 @@ while(<>)
 	    {
 		print STDERR "$part{filename} $param{class} $param{domain}\n";
 		my $md5 = md5_hex($part{content});
-		$dbh->do("insert delayed into md5 select fid, "
+		$dbh->do("replace delayed into md5 select fid, "
 			 . $dbh->quote($md5)
 			 . " from file"
 			 . " left join domain on domain.dmid=file.dmid"
