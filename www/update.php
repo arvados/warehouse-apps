@@ -2,6 +2,7 @@
 
 require_once '/etc/polony-tools/config.php';
 require_once 'functions.php';
+set_time_limit(600);
 
 mysql_connect($mogilefs_mysql_host,
 	      $mogilefs_mysql_username,
