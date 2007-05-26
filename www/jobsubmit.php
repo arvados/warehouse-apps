@@ -73,59 +73,29 @@ if (ereg ("jobid ([0-9]+) submitted", $srunout, $regs))
 {
   $depends = "--dependency=$regs[1]";
 }
-echo "<p>Submitted install job $regs[1]\n";
+echo "<p>Submitted install job $regs[1].\n";
 
 $revisiondir = "/usr/local/polony-tools/$revision";
-
-foreach (split ("\n", $_POST[knobs]) as $knob)
-{
-  $knob = trim($knob);
-  putenv("USER_".$knob);
-}
-putenv ("REVISION=".$revision);
-putenv ("REVISIONDIR=".$revisiondir);
-putenv ("BASEORDER=".join(",", $_POST[cid]));
-
-putenv ("OUTPUT_TRACKERS=".join(",",$mogilefs_trackers));
-putenv ("OUTPUT_DOMAIN=reports");
-putenv ("OUTPUT_CLASS=reports");
-putenv ("DATASETDIR=mogilefs:///$dsid");
-putenv ("MOGILEFS_DOMAIN=images");
-putenv ("MOGILEFS_TRACKERS=".join(",",$mogilefs_trackers));
-putenv ("PATH=$revisiondir/src/align-call:$revisiondir/install/bin:".getenv("PATH"));
-
-echo "<p>Submitting jobs.\n<p>";
-flush();
 
 for ($f=1; $f<=$nframes; $f++)
 {
   $fid = sprintf ("%04d", $f);
   $dkey_stdout="/$rid/frame/$fid";
   $dkey_stderr="/$rid/frame/$fid.stderr";
-  putenv("FRAMENUMBER=$fid");
-  putenv("OUTPUT_KEY=$dkey_stdout");
   $jobname = escapeshellarg("$rid:$fid:$dsid");
   $cmd = "srun --job-name=$jobname $depends --batch --chdir=$revisiondir --output=/tmp/stdout --error=/tmp/stderr `pwd`/../align-call/oneframe.sh";
-  $cmdout = `$cmd 2>&1`;
-  ereg("srun: jobid ([0-9]+) submitted", $cmdout, $regs);
-  $sjid = $regs[1];
   mysql_query ("insert into job set
  jid=null,
- sjid='$sjid',
  rid='$rid',
  fid='$fid',
  dkey_stdout='$dkey_stdout',
  dkey_stderr='$dkey_stderr',
- cmd='".addslashes($cmd)."',
- submittime=now()");
-  echo ".";
-  if ($f % 80 == 0) echo "<br>\n";
-  flush();
+ cmd='".addslashes($cmd)."'");
 }
 
 ?>
 
-<p>Finished.
+<p>Queued <?=$nframes?> jobs for submission to slurm.
 <p>You may proceed to the
 <a href="jobstatus.php?rid=<?=$rid?>">job <?=$rid?> status</a>
 page.
