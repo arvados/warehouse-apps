@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -e
-
 frame=${1-$FRAMENUMBER}
 
 export FOCUSPIXELS="${USER_FOCUSPIXELS-$FOCUSPIXELS}"
@@ -14,10 +12,12 @@ export SEGMENT_PROGRAM="${SEGMENT_PROGRAM-cat}"
 export DIRORDER=`echo "$BASEORDER" | tr "," " "`
 
 (
+set -e
 fn=$((1$frame-10000))
 echo >&2 "# frame $frame hostname `hostname`"
 imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn-1)*4+3)) $((($fn-1)*4+4))`
 (
+	set -e
 	rawify.pl $IMAGEDIR/999/WL_$frame
 	for dir in $DIRORDER
 	do
@@ -37,9 +37,10 @@ imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn
  undef $/;
  $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
                                hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
- $mogc->store_content($ENV{OUTPUT_KEY}, $ENV{OUTPUT_CLASS}, <STDIN>);
+ $mogc->store_content($ENV{OUTPUT_KEY}, $ENV{OUTPUT_CLASS}, <STDIN>)
+ or die;
  '
-) 2>/tmp/stderr.$$
+) 2>/tmp/stderr.$$ || ( rm /tmp/stderr.$$; exit 1 )
 
 cat /tmp/stderr.$$ | perl -e '
  use MogileFS::Client;

@@ -25,7 +25,7 @@ if ($stem =~ s/^mogilefs:\/\///)
     }
     if (!@urls) {
 	print STDERR "No raw/tif/tif.gz, skipping $stem\n";
-	exit;
+	exit 1;
     }
     if (!defined($filter))
     {
