@@ -30,9 +30,11 @@ function mysql_one_value ($sql)
 function lock_or_exit ($lockname)
 {
   global $lockfile_prefix;
+  global $lock_or_exit_fp;
   $lockfile = $lockfile_prefix.$lockname;
   $lockfp = fopen($lockfile, "w+");
-  if (!flock($lockfp, LOCK_EX|LOCK_NB))
+  $lock_or_exit_fp = $lockfp;	// keep it in a global so php doesn't close it!
+  if (!$lockfp || !flock($lockfp, LOCK_EX|LOCK_NB))
     {
       fclose($lockfp);
       echo "Someone else has lock on $lockfile so I quit.\n";
