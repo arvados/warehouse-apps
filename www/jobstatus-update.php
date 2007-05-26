@@ -17,7 +17,7 @@ foreach (explode("\n", trim(`squeue|sort -n`)) as $sj)
   $squeue[$sj[0]] = $sj[4];
 }
 
-$q = mysql_query ("select * from job where finished is null order by sjid");
+$q = mysql_query ("select * from job where finished is null and sjid is not null order by sjid");
 while ($row = mysql_fetch_assoc ($q))
 {
   if (!isset($squeue[$row[sjid]]))
@@ -80,7 +80,7 @@ while ($row = mysql_fetch_assoc ($q))
   putenv ("DATASETDIR=mogilefs:///$row[dsid]");
   putenv ("MOGILEFS_DOMAIN=images");
   putenv ("MOGILEFS_TRACKERS=".join(",",$mogilefs_trackers));
-  putenv ("PATH=$revisiondir/src/align-call:$revisiondir/install/bin:".getenv("PATH"));
+  putenv ("PATH=$revisiondir/src/align-call:$revisiondir/install/bin:/bin:/usr/bin:/usr/local/bin");
   putenv("FRAMENUMBER=$row[fid]");
   putenv("OUTPUT_KEY=$row[dkey_stdout]");
   $cmdout = `$row[cmd] 2>&1`;
