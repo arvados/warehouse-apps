@@ -1,6 +1,9 @@
 #!/bin/sh
 
-frame=${1-$FRAMENUMBER}
+frame="$1"
+if [ -z "$frame" ]
+ frame="$FRAMENUMBER"
+fi
 
 export FOCUSPIXELS="${USER_FOCUSPIXELS-$FOCUSPIXELS}"
 export ALIGNWINDOW="${USER_ALIGNWINDOW-$ALIGNWINDOW}"
