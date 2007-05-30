@@ -24,7 +24,7 @@ mysql_query("create table if not exists report
  baseorder varchar(255),
  knobs text,
  index(dsid)
-)");
+) engine=innodb");
 
 mysql_query("create table if not exists job
 (
@@ -42,7 +42,7 @@ mysql_query("create table if not exists job
  attempts int default 0,
  index(rid),
  index(finished)
-)");
+) engine=innodb");
 
 $nframes = mysql_one_value ("select nframes from dataset where dsid='$dsid'");
 

@@ -36,7 +36,7 @@ create table
  dsid char(32) not null primary key,
  nframes int,
  ncycles int
-)");
+) engine=innodb");
   mysql_query("
 create table
  if not exists
@@ -48,7 +48,7 @@ create table
  nbytes bigint,
  exposure varchar(255),
  unique(dsid,cid)
-)");
+) engine=innodb");
   echo mysql_error();
 }
 

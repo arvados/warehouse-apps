@@ -22,7 +22,7 @@ mysql_query("create table if not exists md5
  fid int(10) unsigned not null,
  md5 char(32),
  primary key (fid)
-)");
+) engine=innodb");
 echo mysql_error();
 
 function mogilefs_getfid($dkey, $domain="default")
