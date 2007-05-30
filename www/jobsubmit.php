@@ -39,6 +39,7 @@ mysql_query("create table if not exists job
  cmd text,
  submittime datetime,
  finished datetime,
+ attempts int default 0,
  index(rid),
  index(finished)
 )");

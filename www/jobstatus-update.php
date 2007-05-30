@@ -38,7 +38,7 @@ while ($row = mysql_fetch_assoc ($q))
 	  $wc_stderr = trim(`wget -O - -q $stderr | wc`);
 	  $wc_stderr = "'$wc_stderr'";
 	}
-      if ($wc_stderr == "null" || $wc_stdout == "null")
+      if ($wc_stdout == "null" && $row[attempts] < 10)
 	{
 	  mysql_query("update job set
 		sjid=null,
@@ -86,7 +86,7 @@ while ($row = mysql_fetch_assoc ($q))
   $cmdout = `$row[cmd] 2>&1`;
   ereg("srun: jobid ([0-9]+) submitted", $cmdout, $regs);
   $sjid = $regs[1];
-  mysql_query ("update job set sjid='$sjid', submittime=now(), finished=null where jid='$row[jid]'");
+  mysql_query ("update job set sjid='$sjid', submittime=now(), finished=null, attempts=attempts+1 where jid='$row[jid]'");
   echo "Submitted slurm job jobid=$sjid for my job jid=$row[jid]\n";
 }
 
