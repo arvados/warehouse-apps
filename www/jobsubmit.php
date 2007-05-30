@@ -16,34 +16,6 @@ if (!($revision > 0))
     }
 }
 
-mysql_query("create table if not exists report
-(
- rid bigint not null auto_increment primary key,
- dsid char(32),
- revision int,
- baseorder varchar(255),
- knobs text,
- index(dsid)
-) engine=innodb");
-
-mysql_query("create table if not exists job
-(
- jid bigint not null auto_increment primary key,
- sjid bigint,
- rid bigint references report.rid,
- fid char(4),
- dkey_stdout char(32),
- dkey_stderr char(32),
- wc_stdout char(32),
- wc_stderr char(32),
- cmd text,
- submittime datetime,
- finished datetime,
- attempts int default 0,
- index(rid),
- index(finished)
-) engine=innodb");
-
 $nframes = mysql_one_value ("select nframes from dataset where dsid='$dsid'");
 
 echo "<p>Job will run on $nframes frames.\n";

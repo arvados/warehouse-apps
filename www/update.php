@@ -28,28 +28,6 @@ function dbsetup()
   echo mysql_error();
   mysql_select_db($analysis_mysql_database);
   echo mysql_error();
-  mysql_query("
-create table
- if not exists
- dataset
-(
- dsid char(32) not null primary key,
- nframes int,
- ncycles int
-) engine=innodb");
-  mysql_query("
-create table
- if not exists
- cycle
-(
- dsid char(32) not null,
- cid char(32) not null,
- nfiles int,
- nbytes bigint,
- exposure varchar(255),
- unique(dsid,cid)
-) engine=innodb");
-  echo mysql_error();
 }
 
 function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
