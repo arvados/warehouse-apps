@@ -31,24 +31,31 @@ imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn
 | find_objects-register_raw_pipe.pl \
 | raw_to_reads.pl \
 | sort \
-| (if [ -z "$SORTEDTAGS" ]; then cat; else join - $SORTEDTAGS; fi) \
-| perl -e '
- use MogileFS::Client;
- undef $/;
- $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
-                               hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
- $mogc->store_content($ENV{OUTPUT_KEY}, $ENV{OUTPUT_CLASS}, <STDIN>)
- or die;
- '
-) 2>/tmp/stderr.$$ || ( rm /tmp/stderr.$$; exit 1 )
+| (if [ -z "$SORTEDTAGS" ]; then cat; else join - $SORTEDTAGS; fi)
+) 2>/tmp/stderr.$$ >/tmp/stdout.$$ || ( rm -f /tmp/stderr.$$ /tmp/stdout.$$; exit 1 )
 
-cat /tmp/stderr.$$ | perl -e '
+# this is a really silly workaround; mogilefs can't store empty files
+if [ -z /tmp/stdout.$$ ]
+then
+  echo -n X >>/tmp/stdout.$$
+fi
+
+if cat /tmp/stderr.$$ | perl -e '
  use MogileFS::Client;
  undef $/;
  $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
                                hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
- $mogc->store_content($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, <STDIN>);
+ exit $mogc->store_content($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, <STDIN>);
  '
-rm /tmp/stderr.$$
+then
+  cat /tmp/stdout.$$ | perl -e '
+ use MogileFS::Client;
+ undef $/;
+ $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
+                               hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
+ exit $mogc->store_content($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, <STDIN>);
+ '
+fi
+rm -f /tmp/stderr.$$ /tmp/stdout.$$
 
 # arch-tag: Tom Clegg Thu Apr 12 19:41:24 PDT 2007 (align-call/oneframe.sh)
