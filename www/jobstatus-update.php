@@ -53,7 +53,7 @@ while ($row = mysql_fetch_assoc ($q))
 		wc_stdout=$wc_stdout,
 		wc_stderr=$wc_stderr
 		where jid='$row[jid]'");
-	  echo sprintf("%8d 32s %32s\n", $row[jid], $wc_stdout, $wc_stderr);
+	  echo sprintf("%8d %32s %32s\n", $row[jid], $wc_stdout, $wc_stderr);
 	}
     }
 }
