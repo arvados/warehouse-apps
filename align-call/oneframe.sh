@@ -49,7 +49,8 @@ if cat /tmp/stderr.$$ | perl -e '
  undef $/;
  $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
                                hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
- exit $mogc->store_content($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, <STDIN>);
+ $mogc->store_content($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, <STDIN>)
+ or exit 1;
  '
 then
   cat /tmp/stdout.$$ | perl -e '
@@ -57,7 +58,8 @@ then
  undef $/;
  $mogc = MogileFS::Client->new(domain => $ENV{OUTPUT_DOMAIN},
                                hosts => [split(",", $ENV{OUTPUT_TRACKERS})]);
- exit $mogc->store_content($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, <STDIN>);
+ $mogc->store_content($ENV{OUTPUT_KEY}.".stderr", $ENV{OUTPUT_CLASS}, <STDIN>)
+ or exit 1;
  '
 fi
 rm -f /tmp/stderr.$$ /tmp/stdout.$$
