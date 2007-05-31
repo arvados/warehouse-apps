@@ -22,7 +22,7 @@ while ($row = mysql_fetch_assoc ($q))
 {
   if (!isset($squeue[$row[sjid]]))
     {
-      $stdout = trim(`./moggetpaths $row[dkey_stdout]`);
+      $stdout = trim(`perl moggetpaths.pl $row[dkey_stdout]`);
       if ($stdout == "") { $wc_stdout = "null"; }
       else
 	{
@@ -30,7 +30,7 @@ while ($row = mysql_fetch_assoc ($q))
 	  $wc_stdout = trim(`wget -O - -q $stdout | wc`);
 	  $wc_stdout = "'$wc_stdout'";
 	}
-      $stderr = trim(`./moggetpaths $row[dkey_stderr]`);
+      $stderr = trim(`perl moggetpaths.pl $row[dkey_stderr]`);
       if ($stderr == "") { $wc_stderr = "null"; }
       else
 	{
