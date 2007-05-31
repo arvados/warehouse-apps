@@ -22,18 +22,18 @@ echo >&2 "# frame $frame hostname `hostname`"
 imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn-1)*4+3)) $((($fn-1)*4+4))`
 (
 	set -e
-	rawify.pl $IMAGEDIR/999/WL_$frame
+	perl -S rawify.pl $IMAGEDIR/999/WL_$frame
 	for dir in $DIRORDER
 	do
 		for imageno in $imagenos
 		do
-			rawify.pl $IMAGEDIR/$dir/SC_$imageno
+			perl -S rawify.pl $IMAGEDIR/$dir/SC_$imageno
 		done
 	done
 ) \
 | $SEGMENT_PROGRAM \
-| find_objects-register_raw_pipe.pl \
-| raw_to_reads.pl \
+| perl -S find_objects-register_raw_pipe.pl \
+| perl -S raw_to_reads.pl \
 | sort \
 | (if [ -z "$SORTEDTAGS" ]; then cat; else join - $SORTEDTAGS; fi)
 ) 2>/tmp/stderr.$$ >/tmp/stdout.$$ || ( rm -f /tmp/stderr.$$ /tmp/stdout.$$; exit 1 )
