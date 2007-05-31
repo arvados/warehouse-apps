@@ -72,7 +72,6 @@ while ($row = mysql_fetch_assoc ($q))
     }
   $revisiondir = "/usr/local/polony-tools/$row[revision]";
   putenv ("REVISION=".$row[revision]);
-  putenv ("REVISIONDIR=".$revisiondir);
   putenv ("BASEORDER=".$row[baseorder]);
   putenv ("OUTPUT_TRACKERS=".join(",",$mogilefs_trackers));
   putenv ("OUTPUT_DOMAIN=reports");
@@ -80,7 +79,6 @@ while ($row = mysql_fetch_assoc ($q))
   putenv ("DATASETDIR=mogilefs:///$row[dsid]");
   putenv ("MOGILEFS_DOMAIN=images");
   putenv ("MOGILEFS_TRACKERS=".join(",",$mogilefs_trackers));
-  putenv ("PATH=$revisiondir/src/align-call:$revisiondir/install/bin:/bin:/usr/bin:/usr/local/bin");
   putenv("FRAMENUMBER=$row[fid]");
   putenv("OUTPUT_KEY=$row[dkey_stdout]");
   $cmdout = `$row[cmd] 2>&1`;
