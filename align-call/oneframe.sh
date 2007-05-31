@@ -2,6 +2,7 @@
 
 frame="$1"
 if [ -z "$frame" ]
+then
  frame="$FRAMENUMBER"
 fi
 
