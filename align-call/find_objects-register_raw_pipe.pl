@@ -1,5 +1,7 @@
 #!/usr/bin/perl -w
 
+#adding a comment here -- AWZ
+
 use strict; 
 
 my $PIXELS = 1000 * 1000; 
