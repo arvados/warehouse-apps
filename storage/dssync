@@ -135,13 +135,13 @@ upload();			# must flush here before chdir or paths to
 if ($opts{v}) { warn "Checking local files.\n"; }
 
 my %hybrid;
-foreach (split ($opts{hybrid}))
+foreach (split (",", $opts{hybrid}))
 {
     $hybrid{$_} = 1;
 }
 
 my %include;
-foreach (split ($opts{include}))
+foreach (split (",", $opts{include}))
 {
     $include{$_} = 1;
 }
