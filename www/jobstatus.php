@@ -87,11 +87,12 @@ REVISION=<?=htmlspecialchars(mysql_one_value("select revision from report where 
   <td>stdout#lines</td>
   <td>stderr#lines</td>
   <td>seconds</td>
+  <td>attempts</td>
 </tr>
 <?php
 
 if (!$where) $where = "where 1=1";
-$q = mysql_query("select *, floor(finished-submittime) sec
+$q = mysql_query("select *, floor(finished-submittime) sec, attempts
  from job
  $where
  and finished is not null
@@ -105,6 +106,7 @@ while ($row = mysql_fetch_assoc($q))
       echo "<td><a href=\"get.php?domain=reports&dkey=".htmlspecialchars($row[dkey_stdout])."\">".ereg_replace(" .*","",$row[wc_stdout])."</a></td>\n";
       echo "<td><a href=\"get.php?domain=reports&dkey=".htmlspecialchars($row[dkey_stderr])."\">".ereg_replace(" .*","",$row[wc_stderr])."</a></td>\n";
       echo "<td>$row[sec]</td>\n";
+      echo "<td>$row[attempts]</td>\n";
     }
   echo "</tr>\n";
 }
