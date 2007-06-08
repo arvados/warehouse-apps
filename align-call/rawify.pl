@@ -27,15 +27,17 @@ if ($stem =~ s/^mogilefs:\/\///)
 	print STDERR "No raw/tif/tif.gz, skipping $stem\n";
 	exit 1;
     }
-    if (!defined($filter))
-    {
-	exec("wget -q -O - $urls[0]");
-    }
-    for (1..4)
+    for (1..5)
     {
 	exit 0 if 0 == system ("wget -q -O - $urls[0] $filter");
+
+	# seg fault
 	next if (($? >> 8) != 0 && ($? & 127) == 11);
-	exit 1;
+
+	# any other error
+	sleep ($_ - 1) if $_ > 1;
+
+	push (@urls, shift @urls);
     }
     exit 1;
 }
