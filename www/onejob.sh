@@ -1,3 +1,3 @@
 #!/bin/sh
 
-exec ./align-call/oneframe.sh
+exec ./src/align-call/oneframe.sh
