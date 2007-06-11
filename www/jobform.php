@@ -45,7 +45,8 @@ if (!is_array($cid))
  <td valign=top>knobs</td>
  <td><textarea name="knobs" wrap="none" cols="80" rows="7">FOCUSPIXELS=
 ALIGNWINDOW=
-OBJECTTHRESHOLD=</textarea>
+OBJECTTHRESHOLD=
+IMAGEFILTER=none</textarea>
 </tr>
 
 <tr>

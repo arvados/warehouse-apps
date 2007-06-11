@@ -16,7 +16,7 @@ export OBJECTTHRESHOLD="${USER_OBJECTTHRESHOLD-$OBJECTTHRESHOLD}"
 
 export FOCUSPIXELS="${USER_FOCUSPIXELS-$FOCUSPIXELS}"
 export IMAGEDIR="${IMAGEDIR-$DATASETDIR/IMAGES/RAW}"
-export SEGMENT_PROGRAM="${SEGMENT_PROGRAM-cat}"
+export IMAGEFILTER="${IMAGEFILTER-none}"
 export DIRORDER=`echo "$BASEORDER" | tr "," " "`
 
 (
@@ -35,7 +35,7 @@ imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn
 		done
 	done
 ) \
-| $SEGMENT_PROGRAM \
+| perl -S filter-$IMAGEFILTER.pl \
 | perl -S find_objects-register_raw_pipe.pl \
 | perl -S raw_to_reads.pl \
 | sort \
