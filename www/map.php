@@ -10,7 +10,7 @@ putenv("MOGILEFS_TRACKERS=".join(",", $mogilefs_trackers));
 $rid = $_REQUEST[rid];
 $dsid = mysql_one_value ("select dsid from report where rid='$rid'");
 
-$positions = explode ("\n", file_get_contents (`perl moggetpaths.pl /$dsid/IMAGES/RAW/positions`));
+$positions = explode ("\n", file_get_contents (trim(`perl moggetpaths.pl /$dsid/IMAGES/RAW/positions`)));
 
 $xy = array();
 foreach ($positions as $p)

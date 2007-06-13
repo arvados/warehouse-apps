@@ -9,5 +9,20 @@ my @trackers = split (",", $ENV{MOGILEFS_TRACKERS});
 my $domain = $ENV{MOGILEFS_DOMAIN};
 my $mogc = MogileFS::Client->new (domain => $domain,
 				  hosts => [@trackers]);
-my @urls = $mogc->get_paths($ARGV[0]);
-print $urls[0];
+if (@ARGV)
+{
+    foreach (@ARGV)
+    {
+	my @urls = $mogc->get_paths($_);
+	print "$urls[0]\n";
+    }
+}
+else
+{
+    while (<>)
+    {
+	chomp;
+	my @urls = $mogc->get_paths($_);
+	print "$urls[0]\n";
+    }
+}

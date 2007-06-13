@@ -65,9 +65,9 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
 	{
 	  putenv("MOGILEFS_DOMAIN=images");
 	  $key = escapeshellarg("/".$dataset."/IMAGES/RAW/cycles");
-	  $cycles = file_get_contents(`perl moggetpaths.pl $key`);
+	  $cycles = file_get_contents(trim(`perl moggetpaths.pl $key`));
 	  $key = escapeshellarg("/".$dataset."/IMAGES/RAW/positions");
-	  $positions = file_get_contents(`perl moggetpaths.pl $key`);
+	  $positions = file_get_contents(trim(`perl moggetpaths.pl $key`));
 	  $nframes = 0;
 	  foreach (explode("\n", $positions) as $p)
 	    {
