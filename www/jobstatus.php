@@ -78,7 +78,10 @@ REVISION=<?=htmlspecialchars(mysql_one_value("select revision from report where 
 
 <h2>blobs</h2>
 
-<p><a href="map.php?rid=<?=$rid?>"><b>Show readcount map</b></a>
+<ul>
+<li><a href="map.php?rid=<?=$rid?>">Show map</a>
+<li>Download all reads (frame# &lt;space&gt; read &lt;lf&gt;): <a href="report-frameread.php?rid=<?=$rid?>">allreads-job<?=$rid?>.txt</a> or <a href="report-frameread.php?rid=<?=$rid?>&gz=1">allreads-job<?=$rid?>.txt.gz</a>
+</ul>
 
 <p>
 <table>

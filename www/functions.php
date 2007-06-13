@@ -42,7 +42,7 @@ function lock_or_exit ($lockname)
     }
 }
 
-function echo_file_get_contents ($filename)
+function echo_file_get_contents ($filename, $maxretries=0)
 {
   if ($fh = fopen ($filename, "r"))
     {
@@ -51,6 +51,10 @@ function echo_file_get_contents ($filename)
 	  echo $buf;
 	}
       fclose ($fh);
+    }
+  else if ($maxretries > 0)
+    {
+      echo_file_get_contents ($filename, $maxretries-1);
     }
 }
 
