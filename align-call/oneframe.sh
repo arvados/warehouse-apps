@@ -20,8 +20,6 @@ export DIRORDER=`echo "$BASEORDER" | tr "," " "`
 
 (
 set -e
-env >&2
-echo >&2
 fn=$((1$frame-10000))
 echo >&2 "# frame $frame hostname `hostname`"
 imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn-1)*4+3)) $((($fn-1)*4+4))`
