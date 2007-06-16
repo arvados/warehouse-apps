@@ -19,7 +19,7 @@ $dsid = $_REQUEST[dsid];
  <td align=right>id</td>
  <td colspan=2></td>
  <td align=right>#jobs</td>
- <td>finished</td>
+ <td>elapsed</td>
  <td>baseorder/knobs</td>
 </tr>
 <?php
@@ -27,6 +27,7 @@ $q = mysql_query("select
  report.*,
  count(jid) njobs,
  date_format(max(job.finished),'%Y-%m-%d %H:%i') last_finished,
+ unix_timestamp(max(job.finished))-unix_timestamp(min(job.submittime)) as elapsed,
  max(job.finished is null) unfinished
  from report
  left outer join job on report.rid=job.rid
@@ -44,7 +45,7 @@ while ($row = mysql_fetch_assoc ($q))
   if ($row[unfinished])
     echo "<td valign=top><b>".mysql_one_value("select count(*) from job where rid='$row[rid]' and finished is not null")."</b></td>";
   else
-    echo "<td valign=top>$row[last_finished]</td>";
+    echo "<td valign=top>$row[elapsed]</td>";
   echo "<td valign=top><code>".nl2br(htmlspecialchars(ereg_replace(","," ",$row[baseorder])."\n".$row[knobs]))."</code></td>";
   echo "</tr>\n";
 }
