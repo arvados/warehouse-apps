@@ -95,10 +95,9 @@ REVISION=<?=htmlspecialchars(mysql_one_value("select revision from report where 
 <?php
 
 if (!$where) $where = "where 1=1";
-$q = mysql_query("select *, floor(finished-submittime) sec, attempts
+$q = mysql_query("select *, floor(unix_timestamp(finished)-unix_timestamp(submittime)) sec, attempts
  from job
  $where
- and finished is not null
  order by fid");
 while ($row = mysql_fetch_assoc($q))
 {
