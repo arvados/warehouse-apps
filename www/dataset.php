@@ -96,7 +96,7 @@ while ($cycle = mysql_fetch_assoc ($q))
     ."</tr>\n";
   $totalbytes += $cycle[nbytes];
 }
-echo "<tr><td/><td/><td/><td>".addcommas($totalbytes)."</td></tr>\n";
+echo "<tr><td/><td/><td/><td/><td>".addcommas($totalbytes)."</td></tr>\n";
 ?>
 
 </table>
