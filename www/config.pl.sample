@@ -1,5 +1,15 @@
+@main::mogilefs_trackers = ("localhost:6001");
 $main::mogilefs_default_domain = "images";
+$main::mogilefs_default_class = "single";
 $main::mogilefs_dsn = "DBI:mysql:database=mogilefs;host=localhost";
 $main::mogilefs_username = "mogile";
 $main::mogilefs_password = "secXret";
+
+@main::copyto_mogilefs_trackers = ("remotehost:6001");
+$main::copyto_mogilefs_default_domain = "images";
+$main::copyto_mogilefs_default_class = "single";
+$main::copyto_mogilefs_dsn = "DBI:mysql:database=mogilefs;host=remotehost";
+$main::copyto_mogilefs_username = "mogile";
+$main::copyto_mogilefs_password = "secXret";
+
 1;
