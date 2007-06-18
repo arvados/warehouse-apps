@@ -71,7 +71,7 @@ To submit a job, select cycles, then press <input type=submit value="Next"> to s
 <?php
 $totalbytes = 0;
 $q = mysql_query("select *,
- if(nframes*4=nfiles,'Y','-') iscomplete
+ if(nframes*4=nfiles or nframes=nfiles,'Y','-') iscomplete
  from cycle
  left join dataset on cycle.dsid=dataset.dsid
  where cycle.dsid='$dsid'
