@@ -21,7 +21,9 @@ $q = mysql_query("select
      left join host on host.hostid=device.hostid
      left outer join md5 on md5.fid=file.fid
      where dmid='$dmid'
-     and dkey like '$keyprefix%'");
+     and dkey like '$keyprefix%'
+     and file_on.fid is not null
+     order by dkey");
 echo mysql_error();
 $lastfid = -1;
 while($row = mysql_fetch_row($q))
