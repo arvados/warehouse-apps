@@ -8,9 +8,9 @@ my $RECORDSIZE = 2 * $PIXELS;
 
 open GZIP, "| gzip | wc -c >&2";
 
-#skip background image 
+#skip brightfield image 
 read(STDIN, my $raw, $RECORDSIZE) == $RECORDSIZE
-  or die "background must be $RECORDSIZE bytes\n";
+  or die "brightfield must be $RECORDSIZE bytes\n";
 print $raw;
 print GZIP $raw;
 
