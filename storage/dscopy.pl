@@ -42,11 +42,16 @@ my $copyto_dbh = DBI->connect($main::copyto_mogilefs_dsn,
 			      $main::copyto_mogilefs_username,
 			      $main::copyto_mogilefs_password);
 
-my $sth = $dbh->prepare("select dkey, md5 from file left join md5 on md5.fid=file.fid where dkey like ? order by dkey");
+my $sth = $dbh->prepare("select dkey, md5 from file left join md5 on md5.fid=file.fid left join file_on on file.fid=file_on.fid where dkey like ? and file_on.fid is not null group by dkey order by binary dkey");
 
-my $copyto_sth = $copyto_dbh->prepare("select dkey, md5 from file left join md5 on md5.fid=file.fid left join file_on on file.fid=file_on.fid where dkey like ? and file_on.fid is not null order by dkey");
+my $copyto_sth = $copyto_dbh->prepare("select dkey, md5 from file left join md5 on md5.fid=file.fid left join file_on on file.fid=file_on.fid where dkey like ? and file_on.fid is not null order by binary dkey");
 
+my $md5_sth = $copyto_dbh->prepare ("insert into md5 (fid, md5) select fid, ? from file left join domain on domain.dmid=file.dmid where dkey=? and domain.namespace=?");
+
+print "Getting local manifest.\n";
 $sth->execute ($keyprefix . "%") or die;
+
+print "Getting remote manifest.\n";
 $copyto_sth->execute ($keyprefix . "%") or die;
 
 my @row = $sth->fetchrow_array;
@@ -55,6 +60,7 @@ my @copyto_row = $copyto_sth->fetchrow_array;
 my $txbytes = 0;
 my $t0 = [gettimeofday];
 
+print "Comparing manifests.\n";
 while (@row)
 {
     # if @copyto_row already has this dkey, fetch next copyto_row
@@ -79,16 +85,23 @@ while (@row)
 
 	my ($dkey, $md5) = @row;
 	my $content = $mogc->get_file_data ($dkey);
-	my $ok = $copyto_mogc->store_content
-	    ($dkey,
-	     $main::copyto_mogilefs_default_class,
-	     $content);
+	my $ok = defined($content);
+	if (!$ok)
+	{
+	    printf ("\nempty!! %-50s ", $row[0]);
+	}
+	if ($ok)
+	{
+	    $ok = $copyto_mogc->store_content
+		($dkey,
+		 $main::copyto_mogilefs_default_class,
+		 $content);
+	}
 	if ($ok)
 	{
 	    $txbytes += length $$content;
 	    if (!$opts{quick})
 	    {
-		my $md5_sth = $copyto_dbh->prepare ("insert delayed into md5 (fid, md5) select fid, ? from file left join domain on domain.dmid=file.dmid where dkey=? and domain.namespace=?");
 		$md5_sth->execute ($md5, $dkey, $main::copyto_mogilefs_default_domain);
 	    }
 	}
@@ -96,7 +109,7 @@ while (@row)
 	printf ("%0.2f MB/s\n", $speed);
 	if (!$ok)
 	{
-	    printf ("FAIL    %-32s %s\n", $row[1], $row[0]);
+	    printf ("FAIL    %-32s\n", $row[0]);
 	}
     }
 
