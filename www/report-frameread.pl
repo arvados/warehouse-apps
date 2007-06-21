@@ -28,7 +28,8 @@ FRAME: for (my $f=1; $f<=$nframes; $f++)
 	my $res = $ua->request($req);
 	if ($res->is_success) {
 	    $_ = $res->content;
-	    s/^(\S+).*$/$fid $1/gm;
+	    s/^(\S*\s\S*\s\S*).*$/$1/gm;
+	    s/^/$fid /gm;
 	    print;
 	    next FRAME;
 	}
