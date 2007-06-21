@@ -37,7 +37,7 @@ imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn
 | perl -S filter-$IMAGEFILTER.pl \
 | perl -S find_objects-register_raw_pipe.pl \
 | perl -S raw_to_reads.pl \
-| sort \
+| sort -n \
 | (if [ -z "$SORTEDTAGS" ]; then cat; else join - $SORTEDTAGS; fi)
 ) 2>/tmp/stderr.$$ >/tmp/stdout.$$ || ( rm -f /tmp/stderr.$$ /tmp/stdout.$$; exit 1 )
 
