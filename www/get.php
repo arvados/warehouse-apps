@@ -8,7 +8,8 @@ putenv("MOGILEFS_TRACKERS=".join(",", $mogilefs_trackers));
 
 unset($filter);
 
-$filename = ereg_replace ("/", "-", ereg_replace("^/", "", $_REQUEST[dkey]));
+$dkey = $_REQUEST[dkey];
+$filename = ereg_replace ("/", "-", ereg_replace("^/", "", $dkey));
 if ($_REQUEST[domain] == 'reports')
 {
   header("Content-Disposition: attachment; filename=\"$filename\"");
@@ -16,19 +17,34 @@ if ($_REQUEST[domain] == 'reports')
 }
 else if ($_REQUEST[domain] == 'images')
 {
-  if (ereg ("/(positions|cycles)$", $_REQUEST[dkey]))
+  if (ereg ("/(positions|cycles)$", $dkey))
     {
       header ("Content-type: text/plain");
     }
   else if ($_REQUEST[format] == 'png')
     {
-      $filter = "convert tif:- png:-";
+      if (ereg ("\.raw$", $dkey))
+	{
+	  $filter = "convert -endian lsb -size 1000x1000 gray:- png:-";
+	}
+      else if (ereg ("\.raw.gz$", $dkey))
+	{
+	  $filter = "zcat | convert -endian lsb -size 1000x1000 gray:- png:-";
+	}
+      else if (ereg ("\.tif$", $dkey))
+	{
+	  $filter = "convert tif:- png:-";
+	}
+      else if (ereg ("\.tif.gz$", $dkey))
+	{
+	  $filter = "zcat | convert tif:- png:-";
+	}
       header ("Content-type: image/png");
     }
   else
     {
       header("Content-Disposition: attachment; filename=\"$filename\"");
-      header ("Content-type: image/tiff");
+      header ("Content-type: application/octet-stream");
     }
 }
 else
@@ -41,7 +57,7 @@ $safekey = escapeshellarg($_REQUEST[dkey]);
 if ($filter)
 {
   $url = escapeshellarg (trim (`perl moggetpaths.pl $safekey`));
-  passthru ("wget -O - $url | $filter");
+  passthru ("wget -q -O - $url | $filter");
 }
 else
 {
