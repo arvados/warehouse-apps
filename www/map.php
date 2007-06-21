@@ -8,11 +8,15 @@ putenv("MOGILEFS_DOMAIN=images");
 putenv("MOGILEFS_TRACKERS=".join(",", $mogilefs_trackers));
 
 $rid = $_REQUEST[rid];
-$dsid = mysql_one_value ("select dsid from report where rid='$rid'");
+if ($rid)
+  $dsid = mysql_one_value ("select dsid from report where rid='$rid'");
+else
+  $dsid = $_REQUEST[dsid];
 
 $positions = explode ("\n", file_get_contents (trim(`perl moggetpaths.pl /$dsid/IMAGES/RAW/positions`)));
 
 $xy = array();
+$nframes = 0;
 foreach ($positions as $p)
 {
   $p = ereg_replace ("[ \t]+", " ", $p);
@@ -20,6 +24,8 @@ foreach ($positions as $p)
   if (ereg ("^0*([0-9]+)$", $p[0], $regs))
     {
       $framexy[$regs[1]] = array ($p[1], $p[2]);
+      if ($nframes < $regs[1])
+	$nframes = $regs[1];
     }
 }
 
@@ -74,19 +80,10 @@ $datacolor_light = imagecolorallocate ($i, 0xaa, 0xaa, 0xff);
 $datacolor_dark = imagecolorallocate ($i, 0x77, 0x77, 0xff);
 $legendcolor = imagecolorallocate ($i, 0, 0, 0);
 
-$zmax = mysql_one_value ("select max(cast(substring(wc_stdout,1,locate(' ',wc_stdout)) as unsigned)) from job where rid='$rid'");
-if ($zmax == 0) $zmax = 9999999;
-
-$q = mysql_query ("select fid, wc_stdout from job where rid='$rid'");
-while ($row = mysql_fetch_row ($q))
+for ($fid=1; $fid<$nframes; $fid++)
 {
-  list ($fid, $z) = $row;
-  $fid = ereg_replace("^0+", "", $fid);
-  $z = ereg_replace(" .*", "", $z);
   $x = $framexy[$fid+0][0];
   $y = $framexy[$fid+0][1];
-  //  imagestring ($i, 3, 0, 10*$fid, "$fid $x $y $z $zmax", $gridcolor);
-
   $x -= $xmin;
   $y -= $ymin;
   $x2 = $x + $framesize;
@@ -95,20 +92,50 @@ while ($row = mysql_fetch_row ($q))
   $y *= $scale;
   $x2 *= $scale;
   $y2 *= $scale;
-
-  //  imagestring ($i, 3, 512, 10*$fid, "$fid $x $y $x2 $y2 $z $zmax", $gridcolor);
   imagerectangle ($i, $x, $y, $x2, $y2, $gridcolor);
-  $radius = ceil($framesize*$scale*sqrt($z/$zmax));
-  if ($radius > 0)
-    {
-      imagefilledellipse ($i, ($x+$x2)/2, ($y+$y2)/2, $radius, $radius,
-			  $datacolor_light);
-      imageellipse ($i, ($x+$x2)/2, ($y+$y2)/2, $radius, $radius,
-		    $datacolor_dark);
-    }
 }
 
-imagestring ($i, 3, $framesize*$scale/2, $h+2, "max(z) = $zmax", $legendcolor);
+if ($rid)
+{
+  $zmax = mysql_one_value ("select max(cast(substring(wc_stdout,1,locate(' ',wc_stdout)) as unsigned)) from job where rid='$rid'");
+  if ($zmax == 0) $zmax = 9999999;
+
+  $q = mysql_query ("select fid, wc_stdout from job where rid='$rid'");
+  while ($row = mysql_fetch_row ($q))
+    {
+      list ($fid, $z) = $row;
+      $fid = ereg_replace("^0+", "", $fid);
+      $z = ereg_replace(" .*", "", $z);
+      $x = $framexy[$fid+0][0];
+      $y = $framexy[$fid+0][1];
+      //  imagestring ($i, 3, 0, 10*$fid, "$fid $x $y $z $zmax", $gridcolor);
+
+      $x -= $xmin;
+      $y -= $ymin;
+      $x2 = $x + $framesize;
+      $y2 = $y + $framesize;
+      $x *= $scale;
+      $y *= $scale;
+      $x2 *= $scale;
+      $y2 *= $scale;
+
+      //  imagestring ($i, 3, 512, 10*$fid, "$fid $x $y $x2 $y2 $z $zmax", $gridcolor);
+      $radius = ceil($framesize*$scale*sqrt($z/$zmax));
+      if ($radius > 0)
+	{
+	  imagefilledellipse ($i, ($x+$x2)/2, ($y+$y2)/2, $radius, $radius,
+			      $datacolor_light);
+	  imageellipse ($i, ($x+$x2)/2, ($y+$y2)/2, $radius, $radius,
+			$datacolor_dark);
+	}
+    }
+
+  imagestring ($i, 3,
+	       $framesize*$scale/2, $h+2,
+	       "max(z) = $zmax",
+	       $legendcolor);
+}
+
 imagerectangle ($i, 0, 0, $w-1, $h-1, $gridcolor);
 header ("Content-type: image/png");
 imagepng ($i);

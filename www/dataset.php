@@ -12,6 +12,12 @@ $dsid = $_REQUEST[dsid];
 <body>
 <h1><a href="./"><?=htmlspecialchars(trim(`hostname`))?></a> / <?=htmlspecialchars($dsid)?></h1>
 
+<h2>images</h2>
+
+<p><a href="map.php?dsid=<?=$dsid?>">frame map</a> (not clickable yet)
+
+<p><a href="show-framelist.php?dsid=<?=$dsid?>">frame list</a> (clickable to view raw images)
+
 <h2>reports</h2>
 
 <table>
