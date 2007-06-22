@@ -88,7 +88,7 @@ while ($cycle = mysql_fetch_assoc ($q))
   $exposure = ereg_replace("^[^,]*,[^,]*,", "", $exposure);
   $exposure = ereg_replace(",", "</td><td align=right>", $exposure);
   echo "<tr><td>";
-  if ($cycle[iscomplete] == 'Y')
+  if ($cycle[nfiles] == $cycle[nframes]*4)
     {
       echo "<input type=checkbox name=\"cid[]\" value=\""
 	.htmlspecialchars($cycle[cid])
