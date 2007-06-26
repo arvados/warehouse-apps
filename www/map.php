@@ -15,7 +15,7 @@ else
 
 $positions = explode ("\n", file_get_contents (trim(`perl moggetpaths.pl /$dsid/IMAGES/RAW/positions`)));
 
-$xy = array();
+$framexy = array();
 $nframes = 0;
 foreach ($positions as $p)
 {
