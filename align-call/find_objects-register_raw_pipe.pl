@@ -7,10 +7,15 @@ use strict;
 my $PIXELS = 1000 * 1000;
 my $RECORDSIZE = 2 * $PIXELS;
 
-my $num_raw_expected = $ENV{DIRORDER} =~ tr/ / /;
-$num_raw_expected = ($num_raw_expected + 1) * 4; # flor images
-$num_raw_expected++;		# bright field
-if (exists($ENV{HYBRIDDIRORDER})
+my $num_raw_expected = 1;	# bright field
+if (exists($ENV{DIRORDER})	# flor images
+    &&
+    $ENV{DIRORDER} =~ /\S/)
+{
+    $num_raw_expected += (1 + ($ENV{DIRORDER} =~ tr/ / /)) * 4;
+    $num_raw_expected ++;
+}
+if (exists($ENV{HYBRIDDIRORDER})# hybrid images
     &&
     $ENV{HYBRIDDIRORDER} =~ /\S/)
 {
