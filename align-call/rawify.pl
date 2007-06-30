@@ -8,11 +8,29 @@ my $localfs = 1;
 my $fetchprogram;
 my ($stem) = @ARGV;
 
+my $attempts = 0;
 if ($stem =~ s/^mogilefs:\/\///)
 {
-    my $mogc = MogileFS::Client->new
-	(domain => $ENV{MOGILEFS_DOMAIN},
-	 hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+MOG:
+    ++$attempts;
+    eval {
+	$main::mogc = MogileFS::Client->new
+	    (domain => $ENV{MOGILEFS_DOMAIN},
+	     hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+    };
+    if ($@)
+    {
+	if ($attempts <= 5)
+	{
+	    sleep ($attempts);
+	    redo MOG;
+	}
+	else
+	{
+	    die "Giving up initializing MogileFS after $attempts attempts: $@";
+	}
+    }
+    my $mogc = $main::mogc;
     my $filter = "";
     my @urls = $mogc->get_paths ("$stem.raw");
     if (!@urls) {
@@ -24,8 +42,7 @@ if ($stem =~ s/^mogilefs:\/\///)
 	$filter = "| zcat | convert tif:- -endian lsb gray:-";
     }
     if (!@urls) {
-	print STDERR "No raw/tif/tif.gz, skipping $stem\n";
-	exit 1;
+	die "No raw/tif/tif.gz found for $stem";
     }
     for (1..5)
     {
@@ -39,7 +56,7 @@ if ($stem =~ s/^mogilefs:\/\///)
 
 	push (@urls, shift @urls);
     }
-    exit 1;
+    die "Giving up fetching @urls for $stem";
 }
 elsif ($stem =~ /:\/\//)
 {
