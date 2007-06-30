@@ -23,7 +23,7 @@ else if ($_REQUEST[domain] == 'images')
     }
   else if ($_REQUEST[format] == 'png')
     {
-      $convert = "convert -normalize";
+      $convert = "convert";
       if (ereg ("\.raw$", $dkey))
 	{
 	  $filter = "$convert -endian lsb -size 1000x1000 gray:- png:-";
