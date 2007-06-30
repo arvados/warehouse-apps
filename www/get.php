@@ -23,21 +23,22 @@ else if ($_REQUEST[domain] == 'images')
     }
   else if ($_REQUEST[format] == 'png')
     {
+      $convert = "convert -normalize";
       if (ereg ("\.raw$", $dkey))
 	{
-	  $filter = "convert -endian lsb -size 1000x1000 gray:- png:-";
+	  $filter = "$convert -endian lsb -size 1000x1000 gray:- png:-";
 	}
       else if (ereg ("\.raw.gz$", $dkey))
 	{
-	  $filter = "zcat | convert -endian lsb -size 1000x1000 gray:- png:-";
+	  $filter = "zcat | $convert -endian lsb -size 1000x1000 gray:- png:-";
 	}
       else if (ereg ("\.tif$", $dkey))
 	{
-	  $filter = "convert tif:- png:-";
+	  $filter = "$convert tif:- png:-";
 	}
       else if (ereg ("\.tif.gz$", $dkey))
 	{
-	  $filter = "zcat | convert tif:- png:-";
+	  $filter = "zcat | $convert tif:- png:-";
 	}
       header ("Content-type: image/png");
     }
