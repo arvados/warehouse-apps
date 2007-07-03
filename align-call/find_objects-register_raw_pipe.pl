@@ -13,14 +13,14 @@ if (exists($ENV{DIRORDER})	# flor images
     $ENV{DIRORDER} =~ /\S/)
 {
     $num_raw_expected += (1 + ($ENV{DIRORDER} =~ tr/ / /)) * 4;
-    $num_raw_expected ++;
+    #$num_raw_expected ++;  Why was this necessary? --AWZ
 }
 if (exists($ENV{HYBRIDDIRORDER})# hybrid images
     &&
     $ENV{HYBRIDDIRORDER} =~ /\S/)
 {
     $num_raw_expected += $ENV{HYBRIDDIRORDER} =~ tr/ / /;
-    $num_raw_expected ++;
+    #$num_raw_expected ++; Why was this necessary? --AWZ
 }
 
 my @raw;
