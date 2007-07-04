@@ -21,26 +21,48 @@ while (@ARGV && $ARGV[0] =~ /^--?([^-].*?)(=(.*))?$/)
     }
     shift @ARGV;
 }
+if (@ARGV != 2)
+{
+    my $remotelist
+	= join ("\n",
+		map (sprintf (" %-12s %s",
+			      $_,
+			      join (", ",
+				    @{$main::remote_lims{$_}{"trackers"}})),
+		     sort keys %main::remote_lims));
+    warn qq{
+$0:      Copy files from local cluster to remote cluster.
+usage:   $0 [options] keyprefix remote-lims-name
+options:
+ -v       verbose
+ --quick  don't update remote md5 table (not recommended)
+configured remote limses:
+$remotelist
+};
+    exit 1;
+}
 my $keyprefix = shift @ARGV;
+my $remotelimsname = shift @ARGV;
+my %remotelims = %{$main::remote_lims{$remotelimsname}};
 
 my @trackers = $main::mogilefs_trackers;
-my @copyto_trackers = $main::copyto_mogilefs_trackers;
+my @copyto_trackers = @{$remotelims{'trackers'}};
 
 my $mogc = MogileFS::Client->new
     (domain => $main::mogilefs_default_domain,
      hosts => [@main::mogilefs_trackers]);
 
 my $copyto_mogc = MogileFS::Client->new
-    (domain => $main::copyto_mogilefs_default_domain,
-     hosts => [@main::copyto_mogilefs_trackers]);
+    (domain => $remotelims{'default_domain'},
+     hosts => $remotelims{'trackers'});
 
 my $dbh = DBI->connect($main::mogilefs_dsn,
 		       $main::mogilefs_username,
 		       $main::mogilefs_password);
 
-my $copyto_dbh = DBI->connect($main::copyto_mogilefs_dsn,
-			      $main::copyto_mogilefs_username,
-			      $main::copyto_mogilefs_password);
+my $copyto_dbh = DBI->connect($remotelims{'dsn'},
+			      $remotelims{'username'},
+			      $remotelims{'password'});
 
 my $sth = $dbh->prepare("select dkey, md5 from file left join md5 on md5.fid=file.fid left join file_on on file.fid=file_on.fid where dkey like ? and file_on.fid is not null group by dkey order by binary dkey");
 
@@ -94,7 +116,7 @@ while (@row)
 	{
 	    $ok = $copyto_mogc->store_content
 		($dkey,
-		 $main::copyto_mogilefs_default_class,
+		 $remotelims{'default_class'},
 		 $content);
 	}
 	if ($ok)
@@ -102,7 +124,7 @@ while (@row)
 	    $txbytes += length $$content;
 	    if (!$opts{quick})
 	    {
-		$md5_sth->execute ($md5, $dkey, $main::copyto_mogilefs_default_domain);
+		$md5_sth->execute ($md5, $dkey, $remotelims{'default_domain'});
 	    }
 	}
 	my $speed = $txbytes / 1048576 / tv_interval($t0);

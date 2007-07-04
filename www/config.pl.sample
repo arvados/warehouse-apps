@@ -5,6 +5,22 @@ $main::mogilefs_dsn = "DBI:mysql:database=mogilefs;host=localhost";
 $main::mogilefs_username = "mogile";
 $main::mogilefs_password = "secXret";
 
+%main::remote_lims
+= ('lims1' => { 'trackers' => ['remotehost1a:6001'],
+		'default_domain' => 'images',
+		'default_class' => 'single',
+		'dsn' => 'DBI:mysql:database=mogilefs;host=remotedbhost-a',
+		'username' => 'mogile',
+		'password' => 'secXret' }
+   ,
+   'lims2' => { 'trackers' => ['remotehost2a:6001', 'remotehost2b:6001'],
+		'default_domain' => 'images',
+		'default_class' => 'single',
+		'dsn' => 'DBI:mysql:database=mogilefs;host=remotedbhost-b',
+		'username' => 'mogile',
+		'password' => 'secXret' }
+   );
+
 @main::copyto_mogilefs_trackers = ("remotehost:6001");
 $main::copyto_mogilefs_default_domain = "images";
 $main::copyto_mogilefs_default_class = "single";
