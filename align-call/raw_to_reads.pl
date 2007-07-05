@@ -89,6 +89,14 @@ for (my $object = 1; $object <= $#object_pixels ; $object++) {
 	    $max = "T";
 	}
 	$call .= $max;
+	
+	#report quality metric as part of read
+	my $A_bit = ($A > 0) ? 1 : 0;
+	my $C_bit = ($C > 0) ? 1 : 0;
+	my $G_bit = ($G > 0) ? 1 : 0;
+	my $T_bit = ($T > 0) ? 1 : 0;
+
+        $call .= sprintf "%X", $A_bit >>3 + $C_bit >>2 + $G_bit >> 1 + $T_bit; 
     }
     print "$call $object @intensities\n";
 }
