@@ -140,7 +140,7 @@ while (@row)
 		 hosts => [@main::mogilefs_trackers]);
 	    goto GETCONTENT;
 	}
-	my $ok = defined($content);
+	my $ok = defined($content) && length($content) > 0;
 	if (!$ok)
 	{
 	    printf ("\nempty!! %-50s ", $row[0]);
