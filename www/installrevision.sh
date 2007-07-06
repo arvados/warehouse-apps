@@ -15,7 +15,7 @@ then
   exit 0
 fi
 
-srun -N$SLURM_NNODES --job-name="r$1" --output="$dir".log sh -c '
+srun -N$SLURM_NNODES --job-name="r$1" --output="$dir".log --chdir=/tmp sh -c '
 rm -rf "$dir" && \
 mkdir "$dir" && \
 cd "$dir" && \
