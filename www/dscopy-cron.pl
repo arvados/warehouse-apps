@@ -11,7 +11,6 @@ while (my $filename = readdir TMP)
     if ($filename =~ /^dscopy:(.*)/)
     {
 	my ($dsid, $remote) = split (":", $1, 2);
-	print "$dsid $remote\n";
 	if (fork() == 0)
 	{
 	    close STDIN;
