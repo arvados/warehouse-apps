@@ -38,7 +38,7 @@ if (@ARGV != 2)
 {
     print STDERR <<EOF;
 usage:
-       $0 [options] keyprefix http://host/path/to/uploadscripts
+       $0 [options] dataset-name http://host/path/to/uploadscripts
 options:
        --lockfile=/path/to/lockfile            default = $defopts{lockfile}
        --localdir=/path/to/images/raw          default = $defopts{localdir}
@@ -66,10 +66,20 @@ if (!open (LOCKFILE, ">>$opts{lockfile}")
     die "$0: Couldn't lock $opts{lockfile} -- exiting.\n";
 }
 
-my ($keyprefix, $remote) = @ARGV;
-for ($keyprefix)
+my $keyprefix;
+my ($dsid, $remote) = @ARGV;
+if ($dsid =~ m|^/([^/]+)/IMAGES/RAW$|)
 {
-  s|/*$||;
+    $keyprefix = $dsid;
+    $dsid = $1;
+}
+elsif ($dsid =~ m|/|)
+{
+    die "$0: Invalid dataset name \"$dsid\" -- shouldn't contain slashes.\n";
+}
+else
+{
+    $keyprefix = "/$dsid/IMAGES/RAW";
 }
 
 if ($opts{v}) { warn "Getting manifest.\n"; }
