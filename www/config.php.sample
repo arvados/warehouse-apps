@@ -1,6 +1,11 @@
 <?php
 
+# Sample config file for polony-tools
+
 $lockfile_prefix = "/var/lock/lock.polony-tools.";
+
+# Don't use localhost for trackers!  Use a name that resolves on the compute
+# nodes as well as the controller node.
 
 $mogilefs_trackers = array ("trackerhost1:6001","trackerhost2:6001");
 

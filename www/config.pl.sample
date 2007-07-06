@@ -1,3 +1,8 @@
+# Sample config file for polony-tools
+
+# Don't use localhost for trackers!  Use a name that resolves on the compute
+# nodes as well as the controller node.
+
 @main::mogilefs_trackers = ("localhost:6001");
 $main::mogilefs_default_domain = "images";
 $main::mogilefs_default_class = "single";
