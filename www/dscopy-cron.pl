@@ -17,7 +17,7 @@ while (my $filename = readdir TMP)
 	    close STDIN;
 	    open STDOUT, ">>$dir/$filename";
 	    open STDERR, ">&STDOUT";
-	    my $ret = system ("perl", "dscopy.pl", $dsid, $remote);
+	    my $ret = system ("perl", "dscopy.pl", "/".$dsid."/", $remote);
 	    if ($ret == 0)
 	    {
 #		unlink "$dir/$filename";
