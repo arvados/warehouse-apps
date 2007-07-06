@@ -49,6 +49,8 @@ while ($dataset = mysql_fetch_assoc ($q))
 echo "<tr><td/><td/><td/><td/><td/><td/><td>".addcommas($totalbytes)."</td></tr>\n";
 echo "</table>\n";
 
+echo "<p><a href=\"datasetcopy.php\">Copy datasets to other clusters...</a>\n";
+
 ?>
 
 <iframe src="installrevision.php" width=800 height=300></iframe>
