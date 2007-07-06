@@ -20,7 +20,7 @@ while (my $filename = readdir TMP)
 	    my $ret = system ("perl", "dscopy.pl", "/".$dsid."/", $remote);
 	    if ($ret == 0)
 	    {
-#		unlink "$dir/$filename";
+		unlink "$dir/$filename";
 	    }
 	    exit 0;
 	}
