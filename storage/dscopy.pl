@@ -5,6 +5,7 @@ use MogileFS::Client;
 use Digest::MD5 'md5_hex';
 use DBI;
 use Time::HiRes qw(gettimeofday tv_interval);
+use Fcntl ':flock';
 
 do '/etc/polony-tools/config.pl';
 
@@ -20,6 +21,11 @@ while (@ARGV && $ARGV[0] =~ /^--?([^-].*?)(=(.*))?$/)
 	$opts{$1} = 1;
     }
     shift @ARGV;
+}
+if (@ARGV == 1 && $ARGV[0] eq "list")
+{
+    print map("$_\n", keys %main::remote_lims);
+    exit 0;
 }
 if (@ARGV != 2)
 {
@@ -44,6 +50,20 @@ $remotelist
 my $keyprefix = shift @ARGV;
 my $remotelimsname = shift @ARGV;
 my %remotelims = %{$main::remote_lims{$remotelimsname}};
+
+my $lockfile = $keyprefix;
+$lockfile =~ s|^/||g;
+$lockfile =~ s|/.*||g;
+$lockfile = $main::lockfile_prefix . "dscopy.$remotelimsname.$lockfile";
+if (!open (LOCKFILE, ">>$lockfile")
+    ||
+    !flock (LOCKFILE, LOCK_EX | LOCK_NB))
+{
+    die "$0: Couldn't lock $lockfile -- exiting.\n";
+}
+$main::lockfile = $lockfile;
+$main::havelock = 1;
+# $SIG{"INT"} = \&unlock_and_exit;
 
 my @trackers = $main::mogilefs_trackers;
 my @copyto_trackers = @{$remotelims{'trackers'}};
@@ -82,6 +102,9 @@ my @copyto_row = $copyto_sth->fetchrow_array;
 my $txbytes = 0;
 my $t0 = [gettimeofday];
 
+my $attempt = 0;
+my $failed = 0;
+
 print "Comparing manifests.\n";
 while (@row)
 {
@@ -106,7 +129,17 @@ while (@row)
 	printf ("copy    %-50s ", $row[0]);
 
 	my ($dkey, $md5) = @row;
-	my $content = $mogc->get_file_data ($dkey);
+	$attempt = 0;
+      GETCONTENT:
+	my $content = eval { $mogc->get_file_data ($dkey); };
+	if ($@) {
+	    if ($attempt > 5) { die "$@"; }
+	    if ($attempt++ > 0) { sleep($attempt); }
+	    $mogc = MogileFS::Client->new
+		(domain => $main::mogilefs_default_domain,
+		 hosts => [@main::mogilefs_trackers]);
+	    goto GETCONTENT;
+	}
 	my $ok = defined($content);
 	if (!$ok)
 	{
@@ -114,10 +147,20 @@ while (@row)
 	}
 	if ($ok)
 	{
-	    $ok = $copyto_mogc->store_content
+	    $attempt = 0;
+	  PUTCONTENT:
+	    $ok = eval { $copyto_mogc->store_content
 		($dkey,
 		 $remotelims{'default_class'},
-		 $content);
+		 $content); };
+	    if ($@) {
+		if ($attempt > 5) { die "$@"; }
+		if ($attempt++ > 0) { sleep($attempt); }
+		$copyto_mogc = MogileFS::Client->new
+		    (domain => $remotelims{'default_domain'},
+		     hosts => $remotelims{'trackers'});
+		goto PUTCONTENT;
+	    }
 	}
 	if ($ok)
 	{
@@ -132,6 +175,7 @@ while (@row)
 	if (!$ok)
 	{
 	    printf ("FAIL    %-32s\n", $row[0]);
+	    $failed++;
 	}
     }
 
@@ -140,6 +184,30 @@ while (@row)
     {
 	@copyto_row = $copyto_sth->fetchrow_array;
     }
+}
+
+if ($failed)
+{
+    exit(1);
+}
+
+sub unlock_and_exit
+{
+    unlock();
+    exit(0);
+}
+
+sub unlock
+{
+    if (defined ($main::havelock))
+    {
+	unlink($main::lockfile);
+	undef $main::havelock;
+    }
+}
+
+END {
+    unlock();
 }
 
 # arch-tag: 7d3f35aa-1df0-11dc-9207-0015f2b17887
