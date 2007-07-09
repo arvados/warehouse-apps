@@ -13,7 +13,7 @@ if (@ARGV)
 {
     foreach (@ARGV)
     {
-	my @urls = $mogc->get_paths($_);
+	my @urls = $mogc->get_paths($_, 1);
 	print "$urls[0]\n";
     }
 }
@@ -22,7 +22,7 @@ else
     while (<>)
     {
 	chomp;
-	my @urls = $mogc->get_paths($_);
+	my @urls = $mogc->get_paths($_, 1);
 	print "$urls[0]\n";
     }
 }
