@@ -12,6 +12,11 @@ $main::mogilefs_dsn = "DBI:mysql:database=mogilefs;host=localhost";
 $main::mogilefs_username = "mogile";
 $main::mogilefs_password = "secXret";
 
+$main::analysis_dsn = "DBI:mysql:database=analysis;host=localhost";
+$main::analysis_mysql_database = "analysis";
+$main::analysis_mysql_username = "analysis";
+$main::analysis_mysql_password = "secXret";
+
 %main::remote_lims
 = ('lims1' => { 'trackers' => ['remotehost1a:6001'],
 		'default_domain' => 'images',
