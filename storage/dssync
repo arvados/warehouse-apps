@@ -180,16 +180,19 @@ foreach my $subdir (sort (readdir DIR))
 
     opendir SUBDIR, $subdir
 	or die "$0: Can't read dir $opts{localdir}/$subdir: $!\n";
-    my @raw = grep (/\.raw$/i, readdir SUBDIR);
+    my $ext = "raw";
+    my @raw = grep (/\.\Q$ext\E$/i, readdir SUBDIR);
     if (@raw == 0)
     {
 	rewinddir SUBDIR;
-	@raw = grep (/\.tif$/i, readdir SUBDIR);
+	$ext = "tif";
+	@raw = grep (/\.\Q$ext\E$/i, readdir SUBDIR);
     }
     if (@raw == 0)
     {
 	rewinddir SUBDIR;
-	@raw = grep (/\.tif.gz$/i, readdir SUBDIR);
+	$ext = "tif.gz";
+	@raw = grep (/\.\Q$ext\E$/i, readdir SUBDIR);
     }
     my $complete = (@raw == (($subdir eq '999' || defined($hybrid{$subdir}))
 			     ? $nframes : $nframes * 4));
@@ -206,7 +209,22 @@ foreach my $subdir (sort (readdir DIR))
     {
 	foreach my $file (@raw)
 	{
-	    maybe_upload ($keyprefix."/".$subdir."/".$file,
+	    my $fixed_file = $file;
+	    if ($fixed_file !~ /^(SC|WL)_\d\d\d\d\.$ext/)
+	    {
+		if ($fixed_file =~ /(\d\d\d\d)/)
+		{
+		    if ($subdir eq '999')
+		    {
+			$fixed_file = "WL_$1.$ext";
+		    }
+		    else
+		    {
+			$fixed_file = "SC_$1.$ext";
+		    }
+		}
+	    }
+	    maybe_upload ($keyprefix."/".$subdir."/".$fixed_file,
 			  $subdir."/".$file,
 			  $opts{quick});
 	}
