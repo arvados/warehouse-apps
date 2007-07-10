@@ -37,7 +37,7 @@ foreach ($positions as $p)
 
 for ($fid=1; $fid<$nframes; $fid++)
 {
-  echo "<a href=\"show-frame.php?dsid=$dsid&frame=$fid\">$fid</a>&nbsp; ";
+  echo "<a href=\"show-frame.cgi?dsid=$dsid&frame=$fid\">$fid</a>&nbsp; ";
 }
 
 ?>
