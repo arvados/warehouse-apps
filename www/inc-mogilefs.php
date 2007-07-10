@@ -1,20 +1,12 @@
 <?php
 
-$serverconf = file_get_contents("/etc/mogilefs/mogilefsd.conf");
-preg_match("/db_user *= *(\S+)/", $serverconf, $regs);
-$dbuser = $regs[1];
-preg_match("/db_pass *= *(\S+)/", $serverconf, $regs);
-$dbpass = $regs[1];
-preg_match("/db_dsn *= *(\S+)/", $serverconf, $regs);
-list($x,$x,$dbname,$x) = explode(":", $regs[1]);
+require_once '/etc/polony-tools/config.php';
 
-$clientconf = file_get_contents("/etc/mogilefs/mogilefs.conf");
-preg_match("/trackers *= *(\S+)/", $clientconf, $regs);
-$mogilefs_trackers = $regs[1];
-
-mysql_connect("localhost",$dbuser,$dbpass);
+mysql_connect($mogilefs_mysql_host,
+	      $mogilefs_mysql_username,
+	      $mogilefs_mysql_password);
 echo mysql_error();
-mysql_select_db($dbname);
+mysql_select_db($mogilefs_mysql_database);
 echo mysql_error();
 
 mysql_query("create table if not exists md5
