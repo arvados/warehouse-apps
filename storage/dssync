@@ -45,7 +45,7 @@ options:
        --cycles=/path/to/all_cycles.cfg        default = $defopts{cycles}
        --positions=/path/to/position_list.dat  default = $defopts{positions}
        --hybrid=subdir,subdir,subdir           default = $defopts{hybrid}
-       --include=subdir,subdir,subdir          default = $defopts{include}
+       --include=subdir,subdir,file            default = $defopts{include}
        --domain=mogilefsdomain        default = $defopts{domain}
        --class=mogilefsclass          default = $defopts{class}
        --batch=maxfilesperrequest     default = $defopts{batch}
@@ -139,10 +139,6 @@ if (!$opts{n})
     warn "Uploading cycle list.\n" if $opts{v};
     maybe_upload($keyprefix."/cycles", $opts{cycles}, 0);
 }
-upload();			# must flush here before chdir or paths to
-				# positions/cycles might not work any more
-
-if ($opts{v}) { warn "Checking local files.\n"; }
 
 my %hybrid;
 foreach (split (",", $opts{hybrid}))
@@ -154,7 +150,18 @@ my %include;
 foreach (split (",", $opts{include}))
 {
     $include{$_} = 1;
+    if (-e $_ && !-d $_)
+    {
+	my $basename = $_;
+	$basename =~ s|.*/||;
+	maybe_upload ("/$dsid/files/$basename", $_, 0);
+    }
 }
+
+upload();			# must flush here before chdir or paths to
+				# positions/cycles might not work any more
+
+if ($opts{v}) { warn "Checking local files.\n"; }
 
 my $uploadtotal = 0;
 my $queuesize = 0;
