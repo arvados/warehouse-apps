@@ -108,8 +108,12 @@ while ($row = mysql_fetch_assoc($q))
       echo "<td><a href=\"get.php?domain=reports&dkey=".htmlspecialchars($row[dkey_stdout])."\">".ereg_replace(" .*","",$row[wc_stdout])."</a></td>\n";
       echo "<td><a href=\"get.php?domain=reports&dkey=".htmlspecialchars($row[dkey_stderr])."\">".ereg_replace(" .*","",$row[wc_stderr])."</a></td>\n";
       echo "<td>$row[sec]</td>\n";
-      echo "<td>$row[attempts]</td>\n";
     }
+  else
+    {
+      echo "<td></td><td></td><td></td>";
+    }
+  echo "<td>$row[attempts]</td>\n";
   echo "</tr>\n";
 }
 
