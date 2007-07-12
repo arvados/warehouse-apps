@@ -56,7 +56,7 @@ for ($f=1; $f<=$nframes; $f++)
   $dkey_stdout="/$rid/frame/$fid";
   $dkey_stderr="/$rid/frame/$fid.stderr";
   $jobname = escapeshellarg("$rid:$fid:$dsid");
-  $cmd = "srun --job-name=$jobname $depends --batch --chdir=$revisiondir --output=/tmp/stdout --error=/tmp/stderr ./src/align-call/oneframe.sh";
+  $cmd = "srun --job-name=$jobname $depends --batch --chdir=$revisiondir --output=/tmp/stdout --error=/tmp/stderr ./src/mapreduce/mapwrapper.sh";
   mysql_query ("insert into job set
  jid=null,
  rid='$rid',
