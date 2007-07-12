@@ -17,7 +17,7 @@ then
 fi
 export MAPFUNCTION
 
-$REVISIONDIR/mapreduce/$MAPFUNCTION-map \
+$REVISIONDIR/src/mapreduce/$MAPFUNCTION-map \
  2>/tmp/stderr.$$ >/tmp/stdout.$$ \
  || ( rm -f /tmp/stderr.$$ /tmp/stdout.$$; exit 1 )
 
