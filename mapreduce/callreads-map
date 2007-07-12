@@ -1,0 +1,28 @@
+#!/bin/sh
+
+set -e
+
+export PATH="$REVISIONDIR/src/align-call:$PATH"
+
+frame="$FRAMENUMBER"
+fn=$((1$frame-10000))
+echo >&2 "# frame $frame hostname `hostname`"
+imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn-1)*4+3)) $((($fn-1)*4+4))`
+(
+	set -e
+	perl -S rawify.pl $IMAGEDIR/999/WL_$frame
+	for dir in $DIRORDER
+	do
+		for imageno in $imagenos
+		do
+			perl -S rawify.pl $IMAGEDIR/$dir/SC_$imageno
+		done
+	done
+) \
+| perl -S filter-$IMAGEFILTER.pl \
+| perl -S find_objects-register_raw_pipe.pl \
+| perl -S raw_to_reads.pl \
+| sort -n \
+| (if [ -z "$SORTEDTAGS" ]; then cat; else join - $SORTEDTAGS; fi)
+
+# arch-tag: a9de1c47-30b5-11dc-9207-0015f2b17887

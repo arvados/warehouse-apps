@@ -79,8 +79,8 @@ while ($row = mysql_fetch_assoc ($q))
   putenv ("DATASETDIR=mogilefs:///$row[dsid]");
   putenv ("MOGILEFS_DOMAIN=images");
   putenv ("MOGILEFS_TRACKERS=".join(",",$mogilefs_trackers));
-  putenv("FRAMENUMBER=$row[fid]");
-  putenv("OUTPUT_KEY=$row[dkey_stdout]");
+  putenv ("FRAMENUMBER=$row[fid]");
+  putenv ("OUTPUT_KEY=$row[dkey_stdout]");
   $cmdout = `$row[cmd] 2>&1`;
   ereg("srun: jobid ([0-9]+) submitted", $cmdout, $regs);
   $sjid = $regs[1];

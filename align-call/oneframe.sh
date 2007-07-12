@@ -1,14 +1,7 @@
 #!/bin/sh
 
-frame="$1"
-if [ -z "$frame" ]
-then
- frame="$FRAMENUMBER"
-fi
-
-
 export REVISIONDIR="/usr/local/polony-tools/$REVISION"
-export PATH="$REVISIONDIR/install/bin:$REVISIONDIR/src/align-call:$PATH"
+export PATH="$REVISIONDIR/install/bin:$PATH"
 
 export FOCUSPIXELS="${USER_FOCUSPIXELS-$FOCUSPIXELS}"
 export ALIGNWINDOW="${USER_ALIGNWINDOW-$ALIGNWINDOW}"
@@ -18,28 +11,15 @@ export IMAGEFILTER="${USER_IMAGEFILTER-none}"
 export IMAGEDIR="${IMAGEDIR-$DATASETDIR/IMAGES/RAW}"
 export DIRORDER=`echo "$BASEORDER" | tr "," " "`
 
-(
-set -e
-fn=$((1$frame-10000))
-echo >&2 "# frame $frame hostname `hostname`"
-imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn-1)*4+3)) $((($fn-1)*4+4))`
-(
-	set -e
-	perl -S rawify.pl $IMAGEDIR/999/WL_$frame
-	for dir in $DIRORDER
-	do
-		for imageno in $imagenos
-		do
-			perl -S rawify.pl $IMAGEDIR/$dir/SC_$imageno
-		done
-	done
-) \
-| perl -S filter-$IMAGEFILTER.pl \
-| perl -S find_objects-register_raw_pipe.pl \
-| perl -S raw_to_reads.pl \
-| sort -n \
-| (if [ -z "$SORTEDTAGS" ]; then cat; else join - $SORTEDTAGS; fi)
-) 2>/tmp/stderr.$$ >/tmp/stdout.$$ || ( rm -f /tmp/stderr.$$ /tmp/stdout.$$; exit 1 )
+if [ -z "$MAPFUNCTION" ]
+then
+  MAPFUNCTION=callreads
+fi
+export MAPFUNCTION
+
+$REVISIONDIR/mapreduce/$MAPFUNCTION-map \
+ 2>/tmp/stderr.$$ >/tmp/stdout.$$ \
+ || ( rm -f /tmp/stderr.$$ /tmp/stdout.$$; exit 1 )
 
 # this is a really silly workaround; mogilefs can't store empty files
 if [ -z /tmp/stdout.$$ ]
