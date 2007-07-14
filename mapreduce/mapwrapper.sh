@@ -11,6 +11,10 @@ export IMAGEFILTER="${USER_IMAGEFILTER-none}"
 export IMAGEDIR="${IMAGEDIR-$DATASETDIR/IMAGES/RAW}"
 export DIRORDER=`echo "$BASEORDER" | tr "," " "`
 
+if [ -z "$MAPFUNCTION" ]
+then
+  MAPFUNCTION=callreads
+fi
 export MAPFUNCTION
 
 $REVISIONDIR/src/mapreduce/$MAPFUNCTION-map \
