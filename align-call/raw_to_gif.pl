@@ -24,6 +24,7 @@ if (($num_raw-1) % 4 != 0) {
 my $num_flor = $num_raw-1;
 
 my @object_pixels;
+my @object_pos;
 
 my $count = 0;
 for (my $pos = 0; $pos < $PIXELS; $pos++) {
@@ -33,6 +34,7 @@ for (my $pos = 0; $pos < $PIXELS; $pos++) {
       $object_pixels[$object] .= pack "N", $pos;
       $count++;
     }
+    $object_pos[$object] .= pack "NN", $pos%1000,$pos/1000; 
 }
 warn "There are $count ($#object_pixels) pixels (objects) in the mask\n";
 
@@ -64,6 +66,8 @@ for (my $object = 1; $object <= $#object_pixels ; $object++) {
 	$intensityA, $intensityC, $intensityG, $intensityT;
     }
 }
+
+my @calls; 
 
 for (my $object = 1; $object <= $#object_pixels ; $object++) {
     my @intensities = unpack "N*", $object_intensities[$object];
@@ -98,7 +102,8 @@ for (my $object = 1; $object <= $#object_pixels ; $object++) {
 
         $call .= sprintf "%X", ($A_bit<<3) + ($C_bit<<2) + ($G_bit<<1) + $T_bit; 
     }
-    print "$call $object @intensities\n";
+    push (@calls, "$call $object @intensities @object_pos($object)\n");
 }
+print @calls;
 
 # arch-tag: Tom Clegg Fri Mar 16 20:45:09 PDT 2007 (align-read/raw_to_reads.pl)
