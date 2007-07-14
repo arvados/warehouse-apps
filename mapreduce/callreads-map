@@ -5,8 +5,10 @@ set -e
 export PATH="$REVISIONDIR/src/align-call:$PATH"
 
 frame="$FRAMENUMBER"
+mapfunction="$MAPFUNCTION"
+
 fn=$((1$frame-10000))
-echo >&2 "# frame $frame hostname `hostname`"
+echo >&2 "# frame $frame mapfunction $mapfunction hostname `hostname`"
 imagenos=`printf "%04d %04d %04d %04d" $((($fn-1)*4+1)) $((($fn-1)*4+2)) $((($fn-1)*4+3)) $((($fn-1)*4+4))`
 (
 	set -e
