@@ -102,7 +102,9 @@ for (my $object = 1; $object <= $#object_pixels ; $object++) {
 
         $call .= sprintf "%X", ($A_bit<<3) + ($C_bit<<2) + ($G_bit<<1) + $T_bit; 
     }
-    push (@calls, "$call $object @intensities @object_pos($object)\n");
+    
+    push (@calls, "$call $object @intensities ".
+      length($object_pos[$object])."\n");
 }
 print @calls;
 
