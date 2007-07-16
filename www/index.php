@@ -51,7 +51,9 @@ echo "</table>\n";
 
 ?>
 
+<? if (`grep 'main::remote_lims' /etc/polony-tools/config.pl`) { ?>
 <p><a href="datasetcopy.php">Copy datasets to other clusters...</a></p>
+<? } ?>
 
 <p>
 <iframe src="installrevision.php" width=800 height=300></iframe>
