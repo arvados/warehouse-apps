@@ -20,7 +20,8 @@ subdirs_to_build =	libcmd \
 			place-report \
 			billy-grep \
 			find-objects \
-			register-raw-translate
+			register-raw-translate \
+			levels
 
 
 # arch-tag: Thomas Lord Sat Aug 19 12:45:44 2006 (polony-tools/Makefile.x)
