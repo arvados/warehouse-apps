@@ -70,7 +70,7 @@ while (1)
       $sth = $dbh->prepare ("insert into mrjobmanager
                              (pid, revision, starttime)
                              values (?, ?, now())");
-      $sth->execute ($$, q/$Rev$/) or die $dbh->errstr;
+      $sth->execute ($$, q/$Revision$/) or die $dbh->errstr;
 
       $sth = $dbh->prepare ("select last_insert_id()");
       $sth->execute or die $dbh->errstr;
