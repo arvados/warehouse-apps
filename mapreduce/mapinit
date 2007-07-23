@@ -6,7 +6,7 @@ use POSIX ':sys_wait_h';
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 
 do '/etc/polony-tools/config.pl';
-my $max_concurrent_jobs = 16;
+my $max_nprocs = 64;
 
 
 
@@ -30,10 +30,10 @@ createtables ($dbh);
 while (1)
 {
 
-  my $sth = $dbh->prepare ("select id from mrjob
+  my $sth = $dbh->prepare ("select id, nprocs, revision from mrjob
                             where jobmanager_id is null limit 1");
   $sth->execute or die $dbh->errstr;
-  my ($job_id) = $sth->fetchrow_array;
+  my ($job_id, $job_nprocs, $job_revision) = $sth->fetchrow_array;
 
   if ($job_id)
   {
@@ -62,7 +62,6 @@ while (1)
 			  $main::mapreduce_mysql_username,
 			  $main::mapreduce_mysql_password);
       die $DBI::errstr if !$dbh;
-      $dbh->{InactiveDestroy} = 1;
 
 
 
@@ -161,7 +160,8 @@ while (1)
 	$start_sth->execute ($id, $job_id);
 
 	++$children;
-	while ($children > $max_concurrent_jobs)
+	while ($children > $job_nprocs ||
+	       $children > $max_nprocs)
 	{
 	  readfrompipes (\%reader, \%proc_job, \%job_stderr);
 	  
@@ -186,7 +186,7 @@ while (1)
 	}
       }
 
-      Log ($dbh, $job_id, undef, "wait for last $children children to die");
+      Log ($dbh, $job_id, undef, "wait for last $children children to finish");
       while ($children > 0)
       {
 	readfrompipes (\%reader, \%proc_job, \%job_stderr);
