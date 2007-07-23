@@ -17,6 +17,11 @@ $main::analysis_mysql_database = "analysis";
 $main::analysis_mysql_username = "analysis";
 $main::analysis_mysql_password = "secXret";
 
+$main::mapreduce_dsn = "DBI:mysql:database=mapreduce;host=dbhost";
+$main::mapreduce_mysql_database = "mapreduce";
+$main::mapreduce_mysql_username = "mapreduce";
+$main::mapreduce_mysql_password = "secXret";
+
 %main::remote_lims
 = ('lims1' => { 'trackers' => ['remotehost1a:6001'],
 		'default_domain' => 'images',

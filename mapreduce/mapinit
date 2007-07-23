@@ -1,0 +1,305 @@
+#!/usr/bin/perl
+
+use strict;
+use DBI;
+use POSIX ':sys_wait_h';
+use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
+
+do '/etc/polony-tools/config.pl';
+my $max_concurrent_jobs = 16;
+
+
+
+$SIG{CHLD} = 'IGNORE';
+
+
+
+my $dbh = DBI->connect($main::mapreduce_dsn,
+		       $main::mapreduce_mysql_username,
+		       $main::mapreduce_mysql_password);
+die $DBI::errstr if !$dbh;
+
+
+
+createtables ($dbh);
+
+
+
+# Wait for a job to appear in the queue
+
+while (1)
+{
+
+  my $sth = $dbh->prepare ("select id from mrjob
+                            where jobmanager_id is null limit 1");
+  $sth->execute or die $dbh->errstr;
+  my ($job_id) = $sth->fetchrow_array;
+
+  if ($job_id)
+  {
+    my $child = fork();
+    if (!defined $child)
+    {
+      warn "Couldn't fork: $!";
+    }
+    elsif ($child)
+    {
+      #
+    }
+    else
+    {
+      $SIG{CHLD} = 'DEFAULT';
+      close(STDIN);
+
+#      $dbh = DBI->connect($main::mapreduce_dsn,
+#			  $main::mapreduce_mysql_username,
+#			  $main::mapreduce_mysql_password);
+#      die $DBI::errstr if !$dbh;
+
+
+      my $child_dbh = $dbh->clone;
+      $dbh->{InactiveDestroy} = 1;
+      $dbh = $child_dbh;
+      die $DBI::errstr if !$dbh;
+
+
+      # Claim this job, and make sure nobody else does
+
+      $sth = $dbh->prepare ("insert into mrjobmanager
+                             (pid, revision, starttime)
+                             values (?, ?, now())");
+      $sth->execute ($$, q/$Rev$/) or die $dbh->errstr;
+
+      $sth = $dbh->prepare ("select last_insert_id()");
+      $sth->execute or die $dbh->errstr;
+      my ($jobmanager_id) = $sth->fetchrow_array;
+
+      $sth = $dbh->prepare ("update mrjob set jobmanager_id=?
+                             where id=? and jobmanager_id is null");
+      $sth->execute ($jobmanager_id, $job_id) or die $dbh->errstr;
+
+      $sth = $dbh->prepare ("select jobmanager_id from mrjob
+                             where id=?");
+      $sth->execute ($job_id) or die $dbh->errstr;
+      my ($check_jobmanager_id) = $sth->fetchrow_array;
+      if ($check_jobmanager_id != $jobmanager_id)
+      {
+	# race condition - another job manager proc stole the job
+	exit(1);
+      }
+
+
+
+      Log ($dbh, $job_id, undef, "start");
+
+
+
+      Log ($dbh, $job_id, undef, "get job step list");
+
+      $sth = $dbh->prepare ("select id, input from mrjobstep
+                             where jobid=? and starttime is null");
+      $sth->execute ($job_id) or die $dbh->errstr;
+
+      my $start_sth = $dbh->prepare ("update mrjobstep set
+                                      starttime=now(),
+                                      finishtime=null
+                                      where id=? and jobid=?");
+      my $finish_sth = $dbh->prepare ("update mrjobstep set
+                                       finishtime=now(),
+                                       exitcode=?,
+                                       stderr=?
+                                       where id=? and jobid=?");
+
+
+
+      Log ($dbh, $job_id, undef, "start child processes");
+
+      my %proc_job;
+      my %job_stderr;
+      my %reader;
+      my $children = 0;
+      my ($id, $input);
+      while (($id, $input) = $sth->fetchrow)
+      {
+	pipe $reader{$id}, "writer" or die "$!";
+	my $flags = fcntl ($reader{$id}, F_GETFL, 0) or die "$!";
+	fcntl ($reader{$id}, F_SETFL, $flags | O_NONBLOCK) or die "$!";
+
+	my $childpid = fork();
+	if ($childpid == 0)
+	{
+	  foreach (values (%reader))
+	  {
+	    close($_);
+	  }
+	  fcntl ("writer", F_SETFL, 0) or die "$!"; # no close-on-exec
+	  open(STDOUT,">&writer");
+	  open(STDERR,">&writer");
+
+	  my $child_dbh = $dbh->clone;
+	  $dbh->{InactiveDestroy} = 1;
+	  undef $dbh;
+	  $dbh = $child_dbh;
+
+	  # execute job step here
+	  exec("srun -n1 sh -c 'sleep 4; hostname'");
+	  exit(1);
+	}
+	close("writer");
+	if (!defined $childpid)
+	{
+	  close $reader{$id};
+	  delete $reader{$id};
+	  next;
+	}
+	$proc_job{$childpid} = $id;
+
+	Log ($dbh, $job_id, $id, "child $childpid started");
+	$start_sth->execute ($id, $job_id);
+
+	++$children;
+	while ($children > $max_concurrent_jobs)
+	{
+	  readfrompipes (\%reader, \%proc_job, \%job_stderr);
+	  
+	  my $pid = waitpid (-1, WNOHANG);
+	  if ($pid > 0) {
+	    Log ($dbh, $job_id, $proc_job{$pid}, "child $pid exit $?");
+	    $finish_sth->execute ($?,
+				  $job_stderr{$proc_job{$pid}},
+				  $proc_job{$pid},
+				  $job_id);
+	    close $reader{$proc_job{$pid}};
+	    delete $reader{$proc_job{$pid}};
+	    delete $job_stderr{$proc_job{$pid}};
+	    delete $proc_job{$pid};
+	    --$children;
+	  }
+	}
+	readfrompipes (\%reader, \%proc_job, \%job_stderr);
+      }
+
+      Log ($dbh, $job_id, undef, "wait for last $children children to die");
+      while ($children > 0)
+      {
+	readfrompipes (\%reader, \%proc_job, \%job_stderr);
+
+	my $pid = waitpid (-1, WNOHANG);
+	if ($pid > 0) {
+	  Log ($dbh, $job_id, $proc_job{$pid}, "child $pid exit $?");
+	  $finish_sth->execute ($?,
+				$job_stderr{$proc_job{$pid}},
+				$proc_job{$pid},
+				$job_id);
+	  close $reader{$proc_job{$pid}};
+	  delete $reader{$proc_job{$pid}};
+	  delete $job_stderr{$proc_job{$pid}};
+	  delete $proc_job{$pid};
+	  --$children;
+	}
+      }
+
+      Log ($dbh, $job_id, undef, "finish");
+
+      exit(1);
+    }
+  }
+
+  sleep (5);
+}
+
+
+sub readfrompipes
+{
+  my ($reader, $proc_job, $job_stderr) = @_;
+  my ($rout, $wout, $eout);
+  my ($bits) = fhbits(keys %$reader);
+  select ($rout=$bits, $wout, $eout=$bits, 0.1);
+  foreach my $job (keys %$reader)
+  {
+    if (1 || vec($rout,fileno($$reader{$job}),1))
+    {
+      my $buf;
+      while (0 < sysread ($$reader{$job}, $buf, 1024))
+      {
+	$$job_stderr{$job} .= $buf;
+	print STDERR $buf;
+      }
+    }
+  }
+}
+
+
+sub fhbits
+{
+  my($bits);
+  for (@_) {
+    vec($bits,fileno($_),1) = 1;
+  }
+  $bits;
+}
+
+
+# Log ($dbh, $job_id, $jobstep_id, $logmessage)
+
+sub Log
+{
+  my $dbh = shift @_;
+  my $sth = $dbh->prepare ("insert into mrlog (time, jobid, jobstepid, message)
+                            values (now(), ?, ?, ?)");
+  $sth->execute (@_) or die $dbh->errstr;
+  printf STDERR ("%s %s %s %s\n", scalar localtime, @_);
+}
+
+
+sub createtables
+{
+  my $dbh = shift;
+  foreach (qq{
+create table if not exists mrlog (
+ id bigint not null auto_increment primary key,
+ time datetime not null,
+ jobid bigint,
+ jobstepid bigint,
+ message varchar(255)
+)
+  },
+	   qq{
+create table if not exists mrjob (
+ id bigint not null auto_increment primary key,
+ revision bigint not null,
+ nprocs int,
+ nodes text,
+ knobs text,
+ starttime datetime,
+ finishtime datetime,
+ jobmanager_id bigint
+)
+  },
+	   qq{
+create table if not exists mrjobstep (
+ id bigint not null auto_increment primary key,
+ jobid bigint not null,
+ input varchar(255),
+ submittime datetime,
+ starttime datetime,
+ finishtime datetime,
+ exitcode int,
+ stderr text,
+ index(jobid)
+)
+  },
+	   qq{
+create table if not exists mrjobmanager (
+ id bigint not null auto_increment primary key,
+ node varchar(63),
+ starttime datetime,
+ revision bigint,
+ pid bigint
+)
+  })
+  {
+    my $sth = $dbh->prepare ($_);
+    $sth->execute or die $dbh->errstr;
+  }
+}
