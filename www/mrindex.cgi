@@ -18,12 +18,6 @@ print q{
 <h2>mapreduce jobs</h2>
 };
 
-my $mogc = eval {
-  MogileFS::Client->new (domain => $main::mogilefs_default_domain,
-			 hosts => [@main::mogilefs_trackers]);
-  };
-die "$@" if !$mogc;
-
 my $dbh = DBI->connect($main::mapreduce_dsn,
 		       $main::mapreduce_mysql_username,
 		       $main::mapreduce_mysql_password) or die DBI->errstr;

@@ -265,7 +265,8 @@ sub readfrompipes
   my ($reader, $proc_job, $job_stderr) = @_;
   my ($rout, $wout, $eout);
   my ($bits) = fhbits(keys %$reader);
-  select ($rout=$bits, $wout, $eout=$bits, 0.1);
+  select (undef, undef, undef, 0.1);
+  select ($rout=$bits, $wout, $eout=$bits, 1);
   foreach my $job (keys %$reader)
   {
     if (1 || vec($rout,fileno($$reader{$job}),1))
@@ -276,12 +277,13 @@ sub readfrompipes
 	$$job_stderr{$job} .= $buf;
 	print STDERR $buf if $ENV{MR_DEBUG};
 
-	while ($job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
+	while ($$job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
 	{
 	  my ($level, $input) = ($1, $2);
 	  my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
           (jobid, level, input) values (?, ?, ?)");
-	  $newjobstep_sth->execute ($job_id, $level, $input) or croak ($dbh->errstr);
+	  $newjobstep_sth->execute ($job_id, $level, $input)
+	      or croak ($dbh->errstr);
 	}
       }
     }
@@ -313,7 +315,8 @@ sub Log				# ($dbh, $job_id, $jobstep_id, $logmessage)
 sub croak
 {
   cleanup() if $dbh;
-  die @_;
+  my ($package, $file, $line) = caller;
+  die "$_[0] at $file line $line\n";
 }
 
 
@@ -322,6 +325,6 @@ sub cleanup
   my $sth;
   $sth = $dbh->prepare ("update mrjobmanager set finishtime=now() where id=?");
   $sth->execute ($jobmanager_id);
-  $sth = $dbh->prepare ("update mjrob set success=0, finishtime=now() where id=? and jobmanager_id=? and finishtime is null");
+  $sth = $dbh->prepare ("update mrjob set success=0, finishtime=now() where id=? and jobmanager_id=? and finishtime is null");
   $sth->execute ($job_id, $jobmanager_id);
 }
