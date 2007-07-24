@@ -20,7 +20,7 @@ rm -rf "$dir" && \
 mkdir "$dir" && \
 cd "$dir" && \
 ln -s . install && \
-svn export "$svnrepos" src && \
+svn export -r "$1" "$svnrepos" src && \
 touch .fetched && \
 sh ./src/tests/autotests.sh && \
 touch .installed && \
