@@ -26,7 +26,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   close STDIN or die "Input stream exited $?";
 }
 
-else
+elsif ($ENV{MR_LEVEL} == 2)
 {
   # reduce
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
@@ -35,4 +35,11 @@ else
     print;
   }
   close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 3 mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}+++";
+}
+
+elsif ($ENV{MR_LEVEL} == 3)
+{
+  my $m = MetaMog->new;
+  $m->rename ($ENV{INPUT}, "mrjob/$ENV{MR_JOB_ID}") or die $m->errstr;
 }

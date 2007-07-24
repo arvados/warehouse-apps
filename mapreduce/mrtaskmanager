@@ -26,7 +26,7 @@ while (read STDIN, $buf, 65536)
 	     hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
 	};
       $fh = eval {
-	$mogc->new_file ("mrjob/$ENV{MR_JOB_ID}/$ENV{MR_ID}",
+	$mogc->new_file ("mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}",
 			 $ENV{MOGILEFS_CLASS});
       };
       last if $fh;

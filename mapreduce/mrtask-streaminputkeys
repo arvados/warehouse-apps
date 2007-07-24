@@ -9,7 +9,7 @@ $main::mogc = undef;
 
 if (!$ENV{MR_INPUT})
 {
-  $ENV{MR_INPUT} = "mrjob/$ENV{MR_JOB_ID}/*";
+  $ENV{MR_INPUT} = "mrjobstep/$ENV{MR_JOB_ID}/*";
 }
 foreach (split ("\n", $ENV{MR_INPUT}))
 {
