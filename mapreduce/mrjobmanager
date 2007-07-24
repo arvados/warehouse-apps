@@ -258,7 +258,7 @@ sub readfrompipes
       while (0 < sysread ($$reader{$job}, $buf, 1024))
       {
 	$$job_stderr{$job} .= $buf;
-	print STDERR $buf;
+	print STDERR $buf if $ENV{MR_DEBUG};
 
 	while ($job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
 	{

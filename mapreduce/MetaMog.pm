@@ -6,7 +6,6 @@ sub rename
 {
   my $self = shift;
   my ($old, $new) = @_;
-  init;
   for (1..5)
   {
     return 1 if eval { $self->{mogc}->rename ($old, $new); };
@@ -25,6 +24,7 @@ sub new
 
 sub errstr
 {
+  my $self = shift;
   return $self->{mogc}->errstr;
 }
 
