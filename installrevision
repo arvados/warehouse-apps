@@ -1,15 +1,18 @@
 #!/usr/bin/perl
 
-# mrtaskmanager: run a map or reduce function on one input.
-
 use Fcntl ':flock';
 
-maybe_install_revision();
+if (@ARGV != 2)
+{
+  die "usage: $0 {revision-number} {repository-url}";
+}
 
+maybe_install_revision (@ARGV);
 
 sub maybe_install_revision
 {
-  my $revdir = "/usr/local/polony-tools/$ENV{MR_REVISION}";
+  my ($revision, $repos) = @_;
+  my $revdir = "/usr/local/polony-tools/$revision";
   if (mkdir $revdir)
   {
     if (fork() == 0)
@@ -21,7 +24,7 @@ sub maybe_install_revision
       open STDOUT, ">&L" or die "$!";
       open STDERR, ">&L" or die "$!";
       flock L, LOCK_EX;
-      system (qw(svn export -r), $ENV{MR_REVISION}, $ENV{MR_SVNREPOS}, "src")
+      system (qw(svn export -r), $revision, $repos, "src")
 	  == 0 or die "$?";
       open F, ">.fetched" or die "$!";
       system (qw(sh ./src/tests/autotests.sh))
