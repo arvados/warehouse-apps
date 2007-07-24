@@ -129,11 +129,10 @@ while (($id, $input) = $sth->fetchrow)
     $ENV{"MR_REVISION"} = $job_revision;
     $ENV{"MR_LEVEL"} = $level;
     $ENV{"MR_FUNCTION"} = $mrfunction;
-    $ENV{"MR_SVNREPOS"} = $main::svn_repos;
+    $ENV{"INSTALL_REPOS"} = $main::svn_repos;
+    $ENV{"INSTALL_REVISION"} = $job_revision;
 
-
-    # execute job step here
-    exec("srun -n1 sh -c '/usr/local/polony-tools/mrtaskmanager'");
+    exec("srun -n1 sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/mapreduce/mrtaskmanager'");
     exit(1);
   }
   close("writer");

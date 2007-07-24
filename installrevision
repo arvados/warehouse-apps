@@ -2,12 +2,7 @@
 
 use Fcntl ':flock';
 
-if (@ARGV != 2)
-{
-  die "usage: $0 {revision-number} {repository-url}";
-}
-
-maybe_install_revision (@ARGV);
+maybe_install_revision ($ENV{INSTALL_REVISION}, $ENV{INSTALL_REPOS});
 
 sub maybe_install_revision
 {
