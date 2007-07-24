@@ -42,5 +42,5 @@ elsif ($ENV{MR_LEVEL} == 2)
 elsif ($ENV{MR_LEVEL} == 3)
 {
   my $m = MetaMog->new;
-  $m->rename ($ENV{INPUT}, "mrjob/$ENV{MR_JOB_ID}") or die $m->errstr;
+  $m->rename ($ENV{MR_INPUT}, "mrjob/$ENV{MR_JOB_ID}") or die $m->errstr;
 }
