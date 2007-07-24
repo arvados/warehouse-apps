@@ -14,7 +14,7 @@ if ($ENV{MR_LEVEL} == 0)
   close STDIN or die "Input stream exited $?";
 }
 
-if ($ENV{MR_LEVEL} == 1)
+elsif ($ENV{MR_LEVEL} == 1)
 {
   # map
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
