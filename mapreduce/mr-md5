@@ -12,6 +12,7 @@ if ($ENV{MR_LEVEL} == 0)
     print STDERR "+++mrjobstep 1 $_+++\n";
   }
   close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 2 +++\n";
 }
 
 elsif ($ENV{MR_LEVEL} == 1)
