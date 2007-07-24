@@ -22,10 +22,10 @@ sub maybe_install_revision
       open STDERR, ">&L" or die "$!";
       flock L, LOCK_EX;
       system (qw(svn export -r), $ENV{MR_REVISION}, $ENV{MR_SVNREPOS}, "src")
-	  or die "$?";
+	  == 0 or die "$?";
       open F, ">.fetched" or die "$!";
       system (qw(sh ./src/tests/autotests.sh))
-	  or die "$?";
+	  == 0 or die "$?";
       open F, ">.installed" or die "$!";
       open F, ">.tested" or die "$!";
       close STDIN;
@@ -47,7 +47,6 @@ sub maybe_install_revision
       close L;
       return 1 if (-e "$revdir/.tested");
     }
-    close L;
-    exit 1;
+    die "Previous installation was abandoned";
   }
 }
