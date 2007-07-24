@@ -136,7 +136,7 @@ while (($id, $input) = $sth->fetchrow)
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
-    exec("srun -n1 sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/mapreduce/mrtaskmanager'");
+    exec("srun -n1 -D /tmp sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/src/mapreduce/mrtaskmanager'");
     exit(1);
   }
   close("writer");

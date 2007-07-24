@@ -11,6 +11,7 @@ open (STDIN, "mr-$ENV{MR_FUNCTION} |") or die "$0: $!";
 
 my $fh;
 my $mogc;
+my $buf;
 while (read STDIN, $buf, 65536)
 {
   if (!defined $fh)
