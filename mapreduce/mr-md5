@@ -10,6 +10,7 @@ if ($ENV{MR_LEVEL} == 0)
   my $data = <STDIN>;
   my $md5 = md5_hex($data);
   print "$md5 $ENV{INPUT}\n";
+  close STDIN or die "Input stream exited $?";
 }
 
 else
@@ -20,4 +21,5 @@ else
   {
     print;
   }
+  close STDIN or die "Input stream exited $?";
 }

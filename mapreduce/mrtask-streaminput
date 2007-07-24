@@ -12,13 +12,27 @@ while(defined ($_ = <STDIN>))
   my $retries = 0;
   if (!defined $mogc)
   {
-    $mogc = MogileFS::Client->new
-	(domain => $ENV{MOGILEFS_DOMAIN},
-	 hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+    my $attempts = 0;
+  reconnect:
+    $mogc = eval {
+      MogileFS::Client->new
+	  (domain => $ENV{MOGILEFS_DOMAIN},
+	   hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+      };
+    if (!$mogc && $attempts++ < 5)
+    {
+      warn "MogileFS connect [$ENV{MOGILEFS_DOMAIN} at $ENV{MOGILEFS_TRACKERS}] failed, retrying";
+      redo reconnect;
+    }
+    if (!$mogc)
+    {
+      die "MogileFS connect failed";
+    }
   }
   my $buf = $mogc->get_file_data ($_);
   if (!defined ($buf))
   {
+    warn "get_file_data($_) failed";
     die $mogc->errstr if ++$retries > 5;
     undef $mogc;
     sleep 1;

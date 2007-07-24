@@ -28,9 +28,22 @@ sub print_wildcard
   my ($prefix) = @_;
   if (!defined ($main::mogc))
   {
-    $main::mogc = MogileFS::Client->new
-	(domain => $ENV{MOGILEFS_DOMAIN},
-	 hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+    my $attempts = 0;
+  reconnect:
+    $main::mogc = eval {
+      MogileFS::Client->new
+	  (domain => $ENV{MOGILEFS_DOMAIN},
+	   hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+      };
+    if (!$main::mogc && $attempts++ < 5)
+    {
+      warn "MogileFS connect [$ENV{MOGILEFS_DOMAIN} at $ENV{MOGILEFS_TRACKERS}] failed, retrying";
+      redo reconnect;
+    }
+    if (!$main::mogc)
+    {
+      die "MogileFS connect failed";
+    }
   }
 
   my $after;
