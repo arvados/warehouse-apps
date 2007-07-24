@@ -70,10 +70,7 @@ while (1)
       exit (1);
     }
   }
-  else
-  {
-    sleep (5);
-  }
+  sleep (5);
 
   if (waitpid (-1, WNOHANG) > 0)
   {
