@@ -173,13 +173,6 @@ while (($id, $input) = $sth->fetchrow)
       Log ($dbh, $job_id, $proc_job{$pid}, "child $pid exit $?");
       if ($?) { ++$tasks_failed; }
       else { ++$tasks_succeeded; }
-      while ($job_stderr{$proc_job{$pid}} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
-      {
-	my ($level, $input) = ($1, $2);
-	my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
-          (jobid, level, input) values (?, ?, ?)");
-	$newjobstep_sth->execute ($job_id, $level, $input) or die $dbh->errstr;
-      }
       my $finish_sth = $dbh->prepare ("update mrjobstep set
                                        finishtime=now(),
                                        exitcode=?,
@@ -266,6 +259,14 @@ sub readfrompipes
       {
 	$$job_stderr{$job} .= $buf;
 	print STDERR $buf;
+
+	while ($job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
+	{
+	  my ($level, $input) = ($1, $2);
+	  my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
+          (jobid, level, input) values (?, ?, ?)");
+	  $newjobstep_sth->execute ($job_id, $level, $input) or die $dbh->errstr;
+	}
       }
     }
   }
