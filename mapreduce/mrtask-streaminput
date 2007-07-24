@@ -7,37 +7,31 @@ use MogileFS::Client;
 
 my $mogc;
 
+my $retries = 0;
 while(defined ($_ = <STDIN>))
 {
   chomp;
-  my $retries = 0;
   if (!defined $mogc)
   {
-    my $attempts = 0;
-  reconnect:
     $mogc = eval {
       MogileFS::Client->new
 	  (domain => $ENV{MOGILEFS_DOMAIN},
 	   hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
       };
-    if (!$mogc && $attempts++ < 5)
-    {
-      warn "MogileFS connect [$ENV{MOGILEFS_DOMAIN} at $ENV{MOGILEFS_TRACKERS}] failed, retrying";
-      redo reconnect;
-    }
     if (!$mogc)
     {
-      die "MogileFS connect failed";
+      warn "MogileFS connect [$ENV{MOGILEFS_DOMAIN} at $ENV{MOGILEFS_TRACKERS}] failed";
     }
   }
-  my $buf = $mogc->get_file_data ($_);
-  if (!defined ($buf))
+  my $bufref = $mogc->get_file_data ($_);
+  if (!$bufref)
   {
-    warn "get_file_data($_) failed";
-    die $mogc->errstr if ++$retries > 5;
+    warn "MogileFS get_file_data($_) failed: " . $mogc->errstr;
+    die if ++$retries > 5;
     undef $mogc;
     sleep 1;
     redo;
   }
-  print $buf;
+  print $$bufref;
+  $retries = 0;
 }
