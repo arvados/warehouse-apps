@@ -13,6 +13,38 @@ sub rename
   return 0;
 }
 
+sub delete_all
+{
+  my $self = shift;
+  my $prefix = shift;
+
+  # try to make sure $prefix looks reasonably specific, eg. >= 2 slashes
+  die "I refuse to delete all keys with prefix '$prefix'!"
+      unless $prefix =~ m|\w/.+/|;
+
+  my $ret = 1;
+  my $after;
+  my $keys;
+  while (1)
+  {
+    ($after, $keys) = $self->{mogc}->list_keys ($prefix, $after);
+    last if (!defined ($keys) || !@$keys);
+    foreach (@$keys)
+    {
+      if ($self->{mogc}->delete ($_))
+      {
+	print STDERR "Deleted $_\n";
+      }
+      else
+      {
+	print STDERR "Error deleting $_: ".$self->errstr."\n";
+	$ret = 0;
+      }
+    }
+  }
+  $ret;
+}
+
 sub new
 {
   my $class = shift;
