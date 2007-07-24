@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+use MetaMog;
 use Digest::MD5 'md5_hex';
 
 if ($ENV{MR_LEVEL} == 0)
