@@ -33,6 +33,8 @@ my $sth = $dbh->prepare ("select nprocs, revision, knobs, mrfunction
 $sth->execute ($job_id) or die $dbh->errstr;
 my ($job_nprocs, $job_revision, $job_knobs, $mrfunction) = $sth->fetchrow;
 
+Log ($dbh, $job_id, undef, "nprocs $job_nprocs rev $job_revision function $mrfunction knobs $job_knobs");
+
 
 
 # Claim this job, and make sure nobody else does
@@ -48,13 +50,13 @@ $sth = $dbh->prepare ("select last_insert_id()");
 $sth->execute or die $dbh->errstr;
 my ($jobmanager_id) = $sth->fetchrow_array;
 
-$sth = $dbh->prepare ("update mrjob set jobmanager_id=?
+$sth = $dbh->prepare ("update mrjob set jobmanager_id=?, starttime=now()
                        where id=? and jobmanager_id is null");
-$sth->execute ($jobmanager_id, $job_id) or die $dbh->errstr;
+$sth->execute ($jobmanager_id, $job_id) or croak ($dbh->errstr);
 
 $sth = $dbh->prepare ("select jobmanager_id from mrjob
                        where id=?");
-$sth->execute ($job_id) or die $dbh->errstr;
+$sth->execute ($job_id) or croak ($dbh->errstr);
 my ($check_jobmanager_id) = $sth->fetchrow_array;
 if ($check_jobmanager_id != $jobmanager_id)
 {
@@ -65,6 +67,9 @@ if ($check_jobmanager_id != $jobmanager_id)
 
 
 Log ($dbh, $job_id, undef, "start");
+$SIG{'INT'} = \&croak;
+$SIG{'QUIT'} = \&croak;
+$SIG{'TERM'} = \&croak;
 
 
 
@@ -73,28 +78,29 @@ ONELEVEL:
 my $tasks_succeeded = 0;
 my $tasks_failed = 0;
 
-Log ($dbh, $job_id, undef, "determine current job level");
+Log ($dbh, $job_id, undef, "determine current jobstep level");
 $sth = $dbh->prepare ("select min(level) from mrjobstep
                        where jobid=?
                        and (finishtime is null or exitcode <> 0)
                        and (attempts < 3)");
-$sth->execute ($job_id) or die $dbh->errstr;
+$sth->execute ($job_id) or croak ($dbh->errstr);
 my ($level) = $sth->fetchrow;
+Log ($dbh, $job_id, undef, "start level $level");
 
 
 
 
-Log ($dbh, $job_id, undef, "get job step list");
+Log ($dbh, $job_id, undef, "ask db for jobstep list");
 
 $sth = $dbh->prepare ("select id, input from mrjobstep
                        where jobid=? and level=?
                        and (finishtime is null or exitcode <> 0)
                        and (attempts < 3)");
-$sth->execute ($job_id, $level) or die $dbh->errstr;
+$sth->execute ($job_id, $level) or croak ($dbh->errstr);
 
 
 
-Log ($dbh, $job_id, undef, "start child processes");
+Log ($dbh, $job_id, undef, "process jobsteps");
 
 my %proc_job;
 my %job_stderr;
@@ -103,18 +109,22 @@ my $children = 0;
 my ($id, $input);
 while (($id, $input) = $sth->fetchrow)
 {
-  pipe $reader{$id}, "writer" or die "$!";
-  my $flags = fcntl ($reader{$id}, F_GETFL, 0) or die "$!";
-  fcntl ($reader{$id}, F_SETFL, $flags | O_NONBLOCK) or die "$!";
+  pipe $reader{$id}, "writer" or croak ($!);
+  my $flags = fcntl ($reader{$id}, F_GETFL, 0) or croak ($!);
+  fcntl ($reader{$id}, F_SETFL, $flags | O_NONBLOCK) or croak ($!);
 
   my $childpid = fork();
   if ($childpid == 0)
   {
+    $SIG{'INT'} = 'DEFAULT';
+    $SIG{'QUIT'} = 'DEFAULT';
+    $SIG{'TERM'} = 'DEFAULT';
+
     foreach (values (%reader))
     {
       close($_);
     }
-    fcntl ("writer", F_SETFL, 0) or die "$!"; # no close-on-exec
+    fcntl ("writer", F_SETFL, 0) or croak ($!); # no close-on-exec
     open(STDOUT,">&writer");
     open(STDERR,">&writer");
 
@@ -152,7 +162,7 @@ while (($id, $input) = $sth->fetchrow)
   $dbh = DBI->connect($main::mapreduce_dsn,
 		      $main::mapreduce_mysql_username,
 		      $main::mapreduce_mysql_password);
-  die $DBI::errstr if !$dbh;
+  croak ($DBI::errstr) if !$dbh;
 
   Log ($dbh, $job_id, $id, "child $childpid started");
   my $start_sth = $dbh->prepare ("update mrjobstep set
@@ -197,7 +207,7 @@ while (($id, $input) = $sth->fetchrow)
 	.($tasks_failed+$tasks_succeeded)
 	.") -- giving up";
     Log ($dbh, $job_id, undef, $message);
-    die $message;
+    croak ($message);
   }
 }
 
@@ -228,18 +238,24 @@ while ($children > 0)
   }
 }
 
-if ($tasks_succeeded > 0)
+if ($tasks_succeeded > 0 || ($tasks_failed > 0 && $tasks_failed < 5))
 {
   Log ($dbh, $job_id, undef, "check for new tasks.");
   goto ONELEVEL;
 }
 elsif ($tasks_failed > 0)
 {
-  Log ($dbh, $job_id, undef, "stop because $tasks_failed tasks failed.");
-  exit 1;
+  my $message = "stop because $tasks_failed tasks failed and none succeeded";
+  Log ($dbh, $job_id, undef, $message);
+  croak ($message);
 }
 
 Log ($dbh, $job_id, undef, "finish");
+
+$sth = $dbh->prepare ("update mrjob set finishtime=now(), success=1
+                       where id=? and jobmanager_id=?");
+$sth->execute ($job_id, $jobmanager_id) or croak ($dbh->errstr);
+
 exit 0;
 
 
@@ -265,7 +281,7 @@ sub readfrompipes
 	  my ($level, $input) = ($1, $2);
 	  my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
           (jobid, level, input) values (?, ?, ?)");
-	  $newjobstep_sth->execute ($job_id, $level, $input) or die $dbh->errstr;
+	  $newjobstep_sth->execute ($job_id, $level, $input) or croak ($dbh->errstr);
 	}
       }
     }
@@ -290,5 +306,22 @@ sub Log				# ($dbh, $job_id, $jobstep_id, $logmessage)
   printf STDERR ("%s %d %s %s %s\n", scalar localtime, $$, @_);
   my $sth = $dbh->prepare ("insert into mrlog (time, jobid, jobstepid, message)
                             values (now(), ?, ?, ?)");
-  $sth->execute (@_) or die $dbh->errstr;
+  $sth->execute (@_) or croak ($dbh->errstr);
+}
+
+
+sub croak
+{
+  cleanup() if $dbh;
+  die @_;
+}
+
+
+sub cleanup
+{
+  my $sth;
+  $sth = $dbh->prepare ("update mrjobmanager set finishtime=now() where id=?");
+  $sth->execute ($jobmanager_id);
+  $sth = $dbh->prepare ("update mjrob set success=0, finishtime=now() where id=? and jobmanager_id=? and finishtime is null");
+  $sth->execute ($job_id, $jobmanager_id);
 }

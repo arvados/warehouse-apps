@@ -104,7 +104,8 @@ create table if not exists mrjob (
  knobs text,
  starttime datetime,
  finishtime datetime,
- jobmanager_id bigint
+ jobmanager_id bigint,
+ success tinyint
 )
   },
 	   qq{
@@ -127,6 +128,7 @@ create table if not exists mrjobmanager (
  id bigint not null auto_increment primary key,
  node varchar(63),
  starttime datetime,
+ finishtime datetime,
  revision bigint,
  pid bigint
 )
