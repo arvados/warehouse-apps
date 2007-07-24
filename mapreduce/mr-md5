@@ -4,6 +4,17 @@ use Digest::MD5 'md5_hex';
 
 if ($ENV{MR_LEVEL} == 0)
 {
+  # init
+  open STDIN, "mrtask-streaminputkeys |";
+  while (defined ($_ = <STDIN>))
+  {
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+}
+
+if ($ENV{MR_LEVEL} == 1)
+{
   # map
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
   undef $/;

@@ -5,6 +5,7 @@
 use strict;
 use MogileFS::Client;
 
+$ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/bin";
 $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/mapreduce";
 
 open (STDIN, "mr-$ENV{MR_FUNCTION} |") or die "mr-$ENV{MR_FUNCTION}: $!";
