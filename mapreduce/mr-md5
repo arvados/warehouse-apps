@@ -8,6 +8,7 @@ if ($ENV{MR_LEVEL} == 0)
   open STDIN, "mrtask-streaminputkeys |";
   while (defined ($_ = <STDIN>))
   {
+    chomp;
     print STDERR "+++mrjobstep 1 $_+++\n";
   }
   close STDIN or die "Input stream exited $?";
