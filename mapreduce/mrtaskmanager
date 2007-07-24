@@ -1,0 +1,4 @@
+#!/usr/bin/perl
+
+# mrtaskmanager: run a map or reduce function on one input.
+
