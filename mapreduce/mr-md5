@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+
+use Digest::MD5 'md5_hex';
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # map
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
+  undef $/;
+  my $data = <STDIN>;
+  my $md5 = md5_hex($data);
+  print "$md5 $ENV{INPUT}\n";
+}
+
+else
+{
+  # reduce
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
+  while (defined ($_ = <STDIN>))
+  {
+    print;
+  }
+}

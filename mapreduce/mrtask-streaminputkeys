@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+# mrtask-streaminputkeys: grok $ENV{MR_INPUT}, send list of keys to stdout
+
+use strict;
+use MogileFS::Client;
+
+$main::mogc = undef;
+
+if (!$ENV{MR_INPUT})
+{
+  $ENV{MR_INPUT} = "mrjob/$ENV{MR_JOB_ID}/*";
+}
+foreach (split ("\n", $ENV{MR_INPUT}))
+{
+  if (s|\*$||)
+  {
+    print_wildcard ($_);
+  }
+  else
+  {
+    print $_ . "\n";
+  }
+}
+
+sub print_wildcard
+{
+  my ($prefix) = @_;
+  if (!defined ($main::mogc))
+  {
+    $main::mogc = MogileFS::Client->new
+	(domain => $ENV{MOGILEFS_DOMAIN},
+	 hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+  }
+
+  my $after;
+  my $keys;
+  while (1)
+  {
+    ($after, $keys) = $main::mogc->list_keys ($prefix, $after);
+    last if (!defined ($keys) || !@$keys);
+    foreach (@$keys)
+    {
+      print "$_\n";
+    }
+  }
+}

@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+
+# mrtaskmanager: run a map or reduce function on one input.
+
+use strict;
+use MogileFS::Client;
+
+$ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/mapreduce";
+
+open (STDIN, "mr-$ENV{MR_FUNCTION} |") or die "$0: $!";
+
+my $fh;
+my $mogc;
+while (read STDIN, $buf, 65536)
+{
+  if (!defined $fh)
+  {
+    my $attempts = 0;
+    while (!defined ($fh) && ++$attempts < 5)
+    {
+      $mogc = eval {
+	MogileFS::Client->new
+	    (domain => $ENV{MOGILEFS_DOMAIN},
+	     hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+	};
+      $fh = eval {
+	$mogc->new_file ("mrjob/$ENV{MR_JOB_ID}/$ENV{MR_ID}",
+			 $ENV{MOGILEFS_CLASS});
+      };
+      last if $fh;
+      sleep 1;
+    }
+    die "MogileFS create failure" if !$fh;
+  }
+  print $fh $buf;
+}
+if ($fh)
+{
+  if (!close $fh)
+  {
+    die "MogileFS write failure";
+  }
+}

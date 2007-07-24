@@ -124,6 +124,7 @@ while (($id, $input) = $sth->fetchrow)
 
 
     $ENV{"MR_ID"} = $id;
+    $ENV{"MR_JOB_ID"} = $job_id;
     $ENV{"MR_INPUT"} = $input;
     $ENV{"MR_KNOBS"} = $job_knobs;
     $ENV{"MR_REVISION"} = $job_revision;
@@ -131,6 +132,9 @@ while (($id, $input) = $sth->fetchrow)
     $ENV{"MR_FUNCTION"} = $mrfunction;
     $ENV{"INSTALL_REPOS"} = $main::svn_repos;
     $ENV{"INSTALL_REVISION"} = $job_revision;
+    $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
+    $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
+    $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
     exec("srun -n1 sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/mapreduce/mrtaskmanager'");
     exit(1);

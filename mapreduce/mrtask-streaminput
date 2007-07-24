@@ -1,0 +1,28 @@
+#!/usr/bin/perl
+
+# mrtask-streaminput: read keys on stdin, output contents to stdout
+
+use strict;
+use MogileFS::Client;
+
+my $mogc;
+
+while(defined ($_ = <STDIN>))
+{
+  my $retries = 0;
+  if (!defined $mogc)
+  {
+    $mogc = MogileFS::Client->new
+	(domain => $ENV{MOGILEFS_DOMAIN},
+	 hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+  }
+  my $buf = $mogc->get_file_data ($_);
+  if (!defined ($buf))
+  {
+    die $mogc->errstr if ++$retries > 5;
+    undef $mogc;
+    sleep 1;
+    redo;
+  }
+  print $buf;
+}
