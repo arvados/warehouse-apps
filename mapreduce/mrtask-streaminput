@@ -9,6 +9,7 @@ my $mogc;
 
 while(defined ($_ = <STDIN>))
 {
+  chomp;
   my $retries = 0;
   if (!defined $mogc)
   {
