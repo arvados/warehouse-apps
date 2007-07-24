@@ -189,6 +189,16 @@ while (($id, $input) = $sth->fetchrow)
       --$children;
     }
   }
+
+  if (($tasks_failed >= 8 && $tasks_succeeded == 0) ||
+      ($tasks_failed >= 16 && $tasks_failed > $tasks_succeeded))
+  {
+    my $message = "Failure rate too high ($tasks_failed/"
+	.($tasks_failed+$tasks_succeeded)
+	.") -- giving up";
+    Log ($dbh, $job_id, undef, $message);
+    die $message;
+  }
 }
 
 Log ($dbh, $job_id, undef, "wait for last $children children to finish");
@@ -218,20 +228,19 @@ while ($children > 0)
   }
 }
 
-if ($tasks_failed > 0)
-{
-  Log ($dbh, $job_id, undef, "stop because $tasks_failed tasks failed.")
-}
-elsif ($tasks_succeeded > 0)
+if ($tasks_succeeded > 0)
 {
   Log ($dbh, $job_id, undef, "check for new tasks.");
   goto ONELEVEL;
 }
+elsif ($tasks_failed > 0)
+{
+  Log ($dbh, $job_id, undef, "stop because $tasks_failed tasks failed.");
+  exit 1;
+}
 
 Log ($dbh, $job_id, undef, "finish");
-$dbh->disconnect;
-
-exit(0);
+exit 0;
 
 
 
