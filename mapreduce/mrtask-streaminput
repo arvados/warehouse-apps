@@ -5,6 +5,15 @@
 use strict;
 use MogileFS::Client;
 
+my %opt;
+foreach (@ARGV)
+{
+  if ($_ eq '--raw-images')
+  {
+    $opt{$_} = 1;
+  }
+}
+
 my $mogc;
 
 my $retries = 0;
@@ -32,6 +41,40 @@ while(defined ($_ = <STDIN>))
     sleep 1;
     redo;
   }
-  print $$bufref;
+  if ($opt{"--raw-images"))
+  {
+    $filter = chooseimagefilter ($_);
+    if ($filter)
+    {
+      for (1..5)
+      {
+	last if eval {
+	  open OUT, "|$filter" or die "Filter '$filter' failed: $!";
+	  print OUT $$bufref;
+	  close OUT or die "Output stream exited $?";
+	  1;
+	};
+      }
+      die "$@" if $@;
+    }
+    else
+    {
+      print $$bufref;
+    }
+  }
+  else
+  {
+    print $$bufref;
+  }
   $retries = 0;
+}
+
+sub chooseimagefilter
+{
+  local ($_) = @_;
+  if (/\.raw$/i) { return undef; }
+  if (/\.raw\.g?z$/i) { return "zcat" }
+  if (/\.tiff?$/i) { return "convert tif:- -endian lsb gray:-" }
+  if (/\.tiff?\.g?z$/i) { return "zcat | convert tif:- -endian lsb gray:-" }
+  die "I don't know how to convert $_ to a raw image";
 }
