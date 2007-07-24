@@ -131,6 +131,7 @@ $q = mysql_query("select
      left join file_on on file.fid=file_on.fid
      where dmid='$dmid_images'
      and file_on.fid is not null
+     and dkey like '/%'
      order by dmid,dkey");
 echo mysql_error();
 $lastfid = -1;
