@@ -2,6 +2,8 @@
 
 $main::lockfile_prefix = "/var/lock/lock.polony-tools.";
 
+$main::svn_repos = "http://tomc/repos/tomc/polony-tools/trunk";
+
 # Don't use localhost for trackers!  Use a name that resolves on the compute
 # nodes as well as the controller node.
 

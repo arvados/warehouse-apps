@@ -98,6 +98,7 @@ create table if not exists mrlog (
 create table if not exists mrjob (
  id bigint not null auto_increment primary key,
  revision bigint not null,
+ mrfunction varchar(64),
  nprocs int,
  nodes text,
  knobs text,

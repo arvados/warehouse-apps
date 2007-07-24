@@ -22,16 +22,16 @@ my ($job_id) = @ARGV;
 
 
 my $dbh = DBI->connect($main::mapreduce_dsn,
-		    $main::mapreduce_mysql_username,
-		    $main::mapreduce_mysql_password);
+		       $main::mapreduce_mysql_username,
+		       $main::mapreduce_mysql_password);
 die $DBI::errstr if !$dbh;
 
 
 
-my $sth = $dbh->prepare ("select nprocs, revision, knobs
+my $sth = $dbh->prepare ("select nprocs, revision, knobs, mrfunction
                           from mrjob where id=?");
 $sth->execute ($job_id) or die $dbh->errstr;
-my ($job_nprocs, $job_revision, $job_knobs) = $sth->fetchrow;
+my ($job_nprocs, $job_revision, $job_knobs, $mrfunction) = $sth->fetchrow;
 
 
 
@@ -128,10 +128,12 @@ while (($id, $input) = $sth->fetchrow)
     $ENV{"MR_KNOBS"} = $job_knobs;
     $ENV{"MR_REVISION"} = $job_revision;
     $ENV{"MR_LEVEL"} = $level;
+    $ENV{"MR_FUNCTION"} = $mrfunction;
+    $ENV{"MR_SVNREPOS"} = $main::svn_repos;
 
 
     # execute job step here
-    exec("srun -n1 sh -c 'sleep 4; hostname'");
+    exec("srun -n1 sh -c '/usr/local/polony-tools/mrtaskmanager'");
     exit(1);
   }
   close("writer");
@@ -158,8 +160,8 @@ while (($id, $input) = $sth->fetchrow)
   $start_sth->execute ($id, $job_id);
 
   ++$children;
-  while ($children > $job_nprocs ||
-	 $children > $max_nprocs)
+  while ($children >= $job_nprocs ||
+	 $children >= $max_nprocs)
   {
     readfrompipes (\%reader, \%proc_job, \%job_stderr);
     

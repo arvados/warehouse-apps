@@ -2,3 +2,52 @@
 
 # mrtaskmanager: run a map or reduce function on one input.
 
+use Fcntl ':flock';
+
+maybe_install_revision();
+
+
+sub maybe_install_revision
+{
+  my $revdir = "/usr/local/polony-tools/$ENV{MR_REVISION}";
+  if (mkdir $revdir)
+  {
+    if (fork() == 0)
+    {
+      close(STDIN);
+      chdir $revdir or die "$!";
+      symlink ".", "install" or die "$!";
+      open L, ">.log" or die "$!";
+      open STDOUT, ">&L" or die "$!";
+      open STDERR, ">&L" or die "$!";
+      flock L, LOCK_EX;
+      system (qw(svn export -r), $ENV{MR_REVISION}, $ENV{MR_SVNREPOS}, "src")
+	  or die "$?";
+      open F, ">.fetched" or die "$!";
+      system (qw(sh ./src/tests/autotests.sh))
+	  or die "$?";
+      open F, ">.installed" or die "$!";
+      open F, ">.tested" or die "$!";
+      close STDIN;
+      close STDOUT;
+      close L;
+      exit 0;
+    }
+    wait;
+    return 1 if ($? == 0);
+    die "Installation failed";
+  }
+  else
+  {
+    return 1 if (-e "$revdir/.tested");
+    sleep 5;
+    open L, "<$revdir/.log" or die "$!";
+    if (flock L, LOCK_SH)
+    {
+      close L;
+      return 1 if (-e "$revdir/.tested");
+    }
+    close L;
+    exit 1;
+  }
+}
