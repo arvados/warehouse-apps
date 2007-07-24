@@ -41,9 +41,9 @@ while(defined ($_ = <STDIN>))
     sleep 1;
     redo;
   }
-  if ($opt{"--raw-images"))
+  if ($opt{"--raw-images"})
   {
-    $filter = chooseimagefilter ($_);
+    my $filter = chooseimagefilter ($_);
     if ($filter)
     {
       for (1..5)
