@@ -17,7 +17,7 @@ if ($_REQUEST[gz])
   header ("Content-Type: application/octet-stream");
   header ("Content-Disposition: attachment; filename=\"allreads-job$rid.txt.gz\"");
 }
-elsif ($_REQUEST[md5])
+else if ($_REQUEST[md5])
 {
   $filter = "| md5sum";
   header ("Content-Type: text/plain");
