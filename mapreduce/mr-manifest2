@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-###MR_INPUT:images
+###MR_INPUT:frames
 
 use MetaMog;
 use Digest::MD5 'md5_hex';
