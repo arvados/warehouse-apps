@@ -28,9 +28,11 @@ foreach (@baseorder)
   }
 }
 
-stub:
-    foreach my $stub (@stubs)
+print map (findkey($_)."\n", @stubs);
+
+sub findkey
 {
+  my $stub = shift;
   my $keylist = $m->list_keys ($stub);
   foreach my $key (@$keylist)
   {
@@ -38,10 +40,10 @@ stub:
     {
       if ($key eq $stub.$ext)
       {
-	print "$key\n";
 	print STDERR "$key\n" if $ENV{MR_DEBUG};
-	next stub;
+	return $key;
       }
     }
   }
+  die "No image found for $stub";
 }
