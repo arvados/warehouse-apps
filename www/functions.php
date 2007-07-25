@@ -46,7 +46,7 @@ function echo_file_get_contents ($filename, $maxretries=0)
 {
   if ($fh = fopen ($filename, "r"))
     {
-      while (strlen($buf = fread ($fh, 8192)))
+      while (strlen($buf = fread ($fh, 1048576)))
 	{
 	  echo $buf;
 	}
