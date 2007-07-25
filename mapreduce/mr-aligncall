@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+###MR_INPUT:frames
+
 use MetaMog;
 
 if ($ENV{MR_LEVEL} == 0)
