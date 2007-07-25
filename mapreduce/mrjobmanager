@@ -281,7 +281,7 @@ sub readfrompipes
 	{
 	  my ($level, $input) = ($1, $2);
 	  my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
-          (jobid, level, input) values (?, ?, ?)");
+          (jobid, level, input, submittime) values (?, ?, ?, ?)");
 	  $newjobstep_sth->execute ($job_id, $level, $input)
 	      or croak ($dbh->errstr);
 	}
