@@ -39,6 +39,7 @@ stub:
       if ($key eq $stub.$ext)
       {
 	print "$key\n";
+	print STDERR "$key\n" if $ENV{MR_DEBUG};
 	next stub;
       }
     }
