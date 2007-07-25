@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+###MR_INPUT:images
+
+use MetaMog;
+use Digest::MD5;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # init
+  open STDIN, "mrtask-streaminputkeys |";
+  while (defined ($_ = <STDIN>))
+  {
+    chomp;
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 2 +++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # map
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
+  undef $/;
+  my $data = <STDIN>;
+  my $md5 = md5_hex($data);
+  print "$md5 $ENV{MR_INPUT}\n";
+  close STDIN or die "Input stream exited $?";
+}
+
+elsif ($ENV{MR_LEVEL} == 2)
+{
+  # reduce
+  my $md5 = digest->new(); 
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
+  while (defined ($_ = <STDIN>))
+  {
+    print;
+  }
+  close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 3 mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 3)
+{
+  my $m = MetaMog->new;
+  $m->rename ($ENV{MR_INPUT}, "mrjob/$ENV{MR_JOB_ID}") or die $m->errstr;
+  $m->delete_all ($ENV{MR_INPUT}, "mrjobstep/$ENV{MR_JOB_ID}/");
+}
