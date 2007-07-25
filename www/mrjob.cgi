@@ -67,6 +67,15 @@ while (my @row = $sth->fetchrow)
 }
 print q{
 </table>
+};
+
+$sth = $dbh->prepare ("select input0 from mrjob where id=?");
+$sth->execute ($jobid) or die $sth->errstr;
+my $input0 = $sth->fetchrow;
+
+print "<p>Input:<blockquote><pre><small>".escapeHTML($input0)."</small></pre></blockquote></p>";
+
+print q{
 <table>
 };
 
