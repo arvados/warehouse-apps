@@ -46,7 +46,7 @@ Map/reduce function:
 };
 
 opendir D, "../mapreduce" or die "Can't open mapreduce dir";
-foreach (sort readdir D)
+foreach (sort `svn ls '$main::svn_repos/mapreduce/'`)
 {
   if (/^mr-([-_\w\.]+)$/)
   {

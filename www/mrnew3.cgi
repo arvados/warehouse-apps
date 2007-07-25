@@ -8,8 +8,13 @@ do '/etc/polony-tools/config.pl';
 my $q = new CGI;
 print $q->header;
 
+my $rev = $q->param('revision') + 0;
+
 my $inputtype = 'images';
-if (open F, "<../mapreduce/mr-".$q->param('mrfunction'))
+if (open F,
+    "svn cat '$main::svn_repos/mapreduce/mr-"
+    .$q->param('mrfunction')
+    ."\@$rev' |")
 {
   foreach (<F>)
   {
