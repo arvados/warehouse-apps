@@ -3,11 +3,12 @@
 ###MR_INPUT:images
 
 use MetaMog;
-use Digest::MD5;
+use Digest::MD5 'md5_hex';
 
 if ($ENV{MR_LEVEL} == 0)
 {
   # init
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
   open STDIN, "mrtask-streaminputkeys |";
   while (defined ($_ = <STDIN>))
   {
