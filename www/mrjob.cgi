@@ -71,19 +71,19 @@ print q{
 };
 
 my $sth = $dbh->prepare("select
- id,input,submittime,starttime,finishtime,exitcode,length(stderr)
+ id,level,input,submittime,starttime,finishtime,exitcode,length(stderr)
  from mrjobstep
  where jobid=?
  order by id");
 $sth->execute ($jobid) or die $sth->errstr;
-print map ("<td>$_</td>\n", qw(StepID Input Submit Start Finish ExitCode stderr));
+print map ("<td>$_</td>\n", qw(StepID Level Input Submit Start Finish ExitCode stderr));
 print q{
 </tr>
 };
 while (my @row = $sth->fetchrow)
 {
   for (@row) { $_ = escapeHTML($_); }
-  for ($row[1]) { s/\n/<br>/g; }
+  for ($row[2]) { s/\n/<br>/g; }
   if ($row[-1])
   {
     $row[-1] = "<a href=\"mrjobstep.cgi?id=$row[0]\">$row[-1]&nbsp;bytes</a>";
