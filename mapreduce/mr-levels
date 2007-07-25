@@ -9,7 +9,8 @@ if ($ENV{MR_LEVEL} == 0)
   while (defined ($_ = <STDIN>))
   {
     chomp;
-    print STDERR "+++mrjobstep 1 $_+++\n";
+    print STDERR "+++mrjobstep 1 $_+++\n"
+	if /\.(raw|tiff?)(\.g?z)?$/i;
   }
   close STDIN or die "Input stream exited $?";
   print STDERR "+++mrjobstep 2 +++\n";
