@@ -17,8 +17,9 @@ if ($_REQUEST[domain] == 'reports')
 }
 else if ($_REQUEST[domain] == 'images')
 {
-  if (ereg ("/(positions|cycles)$", $dkey))
+  if (ereg ("/(positions|cycles)$", $dkey) || $_REQUEST[format] == 'text')
     {
+      header ("Content-Disposition: attachment; filename=\"$filename.txt\"");
       header ("Content-type: text/plain");
     }
   else if ($_REQUEST[format] == 'png')

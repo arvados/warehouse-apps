@@ -38,21 +38,28 @@ my $sth = $dbh->prepare("
     from mrjob
     left join mrjobstep on mrjob.id=mrjobstep.jobid and mrjobstep.finishtime is null
     group by mrjob.id
-    order by mrjob.id desc");
+    order by mrjob.id desc
+    limit 10");
 $sth->execute or die $dbh->errstr;
 
 print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Steps2Go Success));
+print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed StepsInQueue Success Output));
 print q{
 </tr>
 };
 while (my @row = $sth->fetchrow)
 {
+  my ($jobid) = @row;
+  for (@row) { $_ = escapeHTML($_); }
+  if ($row[-1])
+  {
+    push @row, "<a href=\"get.php?format=text&domain=images&dkey=mrjob/$jobid\">view</a>";
+  }
   print "<tr>\n";
-  print map ("<td>".escapeHTML($_)."</td>\n", @row);
+  print map ("<td>$_</td>\n", @row);
   print "</tr>\n";
 }
 print q{
