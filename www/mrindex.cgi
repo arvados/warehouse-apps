@@ -21,7 +21,7 @@ print q{
 my $dbh = DBI->connect($main::mapreduce_dsn,
 		       $main::mapreduce_mysql_username,
 		       $main::mapreduce_mysql_password) or die DBI->errstr;
-
+my $limit = ($q->param('showall') ? "" : "limit 10");
 my $sth = $dbh->prepare("
     select mrjob.id,
       jobmanager_id,
@@ -39,7 +39,7 @@ my $sth = $dbh->prepare("
     left join mrjobstep on mrjob.id=mrjobstep.jobid and ((mrjobstep.finishtime is null) = (mrjob.finishtime is null))
     group by mrjob.id
     order by mrjob.id desc
-    limit 10");
+    $limit");
 $sth->execute or die $dbh->errstr;
 
 print q{
@@ -67,6 +67,11 @@ while (my @row = $sth->fetchrow)
 }
 print q{
 </table>
+};
+
+if ($limit) { print "<p><a href=\"mrindex.cgi?showall=1\">show all</a></p>"; }
+
+print q{
 </body>
 </html>
 };
