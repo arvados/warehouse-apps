@@ -17,6 +17,11 @@ if ($_REQUEST[gz])
   header ("Content-Type: application/octet-stream");
   header ("Content-Disposition: attachment; filename=\"allreads-job$rid.txt.gz\"");
 }
+elsif ($_REQUEST[md5])
+{
+  $filter = "| md5sum";
+  header ("Content-Type: text/plain");
+}
 else
 {
   $filter = "";
@@ -26,5 +31,5 @@ else
 
 flush();
 
-passthru ("perl report-frameread.pl $rid $nframes 2>&1 $filter");
+passthru ("(perl report-frameread.pl $rid $nframes $filter) 2>&1");
 ?>
