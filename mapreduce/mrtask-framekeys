@@ -9,9 +9,8 @@ use MetaMog;
 my $m = new MetaMog;
 
 my ($dsid, $framenumber) = split (" ", $ENV{MR_INPUT});
-my (@knobs) = split ("\n", $ENV{MR_KNOBS});
-my (@hybrid) = map (s/.*?=//, grep (/^HYBRID=/, @knobs));
-my (@baseorder) = map (s/.*?=//, grep (/^BASEORDER=/, @knobs));
+my (@hybrid) = split (",", $ENV{KNOB_HYBRID});
+my (@baseorder) = split (",", $ENV{KNOB_BASEORDER});
 
 my @stubs;
 
