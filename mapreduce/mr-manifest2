@@ -33,7 +33,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 elsif ($ENV{MR_LEVEL} == 2)
 {
   # reduce
-  my $md5 = digest->new(); 
+  my $md5 = Digest->new(); 
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
   while (defined ($_ = <STDIN>))
   {
