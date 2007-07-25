@@ -24,6 +24,10 @@ elsif ($ENV{MR_LEVEL} == 1)
   my (@baseorder) = split (",", $ENV{KNOB_BASEORDER});
   $ENV{HYBRIDDIRORDER} = "@hybrid";
   $ENV{DIRORDER} = "@baseorder";
+  for (qw(FOCUSPIXELS ALIGNWINDOW OBJECTTHRESHOLD))
+  {
+    $ENV{$_} = $ENV{"KNOB_$_"};
+  }
 
   open (STDIN, "mrtask-framekeys "
 	. "| mrtask-streaminput --raw-images "
