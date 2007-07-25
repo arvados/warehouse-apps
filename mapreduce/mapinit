@@ -99,6 +99,7 @@ create table if not exists mrjob (
  nprocs int,
  nodes text,
  knobs text,
+ input0 text,
  starttime datetime,
  finishtime datetime,
  jobmanager_id bigint,

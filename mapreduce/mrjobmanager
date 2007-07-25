@@ -28,10 +28,11 @@ die $DBI::errstr if !$dbh;
 
 
 
-my $sth = $dbh->prepare ("select nprocs, revision, knobs, mrfunction
+my $sth = $dbh->prepare ("select nprocs, revision, input0, knobs, mrfunction
                           from mrjob where id=?");
 $sth->execute ($job_id) or die $dbh->errstr;
-my ($job_nprocs, $job_revision, $job_knobs, $mrfunction) = $sth->fetchrow;
+my ($job_nprocs, $job_revision, $input0, $job_knobs, $mrfunction)
+    = $sth->fetchrow or die $sth->errstr;
 
 Log ($dbh, $job_id, undef, "nprocs $job_nprocs rev $job_revision function $mrfunction knobs $job_knobs");
 
@@ -140,6 +141,7 @@ while (($id, $input) = $sth->fetchrow)
     $ENV{"MR_REVISION"} = $job_revision;
     $ENV{"MR_LEVEL"} = $level;
     $ENV{"MR_FUNCTION"} = $mrfunction;
+    $ENV{"MR_INPUT0"} = $input0;
     $ENV{"INSTALL_REPOS"} = $main::svn_repos;
     $ENV{"INSTALL_REVISION"} = $job_revision;
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);

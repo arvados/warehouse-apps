@@ -12,12 +12,13 @@ my $dbh = DBI->connect($main::mapreduce_dsn,
 		       $main::mapreduce_mysql_username,
 		       $main::mapreduce_mysql_password) or die DBI->errstr;
 $dbh->do ("insert into mrjob
- (jobmanager_id, nprocs, revision, mrfunction, knobs)
- values (-1, ?, ?, ?, ?)",
+ (jobmanager_id, nprocs, revision, mrfunction, input0, knobs)
+ values (-1, ?, ?, ?, ?, ?)",
 	  undef,
 	  32,		# XXX should be chosen by user
 	  $q->param('revision'),
 	  $q->param('mrfunction'),
+	  nocr($q->param('input')),
 	  nocr($q->param('knobs')))
     or die $dbh->errstr;
 my $jobid = $dbh->last_insert_id (undef, undef, undef, undef);
