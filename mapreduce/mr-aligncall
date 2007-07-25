@@ -21,7 +21,6 @@ elsif ($ENV{MR_LEVEL} == 1)
   $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/align-call";
   open STDIN, "mrtask-framekeys \
  | mrtask-streaminput --raw-images \
- | perl -S filter-$IMAGEFILTER.pl \
  | perl -S find_objects-register_raw_pipe.pl \
  | perl -S raw_to_reads.pl \
  | sort -n |" or die "Input pipe failed: $!";
