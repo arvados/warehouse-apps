@@ -13,6 +13,20 @@ sub rename
   return 0;
 }
 
+sub list_keys
+{
+  my @ret;
+  my $after;
+  my $keys;
+  while (1)
+  {
+    ($after, $keys) = $self->{mogc}->list_keys ($prefix, $after);
+    last if (!defined ($keys) || !@$keys);
+    push @ret, @$keys;
+  }
+  return \@ret;
+}
+
 sub delete_all
 {
   my $self = shift;

@@ -1,0 +1,51 @@
+#!/usr/bin/perl
+
+use MetaMog;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # init
+  open STDIN, "mrtask-framelist |";
+  while (defined ($_ = <STDIN>))
+  {
+    chomp;
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 2 +++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # map
+  $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/align-call";
+  open STDIN, "mrtask-framekeys \
+ | mrtask-streaminput --raw-images \
+ | perl -S filter-$IMAGEFILTER.pl \
+ | perl -S find_objects-register_raw_pipe.pl \
+ | perl -S raw_to_reads.pl \
+ | sort -n |" or die "Input pipe failed: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    print "$ENV{MR_INPUT} $_";
+  }
+}
+
+elsif ($ENV{MR_LEVEL} == 2)
+{
+  # reduce
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
+  while (defined ($_ = <STDIN>))
+  {
+    print;
+  }
+  close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 3 mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 3)
+{
+  my $m = MetaMog->new;
+  $m->rename ($ENV{MR_INPUT}, "mrjob/$ENV{MR_JOB_ID}") or die $m->errstr;
+  $m->delete_all ($ENV{MR_INPUT}, "mrjobstep/$ENV{MR_JOB_ID}/");
+}

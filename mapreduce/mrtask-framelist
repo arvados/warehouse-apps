@@ -1,0 +1,30 @@
+#!/usr/bin/perl
+
+# mrtask-framelist: grok $ENV{MR_INPUT}, send list of {dsid,frame} to stdout
+#
+# MR_INPUT = framespeclist
+# framespeclist = framespec | framespec <lf> framespeclist
+# framespec = dataset <space> framenumberrange
+# framenumberrange = framenumber | framenumber <hyphen> framenumber
+#
+# eg.
+#
+# nr_02 1
+# nr_02 7-10
+# gmc1_15 250-499
+
+use strict;
+
+foreach (split ("\n", $ENV{MR_INPUT}))
+{
+  my ($dsid, $framerange) = split;
+  my ($f1, $f2) = split ("-", $framerange);
+  if (!defined $f2 || $f2 < $f1)
+  {
+    $f2 = $f1;
+  }
+  for (my $f = $f1; $f <= $f2; $f ++)
+  {
+    print "$dsid $f\n";
+  }
+}

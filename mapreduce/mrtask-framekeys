@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+# mrtask-framekeys: output images involved in one specified dataset,
+# frame number, hybrid, and baseorder
+
+use strict;
+use MetaMog;
+
+my $m = new MetaMog;
+
+my ($dsid, $framenumber) = split (" ", $ENV{MR_INPUT});
+my (@knobs) = split ("\n", $ENV{MR_KNOBS});
+my (@hybrid) = map (s/.*?=//, grep (/^HYBRID=/, @knobs));
+my (@baseorder) = map (s/.*?=//, grep (/^BASEORDER=/, @knobs));
+
+my @stubs;
+
+push @stubs, sprintf ("/%s/IMAGES/RAW/999/WL_%04d", $dsid, $framenumber);
+foreach (@hybrid)
+{
+  push @stubs, sprintf ("/%s/IMAGES/RAW/$_/SC_%04d", $dsid, $framenumber);
+}
+foreach (@baseorder)
+{
+  foreach my $acgt (-3..0)
+  {
+    push @stubs, sprintf ("/%s/IMAGES/RAW/$_/SC_%04d", $dsid,
+			  $framenumber * 4 + $acgt);
+  }
+}
+
+stub:
+    foreach my $stub (@stubs)
+{
+  my $keylist = $m->list_keys ($stub);
+  foreach my $key (@$keylist)
+  {
+    foreach my $ext (qw(.raw .raw.gz .tif .tif.gz .tiff .tiff.gz))
+    {
+      if ($key eq $stub.$ext)
+      {
+	print "$key\n";
+	next stub;
+      }
+    }
+  }
+}
