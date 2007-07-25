@@ -22,6 +22,11 @@ else if ($_REQUEST[md5])
   $filter = "| md5sum";
   header ("Content-Type: text/plain");
 }
+else if ($_REQUEST[wc])
+{
+  $filter = "| wc";
+  header ("Content-Type: text/plain");
+}
 else
 {
   $filter = "";
