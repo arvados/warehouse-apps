@@ -4,6 +4,8 @@ require_once '/etc/polony-tools/config.php';
 require_once 'functions.php';
 require_once 'connect.php';
 
+$hostname = trim(`hostname`);
+
 putenv("MOGILEFS_DOMAIN=reports");
 putenv("MOGILEFS_TRACKERS=".join(",", $mogilefs_trackers));
 
@@ -15,7 +17,7 @@ if ($_REQUEST[gz])
 {
   $filter = "| gzip";
   header ("Content-Type: application/octet-stream");
-  header ("Content-Disposition: attachment; filename=\"allreads-job$rid.txt.gz\"");
+  header ("Content-Disposition: attachment; filename=\"$hostname-allreads-job$rid.txt.gz\"");
 }
 else if ($_REQUEST[md5])
 {
@@ -31,7 +33,7 @@ else
 {
   $filter = "";
   header ("Content-Type: text/plain");
-  header ("Content-Disposition: attachment; filename=\"allreads-job$rid.txt\"");
+  header ("Content-Disposition: attachment; filename=\"$hostname-allreads-job$rid.txt\"");
 }
 
 flush();
