@@ -15,6 +15,7 @@ sub rename
 
 sub list_keys
 {
+  my $self = shift;
   my @ret;
   my $after;
   my $keys;
