@@ -16,7 +16,7 @@ print q{
 <body>
 <h2><a href="mrindex.cgi">mapreduce jobs</a> / new</h2>
 
-<form method=post action="mrnew2.cgi">
+<form method=get action="mrnew2.cgi">
 Revision:<br>
 <select size=8 name=revision>
 };
