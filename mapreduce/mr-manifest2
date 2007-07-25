@@ -37,9 +37,10 @@ elsif ($ENV{MR_LEVEL} == 2)
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
   while (defined ($_ = <STDIN>))
   {
-    print;
+    $md5->add($_);
   }
   close STDIN or die "Input stream exited $?";
+  print $md5->hexdigest; 
   print STDERR "+++mrjobstep 3 mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}+++\n";
 }
 
