@@ -5,7 +5,7 @@ use MetaMog;
 if ($ENV{MR_LEVEL} == 0)
 {
   # init
-  open STDIN, "mrtask-framelist |";
+  open STDIN, "mrtask-framelist |" or die "Input pipe failed: $!";
   while (defined ($_ = <STDIN>))
   {
     chomp;
