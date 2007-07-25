@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 
 use strict;
-use MogileFS::Client;
 use DBI;
 use CGI ':standard';
 
@@ -47,7 +46,7 @@ print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed StepsToGo Success Output));
+print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Done/-ToDo Success Output));
 print q{
 </tr>
 };
@@ -55,12 +54,13 @@ while (my @row = $sth->fetchrow)
 {
   my ($jobid) = @row;
   for (@row) { $_ = escapeHTML($_); }
-  for ($row[6]) { s/\n/<br>/g; }
+  for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
   $row[10] = 0-$row[10] if !defined $row[8];
   if ($row[-1])
   {
-    push @row, "<a href=\"get.php?format=text&domain=images&dkey=mrjob/$jobid\">view</a>";
+    push @row, "<a href=\"get.php?format=text&domain=images&dkey=mrjob/$jobid\">download</a>";
   }
+  $row[0] = "<a href=\"mrjob.cgi?id=$row[0]\">$row[0]</a>";
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
   print "</tr>\n";
