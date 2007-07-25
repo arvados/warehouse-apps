@@ -80,7 +80,7 @@ REVISION=<?=htmlspecialchars(mysql_one_value("select revision from report where 
 
 <ul>
 <li><a href="map.php?rid=<?=$rid?>">Show map</a>
-<li>Download all reads (frame# &lt;space&gt; read &lt;lf&gt;): <a href="report-frameread.php?rid=<?=$rid?>">allreads-job<?=$rid?>.txt</a> or <a href="report-frameread.php?rid=<?=$rid?>&gz=1">allreads-job<?=$rid?>.txt.gz</a> or just <a href="report-frameread.php?rid=<?=$rid?>&md5=1">md5sum of allreads-job<?=$rid?>.txt</a>
+<li>Download all reads (frame# &lt;space&gt; read &lt;lf&gt;): <a href="report-frameread.php?rid=<?=$rid?>">allreads-job<?=$rid?>.txt</a> or <a href="report-frameread.php?rid=<?=$rid?>&gz=1">allreads-job<?=$rid?>.txt.gz</a> or just <a href="report-frameread.php?rid=<?=$rid?>&md5=1">md5sum of allreads-job<?=$rid?>.txt</a> (beware browser timeout)
 </ul>
 
 <p>
