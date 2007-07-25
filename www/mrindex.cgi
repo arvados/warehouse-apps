@@ -54,12 +54,13 @@ while (my @row = $sth->fetchrow)
 {
   my ($jobid) = @row;
   for (@row) { $_ = escapeHTML($_); }
+  for ($row[6]) { s/\n/<br>/g; }
   if ($row[-1])
   {
     push @row, "<a href=\"get.php?format=text&domain=images&dkey=mrjob/$jobid\">view</a>";
   }
   print "<tr>\n";
-  print map ("<td>$_</td>\n", @row);
+  print map ("<td valign=top>$_</td>\n", @row);
   print "</tr>\n";
 }
 print q{
