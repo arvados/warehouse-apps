@@ -33,8 +33,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 elsif ($ENV{MR_LEVEL} == 2)
 {
   # reduce
-  my $md5 = Digest::MD5->new; 
-  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
+  my $md5 = Digest::MD5->new;
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |"
+      or die "Can't open input pipe: $!";
   while (defined ($_ = <STDIN>))
   {
     $md5->add($_);
