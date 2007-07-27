@@ -13,6 +13,7 @@ my $Qmrfunction = escapeHTML($q->param('mrfunction'));
 my $Qdsid = escapeHTML($q->param('dsid'));
 my $Qcycles = escapeHTML(join(",", $q->param('cycles')));
 my $Qknobs = escapeHTML($q->param('knobs'));
+my $Qnodes = escapeHTML($q->param('nodes'));
 
 my @prefixlist;
 foreach (sort $q->param ('cycles'))
@@ -35,11 +36,13 @@ Function: $Qmrfunction<br>
 Dataset: $Qdsid<br>
 Cycles: $Qcycles<br>
 Knobs: $Qknobs<br>
+Nodes: $Qnodelist<br>
 
 <input type=hidden name=knobs value="$Qknobs">
 <input type=hidden name=input value="$Qprefixlist">
 <input type=hidden name=mrfunction value="$Qmrfunction">
 <input type=hidden name=revision value="$Qrevision">
+<input type=hidden name=nodelist value="$Qnodelist">
 
 <input type=submit value="Submit job">
 </form>

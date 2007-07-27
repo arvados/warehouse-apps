@@ -34,7 +34,39 @@ $sth->execute ($job_id) or die $dbh->errstr;
 my ($job_nprocs, $job_revision, $input0, $job_knobs, $mrfunction)
     = $sth->fetchrow or die $sth->errstr;
 
-Log ($dbh, $job_id, undef, "nprocs $job_nprocs rev $job_revision function $mrfunction knobs $job_knobs");
+Log ($dbh, $job_id, undef, "rev $job_revision function $mrfunction knobs $job_knobs");
+
+
+
+Log ($dbh, $job_id, undef, "check slurm allocation");
+my @taskslot;
+# Should use $ENV{SLURM_TASKS_PER_NODE} instead of sinfo? (eg. "4(x3),2,4(x2)")
+foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
+{
+  my ($ncpus, $nodelist) = split;
+  my @nodelist;
+  if ($nodelist =~ /\[(\d+)-(\d+)\]/)
+  {
+    @nodelist = map {
+      my $n = $nodelist;
+      $n =~ s/\[\d+-\d+\]/$_/;
+      $n;
+    } ($1..$2);
+  }
+  else
+  {
+    @nodelist = ($nodelist);
+  }
+  foreach my $node (@nodelist)
+  {
+    Log ($dbh, $job_id, undef, "node $node - $ncpus slots");
+    foreach my $cpu (1..$ncpus)
+    {
+      push @taskslot, { node => $node,
+			cpu => $cpu };
+    }
+  }
+}
 
 
 
@@ -104,9 +136,10 @@ $sth->execute ($job_id, $level) or croak ($dbh->errstr);
 Log ($dbh, $job_id, undef, "process jobsteps");
 
 my %proc_job;
+my %proc_slot;
+my @freeslot = (0..$#taskslot);
 my %job_stderr;
 my %reader;
-my $children = 0;
 my ($id, $input);
 while (($id, $input) = $sth->fetchrow)
 {
@@ -114,6 +147,8 @@ while (($id, $input) = $sth->fetchrow)
   my $flags = fcntl ($reader{$id}, F_GETFL, 0) or croak ($!);
   fcntl ($reader{$id}, F_SETFL, $flags | O_NONBLOCK) or croak ($!);
 
+  my $childslot = $freeslot[0];
+  my $childnode = $taskslot[$childslot]->{node};
   my $childpid = fork();
   if ($childpid == 0)
   {
@@ -148,7 +183,7 @@ while (($id, $input) = $sth->fetchrow)
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
-    exec("srun -n1 -D /tmp sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/src/mapreduce/mrtaskmanager'");
+    exec("srun --nodelist='$childnode' -n1 -D /tmp sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/src/mapreduce/mrtaskmanager'");
     exit(1);
   }
   close("writer");
@@ -158,7 +193,11 @@ while (($id, $input) = $sth->fetchrow)
     delete $reader{$id};
     next;
   }
+  shift @freeslot;
   $proc_job{$childpid} = $id;
+  $proc_slot{$childpid} = $childslot;
+  # assert (!exists $taskslot[$childslot]->{pid});
+  $taskslot[$childslot]->{pid} = $child;
 
   # XXX shouldn't have to reconnect here??? XXX
   $dbh = DBI->connect($main::mapreduce_dsn,
@@ -170,13 +209,12 @@ while (($id, $input) = $sth->fetchrow)
   my $start_sth = $dbh->prepare ("update mrjobstep set
                                   attempts=attempts+1,
                                   starttime=now(),
-                                  finishtime=null
+                                  finishtime=null,
+                                  node=?
                                   where id=? and jobid=?");
-  $start_sth->execute ($id, $job_id);
+  $start_sth->execute ($childnode, $id, $job_id);
 
-  ++$children;
-  while ($children >= $job_nprocs ||
-	 $children >= $max_nprocs)
+  while (!@freeslot)
   {
     readfrompipes (\%reader, \%proc_job, \%job_stderr);
     
@@ -198,7 +236,9 @@ while (($id, $input) = $sth->fetchrow)
       delete $reader{$proc_job{$pid}};
       delete $job_stderr{$proc_job{$pid}};
       delete $proc_job{$pid};
-      --$children;
+      delete $taskslot[$proc_slot{$pid}]->{pid};
+      push @freeslot, $proc_slot{$pid};
+      delete $proc_slot{$pid};
     }
   }
 
@@ -213,8 +253,8 @@ while (($id, $input) = $sth->fetchrow)
   }
 }
 
-Log ($dbh, $job_id, undef, "wait for last $children children to finish");
-while ($children > 0)
+Log ($dbh, $job_id, undef, "wait for last ".(scalar keys %proc_job)." children to finish");
+while (%proc_job)
 {
   readfrompipes (\%reader, \%proc_job, \%job_stderr);
 
@@ -235,8 +275,10 @@ while ($children > 0)
     close $reader{$proc_job{$pid}};
     delete $reader{$proc_job{$pid}};
     delete $job_stderr{$proc_job{$pid}};
+    delete $taskslot[$proc_slot{$pid}]->{pid};
+    push @freeslot, $proc_slot{$pid};
+    delete $proc_slot{$pid};
     delete $proc_job{$pid};
-    --$children;
   }
 }
 

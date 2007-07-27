@@ -6,7 +6,7 @@ use POSIX ':sys_wait_h';
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 
 do '/etc/polony-tools/config.pl';
-my $max_njobs = 3;		# max "big job" concurrency
+my $max_njobs = 8;		# max "big job" concurrency
 
 
 
@@ -28,10 +28,10 @@ my $children = 0;
 while (1)
 {
 
-  my $sth = $dbh->prepare ("select id, nprocs, revision from mrjob
+  my $sth = $dbh->prepare ("select id, nodes, revision from mrjob
                             where jobmanager_id is null limit 1");
   $sth->execute or die $dbh->errstr;
-  my ($job_id, $job_nprocs, $job_revision) = $sth->fetchrow_array;
+  my ($job_id, $job_nodes, $job_revision) = $sth->fetchrow_array;
 
   if ($job_id)
   {
@@ -65,8 +65,17 @@ while (1)
       undef $dbh;
       undef $sth;
 
-      # XXX this should run under "salloc" XXX
-      exec ("mrjobmanager", $job_id);
+      my $nodes_arg = "";
+      if ($job_nodes =~ /^\d+$/)
+      {
+	$nodes_arg = "--nodes $job_nodes";
+      }
+      else
+      {
+	$job_nodes =~ s/\s+/,/g;
+	$nodes_arg = "--nodelist '$job_nodes'";
+      }
+      exec ("salloc $nodes_arg mrjobmanager", $job_id);
       exit (1);
     }
   }
@@ -115,6 +124,7 @@ create table if not exists mrjobstep (
  submittime datetime,
  starttime datetime,
  finishtime datetime,
+ node varchar(63),
  exitcode int,
  stderr text,
  attempts int not null default 0,

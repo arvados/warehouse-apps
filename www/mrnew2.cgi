@@ -12,6 +12,7 @@ print $q->header;
 
 my $Qrevision = escapeHTML($q->param('revision'));
 my $Qmrfunction = escapeHTML($q->param('mrfunction'));
+my $Qnodelist = escapeHTML($q->param('nodelist'));
 print qq{
 <html>
 <head>
@@ -25,6 +26,8 @@ print qq{
 Revision: $Qrevision<br>
 <input type=hidden name=mrfunction value="$Qmrfunction">
 Map/reduce function: $Qmrfunction<br>
+<input type=hidden name=nodelist value="$Qnodelist">
+Nodes: $Qnodelist<br>
 Dataset:<br>
 };
 

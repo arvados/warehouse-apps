@@ -55,9 +55,16 @@ foreach (sort `svn ls '$main::svn_repos/mapreduce/'`)
 }
 closedir D;
 
-print q{
+
+my $nodelist = join(",", `sinfo -o '%N' -h -r --states=alloc,comp,idle`);
+print qq{
 </select>
 <br>
+
+Nodes:<br>
+<input type=text name=nodelist value="$nodelist">
+<br>
+
 <input type=submit value="Next">
 </form>
 </body>

@@ -1,12 +1,11 @@
 #!/usr/bin/perl
 
 use strict;
-use MogileFS::Client;
 use DBI;
-use CGI ':standard';
 
 my $Qrevision = escapeHTML($q->param('revision'));
 my $Qmrfunction = escapeHTML($q->param('mrfunction'));
+my $Qnodelist = escapeHTML($q->param('nodelist'));
 my $Qdsid = escapeHTML($q->param('dsid'));
 print qq{
 <html>
@@ -21,6 +20,8 @@ print qq{
 Revision: $Qrevision<br>
 <input type=hidden name=mrfunction value="$Qmrfunction">
 Map/reduce function: $Qmrfunction<br>
+<input type=hidden name=nodelist value="$Qnodelist">
+Nodes: $Qnodelist<br>
 <input type=hidden name=dsid value="$Qdsid">
 Dataset: $Qdsid<br>
 Cycles:<br>
