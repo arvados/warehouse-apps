@@ -13,7 +13,7 @@ my $Qmrfunction = escapeHTML($q->param('mrfunction'));
 my $Qdsid = escapeHTML($q->param('dsid'));
 my $Qcycles = escapeHTML(join(",", $q->param('cycles')));
 my $Qknobs = escapeHTML($q->param('knobs'));
-my $Qnodes = escapeHTML($q->param('nodes'));
+my $Qnodelist = escapeHTML($q->param('nodelist'));
 
 my @prefixlist;
 foreach (sort $q->param ('cycles'))
