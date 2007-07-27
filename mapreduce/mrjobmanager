@@ -197,7 +197,7 @@ while (($id, $input) = $sth->fetchrow)
   $proc_job{$childpid} = $id;
   $proc_slot{$childpid} = $childslot;
   # assert (!exists $taskslot[$childslot]->{pid});
-  $taskslot[$childslot]->{pid} = $child;
+  $taskslot[$childslot]->{pid} = $childpid;
 
   # XXX shouldn't have to reconnect here??? XXX
   $dbh = DBI->connect($main::mapreduce_dsn,

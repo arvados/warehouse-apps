@@ -65,17 +65,17 @@ while (1)
       undef $dbh;
       undef $sth;
 
-      my $nodes_arg = "";
+      my @nodes_arg;
       if ($job_nodes =~ /^\d+$/)
       {
-	$nodes_arg = "--nodes $job_nodes";
+	@nodes_arg = ("--nodes", $job_nodes);
       }
       else
       {
 	$job_nodes =~ s/\s+/,/g;
-	$nodes_arg = "--nodelist '$job_nodes'";
+	@nodes_arg = ("--nodelist", $job_nodes);
       }
-      exec ("salloc $nodes_arg mrjobmanager", $job_id);
+      exec ("salloc", @nodes_arg, "mrjobmanager", $job_id);
       exit (1);
     }
   }
