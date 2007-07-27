@@ -80,12 +80,12 @@ print q{
 };
 
 my $sth = $dbh->prepare("select
- id,level,input,submittime,starttime,finishtime,exitcode,length(stderr)
+ id,level,input,submittime,starttime,finishtime,node,exitcode,length(stderr)
  from mrjobstep
  where jobid=?
  order by id");
 $sth->execute ($jobid) or die $sth->errstr;
-print map ("<td>$_</td>\n", qw(StepID Level Input Submit Start Finish ExitCode stderr));
+print map ("<td>$_</td>\n", qw(StepID Level Input Submit Start Finish Node ExitCode stderr));
 print q{
 </tr>
 };
