@@ -183,7 +183,7 @@ while (($id, $input) = $sth->fetchrow)
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
-    exec("srun --nodelist='$childnode' -n1 -D /tmp sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/src/mapreduce/mrtaskmanager'");
+    exec("srun --nodelist='$childnode' -n1 -c1 -D /tmp sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/src/mapreduce/mrtaskmanager'");
     exit(1);
   }
   close("writer");
@@ -205,7 +205,10 @@ while (($id, $input) = $sth->fetchrow)
 		      $main::mapreduce_mysql_password);
   croak ($DBI::errstr) if !$dbh;
 
-  Log ($dbh, $job_id, $id, "child $childpid started");
+  Log ($dbh, $job_id, $id, "child $childpid started on "
+       .$taskslot[$childslot]->{node}
+       ."."
+       .$taskslot[$childslot]->{cpu});
   my $start_sth = $dbh->prepare ("update mrjobstep set
                                   attempts=attempts+1,
                                   starttime=now(),
