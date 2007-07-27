@@ -63,6 +63,7 @@ print qq{
 
 Nodes:<br>
 <input type=text name=nodelist value="$nodelist">
+<br>(specify a slurm-style nodelist like "computenode[1-4]", or just a number of nodes like "4" if you don't care which nodes you use)
 <br>
 
 <input type=submit value="Next">
