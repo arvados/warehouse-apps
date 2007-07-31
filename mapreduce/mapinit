@@ -6,7 +6,7 @@ use POSIX ':sys_wait_h';
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 
 do '/etc/polony-tools/config.pl';
-my $max_njobs = 8;		# max "big job" concurrency
+my $max_njobs = 32;		# max "big job" concurrency
 
 
 
@@ -22,19 +22,27 @@ createtables ($dbh);
 
 
 
-# Wait for a job to appear in the queue
+# Wait for jobs to appear in the queue; start them; repeat.
 
+my %job_proc;
 my $children = 0;
+my $sth;
 while (1)
 {
-
-  my $sth = $dbh->prepare ("select id, nodes, revision from mrjob
-                            where jobmanager_id is null limit 1");
-  $sth->execute or die $dbh->errstr;
-  my ($job_id, $job_nodes, $job_revision) = $sth->fetchrow_array;
-
-  if ($job_id)
+  my @row;
+  if (!defined ($sth) || !(@row = $sth->fetchrow))
   {
+    $sth = $dbh->prepare ("select id, nodes, revision from mrjob
+                           where jobmanager_id is null");
+    $sth->execute or die $dbh->errstr;
+  }
+
+  if (@row)
+  {
+    my ($job_id, $job_nodes, $job_revision) = @row;
+
+    next if exists $job_proc{$job_id};
+
     my $child = fork();
     if (!defined $child)
     {
@@ -42,6 +50,7 @@ while (1)
     }
     elsif ($child)
     {
+      $job_proc{$job_id} = $child;
       # XXX shouldn't have to reconnect here??? XXX
       $dbh = DBI->connect($main::mapreduce_dsn,
 			  $main::mapreduce_mysql_username,
@@ -49,7 +58,8 @@ while (1)
       die $DBI::errstr if !$dbh;
       if ($children >= $max_njobs)
       {
-	wait;
+	my $finishedchild = wait;
+	delete $job_proc{$finishedchild};
       }
       else
       {
@@ -75,14 +85,16 @@ while (1)
 	$job_nodes =~ s/\s+/,/g;
 	@nodes_arg = ("--nodelist", $job_nodes);
       }
+      print join (" ", "salloc", @nodes_arg, "mrjobmanager", $job_id, "\n");
       exec ("salloc", @nodes_arg, "mrjobmanager", $job_id);
       exit (1);
     }
   }
   sleep (5);
 
-  if (waitpid (-1, WNOHANG) > 0)
+  if (my $finishedchild = waitpid (-1, WNOHANG) > 0)
   {
+    delete $job_proc{$finishedchild};
     --$children;
   }
 }
