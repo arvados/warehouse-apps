@@ -20,7 +20,7 @@ my $retries = 0;
 while(defined ($_ = <STDIN>))
 {
   chomp;
-  if (!defined $mogc)
+  while (!defined ($mogc) && ++$retries <= 5)
   {
     $mogc = eval {
       MogileFS::Client->new
@@ -32,11 +32,12 @@ while(defined ($_ = <STDIN>))
       warn "MogileFS connect [$ENV{MOGILEFS_DOMAIN} at $ENV{MOGILEFS_TRACKERS}] failed";
     }
   }
+  die if !$mogc;
+
   my $bufref = $mogc->get_file_data ($_);
-  if (!$bufref)
+  if (!length ($$bufref))
   {
     warn "MogileFS get_file_data($_) failed: " . $mogc->errstr;
-    die if ++$retries > 5;
     undef $mogc;
     sleep 1;
     redo;
