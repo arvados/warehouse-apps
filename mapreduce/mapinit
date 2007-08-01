@@ -92,7 +92,8 @@ while (1)
   }
   sleep (5);
 
-  if (my $finishedchild = waitpid (-1, WNOHANG) > 0)
+  my $finishedchild = waitpid (-1, WNOHANG);
+  if ($finishedchild > 0)
   {
     delete $job_proc{$finishedchild};
     --$children;
