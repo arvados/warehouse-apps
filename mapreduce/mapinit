@@ -25,6 +25,7 @@ createtables ($dbh);
 # Wait for jobs to appear in the queue; start them; repeat.
 
 my %job_proc;
+my %proc_job;
 my $children = 0;
 my $sth;
 while (1)
@@ -51,6 +52,7 @@ while (1)
     elsif ($child)
     {
       $job_proc{$job_id} = $child;
+      $proc_job{$child} = $job_id;
       # XXX shouldn't have to reconnect here??? XXX
       $dbh = DBI->connect($main::mapreduce_dsn,
 			  $main::mapreduce_mysql_username,
@@ -59,7 +61,8 @@ while (1)
       if ($children >= $max_njobs)
       {
 	my $finishedchild = wait;
-	delete $job_proc{$finishedchild};
+	delete $job_proc{$proc_job{$finishedchild}};
+	delete $proc_job{$finishedchild};
       }
       else
       {
@@ -95,7 +98,8 @@ while (1)
   my $finishedchild = waitpid (-1, WNOHANG);
   if ($finishedchild > 0)
   {
-    delete $job_proc{$finishedchild};
+    delete $job_proc{$proc_job{$finishedchild}};
+    delete $proc_job{$finishedchild};
     --$children;
   }
 }
