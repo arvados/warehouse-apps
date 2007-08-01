@@ -85,8 +85,8 @@ while (1)
 	$job_nodes =~ s/\s+/,/g;
 	@nodes_arg = ("--nodelist", $job_nodes);
       }
-      print join (" ", "salloc", @nodes_arg, "mrjobmanager", $job_id, "\n");
-      exec ("salloc", @nodes_arg, "mrjobmanager", $job_id);
+      # print join (" ", "salloc", "--immediate", @nodes_arg, "mrjobmanager", $job_id, "\n");
+      exec ("salloc", "--immediate", @nodes_arg, "mrjobmanager", $job_id);
       exit (1);
     }
   }
