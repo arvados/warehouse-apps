@@ -10,10 +10,6 @@ my $max_njobs = 32;		# max "big job" concurrency
 
 
 
-$SIG{CHLD} = 'IGNORE';
-
-
-
 my $dbh = DBI->connect($main::mapreduce_dsn,
 		       $main::mapreduce_mysql_username,
 		       $main::mapreduce_mysql_password);
@@ -34,7 +30,8 @@ while (1)
   if (!defined ($sth) || !(@row = $sth->fetchrow))
   {
     $sth = $dbh->prepare ("select id, nodes, revision from mrjob
-                           where jobmanager_id is null");
+                           where jobmanager_id is null
+                           and submittime>date_add(now(),interval -1 day)");
     $sth->execute or die $dbh->errstr;
   }
 
@@ -51,16 +48,20 @@ while (1)
     }
     elsif ($child)
     {
-      $job_proc{$job_id} = $child;
-      $proc_job{$child} = $job_id;
       # XXX shouldn't have to reconnect here??? XXX
       $dbh = DBI->connect($main::mapreduce_dsn,
 			  $main::mapreduce_mysql_username,
 			  $main::mapreduce_mysql_password);
       die $DBI::errstr if !$dbh;
+
+      debuglog ("pid $child started");
+      $job_proc{$job_id} = $child;
+      $proc_job{$child} = $job_id;
+
       if ($children >= $max_njobs)
       {
 	my $finishedchild = wait;
+	debuglog ("pid $finishedchild finished");
 	delete $job_proc{$proc_job{$finishedchild}};
 	delete $proc_job{$finishedchild};
       }
@@ -71,7 +72,6 @@ while (1)
     }
     else
     {
-      $SIG{CHLD} = 'DEFAULT';
       close(STDIN);
 
       $dbh->{InactiveDestroy} = 1;
@@ -88,7 +88,7 @@ while (1)
 	$job_nodes =~ s/\s+/,/g;
 	@nodes_arg = ("--nodelist", $job_nodes);
       }
-      # print join (" ", "salloc", "--immediate", @nodes_arg, "mrjobmanager", $job_id, "\n");
+      debuglog ("salloc --immediate @nodes_arg mrjobmanager $job_id");
       exec ("salloc", "--immediate", @nodes_arg, "mrjobmanager", $job_id);
       exit (1);
     }
@@ -98,10 +98,17 @@ while (1)
   my $finishedchild = waitpid (-1, WNOHANG);
   if ($finishedchild > 0)
   {
+    debuglog ("pid $finishedchild finished");
     delete $job_proc{$proc_job{$finishedchild}};
     delete $proc_job{$finishedchild};
     --$children;
   }
+}
+
+
+sub debuglog
+{
+  print STDERR (@_, "\n") if $ENV{MR_DEBUG};
 }
 
 
@@ -126,6 +133,7 @@ create table if not exists mrjob (
  nodes text,
  knobs text,
  input0 text,
+ submittime datetime,
  starttime datetime,
  finishtime datetime,
  jobmanager_id bigint,
