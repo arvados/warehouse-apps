@@ -99,7 +99,7 @@ while (my @row = $sth->fetchrow)
   }
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
-  print "<td><a href=\"get.php?domain=images&dkey=mrjobstep/$jobid/$row[0]\">download</a></td>";
+  print "<td valign=top><a href=\"get.php?format=text&domain=images&dkey=mrjobstep/$jobid/$row[0]\">download</a></td>";
   print "</tr>\n";
 }
 
