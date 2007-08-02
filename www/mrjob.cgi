@@ -85,7 +85,7 @@ my $sth = $dbh->prepare("select
  where jobid=?
  order by id");
 $sth->execute ($jobid) or die $sth->errstr;
-print map ("<td>$_</td>\n", qw(StepID Level Input Submit Start Finish Node ExitCode stderr));
+print map ("<td>$_</td>\n", qw(StepID Level Input Submit Start Finish Node ExitCode stderr stdout));
 print q{
 </tr>
 };
@@ -99,6 +99,7 @@ while (my @row = $sth->fetchrow)
   }
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
+  print "<td><a href=\"get.php?domain=images&dkey=mrjobstep/$jobid/$row[0]\">download</a></td>";
   print "</tr>\n";
 }
 
