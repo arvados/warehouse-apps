@@ -125,10 +125,9 @@ Log ($dbh, $job_id, undef, "start level $level");
 
 Log ($dbh, $job_id, undef, "ask db for jobstep list");
 
-$sth = $dbh->prepare ("select id, input from mrjobstep
+$sth = $dbh->prepare ("select id, input, attempts from mrjobstep
                        where jobid=? and level=?
-                       and (finishtime is null or exitcode <> 0)
-                       and (attempts < 3)");
+                       and (finishtime is null or exitcode <> 0)");
 $sth->execute ($job_id, $level) or croak ($dbh->errstr);
 
 
@@ -140,9 +139,13 @@ my %proc_slot;
 my @freeslot = (0..$#taskslot);
 my %job_stderr;
 my %reader;
-my ($id, $input);
-while (($id, $input) = $sth->fetchrow)
+my ($id, $input, $attempts);
+while (($id, $input, $attempts) = $sth->fetchrow)
 {
+  if ($attempts > 4)
+  {
+    croak ("jobstep $id failed $attempts times -- giving up");
+  }
   pipe $reader{$id}, "writer" or croak ($!);
   my $flags = fcntl ($reader{$id}, F_GETFL, 0) or croak ($!);
   fcntl ($reader{$id}, F_SETFL, $flags | O_NONBLOCK) or croak ($!);
