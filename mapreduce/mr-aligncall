@@ -32,11 +32,11 @@ elsif ($ENV{MR_LEVEL} == 1)
     $ENV{$_} = $ENV{"KNOB_$_"};
   }
 
+  #this should be in (numerical) frame order (!?!)
   open (STDIN, "mrtask-framekeys "
 	. "| mrtask-streaminput --raw-images "
 	. "| perl -S find_objects-register_raw_pipe.pl "
 	. "| perl -S raw_to_reads.pl "
-	. "| sort -n |")
       or die "Input pipe failed: $!";
   while (defined ($_ = <STDIN>))
   {
@@ -51,7 +51,7 @@ elsif ($ENV{MR_LEVEL} == 2)
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
   while (defined ($_ = <STDIN>))
   {
-    print;
+    my ($frame-id, $read, $object-id, $size) = split; 
   }
   close STDIN or die "Input stream exited $?";
   close STDOUT or die "Output stream exited $?";
