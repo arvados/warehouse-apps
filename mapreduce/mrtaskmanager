@@ -15,7 +15,16 @@ foreach (split ("\n", $ENV{MR_KNOBS}))
   $ENV{"KNOB_$k"} = $v;
 }
 
-open (STDIN, "mr-$ENV{MR_FUNCTION} |") or die "mr-$ENV{MR_FUNCTION}: $!";
+my $childpid = open (STDOUT, "|-");
+die "Fork failed" if !defined $childpid;
+if (!$childpid)
+{
+  # child process
+  exec { "mr-$ENV{MR_FUNCTION}" } ("mr-$ENV{MR_FUNCTION}");
+  die "mr-$ENV{MR_FUNCTION}: exec returned $?";
+}
+
+# parent process
 
 my $fh;
 my $mogc;
@@ -47,6 +56,10 @@ if ($fh)
 {
   if (!close $fh)
   {
-    die "MogileFS write failure";
+    die "MogileFS write failed: $!";
   }
+}
+if (!close STDIN)
+{
+  die "mr-$ENV{MR_FUNCTION} failed: $!";
 }
