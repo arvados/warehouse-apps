@@ -15,7 +15,7 @@ foreach (split ("\n", $ENV{MR_KNOBS}))
   $ENV{"KNOB_$k"} = $v;
 }
 
-my $childpid = open (STDOUT, "|-");
+my $childpid = open (STDIN, "-|");
 die "Fork failed" if !defined $childpid;
 if (!$childpid)
 {
