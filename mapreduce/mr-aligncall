@@ -36,7 +36,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   open (STDIN, "mrtask-framekeys "
 	. "| mrtask-streaminput --raw-images "
 	. "| perl -S find_objects-register_raw_pipe.pl "
-	. "| perl -S raw_to_reads.pl "
+	. "| perl -S raw_to_reads.pl |")
       or die "Input pipe failed: $!";
   while (defined ($_ = <STDIN>))
   {
@@ -52,6 +52,7 @@ elsif ($ENV{MR_LEVEL} == 2)
   while (defined ($_ = <STDIN>))
   {
     my ($frame-id, $read, $object-id, $size) = split; 
+    printf  "%05d-%05d-%05d %s\n", $frame-id, $object-id, $size, $read);  
   }
   close STDIN or die "Input stream exited $?";
   close STDOUT or die "Output stream exited $?";
