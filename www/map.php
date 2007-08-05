@@ -24,8 +24,8 @@ foreach ($positions as $p)
   if (ereg ("^0*([0-9]+)$", $p[0], $regs))
     {
       $framexy[$regs[1]] = array ($p[1], $p[2]);
-      if ($nframes < $regs[1])
-	$nframes = $regs[1];
+      if ($nframes <= $regs[1])
+	$nframes = $regs[1] + 1;
     }
 }
 
@@ -80,7 +80,7 @@ $datacolor_light = imagecolorallocate ($i, 0xaa, 0xaa, 0xff);
 $datacolor_dark = imagecolorallocate ($i, 0x77, 0x77, 0xff);
 $legendcolor = imagecolorallocate ($i, 0, 0, 0);
 
-for ($fid=1; $fid<$nframes; $fid++)
+for ($fid=0; $fid<$nframes; $fid++)
 {
   $x = $framexy[$fid+0][0];
   $y = $framexy[$fid+0][1];
@@ -106,8 +106,8 @@ if ($rid)
       list ($fid, $z) = $row;
       $fid = ereg_replace("^0+", "", $fid);
       $z = ereg_replace(" .*", "", $z);
-      $x = $framexy[$fid+0][0];
-      $y = $framexy[$fid+0][1];
+      $x = $framexy[$fid-1][0];
+      $y = $framexy[$fid-1][1];
       //  imagestring ($i, 3, 0, 10*$fid, "$fid $x $y $z $zmax", $gridcolor);
 
       $x -= $xmin;
