@@ -30,12 +30,12 @@ foreach ($positions as $p)
   if (ereg ("^0*([0-9]+)$", $p[0], $regs))
     {
       $framexy[$regs[1]] = array ($p[1], $p[2]);
-      if ($nframes < $regs[1])
-	$nframes = $regs[1];
+      if ($nframes <= $regs[1])
+	$nframes = $regs[1] + 1;
     }
 }
 
-for ($fid=1; $fid<$nframes; $fid++)
+for ($fid=1; $fid<=$nframes; $fid++)
 {
   echo "<a href=\"show-frame.cgi?dsid=$dsid&frame=$fid\">$fid</a>&nbsp; ";
 }
