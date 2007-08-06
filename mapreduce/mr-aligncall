@@ -63,7 +63,6 @@ elsif ($ENV{MR_LEVEL} == 2)
   }
   close STDIN or die "Input stream exited $?";
   $gz->gzclose; 
-  close STDOUT or die "Output stream exited $?";
   print STDERR "+++mrjobstep 3 mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}+++\n";
 }
 
