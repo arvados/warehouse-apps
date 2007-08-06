@@ -3,6 +3,7 @@
 ###MR_INPUT:frames
 
 use MetaMog;
+use Compress::Zlib; 
 
 if ($ENV{MR_LEVEL} == 0)
 {
@@ -49,12 +50,19 @@ elsif ($ENV{MR_LEVEL} == 2)
 {
   # reduce
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
+  
+  binmode STDOUT; 
+  my $gz = gzopen (\*STDOUT, "wb") 
+    or die "Cannot open stdout: $gzerrno\n"; 
+  
   while (defined ($_ = <STDIN>))
   {
     my ($dataset_id, $frame_id, $read, $object_id, $size) = split; 
-    printf  "%05d-%05d-%05d %s\n", $frame_id, $object_id, $size, $read;  
+    my output = sprintf "%05d-%05d-%05d %s\n", $frame_id, $object_id, $size, $read;
+    $gz->gzwrite($output) or die "error writing: $gzerrno\n";      
   }
   close STDIN or die "Input stream exited $?";
+  $gz->gzclose or die "error closing: $gzerrno\n"; 
   close STDOUT or die "Output stream exited $?";
   print STDERR "+++mrjobstep 3 mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}+++\n";
 }
