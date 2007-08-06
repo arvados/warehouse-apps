@@ -51,7 +51,7 @@ elsif ($ENV{MR_LEVEL} == 2)
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
   while (defined ($_ = <STDIN>))
   {
-    my ($frame_id, $read, $object_id, $size) = split; 
+    my ($dataset_id, $frame_id, $read, $object_id, $size) = split; 
     printf  "%05d-%05d-%05d %s\n", $frame_id, $object_id, $size, $read;  
   }
   close STDIN or die "Input stream exited $?";
