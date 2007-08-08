@@ -66,3 +66,4 @@ if (!close STDIN)
 {
   die "mr-$ENV{MR_FUNCTION} failed: $!";
 }
+wait;
