@@ -114,8 +114,7 @@ my $tasks_failed = 0;
 Log ($dbh, $job_id, undef, "determine current jobstep level");
 $sth = $dbh->prepare ("select min(level) from mrjobstep
                        where jobid=?
-                       and (finishtime is null or exitcode <> 0)
-                       and (attempts < 3)");
+                       and (finishtime is null or exitcode <> 0)");
 $sth->execute ($job_id) or croak ($dbh->errstr);
 my ($level) = $sth->fetchrow;
 Log ($dbh, $job_id, undef, "start level $level");
