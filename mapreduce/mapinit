@@ -11,8 +11,8 @@ my $max_njobs = 32;		# max "big job" concurrency
 
 
 my $dbh = DBI->connect($main::mapreduce_dsn,
-		       $main::mapreduce_mysql_username,
-		       $main::mapreduce_mysql_password);
+		       $main::mrcontrol_mysql_username,
+		       $main::mrcontrol_mysql_password);
 die $DBI::errstr if !$dbh;
 createtables ($dbh);
 
@@ -50,8 +50,8 @@ while (1)
     {
       # XXX shouldn't have to reconnect here??? XXX
       $dbh = DBI->connect($main::mapreduce_dsn,
-			  $main::mapreduce_mysql_username,
-			  $main::mapreduce_mysql_password);
+			  $main::mrcontrol_mysql_username,
+			  $main::mrcontrol_mysql_password);
       die $DBI::errstr if !$dbh;
 
       debuglog ("pid $child started");

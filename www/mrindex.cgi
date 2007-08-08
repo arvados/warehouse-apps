@@ -19,8 +19,8 @@ print q{
 };
 
 my $dbh = DBI->connect($main::mapreduce_dsn,
-		       $main::mapreduce_mysql_username,
-		       $main::mapreduce_mysql_password) or die DBI->errstr;
+		       $main::mrwebgui_mysql_username,
+		       $main::mrwebgui_mysql_password) or die DBI->errstr;
 my $limit = ($q->param('showall') ? "" : "limit 10");
 my $sth = $dbh->prepare("
     select mrjob.id,

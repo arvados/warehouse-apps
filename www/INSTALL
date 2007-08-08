@@ -16,3 +16,17 @@ Make sure these run periodically (eg. every five minutes):
 
  cd /path/to/www/ && php-cgi update.php
  cd /path/to/www/ && php-cgi jobstatus-update.php
+
+Create accounts and database for mapreduce system:
+
+ create database mapreduce;
+ grant all privileges on mapreduce.* to mrcontrol@localhost;
+ grant select on mogilefs.* to mrcontrol@localhost;
+ grant select on mapreduce.* to mrcompute@'%';
+ grant select on mogilefs.* to mrwebgui@localhost;
+ grant select on mapreduce.* to mrwebgui@localhost;
+ grant insert, update on mapreduce.mrjob to mrwebgui@localhost;
+ grant insert, update on mapreduce.mrjobstep to mrwebgui@localhost;
+ set password for mrcontrol@localhost = old_password('secXret');
+ set password for mrcompute@'%' = old_password('secXret');
+ set password for mrwebgui@localhost = old_password('secXret');

@@ -9,8 +9,8 @@ do '/etc/polony-tools/config.pl';
 my $q = new CGI;
 
 my $dbh = DBI->connect($main::mapreduce_dsn,
-		       $main::mapreduce_mysql_username,
-		       $main::mapreduce_mysql_password) or die DBI->errstr;
+		       $main::mrwebgui_mysql_username,
+		       $main::mrwebguix_mysql_password) or die DBI->errstr;
 $dbh->do ("insert into mrjob
  (jobmanager_id, submittime, nodes, revision, mrfunction, input0, knobs)
  values (-1, now(), ?, ?, ?, ?, ?)",

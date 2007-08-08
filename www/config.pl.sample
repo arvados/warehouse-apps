@@ -21,8 +21,15 @@ $main::analysis_mysql_password = "secXret";
 
 $main::mapreduce_dsn = "DBI:mysql:database=mapreduce;host=dbhost";
 $main::mapreduce_mysql_database = "mapreduce";
-$main::mapreduce_mysql_username = "mapreduce";
-$main::mapreduce_mysql_password = "secXret";
+
+$main::mrcompute_mysql_username = "mrcompute";
+$main::mrcompute_mysql_password = "secXret";
+
+$main::mrwebgui_mysql_username = "mrwebgui";
+$main::mrwebgui_mysql_password = "secXret";
+
+$main::mrcontrol_mysql_username = "mrcontrol";
+$main::mrcontrol_mysql_password = "secXret";
 
 %main::remote_lims
 = ('lims1' => { 'trackers' => ['remotehost1a:6001'],

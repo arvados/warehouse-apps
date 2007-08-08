@@ -12,8 +12,8 @@ print $q->header ('text/plain');
 my $jobstepid = $q->param('id');
 
 my $dbh = DBI->connect($main::mapreduce_dsn,
-		       $main::mapreduce_mysql_username,
-		       $main::mapreduce_mysql_password) or die DBI->errstr;
+		       $main::mrwebgui_mysql_username,
+		       $main::mrwebgui_mysql_password) or die DBI->errstr;
 
 my $sth = $dbh->prepare("select stderr from mrjobstep where id=?");
 $sth->execute ($jobstepid) or die $dbh->errstr;

@@ -22,8 +22,8 @@ my ($job_id) = @ARGV;
 
 
 my $dbh = DBI->connect($main::mapreduce_dsn,
-		       $main::mapreduce_mysql_username,
-		       $main::mapreduce_mysql_password);
+		       $main::mrcontrol_mysql_username,
+		       $main::mrcontrol_mysql_password);
 die $DBI::errstr if !$dbh;
 
 
@@ -204,8 +204,8 @@ while (($id, $input, $attempts) = $sth->fetchrow)
 
   # XXX shouldn't have to reconnect here??? XXX
   $dbh = DBI->connect($main::mapreduce_dsn,
-		      $main::mapreduce_mysql_username,
-		      $main::mapreduce_mysql_password);
+		      $main::mrcontrol_mysql_username,
+		      $main::mrcontrol_mysql_password);
   croak ($DBI::errstr) if !$dbh;
 
   Log ($dbh, $job_id, $id, "child $childpid started on "
