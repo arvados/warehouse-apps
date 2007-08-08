@@ -10,6 +10,7 @@ print $q->header;
 
 my $rev = $q->param('revision') + 0;
 
+my $defaultknobs = '';
 my $inputtype = 'images';
 if (open F,
     "svn cat '$main::svn_repos/mapreduce/mr-"
@@ -21,6 +22,10 @@ if (open F,
     if (/^\#\#\#MR_INPUT:(\S+)/)
     {
       $inputtype = $1;
+    }
+    elsif (/^\#\#\#MR_KNOBS:(\S+)/)
+    {
+      $defaultknobs .= "$1\n";
     }
   }
   close F;

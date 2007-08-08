@@ -60,9 +60,7 @@ Frames:<br>
 <input type=text name=frames value="1-$row[0]"> (1-$row[0])
 <br>
 Knobs:<br>
-<textarea name=knobs rows=6 cols=40>FOCUSPIXELS=
-ALIGNWINDOW=
-OBJECTTHRESHOLD=</textarea>
+<textarea name=knobs rows=6 cols=40>$defaultknobs</textarea>
 <br>
 <input type=submit value="Next">
 </form>
