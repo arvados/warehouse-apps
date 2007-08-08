@@ -1,6 +1,10 @@
 #!/usr/bin/perl
 
 ###MR_INPUT:frames
+###MR_KNOBS:FOCUSPIXELS=20000
+###MR_KNOBS:ALIGNWINDOW=15
+###MR_KNOBS:OBJECTTHRESHOLD=7000
+###MR_KNOBS:GZIP=yes
 
 use MetaMog;
 use Compress::Zlib; 
@@ -51,18 +55,40 @@ elsif ($ENV{MR_LEVEL} == 2)
   # reduce
   open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
   
-  binmode STDOUT; 
-  my $gz = gzopen (\*STDOUT, "wb") 
-    or die "Cannot open stdout: $gzerrno\n"; 
-  
+  binmode STDOUT;
+  my $gz;
+  if ($ENV{KNOB_GZIP} && $ENV{KNOB_GZIP} !~ /no/i) {
+    $gz = gzopen (\*STDOUT, "wb") 
+	or die "Cannot open stdout: $gzerrno\n"; 
+  }
+  else
+  {
+    my $size = 'XXX';		# fixme: must predict size here!
+    open STDOUT, "|mrtask-storebigoutput $size" or die "open failed: $!";
+  }
+
   while (defined ($_ = <STDIN>))
   {
     my ($dataset_id, $frame_id, $read, $object_id, $size) = split; 
     my $output = sprintf ("%05d-%05d-%05d %s\n", $frame_id, $object_id, $size, $read);
-    $gz->gzwrite($output) or die "error writing: $gzerrno\n";      
+    if ($gz)
+    {
+      $gz->gzwrite ($output) or die "error writing: $gzerrno\n";
+    }
+    else
+    {
+      print STDOUT $output;
+    }
   }
   close STDIN or die "Input stream exited $?";
-  $gz->gzclose; 
+  if ($gz)
+  {
+    $gz->gzclose() or die "gzclose() failed: $gzerrno";
+  }
+  else
+  {
+    close STDOUT or die "close STDOUT failed: $!";
+  }
   print STDERR "+++mrjobstep 3 $ENV{MR_OUTPUTKEY}+++\n";
 }
 
