@@ -83,9 +83,7 @@ elsif ($ENV{MR_LEVEL} == 2)
   close STDIN or die "Input stream exited $?";
   if ($gz)
   {
-    $gz->gzclose();		# or die "gzclose() failed: $gzerrno";
-				# (gzclose() is supposed to return 1 on
-				# success, but doesn't...?)
+    $gz->gzclose() or die "gzclose() failed: $gzerrno";
   }
   else
   {
