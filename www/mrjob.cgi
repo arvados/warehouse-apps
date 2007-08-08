@@ -19,6 +19,10 @@ print qq{
 <body>
 <h2><a href="mrindex.cgi">mapreduce jobs</a> / job $jobid</h2>
 
+<ul>
+<li>View <a href="mrlog.cgi?id=$jobid">jobmanager's log</a>
+</ul>
+
 };
 
 my $dbh = DBI->connect($main::mapreduce_dsn,
