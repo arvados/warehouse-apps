@@ -24,9 +24,6 @@ $main::mapreduce_mysql_database = "mapreduce";
 $main::mapreduce_mysql_username = "mapreduce";
 $main::mapreduce_mysql_password = "secXret";
 
-$main::computenode_mysql_username = "computenode";
-$main::computenode_mysql_password = "secXret";
-
 %main::remote_lims
 = ('lims1' => { 'trackers' => ['remotehost1a:6001'],
 		'default_domain' => 'images',
