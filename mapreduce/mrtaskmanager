@@ -66,9 +66,3 @@ if (!close STDIN)
 {
   die "mr-$ENV{MR_FUNCTION} failed: $!";
 }
-
-wait;
-if ($?)
-{
-  exit (($? >> 8) ? ($? >> 8) : 1);
-}
