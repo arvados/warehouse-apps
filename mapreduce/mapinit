@@ -127,6 +127,7 @@ create table if not exists mrlog (
 	   qq{
 create table if not exists mrjob (
  id bigint not null auto_increment primary key,
+ global_id varchar(64),
  revision bigint not null,
  mrfunction varchar(64),
  nprocs int,
@@ -137,7 +138,8 @@ create table if not exists mrjob (
  starttime datetime,
  finishtime datetime,
  jobmanager_id bigint,
- success tinyint
+ success tinyint,
+ unique(global_id)
 )
   },
 	   qq{
