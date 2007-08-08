@@ -47,7 +47,7 @@ elsif ($ENV{MR_LEVEL} == 2)
     print;
   }
   close STDIN or die "Input stream exited $?";
-  print STDERR "+++mrjobstep 3 mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}+++\n";
+  print STDERR "+++mrjobstep 3 $ENV{MR_OUTPUTKEY}+++\n";
 }
 
 elsif ($ENV{MR_LEVEL} == 3)

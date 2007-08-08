@@ -9,6 +9,10 @@ $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/bin";
 $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/mapreduce";
 $ENV{PERLLIB} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/mapreduce";
 
+# just for backward compatibility -- mrjobmanager should have set this already
+$ENV{MR_OUTPUTKEY} = "mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_LEVEL}/$ENV{MR_ID}"
+    if !exists $ENV{MR_OUTPUTKEY};
+
 foreach (split ("\n", $ENV{MR_KNOBS}))
 {
   my ($k, $v) = split ("=", $_, 2);
@@ -42,8 +46,7 @@ while (read STDIN, $buf, 65536)
 	     hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
 	};
       $fh = eval {
-	$mogc->new_file ("mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}",
-			 $ENV{MOGILEFS_CLASS});
+	$mogc->new_file ($ENV{MR_OUTPUTKEY}, $ENV{MOGILEFS_CLASS});
       };
       last if $fh;
       sleep 1;

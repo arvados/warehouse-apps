@@ -180,6 +180,7 @@ while (($id, $input, $attempts) = $sth->fetchrow)
     $ENV{"MR_LEVEL"} = $level;
     $ENV{"MR_FUNCTION"} = $mrfunction;
     $ENV{"MR_INPUT0"} = $input0;
+    $ENV{"MR_OUTPUTKEY"} = "mrjobstep/$job_id/$level/$id";
     $ENV{"INSTALL_REPOS"} = $main::svn_repos;
     $ENV{"INSTALL_REVISION"} = $job_revision;
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
