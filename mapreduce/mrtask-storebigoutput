@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+
+# mrtask-storebigoutput: store a large amount of data, with known size
+# $ARGV[0], in MogileFS under a specified key $ENV{MR_OUTPUTKEY}
+
+use strict;
+use MogileFS::Client;
+
+
+if (@ARGV != 1 || $ARGV[1] !~ /^\d+$/)
+{
+  die "usage: mrtask-storebigoutput {bytecount}";
+}
+
+my $size = $ARGV[0] + 0;
+
+
+my $fh;
+my $mogc;
+my $buf;
+binmode STDIN;
+while (read STDIN, $buf, 1048576)
+{
+  if (!defined $fh)
+  {
+    my $attempts = 0;
+    while (!defined ($fh) && ++$attempts < 5)
+    {
+      $mogc = eval {
+	MogileFS::Client->new
+	    (domain => $ENV{MOGILEFS_DOMAIN},
+	     hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
+	};
+      $fh = eval {
+	$mogc->new_file ($ENV{MR_OUTPUTKEY}, $ENV{MOGILEFS_CLASS}, $size);
+      };
+      last if $fh;
+      sleep 1;
+    }
+    die "MogileFS create failure" if !$fh;
+    binmode $fh;
+  }
+  print $fh ($buf) or die "Write failed: $!";
+  $bytes_written += length($buf);
+}
+
+
+if ($fh)
+{
+  if (!close $fh)
+  {
+    die "close (MogileFS) failed: $!";
+  }
+}
+
+if (!close STDIN)
+{
+  die "close (STDIN) failed: $!";
+}
+
+if ($bytes_written != $size)
+{
+  die "Expected $size bytes, only read/wrote $bytes_written bytes";
+}
