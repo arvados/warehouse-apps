@@ -43,19 +43,22 @@ my @taskslot;
 # Should use $ENV{SLURM_TASKS_PER_NODE} instead of sinfo? (eg. "4(x3),2,4(x2)")
 foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 {
-  my ($ncpus, $nodelist) = split;
+  my ($ncpus, $slurm_nodelist) = split;
   my @nodelist;
-  if ($nodelist =~ /\[(\d+)-(\d+)\]/)
+  foreach my $nodelist (split (",", $slurm_nodelist))
   {
-    @nodelist = map {
-      my $n = $nodelist;
-      $n =~ s/\[\d+-\d+\]/$_/;
-      $n;
-    } ($1..$2);
-  }
-  else
-  {
-    @nodelist = ($nodelist);
+    if ($nodelist =~ /\[(\d+)-(\d+)\]/)
+    {
+      push @nodelist, map {
+	my $n = $nodelist;
+	$n =~ s/\[\d+-\d+\]/$_/;
+	$n;
+      } ($1..$2);
+    }
+    else
+    {
+      push @nodelist, $nodelist;
+    }
   }
   foreach my $node (@nodelist)
   {
