@@ -54,6 +54,7 @@ while (my @row = $sth->fetchrow)
 {
   my ($jobid) = @row;
   for (@row) { $_ = escapeHTML($_); }
+  for ($row[5]) { s/,/, /g; }
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
   $row[10] = 0-$row[10] if !defined $row[8];
   if ($row[-1])

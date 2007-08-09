@@ -60,6 +60,7 @@ while (my @row = $sth->fetchrow)
 {
   my ($jobid) = @row;
   for (@row) { $_ = escapeHTML($_); }
+  for ($row[5]) { s/,/, /g; }
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
   if ($row[-1])
   {
