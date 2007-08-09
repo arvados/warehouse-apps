@@ -25,8 +25,6 @@ Create accounts and database for mapreduce system:
  grant select on mapreduce.* to mrcompute@'%';
  grant select on mogilefs.* to mrwebgui@localhost;
  grant select on mapreduce.* to mrwebgui@localhost;
- grant insert, update on mapreduce.mrjob to mrwebgui@localhost;
- grant insert, update on mapreduce.mrjobstep to mrwebgui@localhost;
  set password for mrcontrol@localhost = old_password('secXret');
  set password for mrcompute@'%' = old_password('secXret');
  set password for mrwebgui@localhost = old_password('secXret');

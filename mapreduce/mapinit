@@ -167,6 +167,12 @@ create table if not exists mrjobmanager (
  revision bigint,
  pid bigint
 )
+  },
+	   qq{
+grant insert, update on mrjob to mrwebgui@localhost
+  },
+	   qq{
+grant insert, update on mrjobstep to mrwebgui@localhost
   })
   {
     my $sth = $dbh->prepare ($_);
