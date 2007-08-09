@@ -85,12 +85,14 @@ print q{
 };
 
 my $sth = $dbh->prepare("select
- id,level,input,submittime,starttime,finishtime,attempts,node,exitcode,length(stderr)
+ id,level,input,submittime,starttime,finishtime,
+ unix_timestamp(finishtime)-unix_timestamp(starttime) elapsed,
+ attempts,node,exitcode,length(stderr)
  from mrjobstep
  where jobid=?
  order by id");
 $sth->execute ($jobid) or die $sth->errstr;
-print map ("<td>$_</td>\n", qw(StepID Level Input Submit Start Finish Attempts Node ExitCode stderr stdout));
+print map ("<td>$_</td>\n", qw(StepID Level Input Submit Start Finish Elapsed Attempts Node ExitCode stderr stdout));
 print q{
 </tr>
 };
@@ -102,7 +104,7 @@ while (my @row = $sth->fetchrow)
   {
     $row[-1] = "<a href=\"mrjobstep.cgi?id=$row[0]\">$row[-1]&nbsp;bytes</a>";
   }
-  for ($row[8]) { if ($_) { $_ = sprintf "0x%x", $_; } }
+  for ($row[9]) { if ($_) { $_ = sprintf "0x%x", $_; } }
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
   print "<td valign=top><a href=\"get.php?format=text&domain=images&dkey=mrjobstep/$jobid/$row[0]\">download</a></td>";
