@@ -21,6 +21,7 @@ Create accounts and database for mapreduce system:
 
  create database mapreduce;
  grant all privileges on mapreduce.* to mrcontrol@localhost;
+ grant grant option on mapreduce.* to mrcontrol@localhost;
  grant select on mogilefs.* to mrcontrol@localhost;
  grant select on mapreduce.* to mrcompute@'%';
  grant select on mogilefs.* to mrwebgui@localhost;
