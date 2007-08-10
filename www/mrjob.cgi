@@ -10,8 +10,12 @@ my $q = new CGI;
 print $q->header;
 
 my $jobid = $q->param('id');
+my $sort = $q->param('sort') || '';
+$sort =~ s/[^a-z0-9]//gi;
 
 print qq{
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
 <title>mapreduce jobs</title>
@@ -78,11 +82,31 @@ $sth = $dbh->prepare ("select input0 from mrjob where id=?");
 $sth->execute ($jobid) or die $sth->errstr;
 my $input0 = $sth->fetchrow;
 
-print "<p>Input:<blockquote><pre><small>".escapeHTML($input0)."</small></pre></blockquote></p>";
+print "<p>Input:<blockquote><pre><small>".escapeHTML($input0)."</small></pre></blockquote><br>";
 
 print q{
 <table>
 };
+
+my $order_str = 'id';
+if ($sort eq 'elapsed') {
+	$order_str = "unix_timestamp(finishtime)-unix_timestamp(starttime)";
+} elsif ($sort ne '') {
+	$order_str = $sort;
+}
+
+my %fields;
+$fields{StepID} = 'id';
+$fields{Level} = 'level';
+$fields{Input} = 'input';
+$fields{Submit} = 'submittime';
+$fields{Start} = 'starttime';
+$fields{Finish} = 'finishtime';
+$fields{Elapsed} = 'elapsed';
+$fields{Attempts} = 'attempts';
+$fields{Node} = 'node';
+$fields{ExitCode} = 'exitcode';
+$fields{stderr} = 'stderr';
 
 my $sth = $dbh->prepare("select
  id,level,input,submittime,starttime,finishtime,
@@ -90,11 +114,12 @@ my $sth = $dbh->prepare("select
  attempts,node,exitcode,length(stderr)
  from mrjobstep
  where jobid=?
- order by id");
+ order by $order_str");
 $sth->execute ($jobid) or die $sth->errstr;
-print map ("<td>$_</td>\n", qw(StepID Level Input Submit Start Finish Elapsed Attempts Node ExitCode stderr stdout));
+print "<tr>";
+print map ("<td><a href=\"?id=$jobid&amp;sort=" . $fields{$_} . "\">$_</a></td>\n", qw(StepID Level Input Submit Start Finish Elapsed Attempts Node ExitCode stderr));
 print q{
-</tr>
+<td>stdout</td></tr>
 };
 while (my @row = $sth->fetchrow)
 {
@@ -107,7 +132,7 @@ while (my @row = $sth->fetchrow)
   for ($row[9]) { if ($_) { $_ = sprintf "0x%x", $_; } }
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
-  print "<td valign=top><a href=\"get.php?format=text&domain=images&dkey=mrjobstep/$jobid/$row[0]\">download</a></td>";
+  print "<td valign=top><a href=\"get.php?format=text&amp;domain=images&amp;dkey=mrjobstep/$jobid/$row[0]\">download</a></td>";
   print "</tr>\n";
 }
 
