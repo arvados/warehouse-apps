@@ -42,7 +42,7 @@ while (my @row = $sth->fetchrow)
   my $result = "unfinished";
   if ($row[3]) { $result = "finished $row[4]"; }
   if (!$row[4]) { $result .= " (failed)"; }
-  print escapeHTML("$row[0] $row[1] $row[2] $finished");
+  print escapeHTML("$row[0] $row[1] $row[2] $result");
   print "</option>\n";
 }
 print q{
