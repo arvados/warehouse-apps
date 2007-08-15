@@ -132,7 +132,7 @@ $q = mysql_query("select
      where dmid='$dmid_images'
      and file_on.fid is not null
      and dkey like '/%'
-     and dkey not like '/%/frame/'
+     and dkey not like '/%/frame/%'
      order by dmid,dkey");
 echo mysql_error();
 $lastfid = -1;
