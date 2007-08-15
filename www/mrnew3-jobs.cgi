@@ -29,7 +29,7 @@ my $dbh = DBI->connect($main::mapreduce_dsn,
 		       $main::mrwebgui_mysql_password) or die DBI->errstr;
 
 my $sth = $dbh->prepare("
-    select id, mrfunction, submittime, finishtime, success
+    select id, mrfunction, submittime, finishtime, success, revision
     from mrjob
     order by id desc");
 $sth->execute() or die $dbh->errstr;
@@ -40,9 +40,9 @@ while (my @row = $sth->fetchrow)
 {
   print "<option value=\"".escapeHTML($row[0])."\">";
   my $result = "unfinished";
-  if ($row[3]) { $result = "finished $row[4]"; }
+  if ($row[3]) { $result = "finished $row[3]"; }
   if (!$row[4]) { $result .= " (failed)"; }
-  print escapeHTML("$row[0] $row[1] $row[2] $result");
+  print escapeHTML("$row[0] $row[1] r$row[5] started $row[2] $result");
   print "</option>\n";
 }
 print q{
