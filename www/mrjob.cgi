@@ -132,7 +132,7 @@ while (my @row = $sth->fetchrow)
   for ($row[9]) { if ($_) { $_ = sprintf "0x%x", $_; } }
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
-  print "<td valign=top><a href=\"get.php?format=text&amp;domain=images&amp;dkey=mrjobstep/$jobid/$row[0]\">download</a></td>";
+  print "<td valign=top><a href=\"get.php?format=text&amp;domain=images&amp;dkey=mrjobstep/$jobid/$row[1]/$row[0]\">download</a></td>";
   print "</tr>\n";
 }
 
