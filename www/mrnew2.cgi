@@ -1,18 +1,29 @@
 #!/usr/bin/perl
 
 use strict;
-use MogileFS::Client;
 use DBI;
 use CGI ':standard';
 
 do '/etc/polony-tools/config.pl';
+do 'mrlib.pl';
 
 my $q = new CGI;
-print $q->header;
 
 my $Qrevision = escapeHTML($q->param('revision'));
 my $Qmrfunction = escapeHTML($q->param('mrfunction'));
 my $Qnodelist = escapeHTML($q->param('nodelist'));
+
+my $rev = $q->param('revision') + 0;
+my $mrfunction = $q->param('mrfunction');
+my %mrparam = mr_get_mrfunction_params($mrfunction, $rev);
+if ($mrparam{'MR_INPUT'} eq 'jobs')
+{
+  print $q->header ("Location: mrnew3.cgi");
+  exit;
+}
+
+print $q->header;
+
 print qq{
 <html>
 <head>

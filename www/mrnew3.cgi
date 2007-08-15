@@ -2,6 +2,7 @@
 
 use strict;
 use CGI ':standard';
+do 'mrlib.pl';
 
 do '/etc/polony-tools/config.pl';
 
@@ -10,26 +11,9 @@ print $q->header;
 
 my $rev = $q->param('revision') + 0;
 
-my $defaultknobs = '';
-my $inputtype = 'images';
-if (open F,
-    "svn cat '$main::svn_repos/mapreduce/mr-"
-    .$q->param('mrfunction')
-    ."\@$rev' |")
-{
-  foreach (<F>)
-  {
-    if (/^\#\#\#MR_INPUT:(\S+)/)
-    {
-      $inputtype = $1;
-    }
-    elsif (/^\#\#\#MR_KNOBS:(\S+)/)
-    {
-      $defaultknobs .= "$1\n";
-    }
-  }
-  close F;
-}
+my %mrparam = mr_get_mrfunction_params ($q->param('mrfunction'), $rev);
+my $defaultknobs = $mrparam{"MR_KNOBS"};
+my $inputtype = $mrparam{"MR_INPUT"};
 
 if ($inputtype eq 'images' ||
     $inputtype eq 'frames')
