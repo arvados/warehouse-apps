@@ -18,7 +18,7 @@ my $mrfunction = $q->param('mrfunction');
 my %mrparam = mr_get_mrfunction_params($mrfunction, $rev);
 if ($mrparam{'MR_INPUT'} eq 'jobs')
 {
-  print $q->redirect ("mrnew3.cgi");
+  eval `cat mrnew3-$inputtype.cgi` or die "$!";
   exit;
 }
 
