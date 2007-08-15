@@ -53,5 +53,4 @@ elsif ($ENV{MR_LEVEL} == 3)
 {
   my $m = MetaMog->new;
   $m->rename ($ENV{MR_INPUT}, "mrjob/$ENV{MR_JOB_ID}") or die $m->errstr;
-  $m->delete_all ($ENV{MR_INPUT}, "mrjobstep/$ENV{MR_JOB_ID}/");
 }
