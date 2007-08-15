@@ -40,8 +40,10 @@ while (my @row = $sth->fetchrow)
 {
   print "<option value=\"".escapeHTML($row[0])."\">";
   my $result = "unfinished";
-  if ($row[3]) { $result = "finished $row[3]"; }
-  if (!$row[4]) { $result .= " (failed)"; }
+  if ($row[3]) {
+    $result = "finished $row[3]";
+    if (!$row[4]) { $result .= " (failed)"; }
+  }
   print escapeHTML("$row[0] $row[1] r$row[5] started $row[2] $result");
   print "</option>\n";
 }
