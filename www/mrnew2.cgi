@@ -8,6 +8,7 @@ do '/etc/polony-tools/config.pl';
 do 'mrlib.pl';
 
 my $q = new CGI;
+print $q->header;
 
 my $Qrevision = escapeHTML($q->param('revision'));
 my $Qmrfunction = escapeHTML($q->param('mrfunction'));
@@ -21,8 +22,6 @@ if ($mrparam{'MR_INPUT'} eq 'jobs')
   eval `cat mrnew3-jobs.cgi` or die "$!";
   exit;
 }
-
-print $q->header;
 
 print qq{
 <html>
