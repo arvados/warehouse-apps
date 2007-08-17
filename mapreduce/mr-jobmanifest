@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+
+###MR_INPUT:jobs
+
+use Digest::MD5 'md5_hex';
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # init
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
+  open STDIN, "mrtask-streaminputkeys |" or die "Input pipe failed: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    chomp;
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 2 +++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # map
+  open STDIN, "mrtask-streaminput |"
+      or die "Can't open input pipe: $!";
+  undef $/;
+  my $data = <STDIN>;
+  my $md5 = md5_hex($data);
+  print "$md5 $ENV{MR_INPUT}\n";
+  close STDIN or die "Input stream exited $?";
+}
+
+elsif ($ENV{MR_LEVEL} == 2)
+{
+  # reduce
+  my $md5_one = Digest::MD5->new;
+  my $md5_all = Digest::MD5->new;
+  $ENV{MR_INPUT} = "mrjobstep/$ENV{MR_JOB_ID}/1/*";
+  print STDERR `mrtask-streaminputkeys`;
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |"
+      or die "Can't open input pipe: $!";
+
+  my $last_job;
+  while (defined ($_ = <STDIN>))
+  {
+    my ($md5, $key) = split;
+    my ($this_job) = $key =~ m|^mrjobstep/(\d+)/|;
+    if (defined ($last_job) && $last_job != $this_job)
+    {
+      print $md5_one->hexdigest;
+      print " $last_job\n";
+      $md5_one = Digest::MD5->new;
+    }
+    $last_job = $this_job;
+    $md5_all->add($md5);
+    $md5_one->add($md5);
+  }
+  close STDIN or die "Input stream exited $?";
+  print $md5_one->hexdigest;
+  print " $last_job\n";
+  print $md5_all->hexdigest;
+  print "\n";
+}
