@@ -21,7 +21,7 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   # map
-  open STDIN, "mrtask-streaminput |"
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |"
       or die "Can't open input pipe: $!";
   undef $/;
   my $data = <STDIN>;
