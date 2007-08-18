@@ -225,10 +225,11 @@ while (($id, $input, $attempts) = $sth->fetchrow)
 
   while (!@freeslot)
   {
-    readfrompipes (\%reader, \%proc_job, \%job_stderr);
+    my $gotsome = readfrompipes (\%reader, \%proc_job, \%job_stderr);
     
     my $pid = waitpid (-1, WNOHANG);
     if ($pid > 0) {
+      $gotsome = 1;
       Log ($dbh, $job_id, $proc_job{$pid}, "child $pid exit $?");
       if ($?) { ++$tasks_failed; }
       else { ++$tasks_succeeded; }
@@ -249,6 +250,8 @@ while (($id, $input, $attempts) = $sth->fetchrow)
       push @freeslot, $proc_slot{$pid};
       delete $proc_slot{$pid};
     }
+
+    select (undef, undef, undef, 0.1) if !$gotsome;
   }
 
   if (($tasks_failed >= 8 && $tasks_succeeded == 0) ||
@@ -265,10 +268,11 @@ while (($id, $input, $attempts) = $sth->fetchrow)
 Log ($dbh, $job_id, undef, "wait for last ".(scalar keys %proc_job)." children to finish");
 while (%proc_job)
 {
-  readfrompipes (\%reader, \%proc_job, \%job_stderr);
+  my $gotsome = readfrompipes (\%reader, \%proc_job, \%job_stderr);
 
   my $pid = waitpid (-1, WNOHANG);
   if ($pid > 0) {
+    $gotsome = 1;
     Log ($dbh, $job_id, $proc_job{$pid}, "child $pid exit $?");
     if ($?) { ++$tasks_failed; }
     else { ++$tasks_succeeded; }
@@ -289,6 +293,8 @@ while (%proc_job)
     delete $proc_slot{$pid};
     delete $proc_job{$pid};
   }
+
+  select (undef, undef, undef, 0.1) if !$gotsome;
 }
 
 if ($tasks_succeeded > 0 || ($tasks_failed > 0 && $tasks_failed < 5))
@@ -336,7 +342,7 @@ sub readfrompipes
       }
     }
   }
-  select (undef, undef, undef, 0.2) if (!$gotsome);
+  return $gotsome;
 }
 
 
