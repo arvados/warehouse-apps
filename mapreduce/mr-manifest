@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+###MR_DESCRIPTION:image -> md5sum
 ###MR_INPUT:images
 
 use MetaMog;

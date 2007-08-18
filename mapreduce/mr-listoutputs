@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+###MR_DESCRIPTION:job -> list of ouput keys
 ###MR_INPUT:jobs
 
 $ENV{MR_INPUT} = $ENV{MR_INPUT0};

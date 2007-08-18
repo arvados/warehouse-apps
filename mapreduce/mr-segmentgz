@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+###MR_DESCRIPTION:(frame ID, cycles) -> gzipped stack of segmented raw images
 ###MR_INPUT:frames
 
 use strict; 

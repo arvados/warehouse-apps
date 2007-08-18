@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+###MR_DESCRIPTION:image -> (pixelcount, intensity), for producing histogram
 ###MR_INPUT:images
 
 use MetaMog;

@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+###MR_DESCRIPTION:job -> md5sum
 ###MR_INPUT:jobs
 
 use Digest::MD5 'md5_hex';
