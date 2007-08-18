@@ -2,7 +2,6 @@
 
 ###MR_DESCRIPTION:gzipped stacks of segmented images -> reads
 ###MR_INPUT:jobs
-###MR_KNOBS:BASEORDER=***copy this from the segmentgz job!***
 ###MR_KNOBS:FOCUSPIXELS=20000
 ###MR_KNOBS:ALIGNWINDOW=15
 ###MR_KNOBS:OBJECTTHRESHOLD=7000

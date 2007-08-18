@@ -28,6 +28,8 @@ while (my @row = $sth->fetchrow)
   $defaultknobs .= escapeHTML ("$row[0]\n");
 }
 $defaultknobs .= escapeHTML ($mrparam{'MR_KNOBS'});
+$defaultknobs =~ s/\r/\n/g;
+$defaultknobs =~ s/\n\n+/\n/g;
 
 print qq{
 <html>
