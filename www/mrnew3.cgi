@@ -15,8 +15,7 @@ my %mrparam = mr_get_mrfunction_params ($q->param('mrfunction'), $rev);
 my $defaultknobs = $mrparam{"MR_KNOBS"};
 my $inputtype = $mrparam{"MR_INPUT"};
 
-if ($inputtype eq 'images' ||
-    $inputtype eq 'frames')
+if ($inputtype =~ /^[-a-z\d]+$/i')
 {
   eval `cat mrnew3-$inputtype.cgi` or die "$!";
 }

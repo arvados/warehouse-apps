@@ -14,7 +14,7 @@ print qq{
 <body>
 <h2><a href="mrindex.cgi">mapreduce jobs</a> / new (3)</h2>
 
-<form method=get action="mrnew4-jobs.cgi">
+<form method=get action="mrnew3.cgi">
 <input type=hidden name=revision value="$Qrevision">
 Revision: $Qrevision<br>
 <input type=hidden name=mrfunction value="$Qmrfunction">
