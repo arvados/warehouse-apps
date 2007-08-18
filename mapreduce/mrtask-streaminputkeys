@@ -50,7 +50,9 @@ sub print_wildcard
   my $keys;
   while (1)
   {
-    ($after, $keys) = $main::mogc->list_keys ($prefix, $after);
+    my @keylist = $main::mogc->list_keys ($prefix, $after);
+    die "MogileFS::Client::list_keys() failed" if !@keylist;
+    ($after, $keys) = @keylist;
     last if (!defined ($keys) || !@$keys);
     foreach (@$keys)
     {
