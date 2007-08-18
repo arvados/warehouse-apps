@@ -18,8 +18,8 @@ my $Qprefixlist = escapeHTML (join("\n", @prefixlist));
 
 my $defaultknobs = "";
 my $dbh = DBI->connect($main::mapreduce_dsn,
-		       $main::webgui_mysql_username,
-		       $main::webgui_mysql_password) or die DBI->errstr;
+		       $main::mrwebgui_mysql_username,
+		       $main::mrwebgui_mysql_password) or die DBI->errstr;
 
 my $sth = $dbh->prepare("select knobs from mrjob where id in ($Qjobs)");
 $sth->execute($q->param('dsid')) or die $dbh->errstr;
