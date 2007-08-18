@@ -316,31 +316,27 @@ exit 0;
 sub readfrompipes
 {
   my ($reader, $proc_job, $job_stderr) = @_;
-  my ($rout, $wout, $eout);
-  my ($bits) = fhbits(keys %$reader);
-  select (undef, undef, undef, 0.1);
-  select ($rout=$bits, $wout, $eout=$bits, 1);
+  my $gotsome = 0;
   foreach my $job (keys %$reader)
   {
-    if (1 || vec($rout,fileno($$reader{$job}),1))
+    my $buf;
+    while (0 < sysread ($$reader{$job}, $buf, 1024))
     {
-      my $buf;
-      while (0 < sysread ($$reader{$job}, $buf, 1024))
-      {
-	$$job_stderr{$job} .= $buf;
-	print STDERR $buf if $ENV{MR_DEBUG};
+      $gotsome = 1;
+      $$job_stderr{$job} .= $buf;
+      print STDERR $buf if $ENV{MR_DEBUG};
 
-	while ($$job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
-	{
-	  my ($level, $input) = ($1, $2);
-	  my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
+      while ($$job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
+      {
+	my ($level, $input) = ($1, $2);
+	my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
           (jobid, level, input, submittime) values (?, ?, ?, now())");
-	  $newjobstep_sth->execute ($job_id, $level, $input)
-	      or croak ($dbh->errstr);
-	}
+	$newjobstep_sth->execute ($job_id, $level, $input)
+	    or croak ($dbh->errstr);
       }
     }
   }
+  select (undef, undef, undef, 0.2) if (!$gotsome);
 }
 
 
