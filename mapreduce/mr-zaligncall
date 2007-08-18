@@ -5,10 +5,7 @@
 ###MR_KNOBS:FOCUSPIXELS=20000
 ###MR_KNOBS:ALIGNWINDOW=15
 ###MR_KNOBS:OBJECTTHRESHOLD=7000
-###MR_KNOBS:GZIP=yes
-
-use MetaMog;
-use Compress::Zlib; 
+###MR_KNOBS:GZIP=no
 
 if ($ENV{MR_LEVEL} == 0)
 {
@@ -37,6 +34,12 @@ elsif ($ENV{MR_LEVEL} == 1)
     $ENV{$_} = $ENV{"KNOB_$_"};
   }
 
+  my ($gzipflag) = $ENV{"KNOB_GZIP"} =~ /^y/i;
+  if ($gzipflag)
+  {
+    open (STDOUT, "|gzip") or die "Can't open output filter: $!";
+  }
+
   #this should be in (numerical) frame order (!?!)
   open (STDIN, "mrtask-streaminputkeys "
 	. "| mrtask-streaminput "
@@ -49,4 +52,9 @@ elsif ($ENV{MR_LEVEL} == 1)
     print "$ENV{MR_INPUT} $_";
   }
   close STDIN or die "Input stream exited $?";
+
+  if ($gzipflag)
+  {
+    close STDOUT or die "Output filter exited $?";
+  }
 }
