@@ -19,7 +19,7 @@ my $mrfunction = $q->param('mrfunction');
 my %mrparam = mr_get_mrfunction_params($mrfunction, $rev);
 if ($mrparam{'MR_INPUT'} eq 'jobs')
 {
-  eval `cat mrnew3-jobs.cgi` or die "$!";
+  eval `cat mrnew2-jobs.cgi` or die "$!";
   exit;
 }
 
