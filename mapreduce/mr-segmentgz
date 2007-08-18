@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+
+###MR_INPUT:frames
+
+use strict; 
+use Compress::Zlib; 
+use Image::Magick;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # init
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
+  open STDIN, "mrtask-framelist |" or die "Input pipe failed: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    chomp;
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # map
+
+  #this should be in (numerical) frame order (!?!)
+  open (STDIN, "mrtask-framekeys | mrtask-streaminput --raw-images |")
+      or die "Input pipe failed: $!";
+  my $gz = gzopen (\*STDOUT, "wb") 
+      or die "Cannot open stdout: $gzerrno\n"; 
+  while (2000000 == read (STDIN, $_, 2000000))
+  {
+    my $mask = Image::Magick->new( 
+        magick => 'gray', size => '1000x1000', endian => 'lsb');
+              
+    $mask->BlobToImage($_); 
+    my $image = $mask->Clone();
+
+    $mask->Normalize();       
+    $mask->Segment();    
+    $mask->Normalize();
+
+    $image->Composite(image=>$mask, compose=>'Multiply');
+
+    my $segment = $image->ImageToBlob(); 
+    
+    $gz->gzwrite ($segment) or die "error writing: $gzerrno\n";
+  }
+  close STDIN or die "Input stream exited $?";
+  $gz->gzclose();		# or die "gzclose() failed: $gzerrno";
+				# (gzclose() is supposed to return 1 on
+				# success, but doesn't...?)
+}
