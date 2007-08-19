@@ -40,11 +40,9 @@ my $sth = $dbh->prepare("
       mrjob.finishtime,
       unix_timestamp(mrjob.finishtime)-unix_timestamp(mrjob.starttime),
       count(mrjobstep.id),
-      mrjob.success,
-      sum(file.length) outputsize
+      mrjob.success
     from mrjob
     left join mrjobstep on mrjob.id=mrjobstep.jobid and ((mrjobstep.finishtime is null) = (mrjob.finishtime is null))
-    left join mogilefs.file on dmid=? and dkey like concat('mrjobstep/',mrjob.id,'/%')
     group by mrjob.id
     order by mrjob.id desc
     $limit");
