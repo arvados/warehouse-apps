@@ -21,7 +21,13 @@ print q{
 my $dbh = DBI->connect($main::mapreduce_dsn,
 		       $main::mrwebgui_mysql_username,
 		       $main::mrwebgui_mysql_password) or die DBI->errstr;
+
+my $sth = $dbh->prepare("select dmid from domain where namespace=?");
+$sth->execute ($main::mogilefs_default_domain) or die $dbh->errstr;
+my ($dmid) = $sth->fetchrow ();
+
 my $limit = ($q->param('showall') ? "" : "limit 10");
+
 my $sth = $dbh->prepare("
     select mrjob.id,
       jobmanager_id,
@@ -38,12 +44,11 @@ my $sth = $dbh->prepare("
       sum(file.length) outputsize
     from mrjob
     left join mrjobstep on mrjob.id=mrjobstep.jobid and ((mrjobstep.finishtime is null) = (mrjob.finishtime is null))
-    left join mogilefs.domain on namespace='$main::mogilefs_default_domain'
-    left join mogilefs.file on file.dmid=domain.dmid and file.dkey like concat('mrjobstep/',mrjob.id,'/%')
+    left join mogilefs.file on dmid=? and dkey like concat('mrjobstep/',mrjob.id,'/%')
     group by mrjob.id
     order by mrjob.id desc
     $limit");
-$sth->execute or die $dbh->errstr;
+$sth->execute ($dmid) or die $dbh->errstr;
 
 print q{
 <table>
