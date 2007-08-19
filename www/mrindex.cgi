@@ -34,9 +34,12 @@ my $sth = $dbh->prepare("
       mrjob.finishtime,
       unix_timestamp(mrjob.finishtime)-unix_timestamp(mrjob.starttime),
       count(mrjobstep.id),
-      mrjob.success
+      mrjob.success,
+      sum(file.length) outputsize
     from mrjob
     left join mrjobstep on mrjob.id=mrjobstep.jobid and ((mrjobstep.finishtime is null) = (mrjob.finishtime is null))
+    left join mogilefs.domain on namespace='$main::mogilefs_default_domain'
+    left join mogilefs.file on file.dmid=domain.dmid and file.dkey like concat('mrjobstep/',mrjob.id,'/%')
     group by mrjob.id
     order by mrjob.id desc
     $limit");
@@ -46,7 +49,7 @@ print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Done/-ToDo Success Output));
+print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Done/-ToDo Success OutputSize));
 print q{
 </tr>
 };
@@ -57,10 +60,6 @@ while (my @row = $sth->fetchrow)
   for ($row[5]) { s/,/, /g; }
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
   $row[10] = 0-$row[10] if !defined $row[8];
-  if ($row[-1])
-  {
-    push @row, "<a href=\"get.php?format=text&domain=images&dkey=mrjob/$jobid\">download</a>";
-  }
   $row[0] = "<a href=\"mrjob.cgi?id=$row[0]\">$row[0]</a>";
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
