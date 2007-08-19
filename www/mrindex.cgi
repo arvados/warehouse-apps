@@ -46,7 +46,7 @@ my $sth = $dbh->prepare("
     group by mrjob.id
     order by mrjob.id desc
     $limit");
-$sth->execute ($dmid) or die $dbh->errstr;
+$sth->execute () or die $dbh->errstr;
 
 print q{
 <table>
