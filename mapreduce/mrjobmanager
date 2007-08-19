@@ -129,7 +129,8 @@ Log ($dbh, $job_id, undef, "ask db for jobstep list");
 
 $sth = $dbh->prepare ("select id, input, attempts from mrjobstep
                        where jobid=? and level=?
-                       and (finishtime is null or exitcode <> 0)");
+                       and (finishtime is null or exitcode <> 0)
+                       order by id");
 $sth->execute ($job_id, $level) or croak ($dbh->errstr);
 
 
