@@ -44,7 +44,7 @@ my $sth = $dbh->prepare("
       sum(file.length) outputsize
     from mrjob
     left join mrjobstep on mrjob.id=mrjobstep.jobid and ((mrjobstep.finishtime is null) = (mrjob.finishtime is null))
-    left join mogilefs.file on dmid=? and dkey like concat('mrjobstep/',mrjob.id,'/%')
+    left join mogilefs.file on dmid=? and (dkey=concat('mrjobstep/',mrjob.id,'/',mrjobstep.level,'/',mrjobstep.id) or dkey=concat('mrjobstep/',mrjob.id,'/',mrjobstep.id))
     group by mrjob.id
     order by mrjob.id desc
     $limit");
