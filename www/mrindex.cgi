@@ -22,7 +22,7 @@ my $dbh = DBI->connect($main::mapreduce_dsn,
 		       $main::mrwebgui_mysql_username,
 		       $main::mrwebgui_mysql_password) or die DBI->errstr;
 
-my $sth = $dbh->prepare("select dmid from domain where namespace=?");
+my $sth = $dbh->prepare("select dmid from mogilefs.domain where namespace=?");
 $sth->execute ($main::mogilefs_default_domain) or die $dbh->errstr;
 my ($dmid) = $sth->fetchrow ();
 
@@ -40,9 +40,11 @@ my $sth = $dbh->prepare("
       mrjob.finishtime,
       unix_timestamp(mrjob.finishtime)-unix_timestamp(mrjob.starttime),
       count(mrjobstep.id),
-      mrjob.success
+      mrjob.success,
+      sum(file.length) outputsize
     from mrjob
     left join mrjobstep on mrjob.id=mrjobstep.jobid and ((mrjobstep.finishtime is null) = (mrjob.finishtime is null))
+    left join mogilefs.file on dmid=? and dkey like concat('mrjobstep/',mrjob.id,'/%')
     group by mrjob.id
     order by mrjob.id desc
     $limit");
