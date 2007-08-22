@@ -10,12 +10,12 @@ print $q->header;
 
 my $Qrevision = escapeHTML($q->param('revision'));
 my $Qmrfunction = escapeHTML($q->param('mrfunction'));
-my $Qjobs = escapeHTML(join(",", sort { $a <=> $b } ($q->param ('jobs'))));
+my $Qjobs = escapeHTML($q->param ('jobs'));
 my $Qknobs = escapeHTML($q->param('knobs'));
 my $Qnodelist = escapeHTML($q->param('nodelist'));
 
 my @prefixlist;
-foreach (sort { $a <=> $b } ($q->param ('jobs')))
+foreach (split (",", $q->param ('jobs')))
 {
   push @prefixlist, "mrjobstep/$_/*";
 }
