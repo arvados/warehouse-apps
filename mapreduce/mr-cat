@@ -1,0 +1,12 @@
+#!/usr/bin/perl
+
+###MR_DESCRIPTION:job -> all outputs concatenated into one big file
+###MR_INPUT:jobs
+
+$ENV{MR_INPUT} = $ENV{MR_INPUT0};
+open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |"
+    or die "Input pipe failed: $!";
+
+while (defined ($_ = <STDIN>)) { print; }
+
+close STDIN or die "Input stream exited $?";
