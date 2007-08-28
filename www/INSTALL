@@ -22,7 +22,6 @@ Add the md5 table to the MogileFS database:
 Make sure these run periodically (eg. every five minutes):
 
  cd /path/to/www/ && php-cgi update.php
- cd /path/to/www/ && php-cgi jobstatus-update.php
  cd /path/to/www/ && perl dscopy-cron.pl
 
 Create accounts and database for mapreduce system:
