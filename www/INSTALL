@@ -12,10 +12,15 @@ Create "analysis" account and database:
  grant all privileges on analysis.* to analysis@localhost;
  set password for analysis@localhost = old_password('secXret');
 
+Run createschema.php once:
+
+ cd /path/to/www/ && php-cgi createschema.php
+
 Make sure these run periodically (eg. every five minutes):
 
  cd /path/to/www/ && php-cgi update.php
  cd /path/to/www/ && php-cgi jobstatus-update.php
+ cd /path/to/www/ && perl dscopy-cron.pl
 
 Create accounts and database for mapreduce system:
 
@@ -29,3 +34,7 @@ Create accounts and database for mapreduce system:
  set password for mrcontrol@localhost = old_password('secXret');
  set password for mrcompute@'%' = old_password('secXret');
  set password for mrwebgui@localhost = old_password('secXret');
+
+Arrange for mapinit to run now and at startup:
+
+ su www-data -- sh -c 'cd /path/to/mapreduce && PATH=".:$PATH" ./mapinit' &
