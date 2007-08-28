@@ -15,13 +15,13 @@ then
   exit 0
 fi
 
-srun -N$SLURM_NNODES --job-name="r$1" --output="$dir".log --chdir=/tmp sh -c '
-rm -rf "$dir" && \
-mkdir "$dir" && \
-cd "$dir" && \
+srun -N$SLURM_NNODES --job-name="r$1" --output="$dir".log --chdir=/tmp sh -c "
+rm -rf \"$dir\" && \
+mkdir \"$dir\" && \
+cd \"$dir\" && \
 ln -s . install && \
-svn export -r "$1" "$svnrepos" src && \
+svn export -r \"$1\" \"$svnrepos\" src && \
 touch .fetched && \
 sh ./src/tests/autotests.sh && \
 touch .installed && \
-touch .tested'
+touch .tested"
