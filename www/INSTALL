@@ -16,6 +16,10 @@ Run createschema.php once:
 
  cd /path/to/www/ && php-cgi createschema.php
 
+Add the md5 table to the MogileFS database:
+
+ cd /path/to/www/ && php-cgi inc-mogilefs.php
+
 Make sure these run periodically (eg. every five minutes):
 
  cd /path/to/www/ && php-cgi update.php
