@@ -8,9 +8,8 @@ Copy config.php.sample to /etc/polony-tools/config.php and edit to suit.
 Create "analysis" account and database:
 
  create database analysis;
- create database analysis;
  grant all privileges on analysis.* to analysis@localhost;
- set password for analysis@localhost = old_password('secXret');
+ set password for analysis@localhost = old_password('YOURPASSWORDHERE');
 
 Run createschema.php once:
 
@@ -35,10 +34,10 @@ Create accounts and database for mapreduce system:
  grant select on mapreduce.* to mrcompute@'%';
  grant select on mogilefs.* to mrwebgui@localhost;
  grant select on mapreduce.* to mrwebgui@localhost;
- set password for mrcontrol@localhost = old_password('secXret');
- set password for mrcompute@'%' = old_password('secXret');
- set password for mrwebgui@localhost = old_password('secXret');
+ set password for mrcompute@'%' = old_password('YOURPASSWORDHERE');
+ set password for mrwebgui@localhost = old_password('YOURPASSWORDHERE');
+ set password for mrcontrol@localhost = old_password('YOURPASSWORDHERE');
 
 Arrange for mapinit to run now and at startup:
 
- su www-data -- sh -c 'cd /path/to/mapreduce && PATH=".:$PATH" ./mapinit' &
+ su www-data -- sh -c 'cd /path/to/mapreduce && PATH=".:$PATH" /usr/bin/perl ./mapinit' &
