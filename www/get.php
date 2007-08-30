@@ -23,12 +23,12 @@ putenv("MOGILEFS_TRACKERS=".join(",", $mogilefs_trackers));
 unset($filter);
 
 $filename = ereg_replace ("/", "-", ereg_replace("^/", "", $dkey));
-if ($_REQUEST[domain] == 'reports')
+if ($domain == 'reports')
 {
   header("Content-Disposition: attachment; filename=\"$filename\"");
   header("Content-type: text/plain");
 }
-else if ($_REQUEST[domain] == 'images')
+else if ($domain == 'images')
 {
   if (ereg ("/(positions|cycles)$", $dkey)
       || $format == 'text'
@@ -70,7 +70,7 @@ else
   exit;
 }
 
-$safekey = escapeshellarg($_REQUEST[dkey]);
+$safekey = escapeshellarg($dkey);
 
 if ($filter)
 {
