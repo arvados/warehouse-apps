@@ -18,16 +18,25 @@ createtables ($dbh);
 
 
 
+$main::DRAIN = 0;
+$SIG{'HUP'} = sub
+{
+  warn "$0: SIGHUP received; will quit when $main::children finish\n";
+  $main::DRAIN = 1;
+};
+
+
+
 # Wait for jobs to appear in the queue; start them; repeat.
 
 my %job_proc;
 my %proc_job;
 my $children = 0;
 my $sth;
-while (1)
+while (!$main::DRAIN || $children > 0)
 {
   my @row;
-  if (!defined ($sth) || !(@row = $sth->fetchrow))
+  if (!$main::DRAIN && (!defined ($sth) || !(@row = $sth->fetchrow)))
   {
     $sth = $dbh->prepare ("select id, nodes, revision from mrjob
                            where jobmanager_id is null
@@ -35,7 +44,7 @@ while (1)
     $sth->execute or die $dbh->errstr;
   }
 
-  if (@row)
+  if (!$main::DRAIN && @row)
   {
     my ($job_id, $job_nodes, $job_revision) = @row;
 
