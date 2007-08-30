@@ -12,6 +12,7 @@ print $q->header;
 my $jobid = $q->param('id');
 my $sort = $q->param('sort') || '';
 $sort =~ s/[^a-z0-9]//gi;
+my $sortdirection = $q->param('sortdirection');
 
 print qq{
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
@@ -90,9 +91,16 @@ print q{
 
 my $order_str = 'id';
 if ($sort eq 'elapsed') {
-	$order_str = "unix_timestamp(finishtime)-unix_timestamp(starttime)";
+  $order_str = "unix_timestamp(finishtime)-unix_timestamp(starttime)";
 } elsif ($sort ne '') {
-	$order_str = $sort;
+  $order_str = $sort;
+}
+my $other_direction_str;
+if ($sortdirection eq 'desc') {
+  $order_str .= " desc";
+  $other_direction_str = "";
+} else {
+  $other_direction_str = "&amp;sortdirection=desc";
 }
 
 my %fields;
@@ -117,7 +125,21 @@ my $sth = $dbh->prepare("select
  order by $order_str");
 $sth->execute ($jobid) or die $sth->errstr;
 print "<tr>";
-print map ("<td><a href=\"?id=$jobid&amp;sort=" . $fields{$_} . "\">$_</a></td>\n", qw(StepID Level Input Submit Start Finish Elapsed Attempts Node ExitCode stderr));
+print map ("<td><a href=\"?id=$jobid&amp;sort="
+	   . $fields{$_}
+	   . ($fields{$_} eq $sort ? $other_direction_str : "")
+	   . "\">$_</a></td>\n",
+	   qw(StepID
+	      Level
+	      Input
+	      Submit
+	      Start
+	      Finish
+	      Elapsed
+	      Attempts
+	      Node
+	      ExitCode
+	      stderr));
 print q{
 <td>stdout</td></tr>
 };
