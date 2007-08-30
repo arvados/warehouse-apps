@@ -3,12 +3,22 @@
 require_once '/etc/polony-tools/config.php';
 require_once 'functions.php';
 
-putenv("MOGILEFS_DOMAIN=".$_REQUEST[domain]);
+$domain = $_REQUEST[domain];
+$format = $_REQUEST[format];
+$dkey = $_REQUEST[dkey];
+if ($_SERVER[PATH_INFO])
+{
+  $path = ereg_replace ("^/", "", $_SERVER[PATH_INFO]);
+  list ($domain, $dkey) = explode (",", $path, 2);
+  $dkey = ereg_replace ('\.([a-z]+)$', '', $dkey, $regs);
+  $format = $regs[1];
+}
+
+putenv("MOGILEFS_DOMAIN=$domain");
 putenv("MOGILEFS_TRACKERS=".join(",", $mogilefs_trackers));
 
 unset($filter);
 
-$dkey = $_REQUEST[dkey];
 $filename = ereg_replace ("/", "-", ereg_replace("^/", "", $dkey));
 if ($_REQUEST[domain] == 'reports')
 {
@@ -17,12 +27,14 @@ if ($_REQUEST[domain] == 'reports')
 }
 else if ($_REQUEST[domain] == 'images')
 {
-  if (ereg ("/(positions|cycles)$", $dkey) || $_REQUEST[format] == 'text')
+  if (ereg ("/(positions|cycles)$", $dkey)
+      || $format == 'text'
+      || $format == 'txt')
     {
       header ("Content-Disposition: attachment; filename=\"$filename.txt\"");
       header ("Content-type: text/plain");
     }
-  else if ($_REQUEST[format] == 'png')
+  else if ($format == 'png')
     {
       $convert = "convert";
       $transform = "-normalize";
