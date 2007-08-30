@@ -75,7 +75,7 @@ while (@row)
 	    if (@url)
 	    {
 		$e0 = $e;
-		print "<a href=\"get.php?domain=images&dkey=$dkey&format=png\">$dkey</a><br>\n";
+		print "<a href=\"get/images,$dkey.png\">$dkey</a><br>\n";
 		last;
 	    }
 	}
