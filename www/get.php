@@ -10,8 +10,11 @@ if ($_SERVER[PATH_INFO])
 {
   $path = ereg_replace ("^/", "", $_SERVER[PATH_INFO]);
   list ($domain, $dkey) = explode (",", $path, 2);
-  $dkey = ereg_replace ('\.([a-z]+)$', '', $dkey, $regs);
-  $format = $regs[1];
+  if (ereg ('\.([a-z]+)$', $dkey, $regs))
+    {
+      $format = $regs[1];
+      $dkey = ereg_replace ('\.([a-z]+)$', '', $dkey);
+    }
 }
 
 putenv("MOGILEFS_DOMAIN=$domain");
