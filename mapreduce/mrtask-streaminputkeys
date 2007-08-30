@@ -48,6 +48,7 @@ sub print_wildcard
 
   my $after;
   my $keys;
+  my $ok = 0;
   while (1)
   {
     my @keylist = $main::mogc->list_keys ($prefix, $after);
@@ -57,6 +58,8 @@ sub print_wildcard
     foreach (@$keys)
     {
       print "$_\n";
+      $ok = 1;
     }
   }
+  die "No keys match $prefix" if !$ok;
 }
