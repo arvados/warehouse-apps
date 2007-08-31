@@ -21,7 +21,9 @@ createtables ($dbh);
 $main::DRAIN = 0;
 $SIG{'HUP'} = sub
 {
-  warn "$0: SIGHUP received; will quit when $main::children finish\n";
+  warn ("$0: SIGHUP received; will quit when "
+	. (0 + $main::children)
+	." children finish\n");
   $main::DRAIN = 1;
 };
 
@@ -31,9 +33,10 @@ $SIG{'HUP'} = sub
 
 my %job_proc;
 my %proc_job;
-my $children = 0;
+$main::children = 0;
 my $sth;
-while (!$main::DRAIN || $children > 0)
+print STDERR "$0 $$ start\n";
+while (!$main::DRAIN || $main::children > 0)
 {
   my @row;
   if (!$main::DRAIN && (!defined ($sth) || !(@row = $sth->fetchrow)))
@@ -67,7 +70,7 @@ while (!$main::DRAIN || $children > 0)
       $job_proc{$job_id} = $child;
       $proc_job{$child} = $job_id;
 
-      if ($children >= $max_njobs)
+      if ($main::children >= $max_njobs)
       {
 	my $finishedchild = wait;
 	debuglog ("pid $finishedchild finished");
@@ -76,7 +79,7 @@ while (!$main::DRAIN || $children > 0)
       }
       else
       {
-	++$children;
+	++$main::children;
       }
     }
     else
@@ -110,14 +113,16 @@ while (!$main::DRAIN || $children > 0)
     debuglog ("pid $finishedchild finished");
     delete $job_proc{$proc_job{$finishedchild}};
     delete $proc_job{$finishedchild};
-    --$children;
+    --$main::children;
   }
 }
+print STDERR "$0 $$ exit\n";
+exit 0;
 
 
 sub debuglog
 {
-  print STDERR (@_, "\n") if $ENV{MR_DEBUG};
+  print STDERR ("$0 $$ ", @_, "\n") if $ENV{MR_DEBUG};
 }
 
 
