@@ -21,9 +21,9 @@ createtables ($dbh);
 $main::DRAIN = 0;
 $SIG{'HUP'} = sub
 {
-  warn ("$0: SIGHUP received; will quit when "
+  warn ("$0 $$ SIGHUP, wait for "
 	. (0 + $main::children)
-	." children finish\n");
+	." children to finish\n");
   $main::DRAIN = 1;
 };
 
