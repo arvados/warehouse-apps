@@ -47,13 +47,28 @@ foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
   my @nodelist;
   foreach my $nodelist (split (",", $slurm_nodelist))
   {
-    if ($nodelist =~ /\[(\d+)-(\d+)\]/)
+    if ($nodelist =~ /\[((\d+)(-(\d+))?(,(\d+)(-(\d+))?))*\]/)
     {
-      push @nodelist, map {
-	my $n = $nodelist;
-	$n =~ s/\[\d+-\d+\]/$_/;
-	$n;
-      } ($1..$2);
+      my $ranges = $1;
+      foreach (split (",", $ranges))
+      {
+	my ($a, $b);
+	if (/(\d+)-(\d+)/)
+	{
+	  $a = $1;
+	  $b = $2;
+	}
+	else
+	{
+	  $a = $_;
+	  $b = $_;
+	}
+	push @nodelist, map {
+	  my $n = $nodelist;
+	  $n =~ s/\[\d+(-\d+)?(,(\d+(-\d+)?))*\]/$_/;
+	  $n;
+	} ($a..$b);
+      }
     }
     else
     {
