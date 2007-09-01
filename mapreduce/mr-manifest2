@@ -29,6 +29,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $data = <STDIN>;
   my $md5 = md5_hex($data);
   print "$md5 $ENV{MR_INPUT}\n";
+  print STDERR ($md5, " ", $ENV{MR_INPUT}, " ", length($data), "\n");
   close STDIN or die "Input stream exited $?";
 }
 
