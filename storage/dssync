@@ -18,6 +18,7 @@ my %defopts = qw(
 		 quick     0
 		 n         0
 		 v         0
+		 all       0
 		 );
 my %opts = %defopts;
 while ($ARGV[0] =~ /^-/)
@@ -68,18 +69,27 @@ if (!open (LOCKFILE, ">>$opts{lockfile}")
 
 my $keyprefix;
 my ($dsid, $remote) = @ARGV;
-if ($dsid =~ m|^/([^/]+)/IMAGES/RAW$|)
+
+if ($opts{all})
 {
-    $keyprefix = $dsid;
-    $dsid = $1;
+  $keyprefix = $dsid;
+  if ($keyprefix !~ m|^/[^/]|)
+  {
+    die "$0: Invalid keyprefix \"$keyprefix\" -- should look like \"/datasetname\".\n";
+  }
+}
+elsif ($dsid =~ m|^/([^/]+)/IMAGES/RAW$|)
+{
+  $keyprefix = $dsid;
+  $dsid = $1;
 }
 elsif ($dsid =~ m|/|)
 {
-    die "$0: Invalid dataset name \"$dsid\" -- shouldn't contain slashes.\n";
+  die "$0: Invalid dataset name \"$dsid\" -- shouldn't contain slashes.\n";
 }
 else
 {
-    $keyprefix = "/$dsid/IMAGES/RAW";
+  $keyprefix = "/$dsid/IMAGES/RAW";
 }
 
 if ($opts{v}) { warn "Getting manifest.\n"; }
@@ -92,6 +102,10 @@ my $r = $ua->request(POST $remote."/manifest.php",
 		       "domain" => $opts{domain},
 		       "class" => $opts{class},
 		       "quick" => $opts{quick} ]);
+if (!$r->is_success)
+{
+  die "$0: Error retrieving manifest from $remote/manifest.php: ".$r->status_line;
+}
 foreach (split (/\n/, $r->content))
 {
     my ($md5, $key) = split;
@@ -100,55 +114,57 @@ foreach (split (/\n/, $r->content))
 }
 if (!$manifestok)
 {
-    die "Error retrieving manifest from $remote/manifest.php -- stopping.\n";
+    die "$0: Retrieved manifest from $remote/manifest.php but did not see end marker. Stop.\n";
 }
 
-if ($opts{v}) { warn "Reading position list.\n"; }
-
-open POSITIONS, "<$opts{positions}" or die "Can't open $opts{positions}: $!\n";
-my @positions = <POSITIONS>;
-close POSITIONS;
-my $nframes = 0;
-foreach (@positions)
+if (!$opts{all})
 {
+  if ($opts{v}) { warn "Reading position list.\n"; }
+
+  open POSITIONS, "<$opts{positions}" or die "Can't open $opts{positions}: $!\n";
+  my @positions = <POSITIONS>;
+  close POSITIONS;
+  my $nframes = 0;
+  foreach (@positions)
+  {
     my ($frame_id, $x, $y, $w, $h) = split;
     if ($frame_id !~ /^\d+$/) { next; }
     ++$nframes;
-}
-if (!$opts{n})
-{
+  }
+  if (!$opts{n})
+  {
     warn "Uploading position list.\n" if $opts{v};
     maybe_upload($keyprefix."/positions", $opts{positions}, 0);
-}
+  }
 
-if ($opts{v}) { warn "Reading cycle list.\n"; }
+  if ($opts{v}) { warn "Reading cycle list.\n"; }
 
-my %cycle;
-open CYCLES, "<$opts{cycles}" or die "Can't open $opts{cycles}: $!\n";
-my @cycles = <CYCLES>;
-my @cycles_orig = @cycles;
-close CYCLES;
-foreach (@cycles)
-{
+  my %cycle;
+  open CYCLES, "<$opts{cycles}" or die "Can't open $opts{cycles}: $!\n";
+  my @cycles = <CYCLES>;
+  my @cycles_orig = @cycles;
+  close CYCLES;
+  foreach (@cycles)
+  {
     s/\;.*//;
     my ($datasetname, $cycle_id, $wellnumber, $x, $x, @exposures) = split(",");
     $cycle{$cycle_id} = 0;
-}
-if (!$opts{n})
-{
+  }
+  if (!$opts{n})
+  {
     warn "Uploading cycle list.\n" if $opts{v};
     maybe_upload($keyprefix."/cycles", $opts{cycles}, 0);
-}
+  }
 
-my %hybrid;
-foreach (split (",", $opts{hybrid}))
-{
+  my %hybrid;
+  foreach (split (",", $opts{hybrid}))
+  {
     $hybrid{$_} = 1;
-}
+  }
 
-my %include;
-foreach (split (",", $opts{include}))
-{
+  my %include;
+  foreach (split (",", $opts{include}))
+  {
     $include{$_} = 1;
     if (-e $_ && !-d $_)
     {
@@ -156,10 +172,11 @@ foreach (split (",", $opts{include}))
 	$basename =~ s|.*/||;
 	maybe_upload ("/$dsid/files/$basename", $_, 0);
     }
-}
+  }
 
-upload();			# must flush here before chdir or paths to
+  upload();			# must flush here before chdir or paths to
 				# positions/cycles might not work any more
+}
 
 if ($opts{v}) { warn "Checking local files.\n"; }
 
@@ -168,10 +185,17 @@ my $queuesize = 0;
 my @uploadqueue;
 my @warn;
 chdir ($opts{localdir}) or die "$0: Can't chdir to $opts{localdir}: $!\n";
-opendir DIR, "."
-    or die "$0: Can't read dir $opts{localdir}: $!\n";
-foreach my $subdir (sort (readdir DIR))
+
+if ($opts{all})
 {
+  recursive_upload ($keyprefix, ".");
+}
+else
+{
+  opendir DIR, "."
+      or die "$0: Can't read dir $opts{localdir}: $!\n";
+  foreach my $subdir (sort (readdir DIR))
+  {
     if (!-d $subdir) { next; }
     if ($subdir eq '.') { next; }
     if ($subdir eq '..') { next; }
@@ -236,11 +260,38 @@ foreach my $subdir (sort (readdir DIR))
 			  $opts{quick});
 	}
     }
+  }
 }
 
 upload();
 print STDERR @warn;
 print STDERR "$uploadtotal files uploaded.\n";
+
+sub recursive_upload
+{
+  my ($remotedir, $localdir) = @_;
+  opendir D, $localdir or die "$0: Can't read dir $localdir: $!";
+  my @files = sort readdir D;
+  close D;
+  foreach my $file (@files)
+  {
+    next if ($file eq "." || $file eq "..");
+    if (-d "$localdir/$file")
+    {
+      recursive_upload ("$remotedir/$file", "$localdir/$file");
+    }
+    elsif (-f "$localdir/$file")
+    {
+      maybe_upload ($remotedir."/".$file,
+		    $localdir."/".$file,
+		    $opts{quick});
+    }
+    else
+    {
+      push (@warn, "Skipped special file $localdir/$file\n");
+    }
+  }
+}
 
 sub maybe_upload
 {
