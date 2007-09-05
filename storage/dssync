@@ -39,7 +39,7 @@ if (@ARGV != 2)
 {
     print STDERR <<EOF;
 usage:
-       $0 [options] dataset-name http://host/path/to/uploadscripts
+       $0 [options] dataset-name-or-keyprefix http://lims-server
 options:
        --lockfile=/path/to/lockfile            default = $defopts{lockfile}
        --localdir=/path/to/images/raw          default = $defopts{localdir}
@@ -51,10 +51,12 @@ options:
        --class=mogilefsclass          default = $defopts{class}
        --batch=maxfilesperrequest     default = $defopts{batch}
        --quick                        don't compare md5 of existing files
+       --all                          upload entire directory tree
        -n                             don't really upload anything
        -v                             verbose
 examples:
-       $0 /tmp/RAW /foo_01/IMAGES/RAW http://tomc
+       $0 /tmp/RAW foo_01 http://tomc
+       $0 --all /tmp/RAW /foo_01/IMAGES/RAW http://tomc
 EOF
 ;
     exit 1;
@@ -117,6 +119,11 @@ if (!$manifestok)
     die "$0: Retrieved manifest from $remote/manifest.php but did not see end marker. Stop.\n";
 }
 
+my %cycle;
+my %hybrid;
+my %include;
+my $nframes = 0;
+
 if (!$opts{all})
 {
   if ($opts{v}) { warn "Reading position list.\n"; }
@@ -124,7 +131,6 @@ if (!$opts{all})
   open POSITIONS, "<$opts{positions}" or die "Can't open $opts{positions}: $!\n";
   my @positions = <POSITIONS>;
   close POSITIONS;
-  my $nframes = 0;
   foreach (@positions)
   {
     my ($frame_id, $x, $y, $w, $h) = split;
@@ -139,7 +145,6 @@ if (!$opts{all})
 
   if ($opts{v}) { warn "Reading cycle list.\n"; }
 
-  my %cycle;
   open CYCLES, "<$opts{cycles}" or die "Can't open $opts{cycles}: $!\n";
   my @cycles = <CYCLES>;
   my @cycles_orig = @cycles;
@@ -156,13 +161,11 @@ if (!$opts{all})
     maybe_upload($keyprefix."/cycles", $opts{cycles}, 0);
   }
 
-  my %hybrid;
   foreach (split (",", $opts{hybrid}))
   {
     $hybrid{$_} = 1;
   }
 
-  my %include;
   foreach (split (",", $opts{include}))
   {
     $include{$_} = 1;
