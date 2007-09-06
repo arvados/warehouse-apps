@@ -37,6 +37,7 @@ while (1)
     my $dataref = $mogc->get_file_data ($key);
     if ($dataref)
     {
+      $key =~ s|^/*||;
       if (length($key) > 100)
       {
 	substr ($key, 100) = "";
@@ -60,7 +61,7 @@ while (1)
       print $tarheader;
 
       print $$dataref;
-      my $pad = 512 - (length($$dataref) % 512);
+      my $pad = 512 - (length($$dataref) & 511);
       if ($pad != 512)
       {
 	print "\0" x $pad;
