@@ -37,7 +37,10 @@ while (1)
     my $dataref = $mogc->get_file_data ($key);
     if ($dataref)
     {
-      substr ($key, 100) = "";
+      if (length($key) > 100)
+      {
+	substr ($key, 100) = "";
+      }
 
       my $tarheader = "\0" x 512;
       substr ($tarheader, 0, length($key)) = $key;
