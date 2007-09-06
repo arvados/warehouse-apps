@@ -50,10 +50,11 @@ while (1)
       substr ($tarheader, 124, 11) = sprintf ("%011o", length($$dataref));
       substr ($tarheader, 136, 11) = sprintf ("%011o", scalar time);
       substr ($tarheader, 156, 1) = "0";
-      substr ($tarheader, 257, 5) = "ustar";
-      substr ($tarheader, 263, 2) = "00";
+      substr ($tarheader, 257, 7) = "ustar  ";
       substr ($tarheader, 265, 8) = "mogilefs";
       substr ($tarheader, 297, 8) = "mogilefs";
+      substr ($tarheader, 329, 7) = "0000000";
+      substr ($tarheader, 337, 7) = "0000000";
       substr ($tarheader, 148, 7) = sprintf ("%07o", tarchecksum($tarheader));
       print $tarheader;
 
