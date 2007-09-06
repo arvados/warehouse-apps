@@ -24,6 +24,7 @@ die "$@" if !$mogc;
 
 my $keyprefix = $q->param ("keyprefix");
 
+my $totalbytes = 0;
 my $after;
 my $keys;
 while (1)
