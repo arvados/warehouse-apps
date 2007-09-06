@@ -32,11 +32,45 @@ while (1)
   die "MogileFS::Client::list_keys() failed" if !@keylist;
   ($after, $keys) = @keylist;
   last if (!defined ($keys) || !@$keys);
-  foreach (@$keys)
+  foreach my $key (@$keys)
   {
-    print "$_\n";
+    my $dataref = $mogc->get_file_data ($key);
+    if ($dataref)
+    {
+      substr ($key, 100) = "";
+
+      my $tarheader = "\0" x 512;
+      substr ($tarheader, 0, length($key)) = $key;
+      substr ($tarheader, 100, 7) = sprintf ("%07o", 0644); # mode
+      substr ($tarheader, 108, 7) = sprintf ("%07o", 0); # uid
+      substr ($tarheader, 116, 7) = sprintf ("%07o", 0); # gid
+      substr ($tarheader, 124, 11) = sprintf ("%011o", length($$dataref));
+      substr ($tarheader, 136, 11) = sprintf ("%011o", scalar time);
+      substr ($tarheader, 148, 7) = sprintf ("%07o", tarchecksum($tarheader));
+      print $tarheader;
+
+      print $$dataref;
+      my $pad = 512 - (length($$dataref) % 512);
+      if ($pad != 512)
+      {
+	print "\0" x $pad;
+      }
+    }
   }
 }
+print "\0" x 1024;
 
+sub tarchecksum
+{
+  my $sum = 0;
+  for (@_)
+  {
+    for (my $i=0; $i<length; $i++)
+    {
+      $sum += ord(substr($_,$i,1));
+    }
+  }
+  return $sum;
+}
 
 # arch-tag: 380ef2a7-5c3e-11dc-9207-0015f2b17887
