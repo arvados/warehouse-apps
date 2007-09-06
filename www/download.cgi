@@ -49,10 +49,11 @@ while (1)
       substr ($tarheader, 116, 7) = sprintf ("%07o", 0); # gid
       substr ($tarheader, 124, 11) = sprintf ("%011o", length($$dataref));
       substr ($tarheader, 136, 11) = sprintf ("%011o", scalar time);
-      substr ($tarheader, 156, 1) = "0";
-      substr ($tarheader, 257, 7) = "ustar  ";
-      substr ($tarheader, 265, 8) = "mogilefs";
-      substr ($tarheader, 297, 8) = "mogilefs";
+      substr ($tarheader, 156, 1) = "\0"; # typeflag
+      substr ($tarheader, 257, 5) = "ustar"; # magic
+      substr ($tarheader, 263, 2) = "00"; # version
+      substr ($tarheader, 265, 8) = "mogilefs";	# user
+      substr ($tarheader, 297, 8) = "mogilefs";	# group
       substr ($tarheader, 329, 7) = "0000000";
       substr ($tarheader, 337, 7) = "0000000";
       substr ($tarheader, 148, 7) = sprintf ("%07o", tarchecksum($tarheader));
@@ -76,7 +77,8 @@ sub tarchecksum
   {
     for (my $i=0; $i<length; $i++)
     {
-      $sum += ord(substr($_,$i,1));
+      if ($i >= 148 && $i < 156) { $sum += 32; }
+      else { $sum += ord(substr($_,$i,1)); }
     }
   }
   return $sum;
