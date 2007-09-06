@@ -279,7 +279,7 @@ sub recursive_upload
   foreach my $file (@files)
   {
     next if ($file eq "." || $file eq "..");
-    if (-s "$localdir/$file")
+    if (-l "$localdir/$file")
     {
       push (@warn, "Skipped symbolic link $localdir/$file\n");
     }
