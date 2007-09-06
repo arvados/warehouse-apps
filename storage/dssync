@@ -55,8 +55,8 @@ options:
        -n                             don't really upload anything
        -v                             verbose
 examples:
-       $0 /tmp/RAW foo_01 http://tomc
-       $0 --all /tmp/RAW /foo_01/IMAGES/RAW http://tomc
+       $0 --localdir=/tmp/RAW foo_01 http://tomc
+       $0 --all --localdir=/tmp/RAW /foo_01/IMAGES/RAW http://tomc
 EOF
 ;
     exit 1;
