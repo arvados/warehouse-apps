@@ -28,7 +28,7 @@ my $after;
 my $keys;
 while (1)
 {
-  my @keylist = $self->{mogc}->list_keys ($keyprefix, $after);
+  my @keylist = $mogc->list_keys ($keyprefix, $after);
   die "MogileFS::Client::list_keys() failed" if !@keylist;
   ($after, $keys) = @keylist;
   last if (!defined ($keys) || !@$keys);
