@@ -59,17 +59,29 @@ while (1)
       substr ($tarheader, 337, 7) = "0000000";
       substr ($tarheader, 148, 7) = sprintf ("%07o", tarchecksum($tarheader));
       print $tarheader;
+      $totalbytes += 512;
 
       print $$dataref;
+      $totalbytes += length($$dataref);
+
       my $pad = 512 - (length($$dataref) & 511);
       if ($pad != 512)
       {
 	print "\0" x $pad;
+	$totalbytes += $pad;
       }
     }
   }
 }
 print "\0" x 1024;
+$totalbytes += 1024;
+
+my $pad = 0x1000 - ($totalbytes & 0xfff);
+if ($pad != 0x1000)
+{
+  print "\0" x $pad;
+  $totalbytes += $pad;
+}
 
 sub tarchecksum
 {
