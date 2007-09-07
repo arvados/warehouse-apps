@@ -7,6 +7,7 @@ use LWP::UserAgent;
 use Fcntl ':flock';
 
 my %defopts = qw(
+		 bigfilesize 40000000
 		 batch     12
 		 domain    images
 		 class     single
@@ -50,6 +51,7 @@ options:
        --domain=mogilefsdomain        default = $defopts{domain}
        --class=mogilefsclass          default = $defopts{class}
        --batch=maxfilesperrequest     default = $defopts{batch}
+       --bigfilesize=maxfilesizeinram default = $defopts{bigfilesize}
        --quick                        don't compare md5 of existing files
        --all                          upload entire directory tree
        -n                             don't really upload anything
@@ -318,19 +320,33 @@ sub maybe_upload
 	}
     }
 
+    my $file_is_big = ($opts{bigfilesize} < -s $file);
+
     my $data;
-    do {
+    if (!$quick && !$file_is_big)
+    {
 	local $/ = undef;
 	open FILE, "<$file" or die "$0: Can't open $file: $!\n";
 	$data = <FILE>;
 	close FILE;
-    };
+    }
 
     my $md5 = " " x 32;
 
     if (!$quick)
     {
-	$md5 = md5_hex($data);
+	if (defined ($data))
+	{
+	    $md5 = md5_hex ($data);
+	}
+	else
+	{
+	    open FILE, "<$file" or die "$0: Can't open $file: $!\n";
+	    my $m = Digest::MD5->new;
+	    $m->addfile (*FILE);
+	    $md5 = $m->hexdigest;
+	    close FILE;
+	}
 	if ($storedmd5{$key} eq $md5)
 	{
 	    print STDERR "skip:    $md5 $key\n";
@@ -357,10 +373,19 @@ sub upload
     {
 	my $n = $queuesize;
 	if ($n == 0) { $n = ""; }
-	push (@uploadqueue,
-	      "upload$n" => [ undef, $key,
-			      "Content-Type" => "application/binary",
-			      "Content" => $data ]);
+	if (defined ($data))
+	{
+	  push (@uploadqueue,
+		"upload$n" => [ undef, $key,
+				"Content-Type" => "application/binary",
+				"Content" => $data ]);
+	}
+	else
+	{
+	  push (@uploadqueue,
+		"upload$n" => [ $filename, $key,
+				"Content-Type" => "application/binary" ]);
+	}
 	++$queuesize;
 	++$uploadtotal;
     }
