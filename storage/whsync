@@ -1,0 +1,97 @@
+#!/usr/bin/perl
+
+use strict;
+use Digest::MD5 'md5_hex';
+use HTTP::Request::Common;
+use LWP::UserAgent;
+use Fcntl ':flock';
+
+my %defopts = qw(
+		 domain    images
+		 quick     0
+		 n         0
+		 v         0
+		 );
+my %opts = %defopts;
+while ($ARGV[0] =~ /^-/)
+{
+    if ($ARGV[0] =~ /^--(.*?)(=(.*))?$/)
+    {
+	$opts{$1} = defined($3) ? $3 : 1;
+    }
+    else
+    {
+	$ARGV[0] =~ /^-(.*)/;
+	$opts{$1} = 1;
+    }
+    shift @ARGV;
+}
+
+if (@ARGV != 2)
+{
+    print STDERR <<EOF;
+usage:
+       $0 [options] source destination
+options:
+       --domain=mogilefsdomain        default = $defopts{domain}
+       --quick                        don't compare md5 of existing files
+       --all                          upload entire directory tree
+       -n                             don't really upload anything
+       -v                             verbose
+examples:
+       $0 http://tomc.freelogy.org:/foo_01/IMAGES/RAW /tmp/RAW
+EOF
+;
+    exit 1;
+}
+
+my ($from, $to) = @ARGV;
+
+if ($from =~ /(http:\/\/\S+?):(\S+)$/)
+{
+  if (-e $to && !-d $to)
+  {
+    die "$0: $to: not a directory\n";
+  }
+  $opts{whurl} = $1;
+  $opts{keyprefix} = $2;
+
+  my @local_manifest = get_local_manifest ($to, "");
+
+  my $tempfile = "/tmp/whsync.$$";
+  open TEMPFILE, "+>$tempfile" or die "$0: can't create $tempfile: $!\n";
+  print TEMPFILE join ("\n", @local_manifest);
+  close TEMPFILE;
+  system ("curl -s -F 'keyprefix=$opts{keyprefix}' -F 'exclude=\@$tempfile' '$opts{whurl}/download.cgi' | tar -C '$to' -xvf -");
+  unlink $tempfile;
+}
+else
+{
+  die "$0: upload is not supported yet -- use dssync\n";
+}
+
+sub get_local_manifest
+{
+  my $dir = shift;
+  my $strippeddir = shift;
+  return () if (!-e $dir);
+
+  my @ret;
+  opendir D, $dir or die "$0: can't open $dir: $!\n";
+  foreach my $file (sort readdir D)
+  {
+    next if -l "$dir/$file";
+    next if $file eq '.';
+    next if $file eq '..';
+    if (-d "$dir/$file")
+    {
+      push @ret, get_local_manifest ("$dir/$file", "$strippeddir/$file");
+    }
+    else
+    {
+      push @ret, "$strippeddir/$file";
+    }
+  }
+  closedir D;
+  return @ret;
+}

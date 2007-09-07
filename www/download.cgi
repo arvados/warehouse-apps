@@ -24,6 +24,22 @@ die "$@" if !$mogc;
 
 my $keyprefix = $q->param ("keyprefix");
 
+# when preparing the tar to send to the client, we will remove
+# everything up to the last slash.  So, if warehouse has /foo/bar/baz
+# then:
+# 
+# client requests /foo/bar  tar will contain bar/baz unless /bar/baz in exclude
+# client requests /foo/bar/ tar will contain baz     unless /baz     in exclude
+# client requests /         tar will contain foo/... unless /foo/... in exclude
+# client requests           tar will contain foo/... unless /foo/... in exclude
+
+my $keyprefix_to_remove = $keyprefix;
+$keyprefix_to_remove =~ s/[^\/]*$//;
+
+my $exclude_fh = $q->upload ("exclude");
+my @exclude = sort <$exclude_fh>;
+chomp @exclude;
+
 my $totalbytes = 0;
 my $after;
 my $keys;
@@ -33,19 +49,31 @@ while (1)
   die "MogileFS::Client::list_keys() failed" if !@keylist;
   ($after, $keys) = @keylist;
   last if (!defined ($keys) || !@$keys);
-  foreach my $key (@$keys)
+  my $ei = 0;
+  foreach my $mogkey (@$keys)
   {
-    my $dataref = $mogc->get_file_data ($key);
+    my $tarkey = $mogkey;
+    substr($tarkey, 0, length($keyprefix_to_remove)) = "";
+
+    while ($ei <= $#exclude && $exclude[$ei] lt "/$tarkey")
+    {
+      ++$ei;
+    }
+    if ($ei <= $#exclude && $exclude[$ei] eq "/$tarkey")
+    {
+      ++$ei;
+      next;
+    }
+    my $dataref = $mogc->get_file_data ($mogkey);
     if ($dataref)
     {
-      $key =~ s|^/*||;
-      if (length($key) > 100)
+      if (length($tarkey) > 99)
       {
-	substr ($key, 100) = "";
+	substr ($tarkey, 99) = "";
       }
 
       my $tarheader = "\0" x 512;
-      substr ($tarheader, 0, length($key)) = $key;
+      substr ($tarheader, 0, length($tarkey)) = $tarkey;
       substr ($tarheader, 100, 7) = sprintf ("%07o", 0644); # mode
       substr ($tarheader, 108, 7) = sprintf ("%07o", 0); # uid
       substr ($tarheader, 116, 7) = sprintf ("%07o", 0); # gid
