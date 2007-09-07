@@ -49,9 +49,16 @@ my ($from, $to) = @ARGV;
 
 if ($from =~ /(http:\/\/\S+?):(\S+)$/)
 {
-  if (-e $to && !-d $to)
+  if (-e $to)
   {
-    die "$0: $to: not a directory\n";
+    if (!-d $to)
+    {
+      die "$0: $to: not a directory\n";
+    }
+  }
+  else
+  {
+    mkdir $to or die "$0: can't mkdir $to: $!";
   }
   $opts{whurl} = $1;
   $opts{keyprefix} = $2;
