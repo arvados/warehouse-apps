@@ -7,7 +7,7 @@ use LWP::UserAgent;
 use Fcntl ':flock';
 
 my %defopts = qw(
-		 bigfilesize 40000000
+		 bigfilesize 3000000
 		 batch     12
 		 domain    images
 		 class     single
