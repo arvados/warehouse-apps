@@ -343,7 +343,10 @@ sub maybe_upload
 	{
 	    open FILE, "<$file" or die "$0: Can't open $file: $!\n";
 	    my $m = Digest::MD5->new;
-	    $m->addfile (*FILE);
+	    my $buf;
+	    while (read FILE, $buf, 1048576) {
+		$m->add($buf);
+	    }
 	    $md5 = $m->hexdigest;
 	    close FILE;
 	}
