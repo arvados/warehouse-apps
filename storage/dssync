@@ -383,6 +383,7 @@ sub upload
 	{
 	  push (@uploadqueue,
 		"upload$n" => [ undef, $key,
+				"Content-Length" => length($data),
 				"Content-Type" => "application/binary",
 				"Content" => $data ]);
 	}
@@ -390,6 +391,7 @@ sub upload
 	{
 	  push (@uploadqueue,
 		"upload$n" => [ $filename, $key,
+				"Content-Length" => -s $filename,
 				"Content-Type" => "application/binary" ]);
 	}
 	++$queuesize;
