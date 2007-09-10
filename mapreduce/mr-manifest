@@ -10,7 +10,7 @@ if ($ENV{MR_LEVEL} == 0)
 {
   # init
   $ENV{MR_INPUT} = $ENV{MR_INPUT0};
-  open STDIN, "mrtask-streaminputkeys |";
+  open STDIN, "mrtask-streaminputkeys |" or die "Input pipe failed: $!";
   while (defined ($_ = <STDIN>))
   {
     chomp;
@@ -23,18 +23,23 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   # map
-  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
-  undef $/;
-  my $data = <STDIN>;
-  my $md5 = md5_hex($data);
-  print "$md5 $ENV{MR_INPUT}\n";
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |"
+      or die "Can't open input pipe: $!";
+  my $data;
+  my $md5 = Digest::MD5->new;
+  while (read STDIN, $data, 1000000)
+  {
+      $md5->add($data);
+  }
+  print $md5->hexdigest() . " " . $ENV{MR_INPUT}\n";
   close STDIN or die "Input stream exited $?";
 }
 
 elsif ($ENV{MR_LEVEL} == 2)
 {
   # reduce
-  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |";
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |"
+      or die "Can't open input pipe: $!";
   while (defined ($_ = <STDIN>))
   {
     print;
