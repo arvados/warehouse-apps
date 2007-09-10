@@ -45,7 +45,7 @@ foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 {
   my ($ncpus, $slurm_nodelist) = split;
   my @nodelist;
-  while ($slurm_nodelist =~ s/^([^\[]+(\[[^\]]*\])?)(,|$)//)
+  while ($slurm_nodelist =~ s/^([^\[,]+?(\[.*?\])?)(,|$)//)
   {
     my $nodelist = $1;
     if ($nodelist =~ /\[((\d+)(-(\d+))?(,(\d+)(-(\d+))?)*)\]/)
