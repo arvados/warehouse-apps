@@ -30,7 +30,7 @@ Knobs: $Qknobs<br>
 Nodes: $Qnodelist<br>
 
 <input type=hidden name=knobs value="$Qknobs">
-<input type=hidden name=input value="$Qdsid">
+<input type=hidden name=input value="/$Qdsid/">
 <input type=hidden name=mrfunction value="$Qmrfunction">
 <input type=hidden name=revision value="$Qrevision">
 <input type=hidden name=nodelist value="$Qnodelist">
