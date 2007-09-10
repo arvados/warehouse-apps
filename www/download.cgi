@@ -50,7 +50,7 @@ while (1)
   ($after, $keys) = @keylist;
   last if (!defined ($keys) || !@$keys);
   my $ei = 0;
-  foreach my $mogkey (@$keys)
+  foreach my $mogkey (sort @$keys)
   {
     my $tarkey = $mogkey;
     substr($tarkey, 0, length($keyprefix_to_remove)) = "";
