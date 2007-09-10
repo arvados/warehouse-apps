@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+
+###MR_DESCRIPTION:file -> md5sum
+###MR_INPUT:files
+
+use MetaMog;
+use Digest::MD5 'md5_hex';
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # init
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
+  open STDIN, "mrtask-streaminputkeys |" or die "Input pipe failed: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    chomp;
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 2 +++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # map
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |"
+      or die "Can't open input pipe: $!";
+  my $data;
+  my $md5 = Digest::MD5->new;
+  while (read STDIN, $data, 1000000)
+  {
+      $md5->add($data);
+  }
+  print $md5->hexdigest() . " " . $ENV{MR_INPUT} . "\n";
+  close STDIN or die "Input stream exited $?";
+}
+
+elsif ($ENV{MR_LEVEL} == 2)
+{
+  # reduce
+  open STDIN, "mrtask-streaminputkeys | mrtask-streaminput |"
+      or die "Can't open input pipe: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    print;
+  }
+  close STDIN or die "Input stream exited $?";
+  print STDERR "+++mrjobstep 3 $ENV{MR_OUTPUTKEY}+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 3)
+{
+  my $m = MetaMog->new;
+  $m->rename ($ENV{MR_INPUT}, "mrjob/$ENV{MR_JOB_ID}") or die $m->errstr;
+}
