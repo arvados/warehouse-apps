@@ -79,8 +79,9 @@ while (defined $after)
   @results = sort { $$a[0] cmp $$b[0] } @results;
 
   my $ei = 0;
-  while (my ($mogkey, $moglength, $mogmd5) = @{shift @results})
+  while (@results)
   {
+    my ($mogkey, $moglength, $mogmd5) = @{shift @results};
     my $tarkey = $mogkey;
     substr($tarkey, 0, length($keyprefix_to_remove)) = "";
 
