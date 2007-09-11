@@ -35,8 +35,7 @@ usage:
 options:
        --domain=mogilefsdomain        default = $defopts{domain}
        --quick                        don't compare md5 of existing files
-       --all                          upload entire directory tree
-       -n                             don't really upload anything
+       -n                             don't save, just download and list
        -v                             verbose
 examples:
        $0 http://tomc.freelogy.org:/foo_01/IMAGES/RAW /tmp/RAW
@@ -67,7 +66,7 @@ if ($from =~ /(http:\/\/\S+?):(\S+)$/)
 
   my $tempfile = "/tmp/whsync.$$";
   open TEMPFILE, "+>$tempfile" or die "$0: can't create $tempfile: $!\n";
-  print TEMPFILE join ("\n", @local_manifest);
+  print TEMPFILE @local_manifest;
   close TEMPFILE;
   system ("curl -s -F 'keyprefix=$opts{keyprefix}' -F 'exclude=\@$tempfile' '$opts{whurl}/download.cgi' | tar -C '$to' -xvf -");
   unlink $tempfile;
@@ -96,7 +95,25 @@ sub get_local_manifest
     }
     else
     {
-      push @ret, "$strippeddir/$file";
+      my $filesize = -s "$dir/$file";
+      if ($opts{quick})
+      {
+	push @ret, "$strippeddir/$file $filesize\n";
+      }
+      else
+      {
+	my $md5 = Digest::MD5->new;
+	my $buf;
+	open F, "<$dir/$file" or die "$0: can't read $dir/$file: $!\n";
+	while (read F, $buf, 1000000)
+	{
+	  $md5->add ($buf);
+	}
+	close F;
+	my $md5sum = $md5->hexdigest;
+	push @ret, "$strippeddir/$file $filesize $md5sum\n";
+	print STDERR "." if $opts{v};
+      }
     }
   }
   closedir D;
