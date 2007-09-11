@@ -68,7 +68,21 @@ if ($from =~ /(http:\/\/\S+?):(\S+)$/)
   open TEMPFILE, "+>$tempfile" or die "$0: can't create $tempfile: $!\n";
   print TEMPFILE @local_manifest;
   close TEMPFILE;
-  system ("curl -s -F 'keyprefix=$opts{keyprefix}' -F 'exclude=\@$tempfile' '$opts{whurl}/download.cgi' | tar -C '$to' -xvf -");
+
+  my $manifest_flag = $opts{n} ? "1" : "0";
+  my $curl_command = "curl -s "
+      . "-F 'keyprefix=$opts{keyprefix}' "
+      . "-F 'manifest=$manifest_flag' "
+      . "-F 'exclude=\@$tempfile' "
+      . "'$opts{whurl}/download.cgi'";
+  if ($opts{n})
+  {
+    system ($curl_command);
+  }
+  else
+  {
+    system ("$curl_command | tar -C '$to' -xvf -");
+  }
   unlink $tempfile;
 }
 else
