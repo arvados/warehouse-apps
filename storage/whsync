@@ -35,7 +35,7 @@ usage:
 options:
        --domain=mogilefsdomain        default = $defopts{domain}
        --quick                        don't compare md5 of existing files
-       -n                             don't save, just download and list
+       -n                             don't download, just list missing/changed
        -v                             verbose
 examples:
        $0 http://tomc.freelogy.org:/foo_01/IMAGES/RAW /tmp/RAW
