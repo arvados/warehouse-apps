@@ -11,6 +11,17 @@ print $q->header ('application/x-tar');
 
 do '/etc/polony-tools/config.pl';
 
+my $dbh = DBI->connect($main::mogilefs_dsn,
+		       $main::mrwebgui_mysql_username,
+		       $main::mrwebgui_mysql_password)
+    or die DBI->errstr;
+
+my $sth = $dbh->prepare ("select dmid from domain where namespace=?");
+$sth->execute ($main::mogilefs_default_domain) or die DBI->errstr;
+my ($dmid) = $sth->fetchrow_array;
+die "Couldn't find dmid for namespace '$main::mogilefs_default_domain'"
+    unless $dmid > 0;
+
 my $mogc;
 for (qw(1 2 3 4 5))
 {
@@ -23,6 +34,7 @@ for (qw(1 2 3 4 5))
 die "$@" if !$mogc;
 
 my $keyprefix = $q->param ("keyprefix");
+my $manifest = $q->param ("manifest");
 
 # when preparing the tar to send to the client, we will remove
 # everything up to the last slash.  So, if warehouse has /foo/bar/baz
@@ -40,18 +52,27 @@ my $exclude_fh = $q->upload ("exclude");
 my @exclude = sort <$exclude_fh>;
 chomp @exclude;
 
+$sth = $dbh->prepare ("select
+ dkey, length, md5
+ from file
+ left join md5 on file.fid=md5.fid
+ where dmid = ? and  dkey like ?
+ and dkey > ?
+ order by dkey
+ limit 1000");
+
 my $totalbytes = 0;
-my $after;
+my $after = "";
 my $keys;
-while (1)
+while (defined $after)
 {
-  my @keylist = $mogc->list_keys ($keyprefix, $after);
-  die "MogileFS::Client::list_keys() failed" if !@keylist;
-  ($after, $keys) = @keylist;
-  last if (!defined ($keys) || !@$keys);
+  $sth->execute ($dmid, $keyprefix."%", $after)
+      or die DBI->errstr;
+  $after = undef;
   my $ei = 0;
-  foreach my $mogkey (sort @$keys)
+  while (my ($mogkey, $moglength, $mogmd5) = $sth->fetchrow_array)
   {
+    $after = $mogkey;
     my $tarkey = $mogkey;
     substr($tarkey, 0, length($keyprefix_to_remove)) = "";
 
@@ -59,11 +80,26 @@ while (1)
     {
       ++$ei;
     }
-    if ($ei <= $#exclude && $exclude[$ei] eq "/$tarkey")
+    if ($ei <= $#exclude &&
+	(
+	 ($exclude[$ei] eq "/$tarkey")
+	 ||
+	 ($exclude[$ei] eq "/$tarkey $moglength")
+	 ||
+	 ($exclude[$ei] eq "/$tarkey $moglength $mogmd5")
+	 )
+	)
     {
       ++$ei;
       next;
     }
+
+    if ($manifest)
+    {
+      print "$tarkey $moglength $mogmd5\n";
+      next;
+    }
+
     my $dataref = $mogc->get_file_data ($mogkey);
     if ($dataref)
     {
@@ -102,14 +138,18 @@ while (1)
     }
   }
 }
-print "\0" x 1024;
-$totalbytes += 1024;
 
-my $pad = 0x1000 - ($totalbytes & 0xfff);
-if ($pad != 0x1000)
+if (!$manifest)
 {
-  print "\0" x $pad;
-  $totalbytes += $pad;
+  print "\0" x 1024;
+  $totalbytes += 1024;
+
+  my $pad = 0x1000 - ($totalbytes & 0xfff);
+  if ($pad != 0x1000)
+  {
+    print "\0" x $pad;
+    $totalbytes += $pad;
+  }
 }
 
 sub tarchecksum
