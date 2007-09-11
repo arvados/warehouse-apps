@@ -69,10 +69,18 @@ while (defined $after)
   $sth->execute ($dmid, $keyprefix."%", $after)
       or die DBI->errstr;
   $after = undef;
-  my $ei = 0;
+
+  my @results;
   while (my ($mogkey, $moglength, $mogmd5) = $sth->fetchrow_array)
   {
     $after = $mogkey;
+    push @results, [$mogkey, $moglength, $mogmd5];
+  }
+  @results = sort { $$a[0] cmp $$b[0] } @results;
+
+  my $ei = 0;
+  while (my ($mogkey, $moglength, $mogmd5) = @{shift @results})
+  {
     my $tarkey = $mogkey;
     substr($tarkey, 0, length($keyprefix_to_remove)) = "";
 
