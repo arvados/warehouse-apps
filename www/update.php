@@ -39,7 +39,13 @@ function grok ($fid=undef, $length=undef, $dmid=undef, $dkey=undef)
   if ($fid !== undef)
     {
       $dkey = explode("/", ereg_replace("^/*","",$dkey));
-      $subdir = $dkey[count($dkey)-2];
+      if (!($dkey[1] == "IMAGES"
+	    &&
+	    $dkey[2] == "RAW"))
+	{
+	  return;
+	}
+      $subdir = $dkey[3];
       $dataset = $dkey[0];
       if (!isset($grok[$dataset]))
 	{
