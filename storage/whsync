@@ -119,11 +119,13 @@ sub get_local_manifest
 	my $md5 = Digest::MD5->new;
 	my $buf;
 	open F, "<$dir/$file" or die "$0: can't read $dir/$file: $!\n";
-	while (read F, $buf, 1000000)
+	my $ok;
+	while ($ok = read F, $buf, 1000000)
 	{
 	  $md5->add ($buf);
 	}
-	close F;
+	defined $ok or die "$0: error reading $dir/$file: $!\n";
+	close F or die "$0: can't close $dir/$file: $!\n";
 	my $md5sum = $md5->hexdigest;
 	push @ret, "$strippeddir/$file $filesize $md5sum\n";
 	print STDERR "." if $opts{v};
