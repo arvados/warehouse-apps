@@ -115,7 +115,7 @@ if (!$r->is_success)
 }
 foreach (split (/\n/, $r->content))
 {
-    my ($md5, $key) = split;
+    my ($key, $size, $md5) = split (" ");
     if ($md5 eq "--------------------------------") { $manifestok = 1; }
     else { $storedmd5{$key} = $md5; }
 }
