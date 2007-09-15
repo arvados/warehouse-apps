@@ -104,14 +104,14 @@ if ($opts{v}) { warn "Getting manifest.\n"; }
 my $manifestok;
 my %storedmd5;
 my $ua = LWP::UserAgent->new;
-my $r = $ua->request(POST $remote."/manifest.php",
+my $r = $ua->request(POST $remote."/manifest.cgi",
 		     [ "keyprefix" => $keyprefix."/",
 		       "domain" => $opts{domain},
 		       "class" => $opts{class},
 		       "quick" => $opts{quick} ]);
 if (!$r->is_success)
 {
-  die "$0: Error retrieving manifest from $remote/manifest.php: ".$r->status_line;
+  die "$0: Error retrieving manifest from $remote/manifest.cgi: ".$r->status_line;
 }
 foreach (split (/\n/, $r->content))
 {
@@ -121,7 +121,7 @@ foreach (split (/\n/, $r->content))
 }
 if (!$manifestok)
 {
-    die "$0: Retrieved manifest from $remote/manifest.php but did not see end marker. Stop.\n";
+    die "$0: Retrieved manifest from $remote/manifest.cgi but did not see end marker. Stop.\n";
 }
 
 my %cycle;
