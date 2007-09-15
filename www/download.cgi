@@ -157,7 +157,11 @@ while (defined $after)
   }
 }
 
-if (!$manifest)
+if ($manifest)
+{
+    print "eof 0 --------------------------------\n";
+}
+else
 {
   print "\0" x 1024;
   $totalbytes += 1024;
