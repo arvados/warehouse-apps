@@ -1,4 +1,4 @@
-<Files ~ "^(upload\.cgi|manifest\.php|download\.cgi)$">
+<Files ~ "^(upload\.cgi|manifest\.php|manifest\.cgi|download\.cgi)$">
   # "DontRequire valid-user" is really what we want here.  "Satisfy
   # any" allows hosts in "Deny from" to access these files with http
   # authentication.
