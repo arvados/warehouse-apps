@@ -21,7 +21,7 @@ Add the md5 table to the MogileFS database:
 
 Make sure these run periodically (eg. every five minutes):
 
- cd /path/to/www/ && php-cgi update.php
+ cd /path/to/www/ && perl update.pl
  cd /path/to/www/ && perl dscopy-cron.pl
 
 Create accounts and database for mapreduce system:
@@ -33,6 +33,7 @@ Create accounts and database for mapreduce system:
  grant select on mapreduce.* to mrcompute@'%';
  grant select on mogilefs.* to mrwebgui@localhost;
  grant select on mapreduce.* to mrwebgui@localhost;
+ grant all privileges on analysis.* to mrwebgui@localhost;
  set password for mrcompute@'%' = old_password('YOURPASSWORDHERE');
  set password for mrwebgui@localhost = old_password('YOURPASSWORDHERE');
  set password for mrcontrol@localhost = old_password('YOURPASSWORDHERE');

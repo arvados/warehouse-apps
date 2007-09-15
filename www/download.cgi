@@ -7,7 +7,18 @@ use DBI;
 use CGI ':standard';
 
 my $q = new CGI;
-print $q->header ('application/x-tar');
+
+my $keyprefix = $q->param ("keyprefix");
+my $manifest = $q->param ("manifest");
+
+if ($manifest)
+{
+    print $q->header ('text/plain');
+}
+else
+{
+    print $q->header ('application/x-tar');
+}
 
 do '/etc/polony-tools/config.pl';
 
@@ -33,9 +44,6 @@ for (qw(1 2 3 4 5))
 }
 die "$@" if !$mogc;
 
-my $keyprefix = $q->param ("keyprefix");
-my $manifest = $q->param ("manifest");
-
 # when preparing the tar to send to the client, we will remove
 # everything up to the last slash.  So, if warehouse has /foo/bar/baz
 # then:
@@ -56,16 +64,17 @@ $sth = $dbh->prepare ("select
  dkey, length, md5
  from file
  left join md5 on file.fid=md5.fid
- where dmid = ? and  dkey like ?
+ where dmid = ? and dkey like ?
  and dkey > ?
  order by dkey
- limit 1000");
+ limit 100000");
 
 my $totalbytes = 0;
 my $after = "";
 my $keys;
 while (defined $after)
 {
+  $sth->{"mysql_use_result"} = 1;
   $sth->execute ($dmid, $keyprefix."%", $after)
       or die DBI->errstr;
   $after = undef;
