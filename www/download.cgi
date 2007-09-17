@@ -76,7 +76,7 @@ my $keys;
 while ($fetchmore)
 {
   my @results;
-  while (1)
+  while ($fetchmore)
   {
     if (my ($mogkey, $moglength, $mogmd5) = $sth->fetchrow_array)
     {
