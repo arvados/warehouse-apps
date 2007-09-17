@@ -64,26 +64,29 @@ $sth = $dbh->prepare ("select
  dkey, length, md5
  from file
  left join md5 on file.fid=md5.fid
- where dmid = ? and dkey like ?
- and dkey > ?
- order by dkey
- limit 100000");
+ where dmid = ? and dkey like ?");
+
+$sth->{"mysql_use_result"} = 1;
+$sth->execute ($dmid, $keyprefix."%")
+    or die DBI->errstr;
 
 my $totalbytes = 0;
-my $after = "";
+my $fetchmore = 1;
 my $keys;
-while (defined $after)
+while ($fetchmore)
 {
-  $sth->{"mysql_use_result"} = 1;
-  $sth->execute ($dmid, $keyprefix."%", $after)
-      or die DBI->errstr;
-  $after = undef;
-
   my @results;
-  while (my ($mogkey, $moglength, $mogmd5) = $sth->fetchrow_array)
+  while (1)
   {
-    $after = $mogkey;
-    push @results, [$mogkey, $moglength, $mogmd5];
+    if (my ($mogkey, $moglength, $mogmd5) = $sth->fetchrow_array)
+    {
+      push @results, [$mogkey, $moglength, $mogmd5];
+      last if $#results == 9999;
+    }
+    else
+    {
+      $fetchmore = 0;
+    }
   }
   @results = sort { $$a[0] cmp $$b[0] } @results;
 
