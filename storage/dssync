@@ -106,10 +106,9 @@ if ($opts{v}) { warn "Getting manifest.\n"; }
 my $manifestok;
 my %storedmd5;
 my $ua = LWP::UserAgent->new ("timeout" => $opts{httptimeout});
-my $r = $ua->request(POST $remote."/manifest.cgi",
+my $r = $ua->request(GET $remote."/manifest.cgi",
 		     [ "keyprefix" => $keyprefix."/",
 		       "domain" => $opts{domain},
-		       "class" => $opts{class},
 		       "quick" => $opts{quick} ]);
 if (!$r->is_success)
 {
