@@ -10,6 +10,7 @@ $HTTP::Request::Common::DYNAMIC_FILE_UPLOAD = 1;
 
 
 my %defopts = qw(
+		 httptimeout 360
 		 bigfilesize 3000000
 		 batch     12
 		 domain    images
@@ -55,6 +56,7 @@ options:
        --class=mogilefsclass          default = $defopts{class}
        --batch=maxfilesperrequest     default = $defopts{batch}
        --bigfilesize=maxfilesizeinram default = $defopts{bigfilesize}
+       --httptimeout=seconds          default = $defopts{httptimeout}
        --quick                        don't compare md5 of existing files
        --all                          upload entire directory tree
        -n                             don't really upload anything
@@ -103,7 +105,7 @@ if ($opts{v}) { warn "Getting manifest.\n"; }
 
 my $manifestok;
 my %storedmd5;
-my $ua = LWP::UserAgent->new;
+my $ua = LWP::UserAgent->new ("timeout" => $opts{httptimeout});
 my $r = $ua->request(POST $remote."/manifest.cgi",
 		     [ "keyprefix" => $keyprefix."/",
 		       "domain" => $opts{domain},
