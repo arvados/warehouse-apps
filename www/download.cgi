@@ -60,6 +60,11 @@ my $exclude_fh = $q->upload ("exclude");
 my @exclude = sort <$exclude_fh>;
 chomp @exclude;
 
+if ($manifest)
+{
+  print "- 0 ,\n";
+}
+
 $sth = $dbh->prepare ("select
  dkey, length, md5
  from file
