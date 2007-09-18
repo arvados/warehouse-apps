@@ -115,16 +115,22 @@ if (!$r->is_success)
 {
   die "$0: Error retrieving manifest from $remote/manifest.cgi: ".$r->status_line;
 }
+
+my $manifestsize = length $r->content;
+if ($opts{v}) { warn "Received $manifestsize bytes.\n"; }
+
+my $lastline;
 foreach (split (/\n/, $r->content))
 {
-    my ($key, $size, $md5) = split (" ");
+    my ($key, $size, $md5) = /^(.*) (\S*) (\S*)$/;
     if ($md5 eq "--------------------------------") { $manifestok = 1; }
     elsif ($md5 =~ /^,+$/) { next; } # just a keepalive message
     else { $storedmd5{$key} = $md5; }
+    $lastline = $_ if length;
 }
 if (!$manifestok)
 {
-    die "$0: Retrieved manifest from $remote/manifest.cgi but did not see end marker. Stop.\n";
+    die "$0: Retrieved manifest from $remote/manifest.cgi ($manifestsize bytes) but did not see end marker.\n$0: Last line received: $lastline\n$0: Stopping.\n";
 }
 
 my %cycle;
