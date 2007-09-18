@@ -119,7 +119,7 @@ foreach (split (/\n/, $r->content))
 {
     my ($key, $size, $md5) = split (" ");
     if ($md5 eq "--------------------------------") { $manifestok = 1; }
-    elsif ($md5 =~ "^,+$") { next; } # just a keepalive message
+    elsif ($md5 =~ /^,+$/) { next; } # just a keepalive message
     else { $storedmd5{$key} = $md5; }
 }
 if (!$manifestok)
