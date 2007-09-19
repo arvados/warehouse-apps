@@ -2,7 +2,7 @@
 
 use strict;
 use MogileFS::Client;
-use Digest::MD5 'md5_hex';
+use Digest::MD5 qw(md5_hex md5);
 use DBI;
 use CGI ':standard';
 
@@ -10,10 +10,25 @@ my $q = new CGI;
 
 my $keyprefix = $q->param ("keyprefix");
 my $manifest = $q->param ("manifest");
+my $format = $q->param ("format"); # "", "text", "1md5", or "2md5"
+
+if (!($format eq "1md5" ||
+      $format eq "2md5" ||
+      $format eq "text"))
+{
+    $format = "text";
+}
 
 if ($manifest)
 {
-    print $q->header ('text/plain');
+    if ($format eq "text")
+    {
+	print $q->header ('text/plain');
+    }
+    else
+    {
+	print $q->header ('application/binary');
+    }
 }
 else
 {
@@ -60,7 +75,7 @@ my $exclude_fh = $q->upload ("exclude");
 my @exclude = sort <$exclude_fh>;
 chomp @exclude;
 
-if ($manifest)
+if ($manifest && $format eq "text")
 {
   print "- 0 ,\n";
 }
@@ -122,8 +137,20 @@ while ($fetchmore)
 
     if ($manifest)
     {
-      print "$tarkey $moglength $mogmd5\n";
-      next;
+	if ($format eq "text")
+	{
+	    print "$tarkey $moglength $mogmd5\n";
+	}
+	elsif ($format eq "1md5")
+	{
+	    print md5 ("$tarkey $moglength");
+	}
+	elsif ($format eq "2md5")
+	{
+	    print md5 ("$tarkey $moglength");
+	    print pack ("H32", $mogmd5);
+	}
+	next;
     }
 
     my $dataref = $mogc->get_file_data ($mogkey);
@@ -167,7 +194,19 @@ while ($fetchmore)
 
 if ($manifest)
 {
-    print "eof 0 --------------------------------\n";
+    if ($format eq "text")
+    {
+	print "eof 0 --------------------------------\n";
+    }
+    elsif ($format eq "1md5")
+    {
+	print pack ("H32", 0);
+    }
+    elsif ($format eq "2md5")
+    {
+	print pack ("H32", 0);
+	print pack ("H32", 0);
+    }
 }
 else
 {
