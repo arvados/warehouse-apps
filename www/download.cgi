@@ -139,15 +139,15 @@ while ($fetchmore)
     {
 	if ($format eq "text")
 	{
-	    print "$tarkey $moglength $mogmd5\n";
+	    print "$mogkey $moglength $mogmd5\n";
 	}
 	elsif ($format eq "1md5")
 	{
-	    print md5 ("$tarkey $moglength");
+	    print md5 ("$mogkey $moglength");
 	}
 	elsif ($format eq "2md5")
 	{
-	    print md5 ("$tarkey $moglength");
+	    print md5 ("$mogkey $moglength");
 	    print pack ("H32", $mogmd5);
 	}
 	next;
