@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
-use Digest::MD5 'md5_hex';
+use Digest::MD5;
 use HTTP::Request::Common;
 use LWP::UserAgent;
 use Fcntl ':flock';
@@ -101,36 +101,76 @@ else
   $keyprefix = "/$dsid/IMAGES/RAW";
 }
 
+
 if ($opts{v}) { warn "Getting manifest.\n"; }
 
-my $manifestok;
+my $format = $opts{quick} ? "1md5" : "2md5";
 my %storedmd5;
+
 my $ua = LWP::UserAgent->new ("timeout" => $opts{httptimeout});
-my $r = $ua->request(GET $remote."/manifest.cgi",
-		     [ "keyprefix" => $keyprefix."/",
-		       "domain" => $opts{domain},
-		       "quick" => $opts{quick} ]);
+my $r = $ua->request
+    (GET $remote."/manifest.cgi?format=$format&keyprefix=$keyprefix/");
+
 if (!$r->is_success)
 {
   die "$0: Error retrieving manifest from $remote/manifest.cgi: ".$r->status_line;
 }
 
-my $manifestsize = length $r->content;
+
+my $manifest = $r->content;
+undef $r;
+my $manifestsize = length $manifest;
 if ($opts{v}) { warn "Received $manifestsize bytes.\n"; }
 
-my $lastline;
-foreach (split (/\n/, $r->content))
+if ($manifestsize & 0xf != 0)
 {
-    my ($key, $size, $md5) = /^(.*) (\S*) (\S*)$/;
-    if ($md5 eq "--------------------------------") { $manifestok = 1; }
-    elsif ($md5 =~ /^,+$/) { next; } # just a keepalive message
-    else { $storedmd5{$key} = $md5; }
-    $lastline = $_ if length;
+    die "$0: Binary manifest was not a multiple of 16 bytes. Stopping.\n";
 }
-if (!$manifestok)
+
+my $recsize = $format eq "2md5" ? 32 : 16;
+if (substr ($manifest, -$recsize, $recsize) ne "\0" x $recsize)
 {
-    die "$0: Retrieved manifest from $remote/manifest.cgi ($manifestsize bytes) but did not see end marker.\n$0: Last line received: $lastline\n$0: Stopping.\n";
+    die "$0: Binary manifest did not end with $recsize NUL bytes. Stopping.\n";
 }
+$manifestsize -= $recsize;
+
+if ($opts{v}) { warn "Manifest looks okay.\n"; }
+
+
+
+if ($opts{v}) { warn "Building hash table.\n"; }
+my $oldfh = select STDERR; $| = 1; select $oldfh;
+
+my $progress_step = 160000;
+my $progress_next = $opts{v} ? $progress_step : $manifestsize;
+if ($format eq "1md5")
+{
+    for (my $pos = 0; $pos < $manifestsize; $pos += 16)
+    {
+	$storedmd5{substr ($manifest, $pos, 16)} = "";
+	if ($pos > $progress_next)
+	{
+	    print STDERR "\r$pos";
+	    $progress_next += $progress_step;
+	}
+    }
+}
+else
+{
+    for (my $pos = 0; $pos < $manifestsize; $pos += 32)
+    {
+	$storedmd5{substr ($manifest, $pos, 16)} =
+	    substr ($manifest, $pos+16, 16);
+	if ($pos > $progress_next)
+	{
+	    print STDERR "\r$pos";
+	    $progress_next += $progress_step;
+	}
+    }
+}
+
+if ($opts{v}) { warn " done.\n"; }
+
 
 my %cycle;
 my %hybrid;
@@ -317,9 +357,12 @@ sub maybe_upload
 {
     my ($key, $file, $quick) = @_;
 
+    my $filesize = -s $file;
+    my $keymd5 = Digest::MD5::md5 ("$key $filesize");
+
     if ($quick)
     {
-	if (exists($storedmd5{$key}))
+	if (exists($storedmd5{$keymd5}))
 	{
 	    print STDERR "skip:    ".(" "x32)." $key\n";
 	    return;
@@ -331,7 +374,7 @@ sub maybe_upload
 	}
     }
 
-    my $file_is_big = ($opts{bigfilesize} < -s $file);
+    my $file_is_big = ($opts{bigfilesize} < $filesize);
 
     my $data;
     if (!$quick && !$file_is_big)
@@ -342,13 +385,15 @@ sub maybe_upload
 	close FILE;
     }
 
-    my $md5 = " " x 32;
+    my $md5bin = "";
+    my $md5hex = " " x 32;
 
     if (!$quick)
     {
 	if (defined ($data))
 	{
-	    $md5 = md5_hex ($data);
+	    $md5bin = Digest::MD5::md5 ($data);
+	    $md5hex = Digest::MD5::md5_hex ($data);
 	}
 	else
 	{
@@ -358,23 +403,24 @@ sub maybe_upload
 	    while (read FILE, $buf, 1048576) {
 		$m->add($buf);
 	    }
-	    $md5 = $m->hexdigest;
+	    $md5bin = $m->digest;
+	    $md5hex = $m->hexdigest;
 	    close FILE;
 	}
-	if ($storedmd5{$key} eq $md5)
+	if ($storedmd5{$keymd5} eq $md5bin)
 	{
-	    print STDERR "skip:    $md5 $key\n";
+	    print STDERR "skip:    $md5hex $key\n";
 	    return;
 	}
     }
 
-    if (length($storedmd5{$key}) == 32)
+    if (length($storedmd5{$keymd5}) == 16)
     {
-	print STDERR "update:  $md5 $key\n";
+	print STDERR "update:  $md5hex $key\n";
     }
     else
     {
-	print STDERR "new:     $md5 $key\n";
+	print STDERR "new:     $md5hex $key\n";
     }
 
     upload($key, $file, $data) unless $opts{n};
