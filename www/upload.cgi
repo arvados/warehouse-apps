@@ -62,7 +62,7 @@ while(<>)
 
 	    $dbh->do("delete md5 from md5,file"
 		     . " where md5.fid=file.fid"
-		     . " and dmid = ? and dkey = ?"
+		     . " and dmid = ? and dkey = ?",
 		     undef,
 		     $dmid,
 		     $part{filename});
