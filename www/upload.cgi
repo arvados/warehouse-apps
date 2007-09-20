@@ -56,8 +56,10 @@ while(<>)
 		    ("select dmid from domain where namespace=?");
 		$sth->execute ($param{domain})
 		    or die "DBI query failed";
-		($dmid) = $sth->fetchrow_array
-		    or die "no dmid for namespace '$param{domain}'";
+		($dmid) = $sth->fetchrow_array;
+
+		die "no dmid for namespace '$param{domain}'"
+		    unless defined $dmid;
 	    }
 
 	    $dbh->do("delete md5 from md5,file"
