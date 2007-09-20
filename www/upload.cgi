@@ -14,6 +14,7 @@ my $lastboundary;
 my $lastchunk;
 my $mogc;
 my $eol;
+my $dmid;
 my %part;
 my %param = (domain => $main::mogilefs_default_domain);
 
@@ -49,25 +50,31 @@ while(<>)
 	}
 	if (defined($part{filename}))
 	{
-	    $dbh->do("delete md5 from md5,file,domain"
+	    if (!defined $dmid)
+	    {
+		$sth = $dbh->prepare
+		    ("select dmid from domain where namespace=?");
+		$sth->execute ($param{domain})
+		    or die "DBI query failed";
+		($dmid) = $sth->fetchrow_array
+		    or die "no dmid for namespace '$param{domain}'";
+	    }
+
+	    $dbh->do("delete md5 from md5,file"
 		     . " where md5.fid=file.fid"
-		     . " and file.dmid=domain.dmid"
-		     . " and file.dkey="
-		     . $dbh->quote($part{filename})
-		     . " and domain.namespace="
-		     . $dbh->quote($param{domain}));
+		     . " and dmid = ? and dkey = ?"
+		     undef,
+		     $dmid,
+		     $part{filename});
 
 	    flushcontent ();
 
-	    my $md5 = $part{md5}->hexdigest;
-	    $dbh->do("replace delayed into md5 select fid, "
-		     . $dbh->quote($md5)
-		     . " from file"
-		     . " left join domain on domain.dmid=file.dmid"
-		     . " where dkey="
-		     . $dbh->quote($part{filename})
-		     . " and domain.namespace="
-		     . $dbh->quote($param{domain}));
+	    $dbh->do("replace into md5 select fid, ? from file"
+		     . " where dmid = ? and dkey = ?",
+		     undef,
+		     $part{md5}->hexdigest,
+		     $dmid,
+		     $part{filename});
 	}
 	else
 	{
