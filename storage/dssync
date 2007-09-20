@@ -413,7 +413,7 @@ sub maybe_upload
 	    }
 	    close FILE or die "read error: $file: $!";
 	    $md5bin = $m->digest;
-	    $md5hex = $m->hexdigest;
+	    $md5hex = unpack ("H*", $md5bin);
 	}
 	if ($storedmd5{$keymd5} eq $md5bin)
 	{
