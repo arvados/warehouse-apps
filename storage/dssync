@@ -183,7 +183,7 @@ if (!$opts{all})
 
   open POSITIONS, "<$opts{positions}" or die "Can't open $opts{positions}: $!\n";
   my @positions = <POSITIONS>;
-  close POSITIONS;
+  close POSITIONS or die "read error: $opts{positions}: $!";
   foreach (@positions)
   {
     my ($frame_id, $x, $y, $w, $h) = split;
@@ -201,7 +201,8 @@ if (!$opts{all})
   open CYCLES, "<$opts{cycles}" or die "Can't open $opts{cycles}: $!\n";
   my @cycles = <CYCLES>;
   my @cycles_orig = @cycles;
-  close CYCLES;
+  close CYCLES or die "read error: $opts{cycles}: $!";
+
   foreach (@cycles)
   {
     s/\;.*//;
@@ -326,9 +327,11 @@ print STDERR "$uploadtotal files uploaded.\n";
 sub recursive_upload
 {
   my ($remotedir, $localdir) = @_;
+
   opendir D, $localdir or die "$0: Can't read dir $localdir: $!";
   my @files = sort readdir D;
-  close D;
+  closedir D or die "directory read error: $localdir/: $!";
+
   foreach my $file (@files)
   {
     next if ($file eq "." || $file eq "..");
@@ -382,7 +385,7 @@ sub maybe_upload
 	local $/ = undef;
 	open FILE, "<$file" or die "$0: Can't open $file: $!\n";
 	$data = <FILE>;
-	close FILE;
+	close FILE or die "read error: $file: $!";
     }
 
     my $md5bin = "";
@@ -400,12 +403,17 @@ sub maybe_upload
 	    open FILE, "<$file" or die "$0: Can't open $file: $!\n";
 	    my $m = Digest::MD5->new;
 	    my $buf;
-	    while (read FILE, $buf, 1048576) {
+	    my $bytes;
+	    while ($bytes = read FILE, $buf, 1048576) {
 		$m->add($buf);
 	    }
+	    if (!defined $buf)
+	    {
+		die "read error: $file: $!";
+	    }
+	    close FILE or die "read error: $file: $!";
 	    $md5bin = $m->digest;
 	    $md5hex = $m->hexdigest;
-	    close FILE;
 	}
 	if ($storedmd5{$keymd5} eq $md5bin)
 	{
