@@ -407,7 +407,7 @@ sub maybe_upload
 	    while ($bytes = read FILE, $buf, 1048576) {
 		$m->add($buf);
 	    }
-	    if (!defined $buf)
+	    if (!defined $bytes)
 	    {
 		die "read error: $file: $!";
 	    }
