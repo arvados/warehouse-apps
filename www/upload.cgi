@@ -52,6 +52,9 @@ while(<>)
 	{
 	    if (!defined $dmid)
 	    {
+		# XXX this is here just because %param handling is broken
+		$param{domain} = $main::mogilefs_default_domain;
+
 		my $sth = $dbh->prepare
 		    ("select dmid from domain where namespace=?");
 		$sth->execute ($param{domain})
@@ -112,8 +115,9 @@ while(<>)
     {
 	if (!defined $mogc)
 	{
-	    $mogc = MogileFS::Client->new (domain => $param{domain},
-					   hosts => [@trackers]);
+	    $mogc = MogileFS::Client->new
+		(domain => $main::mogilefs_default_domain,
+		 hosts => [@trackers]);
 	}
 	writecontent ($lastchunk) if defined $lastchunk;
 	$lastchunk = $_;
