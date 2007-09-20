@@ -362,17 +362,18 @@ sub maybe_upload
 
     my $filesize = -s $file;
     my $keymd5 = Digest::MD5::md5 ("$key $filesize");
+    my $sizeandkey = sprintf ("%9d %s", $filesize, $key);
 
     if ($quick)
     {
 	if (exists($storedmd5{$keymd5}))
 	{
-	    print STDERR "skip:    ".(" "x32)." $key\n";
+	    print STDERR "skip:    ".(" "x32)." $sizeandkey\n";
 	    return;
 	}
 	if ($opts{n})
 	{
-	    print STDERR "new:     ".(" "x32)." $key\n";
+	    print STDERR "new:     ".(" "x32)." $sizeandkey\n";
 	    return;
 	}
     }
@@ -417,18 +418,18 @@ sub maybe_upload
 	}
 	if ($storedmd5{$keymd5} eq $md5bin)
 	{
-	    print STDERR "skip:    $md5hex $key\n";
+	    print STDERR "skip:    $md5hex $sizeandkey\n";
 	    return;
 	}
     }
 
     if (length($storedmd5{$keymd5}) == 16)
     {
-	print STDERR "update:  $md5hex $key\n";
+	print STDERR "update:  $md5hex $sizeandkey\n";
     }
     else
     {
-	print STDERR "new:     $md5hex $key\n";
+	print STDERR "new:     $md5hex $sizeandkey\n";
     }
 
     upload($key, $file, $data) unless $opts{n};
