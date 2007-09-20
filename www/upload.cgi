@@ -52,7 +52,7 @@ while(<>)
 	{
 	    if (!defined $dmid)
 	    {
-		$sth = $dbh->prepare
+		my $sth = $dbh->prepare
 		    ("select dmid from domain where namespace=?");
 		$sth->execute ($param{domain})
 		    or die "DBI query failed";
