@@ -5,10 +5,13 @@ use MogileFS::Client;
 use Digest::MD5 qw(md5_hex md5);
 use DBI;
 use CGI ':standard';
+use Image::Magick;
 
 my $q = new CGI;
 
-print $q->header ('text/plain');
+my $png = $q->param ("format") eq "png";
+
+print $q->header ($png ? 'image/png' : 'text/plain');
 
 do '/etc/polony-tools/config.pl';
 
@@ -45,6 +48,10 @@ foreach (split ("\n", $$positions))
 
 my $gridw = $q->param ("gridw") || 50;
 my $gridh = $q->param ("gridh") || 50;
+my $imagew = $q->param ("imagew") || 401;
+my $imageh = $q->param ("imageh") || 401;
+my $gridsquarew = int ($imagew / $gridw);
+my $gridsquareh = int ($imageh / $gridh);
 
 my $minx;
 my $miny;
@@ -103,6 +110,14 @@ foreach (@frame)
     $id{$gridx{$x}}{$gridy{$y}} = $id;
 }
 
+my $image;
+if ($png)
+{
+    $image = new Image::Magick;
+    $image->Set (size=>$imagew."x".$imageh);
+    $image->Read ("xc:white");
+}
+
 for (my $y = 0; $y < $gridh; $y++)
 {
     my $thisgridy = $gridy[$y];
@@ -110,7 +125,18 @@ for (my $y = 0; $y < $gridh; $y++)
     {
 	my $thisgridx = $gridx[$x];
 	my $id = $id{$thisgridx}{$thisgridy};
-	if (defined $id) { print "$id\n"; }
-	else { print "-1\n"; }
+	if ($png)
+	{
+	    my ($px, $py) = ($x * $gridsquarew+1, $y * $gridsquareh+1);
+	    my ($px2, $py2) = ($px + $gridsquarew-2, $py + $gridsquareh-2);
+	    $image->Draw (stroke=>"black",
+			  primitive=>"rectangle",
+			  points="$px,$py,$px2,$py2");
+	}
+	else
+	{
+	    if (defined $id) { print "$id\n"; }
+	    else { print "-1\n"; }
+	}
     }
 }
