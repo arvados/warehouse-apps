@@ -38,7 +38,7 @@ sub findkey
   {
     foreach my $ext (qw(.raw .raw.gz .tif .tif.gz .tiff .tiff.gz))
     {
-      if ($key eq $stub.$ext)
+      if (lc $key eq lc $stub.$ext)
       {
 	print STDERR "$key\n" if $ENV{MR_DEBUG};
 	return $key;
