@@ -160,7 +160,6 @@ foreach my $dsid (sort keys %size)
 	    {
 		if (@c > 1)
 		{
-		    $c[1] =~ tr/A-Z/a-z/;
 		    $cycle{$c[1]} = 1;
 		    $dbh->do ("insert into cycle_tmp (dsid, cid, exposure) values (?, ?, ?)",
 			      undef, $dsid, $c[1], $_);
