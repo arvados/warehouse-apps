@@ -7,7 +7,7 @@ require_once 'connect.php';
 mysql_query("create table if not exists report
 (
  rid bigint not null auto_increment primary key,
- dsid char(32) binary,
+ dsid char(32),
  revision int,
  baseorder varchar(255),
  knobs text,
@@ -36,7 +36,7 @@ echo mysql_error();
 
 mysql_query("create table if not exists dataset
 (
- dsid char(32) binary not null primary key,
+ dsid char(32) not null primary key,
  nframes int,
  ncycles int
 ) engine=innodb");
@@ -44,24 +44,13 @@ echo mysql_error();
 
 mysql_query("create table if not exists cycle
 (
- dsid char(32) binary not null,
- cid char(32) binary not null,
+ dsid char(32) not null,
+ cid char(32) not null,
  nfiles int,
  nbytes bigint,
  exposure varchar(255),
  unique(dsid,cid)
 ) engine=innodb");
-echo mysql_error();
-
-/* automatically upgrade old tables */
-
-mysql_query("alter table report modify dsid char(32) binary");
-echo mysql_error();
-mysql_query("alter table dataset modify dsid char(32) binary not null;");
-echo mysql_error();
-mysql_query("alter table cycle modify dsid char(32) binary not null;");
-echo mysql_error();
-mysql_query("alter table cycle modify cid char(32) binary not null;");
 echo mysql_error();
 
 ?>
