@@ -127,11 +127,15 @@ for (my $y = 0; $y < $gridh; $y++)
 	my $id = $id{$thisgridx}{$thisgridy};
 	if ($png)
 	{
-	    my ($px, $py) = ($x * $gridsquarew+1, $y * $gridsquareh+1);
-	    my ($px2, $py2) = ($px + $gridsquarew-2, $py + $gridsquareh-2);
-	    $image->Draw (stroke=>"black",
-			  primitive=>"rectangle",
-			  points="$px,$py,$px2,$py2");
+	    if (defined $id)
+	    {
+		my ($px, $py) = ($x * $gridsquarew+1, $y * $gridsquareh+1);
+		my ($px2, $py2) = ($px + $gridsquarew-2, $py + $gridsquareh-2);
+		$image->Draw (stroke=>"black",
+			      fill=>"black",
+			      primitive=>"rectangle",
+			      points=>"$px,$py,$px2,$py2");
+	    }
 	}
 	else
 	{
@@ -139,4 +143,10 @@ for (my $y = 0; $y < $gridh; $y++)
 	    else { print "-1\n"; }
 	}
     }
+}
+
+$|=1;
+if ($png)
+{
+    $image->Write('png:-');
 }
