@@ -1,0 +1,116 @@
+#!/usr/bin/perl
+
+use strict;
+use MogileFS::Client;
+use Digest::MD5 qw(md5_hex md5);
+use DBI;
+use CGI ':standard';
+
+my $q = new CGI;
+
+print $q->header ('text/plain');
+
+do '/etc/polony-tools/config.pl';
+
+my $dbh = DBI->connect($main::mogilefs_dsn,
+		       $main::mrwebgui_mysql_username,
+		       $main::mrwebgui_mysql_password)
+    or die DBI->errstr;
+
+
+my $mogc;
+for (qw(1 2 3 4 5))
+{
+    $mogc = eval {
+	MogileFS::Client->new (domain => $main::mogilefs_default_domain,
+			       hosts => [@main::mogilefs_trackers]);
+      };
+    last if $mogc;
+}
+die "$@" if !$mogc;
+
+my $dsid = $q->param ('dsid');
+
+my $positions = $mogc->get_file_data ("/$dsid/IMAGES/RAW/positions");
+
+my @frame;
+foreach (split ("\n", $$positions))
+{
+    my ($id, $x, $y) = /^(\d+)\s+([-\d\.]+)\s+([-\d\.]+)\s/;
+    if (defined $id)
+    {
+	push @frame, [$id+1, $x, $y];
+    }
+}
+
+my $gridw = $q->param ("gridw") || 50;
+my $gridh = $q->param ("gridh") || 50;
+
+my $minx;
+my $miny;
+my $maxx;
+my $maxy;
+my @allx;
+my @ally;
+
+foreach (@frame)
+{
+    my ($id, $x, $y) = @$_;
+    if (!defined $minx || $x < $minx) { $minx = $x; }
+    if (!defined $miny || $y < $miny) { $miny = $y; }
+    if (!defined $maxx || $x > $maxx) { $maxx = $x; }
+    if (!defined $maxy || $y > $maxy) { $maxy = $y; }
+    push @allx, $x;
+    push @ally, $y;
+}
+
+# smallx/smally - frames closer than this will be in the same grid spot
+my $smallx = ($maxx-$minx)/$gridw/2;
+my $smally = ($maxy-$miny)/$gridh/2;
+
+my @gridx;			# smallest x pos of each grid square
+my %gridx;			# smallest x pos of each frame x position
+my $thisgridx;
+foreach (sort { $a <=> $b } @allx)
+{
+    if (!defined $thisgridx ||
+	$_ > $thisgridx+$smallx)
+    {
+	$thisgridx = $_;
+	push @gridx, $_;
+    }
+    $gridx{$_} = $thisgridx;
+}
+
+my @gridy;
+my %gridy;
+my $thisgridy;
+foreach (sort { $a <=> $b } @ally)
+{
+    if (!defined $thisgridy ||
+	$_ > $thisgridy+$smally)
+    {
+	$thisgridy = $_;
+	push @gridy, $_;
+    }
+    $gridy{$_} = $thisgridy;
+}
+
+my %id;
+foreach (@frame)
+{
+    my ($id, $x, $y) = @$_;
+    $id{$gridx{$x}}{$gridy{$y}} = $id;
+}
+
+for (my $y = 0; $y < $gridh; $y++)
+{
+    my $thisgridy = $gridy[$y];
+    for (my $x = 0; $x < $gridw; $x++)
+    {
+	my $thisgridx = $gridx[$x];
+	my $id = $id{$thisgridx}{$thisgridy};
+	if (defined $id) { print "$id\n"; }
+	else { print "-1\n"; }
+    }
+}
