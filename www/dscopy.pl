@@ -91,7 +91,7 @@ my $copyto_reader_dbh = DBI->connect($remotelims{'dsn'},
 my $sth = $dbh->prepare("select dkey, md5 from file left join md5 on md5.fid=file.fid left join file_on on file.fid=file_on.fid where dkey like ? and file_on.fid is not null group by dkey order by binary dkey");
 $sth->{"mysql_use_result"} = 1;
 
-my $copyto_sth = $copyto_reader_dbh->prepare("select dkey, md5 from file left join md5 on md5.fid=file.fid left join file_on on file.fid=file_on.fid where dkey like ? and file_on.fid is not null order by binary dkey");
+my $copyto_sth = $copyto_reader_dbh->prepare("select dkey, md5 from file left join md5 on md5.fid=file.fid left join file_on on file.fid=file_on.fid left join domain on file.dmid=domain.dmid where domain.namespace = ? and dkey like ? and file_on.fid is not null order by binary dkey");
 $copyto_sth->{"mysql_use_result"} = 1;
 
 my $md5_sth = $copyto_writer_dbh->prepare ("insert into md5 (fid, md5) select fid, ? from file left join domain on domain.dmid=file.dmid where dkey=? and domain.namespace=?");
@@ -100,7 +100,7 @@ print "Getting local manifest.\n";
 $sth->execute ($keyprefix . "%") or die;
 
 print "Getting remote manifest.\n";
-$copyto_sth->execute ($keyprefix . "%") or die;
+$copyto_sth->execute ($main::mogilefs_default_domain, $keyprefix . "%") or die;
 
 my @row = $sth->fetchrow_array;
 my @copyto_row = $copyto_sth->fetchrow_array;
