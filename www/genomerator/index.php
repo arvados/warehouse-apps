@@ -12,7 +12,7 @@
 <body>
 <div id="wrap">
     <div id="head"></div>
- <div id="left"><img src="images/grid.png" alt="Genomerator" width="350" height="350" /></div>
+ <div id="left"><img src="/framegrid.cgi?dsid=km_02&format=png&imagew=350&imageh=350&gridw=50&gridh=50" alt="Genomerator" width="350" height="350" /></div>
   <div id="right">
         <div id="goto">
 		<table width="300" border="0" cellspacing="0" cellpadding="0">
@@ -22,7 +22,7 @@
     <td><img src="images/go.png" width="26" height="23" /></td>
   </tr>
 </table></div>
-    <h1>Frame 1234 - Example Genome </h1>
+    <h1>Frame 1234 - km_02 </h1>
 		 <div id="leftbody">
 		   <div id="menu">
           <p><strong>Click on an image to see below:</strong></p>
