@@ -50,7 +50,12 @@ elsif ($ENV{MR_LEVEL} == 1)
     
     $gz->gzwrite ($segment) or die "error writing: $gzerrno\n";
   }
-  warn "read $bytesread bytes\n";  
+  if ($bytesread) { 
+  	warn "read $bytesread bytes\n"; 
+  }
+  else {
+  	die "read 0 bytes\n"; 
+  } 
   close STDIN or die "Input stream exited $?";
   $gz->gzclose();		# or die "gzclose() failed: $gzerrno";
 				# (gzclose() is supposed to return 1 on
