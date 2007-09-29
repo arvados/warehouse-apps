@@ -18,7 +18,7 @@ my $dbh = DBI->connect($main::analysis_dsn,
 
 my $dsid = $q->param ('dsid');
 
-my $sth = $dbh->prepare ("select cid from cycle where dsid=? and nfiles>0 order by cid");
+my $sth = $dbh->prepare ("select cid from cycle where dsid=? and nfiles>0 and cid<>'none' order by cid");
 $sth->execute ($dsid) or die DBI->errstr;
 while (my @row = $sth->fetchrow)
 {
