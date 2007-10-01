@@ -24,5 +24,16 @@ while (my @row = $sth->fetchrow)
 {
     my ($cid) = @row;
     my $nimages = $cid =~ /\D/ ? 4 : 1;
-    print "$cid $nimages\n";
+
+    my $imgsrc = "/get/images,/$dsid/IMAGES/RAW/$cid/";
+    if ($cid eq "999")
+    {
+	$imagesrc .= "WL_";
+    }
+    else
+    {
+	$imagesrc .= "SC_";
+    }
+
+    print "$cid $nimages $imagesrc\n";
 }
