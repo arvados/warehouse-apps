@@ -25,7 +25,7 @@ while (my @row = $sth->fetchrow)
     my ($cid) = @row;
     my $nimages = $cid =~ /\D/ ? 4 : 1;
 
-    my $imagesrc = "/get/images,/$dsid/IMAGES/RAW/$cid/";
+    my $imagesrc = "/getimage.cgi/images,/$dsid/IMAGES/RAW/$cid/";
     if ($cid eq "999")
     {
 	$imagesrc .= "WL_";
