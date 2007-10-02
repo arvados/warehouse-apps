@@ -109,7 +109,7 @@ function check_all_boxes(status) {
 }
 
 function load_frame_data(sid) {
-	dsid	= (dsid) ? dsid : sid;
+	dsid	= sid;
 	
 	var xml_tunnel	= window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Msxml2.XMLHTTP");
 	xml_tunnel.open('GET','/framegrid.cgi?dsid='+dsid+';gridw=50;gridh=50',true);
