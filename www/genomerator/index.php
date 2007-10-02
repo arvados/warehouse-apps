@@ -1,4 +1,8 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<?php
+
+$dsid = ereg_replace ("[^-_a-zA-Z0-9]", "", $_REQUEST["dsid"]);
+
+?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
@@ -57,7 +61,7 @@ function check_all_boxes(status) {
 
 function load_frame_data() {
 	var xml_tunnel	= window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Msxml2.XMLHTTP");
-	xml_tunnel.open('GET','test_data.txt',true);
+	xml_tunnel.open('GET','/framelist.cgi?dsid=<?=$dsid?>;gridw=50;gridh=50',true);
 	xml_tunnel.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"); 
 	xml_tunnel.onreadystatechange = function() {
 		if(xml_tunnel.readyState == 4 && xml_tunnel.status == 200) {
@@ -173,12 +177,12 @@ function do_nothing() {}
 	margin: 0px;
 	padding: 0px;
 	cursor:crosshair;
-	background-image: url('images/grid.png');
+	background-image: url('/framegrid.cgi?dsid=<?=$dsid?>;gridw=50;gridh=50;imagew=350;imageh=350;format=png');
 }
 </style>
 </head>
 
-<body onload="load_grid_image('http://tomc.freelogy.org/framegrid.cgi?dsid=nr_02;gridw=50;gridh=50;imagew=350;imageh=350;format=png'); load_frame_data();">
+<body onload="load_grid_image('/framegrid.cgi?dsid=<?=$dsid?>;gridw=50;gridh=50;imagew=350;imageh=350;format=png'); load_frame_data();">
 <div id="wrap">
     <div id="head"></div>
  <div id="left">
