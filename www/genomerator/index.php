@@ -18,23 +18,30 @@ num_boxes_h		= 50;
 no_move			= 0;
 grid_data		= new Array();
 
+function retrieve_index_of(test_array,value) {
+	for(var o=0;o<test_array.length;o++) {
+		if(test_array[o] == value) {
+			return o;
+		}
+	}
+	return false;
+}
+
+
 function retrieve_grid_location(frame_num) {
+
 	// Retrieve the Index
-	var index	= grid_data.indexOf(frame_num);
+	
+	var index	= retrieve_index_of(grid_data,frame_num);
 	
 	// Get the base positions
-	var	y	= 	(index > 0) ? floor(index/num_boxes_w) : "0";
+	var	y	= 	(index > 0) ? Math.floor(index/num_boxes_w) : "0";
 	var x	= 	(index > 0) ? index % num_boxes_w : "0";
-	
+
 	// Calculate the final positions
-	if(y == 0 || y % 2 == 0) {
 		x	=  little_box_w * x;
-	} else {
-		x	=  (num_boxes_w - x) * little_box_w;
-	}
 	y	= y * little_box_h;
-	
-	move_to_position((x+floor(little_box_w/2)),(y+floor(little_box_h/2)));
+	move_to_position(x,y);
 }
 
 
@@ -64,8 +71,8 @@ function load_frame_data() {
 
 function move_little_box(x,y) {
 	var little_box	= document.getElementById("little_box");
-	little_box.style.width	= Number(little_box_w-2) + "px";
-	little_box.style.height	= Number(little_box_h-2) + "px";
+	little_box.style.width	= Number(little_box_w) + "px";
+	little_box.style.height	= Number(little_box_h) + "px";
 
 	little_box.style.display	= "block";
 	little_box.style.left		= Number(x)+"px";
@@ -76,23 +83,13 @@ function update_framelist(frame) {
 	
 }
 
-function move_to_position(x,y) {
+function move_to_position(final_x,final_y) {
 	if(!no_move || no_move != 1) {
+		
 		var wrapper	= document.getElementById("wrap");
 		var grid	= document.getElementById("grid_image");
 		var left	= document.getElementById("left");
-		
-			var offset_y	= Number(wrapper.offsetTop) + Number(left.offsetTop);
-			var offset_x	= wrapper.offsetLeft + left.offsetLeft;
-			
-			y	= y - offset_y;
-		
-			if(y < 0) y=0;
-			if(x >= grid.clientWidth) x = Number(grid.clientWidth)-Number(little_box_w);
-			
-			final_x	= Number(Math.round((x-(little_box_w/2))/little_box_w)*little_box_w);
-			final_y	= Number(Math.round((y-(little_box_h/2))/little_box_h)*little_box_h);
-		
+
 			// Get the Frame Number
 			var line_number = ((final_x+little_box_w)/little_box_w) + (((final_y)/little_box_h)*(grid.clientWidth/little_box_w));
 			if(grid_data.length >= line_number) {
@@ -117,7 +114,23 @@ function move_to_position(x,y) {
 function display_elements(e) {
 	var x	= (e.x) ? e.x : e.layerX;
 	var y	= (e.y) ? e.y : e.layerY+2;
-	move_to_position(x,y);
+	
+	var wrapper	= document.getElementById("wrap");
+	var grid	= document.getElementById("grid_image");
+	var left	= document.getElementById("left");
+
+	var offset_y	= Number(wrapper.offsetTop) + Number(left.offsetTop);
+	var offset_x	= wrapper.offsetLeft + left.offsetLeft;
+	
+	y	= y - offset_y;
+
+	if(y < 0) y=0;
+	if(x >= grid.clientWidth) x = Number(grid.clientWidth)-Number(little_box_w);
+	
+	final_x	= Number(Math.round((x-(little_box_w/2))/little_box_w)*little_box_w);
+	final_y	= Number(Math.round((y-(little_box_h/2))/little_box_h)*little_box_h);
+
+	move_to_position(final_x,final_y);
 }
 
 function load_grid_image(location) {
@@ -147,7 +160,8 @@ function do_nothing() {}
 }
 
 #little_box {
-	border: 1px solid #00FFFF;
+	border: 1px solid #5FACEF;
+	background: #5FACEF;
 	display: none;
 	position: relative;
 	font-size: 6px;
