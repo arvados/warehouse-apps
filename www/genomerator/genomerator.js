@@ -66,7 +66,7 @@ function load_fullsize_image(num_images,location,current_position) {
 	// Get the data
 	var extension	= ((Number(current_frame) - 1) * Number(num_images)) + Number(current_position);
 	filename = location + String(extension);
-	document.getElementById("footer").innerHTML	= "<img src=\"http://tomc.freelogy.org"+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />";
+	document.getElementById("footer").innerHTML	= "<img src=\""+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />";
 }
 
 function display_cycle_list(cycle_data) {
@@ -82,9 +82,10 @@ function display_cycle_list(cycle_data) {
 	document.getElementById("cycle_list").innerHTML	= content;
 }
 
-function load_cycle_list() {
+function load_cycle_list(sid) {
+	dsid = sid;
 	var xml_tunnel	= window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Msxml2.XMLHTTP");
-	xml_tunnel.open('GET','cycle_test.txt',true);
+	xml_tunnel.open('GET','/cyclelist.cgi?dsid='+dsid,true);
 	xml_tunnel.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"); 
 	xml_tunnel.onreadystatechange = function() {
 		if(xml_tunnel.readyState == 4 && xml_tunnel.status == 200) {
@@ -107,9 +108,11 @@ function check_all_boxes(status) {
 	}
 }
 
-function load_frame_data() {
+function load_frame_data(sid) {
+	dsid	= (dsid) ? dsid : sid;
+	
 	var xml_tunnel	= window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Msxml2.XMLHTTP");
-	xml_tunnel.open('GET','test_data.txt',true);
+	xml_tunnel.open('GET','/framegrid.cgi?dsid='+dsid+';gridw=50;gridh=50',true);
 	xml_tunnel.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"); 
 	xml_tunnel.onreadystatechange = function() {
 		if(xml_tunnel.readyState == 4 && xml_tunnel.status == 200) {
