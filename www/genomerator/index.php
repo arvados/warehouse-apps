@@ -61,7 +61,7 @@ function check_all_boxes(status) {
 
 function load_frame_data() {
 	var xml_tunnel	= window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Msxml2.XMLHTTP");
-	xml_tunnel.open('GET','/framelist.cgi?dsid=<?=$dsid?>;gridw=50;gridh=50',true);
+	xml_tunnel.open('GET','/framegrid.cgi?dsid=<?=$dsid?>;gridw=50;gridh=50',true);
 	xml_tunnel.setRequestHeader("Content-Type", "application/x-www-form-urlencoded"); 
 	xml_tunnel.onreadystatechange = function() {
 		if(xml_tunnel.readyState == 4 && xml_tunnel.status == 200) {
