@@ -199,7 +199,7 @@ function do_nothing() {}
     <td><img src="images/go.png" width="26" height="23" onClick="JavaScript: retrieve_grid_location(document.getElementById('goto_frame').value);" /></td>
   </tr>
 </table></div>
-    <h1> <span id="location_box">Location: </span>Frame <span id="frame_number">0</span> - example genome</h1>
+    <h1> <span id="location_box">Location: </span>Frame <span id="frame_number">0</span> from <?=$dsid?> images</h1>
 		 <div id="leftbody">
 		   <div id="menu">
           <p><strong>Click on an image to see below:</strong></p>
