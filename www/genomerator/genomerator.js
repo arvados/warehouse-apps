@@ -176,6 +176,9 @@ function display_elements(e) {
 	var offset_y	= Number(wrapper.offsetTop) + Number(left.offsetTop);
 	var offset_x	= wrapper.offsetLeft + left.offsetLeft;
 	
+	
+	var regex	= /Safari/;
+	if(navigator.userAgent.match(regex)) x = x - offset_x;
 	y	= y - offset_y;
 
 	if(y < 0) y=0;

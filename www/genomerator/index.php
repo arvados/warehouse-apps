@@ -38,7 +38,10 @@ $dsid = ereg_replace ("[^-_a-zA-Z0-9]", "", $_REQUEST["dsid"]);
 	margin: 0px;
 	padding: 0px;
 	cursor:crosshair;
-	background-image: url('images/grid.png');
+}
+
+#footer {
+	height: 200px;
 }
 </style>
 </head>
