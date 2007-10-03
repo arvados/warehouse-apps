@@ -278,9 +278,9 @@ while (($id, $input, $attempts) = $sth->fetchrow)
   {
     my $message = "Failure rate too high ($tasks_failed/"
 	.($tasks_failed+$tasks_succeeded)
-	.") -- giving up";
+	.") -- giving up on this round";
     Log ($dbh, $job_id, undef, $message);
-    croak ($message);
+    last;
   }
 }
 
