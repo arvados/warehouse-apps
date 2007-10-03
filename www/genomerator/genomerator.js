@@ -39,13 +39,13 @@ function parse_cycle_row(data) {
 	if(data != "") {
 		var pieces	= data.split(" ");
 		if(pieces.length == 3) {
-			var content = "<tr>\n<td class=\"blocks\" width=\"30\"><input type=\"checkbox\" id=\"checkbox\" name=\"checkbox\" value=\"" + pieces[0] + "\" /></td>";
+			var content = "<tr>\n<td class=\"blocks\" width=\"30\"><input type=\"checkbox\" id=\"image_select\" name=\"image_select\" value=\"" + pieces[0] + "\" /></td>";
 			content	= content + "<td class=\"blocks\" width=\"30\" height=\"28\">" + pieces[0] + "</td>\n";
 			content	= content + "<td class=\"blocks\" height=\"200\">\n";
 			marker++;
 				
 			if(pieces[1] == 1) {
-				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
+				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','1')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
 			} else {
 				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','1')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
 				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','2')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
@@ -100,7 +100,7 @@ function load_cycle_list(sid) {
 
 function check_all_boxes(status) {
 	var i=0;
-	var id_field = document.download.checkbox;
+	var id_field = document.download.image_select;
 	var id_options = id_field.length;
 	
 	for(i=0;i<id_options;i++) {

@@ -59,7 +59,7 @@ $dsid = ereg_replace ("[^-_a-zA-Z0-9]", "", $_REQUEST["dsid"]);
 		<table width="300" border="0" cellspacing="0" cellpadding="0">
   <tr>
     <td width="80">Go to Frame</td>
-    <td width="75"><input name="goto_frame" id="goto_frame" type="text" size="8" /></td>
+    <td width="75"><input name="goto_frame" id="goto_frame" type="text" size="8" onChange="JavaScript: retrieve_grid_location(document.getElementById('goto_frame').value);"/></td>
     <td><img src="images/go.png" width="26" height="23" onClick="JavaScript: retrieve_grid_location(document.getElementById('goto_frame').value);" /></td>
   </tr>
 </table></div>
