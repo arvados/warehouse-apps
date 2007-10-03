@@ -107,3 +107,8 @@ float: left; }
 width: 320px;
 float: right;
 }
+
+#image_caption {
+	padding-left: 5px;
+	margin-top: 5px;
+}

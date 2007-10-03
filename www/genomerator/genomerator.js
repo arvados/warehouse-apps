@@ -46,12 +46,12 @@ function parse_cycle_row(data) {
 			marker++;
 				
 			if(pieces[1] == 1) {
-				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','1')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
+				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','1','"+pieces[0]+"')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
 			} else {
-				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','1')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
-				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','2')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
-				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','3')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
-				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','4')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
+				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','1','"+pieces[0]+"')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
+				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','2','"+pieces[0]+"')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
+				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','3','"+pieces[0]+"')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
+				content =  content + "<a href=\"JavaScript: load_fullsize_image('" + pieces[1] + "','" + pieces[2] + "','4','"+pieces[0]+"')\"><img src=\"images/1block.png\" width=\"33\" height=\"25\" border=\"0\" />"; 
 			}
 			
 			content = content + "</td>\n</tr>\n";
@@ -97,7 +97,7 @@ function load_fullsize_image(num_images,location,current_position,cycle) {
 	// Pad the extension if necessary
 	var final_extension	= string_pad(String(extension),4,'0','left');
 	filename = location + String(final_extension);
-	description = description + "\n<p>" + filename + "</p>";
+	description = description + "\n<p id=\"image_caption\">" + filename + "</p>";
 	
 	current_image_data	= new Array(num_images,location,current_position,cycle);
 	
