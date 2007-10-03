@@ -67,12 +67,15 @@ function string_pad(input,num_chars,pad_char,pad_side) {
 	var required_chars	= num_chars - input_length;
 	var output = "";
 	var content = "";
+	var pad_char	= String(pad_char);
+	var input		= String(input);
 	
 	if(required_chars > 0) {
 		for(i=0;i<required_chars;i++) {
 			content = content + String(pad_char);
 		}
 		
+		content = String(content);
 		if(pad_side == 'left') {
 			output = content + input;
 		} else {
@@ -90,8 +93,8 @@ function load_fullsize_image(num_images,location,current_position) {
 	var extension	= ((Number(current_frame) - 1) * Number(num_images)) + Number(current_position);
 	
 	// Pad the extension if necessary
-	extension	= string_pad(extension,4,'0','left');
-	filename = location + String(extension);
+	var final_extension	= string_pad(String(extension),4,'0','left');
+	filename = location + String(final_extension);
 	document.getElementById("footer").innerHTML	= "<img src=\""+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />";
 }
 
@@ -150,6 +153,8 @@ function load_frame_data(sid) {
 	
 	xml_tunnel.send(null);
 }
+
+
 
 function move_little_box(x,y) {
 	var little_box	= document.getElementById("little_box");
