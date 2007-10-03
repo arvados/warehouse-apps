@@ -79,7 +79,7 @@ $dsid = ereg_replace ("[^-_a-zA-Z0-9]", "", $_REQUEST["dsid"]);
            <br />
          <img src="images/select_none.png" alt="Select None" width="90" height="30" onclick="JavaScript: check_all_boxes(false);"/><br />
          <br />
-    <img src="images/download.png" alt="Dowload Selected" width="135" height="30" /></div>
+    <img src="images/download.png" alt="Dowload Selected" width="135" height="30" onclick="JavaScript: document.download.submit();" /></div>
       </div>
       <div id="footer">
       </div>
