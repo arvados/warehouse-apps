@@ -2,6 +2,7 @@
 little_box_w	= 7;
 little_box_h	= 7;
 current_frame	= 1;
+current_image_data	= "";
 
 num_boxes_w		= 50;
 num_boxes_h		= 50;
@@ -88,14 +89,19 @@ function string_pad(input,num_chars,pad_char,pad_side) {
 	return output;
 }
 
-function load_fullsize_image(num_images,location,current_position) {
+function load_fullsize_image(num_images,location,current_position,cycle) {
 	// Get the data
 	var extension	= ((Number(current_frame) - 1) * Number(num_images)) + Number(current_position);
+	var description	= "<h1 id=\"image_caption\">Frame #" + current_frame + " - Cycle " + cycle + " - Image " + current_position + "</h1>";
 	
 	// Pad the extension if necessary
 	var final_extension	= string_pad(String(extension),4,'0','left');
 	filename = location + String(final_extension);
-	document.getElementById("footer").innerHTML	= "<img src=\""+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />";
+	description = description + "\n<p>" + filename + "</p>";
+	
+	current_image_data	= new Array(num_images,location,current_position,cycle);
+	
+	document.getElementById("footer").innerHTML	= description + "<img src=\""+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />";
 }
 
 function display_cycle_list(cycle_data) {
@@ -191,6 +197,8 @@ function move_to_position(final_x,final_y) {
 				location_box.innerHTML	= "Location: X:" + final_x + "px  Y:" + final_y + "px   -  Frame Number: " +line_data;
 			
 				move_little_box(final_x,final_y);
+				if(current_image_data.constructor == Array) load_fullsize_image(current_image_data[0],current_image_data[1],current_image_data[2],current_image_data[3]);
+				
 			}
 	}
 	no_move = 0;
