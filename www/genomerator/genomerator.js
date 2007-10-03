@@ -62,9 +62,35 @@ function parse_cycle_row(data) {
 	
 }
 
+function string_pad(input,num_chars,pad_char,pad_side) {
+	var input_length	= input.length;
+	var required_chars	= num_chars - input_length;
+	var output = "";
+	var content = "";
+	
+	if(required_chars > 0) {
+		for(i=0;i<required_chars;i++) {
+			content = content + String(pad_char);
+		}
+		
+		if(pad_side == 'left') {
+			output = content + input;
+		} else {
+			output = input + content;
+		}
+	} else {
+		output = input;
+	}
+	
+	return output;
+}
+
 function load_fullsize_image(num_images,location,current_position) {
 	// Get the data
 	var extension	= ((Number(current_frame) - 1) * Number(num_images)) + Number(current_position);
+	
+	// Pad the extension if necessary
+	extension	= string_pad(extension,4,'0','left');
 	filename = location + String(extension);
 	document.getElementById("footer").innerHTML	= "<img src=\""+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />";
 }
