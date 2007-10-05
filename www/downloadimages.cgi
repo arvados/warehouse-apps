@@ -3,6 +3,7 @@ use strict;
 use CGI ':standard';
 
 my $q = new CGI;
+print $q->header;
 
 my @cycle_list	= $q->param ('cycles');
 my $dsid		= $q->param ('dsid');
