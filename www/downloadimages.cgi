@@ -5,7 +5,7 @@ use CGI ':standard';
 my $q = new CGI;
 print $q->header;
 
-my @cycle_list	= $q->param ('cycles');
+my @cycle_list	= $q->param ('cycles[]');
 my $dsid		= $q->param ('dsid');
 my $frame_id 	= $q->param ('frame_id');
 my $cid;
