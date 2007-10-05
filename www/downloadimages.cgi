@@ -14,7 +14,7 @@ for $cid (@cycle_list) {
     my $nimages = $cid =~ /\D/ ? 4 : 1;
     my $imagesrc = "/$dsid/IMAGES/RAW/$cid/";
 	my $counter	= 1;
-	my $padded_string;
+	my $image_file;
 	
     if ($cid eq "999")
     {
@@ -26,8 +26,8 @@ for $cid (@cycle_list) {
     }
 	
 	while($counter <= $nimages) {
-		$imagesrc .= sprintf('%04d',(($frame_id - 1) * $nimages + $counter));		
-	    print "$imagesrc\n";
+		$image_file = $imagesrc . sprintf('%04d',(($frame_id - 1) * $nimages + $counter));		
+	    print "$image_file\n";
 		$counter++;
 	}
 }
