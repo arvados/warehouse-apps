@@ -40,7 +40,7 @@ function parse_cycle_row(data) {
 	if(data != "") {
 		var pieces	= data.split(" ");
 		if(pieces.length == 3) {
-			var content = "<tr>\n<td class=\"blocks\" width=\"30\"><input type=\"checkbox\" id=\"image_select\" name=\"image_select\" value=\"" + pieces[0] + "\" /></td>";
+			var content = "<tr>\n<td class=\"blocks\" width=\"30\"><input type=\"checkbox\" id=\"cycles\" name=\"cycles[]\" value=\"" + pieces[0] + "\" /></td>";
 			content	= content + "<td class=\"blocks\" width=\"30\" height=\"28\">" + pieces[0] + "</td>\n";
 			content	= content + "<td class=\"blocks\" height=\"200\">\n";
 			marker++;
@@ -135,7 +135,7 @@ function load_cycle_list(sid) {
 
 function check_all_boxes(status) {
 	var i=0;
-	var id_field = document.download.image_select;
+	var id_field = document.download.cycles;
 	var id_options = id_field.length;
 	
 	for(i=0;i<id_options;i++) {
@@ -192,8 +192,11 @@ function move_to_position(final_x,final_y) {
 			if(line_data != '-1') {
 				var location_box = document.getElementById("location_box");
 				var frame_number	=	document.getElementById("frame_number");
+				var frame_id		= document.getElementById("frame_id");
+				
 				frame_number.innerHTML	= line_data;
 				current_frame	= line_data;
+				frame_id.value	= current_frame;
 				location_box.innerHTML	= "Location: X:" + final_x + "px  Y:" + final_y + "px   -  Frame Number: " +line_data;
 			
 				move_little_box(final_x,final_y);

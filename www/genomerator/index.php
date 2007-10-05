@@ -67,8 +67,11 @@ $dsid = ereg_replace ("[^-_a-zA-Z0-9]", "", $_REQUEST["dsid"]);
 		 <div id="leftbody">
 		   <div id="menu">
           <p><strong>Click on an image to see below:</strong></p>
-		  <form method="post" name="download" action="#" id="cycle_list">
-       
+		  <form method="post" name="download" action="/downloadimages.cgi">
+		  <input type="hidden" id="dsid" name="dsid" value="<?=$dsid?>" />
+		  <input type="hidden" id="frame_id" name="frame_id" value="1" />
+		  <div id="cycle_list">
+		  </div>       
 		  </form>
         </div>
 	    </div>
