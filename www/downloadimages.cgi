@@ -1,9 +1,9 @@
 #!/usr/bin/perl
+
 use strict;
 use CGI ':standard';
 
 my $q = new CGI;
-print $q->header;
 
 my @cycle_list	= $q->param ('cycles[]');
 my $dsid		= $q->param ('dsid');
@@ -12,10 +12,10 @@ my $cid;
 
 for $cid (@cycle_list) {
     my $nimages = $cid =~ /\D/ ? 4 : 1;
-    my $imagesrc = "/$dsid/IMAGES/RAW/$cid/";
-	my $counter	= 1;
-	my $image_file;
-	
+    my $imagesrc = "/$cid/";
+    my $counter	= 1;
+    my $image_file;
+    
     if ($cid eq "999")
     {
 	$imagesrc .= "WL_";
@@ -24,10 +24,15 @@ for $cid (@cycle_list) {
     {
 	$imagesrc .= "SC_";
     }
-	
-	while($counter <= $nimages) {
-		$image_file = $imagesrc . sprintf('%04d',(($frame_id - 1) * $nimages + $counter));		
-	    print "$image_file\n";
-		$counter++;
-	}
+    
+    for (my $i=1; $i<=$nimages; $i++) {
+	$image_file = $imagesrc
+	    . sprintf ('%04d', (($frame_id - 1) * $nimages + $i));
+	push @main::include, $image_file;
+    }
 }
+
+$main::_keyprefix = "/$dsid/IMAGES/RAW/";
+@main::include = sort { $a cmp $b } @main::include;
+
+do "download.cgi";

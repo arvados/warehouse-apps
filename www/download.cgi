@@ -8,9 +8,10 @@ use CGI ':standard';
 
 my $q = new CGI;
 
-my $keyprefix = $q->param ("keyprefix");
+my $keyprefix = defined($main::_keyprefix) ? $main::_keyprefix : $q->param ("keyprefix");
 my $manifest = $q->param ("manifest");
 my $format = $q->param ("format"); # "", "text", "1md5", or "2md5"
+my $include = @main::include;
 
 if (!($format eq "1md5" ||
       $format eq "2md5" ||
@@ -27,7 +28,8 @@ if ($manifest)
     }
     else
     {
-	print $q->header ('application/binary');
+	print $q->header (-type => 'application/binary',
+			  -attachment => 'download.tar');
     }
 }
 else
@@ -133,6 +135,27 @@ while ($fetchmore)
     {
       ++$ei;
       next;
+    }
+
+    if ($include)
+    {
+	# XXX include + exclude = undefined results
+	while (@main::include &&
+	       $main::include[0] lt
+	       substr("/$tarkey", 0, length($main::include[0])))
+	{
+	    shift @main::include;
+	}
+	if (@main::include &&
+	    $main::include[0] eq
+	    substr("/$tarkey", 0, length($main::include[0])))
+	{
+	    ;
+	}
+	else
+	{
+	    next;
+	}
     }
 
     if ($manifest)
