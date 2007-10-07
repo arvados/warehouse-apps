@@ -28,13 +28,13 @@ if ($manifest)
     }
     else
     {
-	print $q->header (-type => 'application/binary',
-			  -attachment => 'download.tar');
+	print $q->header ('application/binary');
     }
 }
 else
 {
-    print $q->header ('application/x-tar');
+    print $q->header (-type => 'application/x-tar',
+		      -attachment => 'download.tar');
 }
 
 do '/etc/polony-tools/config.pl';
