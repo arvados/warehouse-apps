@@ -35,7 +35,7 @@ while(defined ($_ = <STDIN>))
   die if !$mogc;
 
   my $bufref = $mogc->get_file_data ($_);
-  if (!length ($$bufref))
+  if (!defined $bufref || !length ($$bufref))
   {
     warn "MogileFS get_file_data($_) failed: " . $mogc->errstr;
     undef $mogc;
