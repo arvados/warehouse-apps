@@ -4,3 +4,9 @@
   # authentication.
   Satisfy any
 </Files>
+
+RewriteEngine On
+RewriteCond %{HTTP_HOST} "pmage-wt-403-8\..*"
+RewriteRule ^ - [C,E=DSID:pmage_wt_403_8]
+RewriteCond %{REQUEST_URI} ^/$
+RewriteRule .* /genomerator/ [R]
