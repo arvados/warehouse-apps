@@ -10,17 +10,19 @@ my $q = new CGI;
 
 do '/etc/polony-tools/config.pl';
 
+my $outputsize;
 my ($domain, $prefix) = split (",", $ENV{PATH_INFO});
 if (!defined $prefix)
 {
     $prefix = $domain;
     $domain = "";
 }
+elsif ($prefix =~ s,^/(\d+)$,,)
+{
+    $outputsize = $1;
+}
 $domain =~ s,^/,,;
 $domain = "images" if $domain !~ /\S/;
-
-my $outputsize;
-$outputsize = $1 if $prefix =~ s|^/(\d+),|/|;
 
 if (defined $ENV{"DSID"})
 {
