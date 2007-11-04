@@ -17,7 +17,7 @@ if (!defined $prefix)
     $prefix = $domain;
     $domain = "";
 }
-elsif ($prefix =~ s,^/(\d+)$,,)
+elsif ($domain =~ s,^/(\d+)$,,)
 {
     $outputsize = $1;
 }
