@@ -96,7 +96,7 @@ function load_fullsize_image(num_images,location,current_position,cycle) {
 	
 	// Pad the extension if necessary
 	var final_extension	= string_pad(String(extension),4,'0','left');
-	filename = location + String(final_extension);
+	filename = location + String(final_extension) + '.jpg';
 	description = description + "\n<p id=\"image_caption\">" + filename + "</p>";
 	
 	current_image_data	= new Array(num_images,location,current_position,cycle);
