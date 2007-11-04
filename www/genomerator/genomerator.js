@@ -92,16 +92,20 @@ function string_pad(input,num_chars,pad_char,pad_side) {
 function load_fullsize_image(num_images,location,current_position,cycle) {
 	// Get the data
 	var extension	= ((Number(current_frame) - 1) * Number(num_images)) + Number(current_position);
-	var description	= "<h1 id=\"image_caption\">Frame #" + current_frame + " - Cycle " + cycle + " - Image " + current_position + "</h1>";
+	var description	= "<span id=\"image_caption\">&nbsp;<br />Frame <b>" + current_frame + "</b> cycle <b>" + cycle + "</b> = image <b>" + current_position + "</b> - ";
 	
 	// Pad the extension if necessary
 	var final_extension	= string_pad(String(extension),4,'0','left');
 	filename = location + String(final_extension) + '.jpg';
-	description = description + "\n<p id=\"image_caption\">" + filename + "</p>";
+	description = description + filename + "<br />&nbsp;</span>";
 	
 	current_image_data	= new Array(num_images,location,current_position,cycle);
+
+	var extralinks = "<br/>Links to other formats: <ul>"
+	+ "<li><a href=\""+filename+"\">full size jpeg</a>"
+	+ "</ul><br/>&nbsp;";
 	
-	document.getElementById("footer").innerHTML	= description + "<img src=\""+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />";
+	document.getElementById("footer").innerHTML	= "<img src=\""+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />" + description + extralinks;
 }
 
 function display_cycle_list(cycle_data) {
