@@ -25,6 +25,7 @@ else
 <script language="javascript" type="text/javascript" src="genomerator.js"></script>
 <style>
 #location_box {
+	display: none;
 	float: right;
 	clear: none;
 	width: 200px;
