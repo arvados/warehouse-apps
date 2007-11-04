@@ -10,19 +10,25 @@ my $q = new CGI;
 
 do '/etc/polony-tools/config.pl';
 
-my $outputsize;
-my ($domain, $prefix) = split (",", $ENV{PATH_INFO});
-if (!defined $prefix)
-{
-    $prefix = $domain;
-    $domain = "";
-}
-elsif ($domain =~ s,^/(\d+)$,,)
+my ($outputsize, $prefix, $domain);
+
+my $path_info = $ENV{PATH_INFO};
+$path_info =~ s,^/,,;
+$domain = "images";
+if ($path_info =~ /^(\d+),(.*)/)
 {
     $outputsize = $1;
+    $prefix = "/$2";
 }
-$domain =~ s,^/,,;
-$domain = "images" if $domain !~ /\S/;
+elsif ($path_info =~ /^(.*?),(.*)/)
+{
+    $domain = $1;
+    $prefix = "/$2";
+}
+else
+{
+    $prefix = "/$path_info";
+}
 
 if (defined $ENV{"DSID"})
 {
@@ -35,7 +41,7 @@ if ($prefix =~ s,\.(jpg|jp2|png)$,,i) { $type = lc $1; }
 
 print $q->header ("image/$type");
 
-print STDERR "$domain, $prefix, $type\n";
+print STDERR "$domain, $prefix, $type, $outputsize\n";
 
 my $mogc;
 for (qw(1 2 3 4 5))
