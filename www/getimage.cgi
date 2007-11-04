@@ -11,7 +11,19 @@ my $q = new CGI;
 do '/etc/polony-tools/config.pl';
 
 my ($domain, $prefix) = split (",", $ENV{PATH_INFO});
+if (!defined $prefix)
+{
+    $prefix = $domain;
+    $domain = "";
+}
 $domain =~ s,^/,,;
+$domain = "images" if $domain !~ /\S/;
+
+if (defined $ENV{"DSID"})
+{
+    my $dsid = $ENV{"DSID"};
+    $prefix = "/$dsid/IMAGES/RAW" . $prefix;
+}
 
 my $type = "png";
 if ($prefix =~ s,\.(jpg|jp2|png)$,,i) { $type = lc $1; }

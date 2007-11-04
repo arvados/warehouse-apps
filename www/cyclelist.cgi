@@ -16,7 +16,9 @@ my $dbh = DBI->connect($main::analysis_dsn,
     or die DBI->errstr;
 
 
+my $needfullpath = !defined $ENV{"DSID"};
 my $dsid = $q->param ('dsid');
+$dsid =~ s/[^-_a-zA-Z0-9]//g;
 
 my $sth = $dbh->prepare ("select cid from cycle where dsid=? and nfiles>0 and cid<>'none' order by cid");
 $sth->execute ($dsid) or die DBI->errstr;
@@ -25,7 +27,9 @@ while (my @row = $sth->fetchrow)
     my ($cid) = @row;
     my $nimages = $cid =~ /\D/ ? 4 : 1;
 
-    my $imagesrc = "/getimage.cgi/images,/$dsid/IMAGES/RAW/$cid/";
+    my $imagesrc = "/getimage.cgi";
+    $imagesrc .= "/$dsid/IMAGES/RAW" if $needfullpath;
+    $imagesrc .= "/$cid/";
     if ($cid eq "999")
     {
 	$imagesrc .= "WL_";
