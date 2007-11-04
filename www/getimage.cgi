@@ -19,6 +19,9 @@ if (!defined $prefix)
 $domain =~ s,^/,,;
 $domain = "images" if $domain !~ /\S/;
 
+my $outputsize;
+$outputsize = $1 if $prefix =~ s|^/(\d+),|/|;
+
 if (defined $ENV{"DSID"})
 {
     my $dsid = $ENV{"DSID"};
@@ -53,7 +56,9 @@ my $filter;
 foreach (@$keys)
 {
     my $convert = "convert";
-    my $transform = "-normalize";
+    my $transform = "";
+    $transform .= " -geometry ${outputsize}x${outputsize}\\>" if defined $outputsize;
+    $transform .= " -normalize";
 
     if (/\.raw$/i)
     {
