@@ -38,6 +38,7 @@ if (defined $ENV{"DSID"})
 
 my $type = "png";
 if ($prefix =~ s,\.(jpg|jp2|png)$,,i) { $type = lc $1; }
+if ($prefix =~ s,\.(\d+)$,,i) { $outputsize = $1; }
 
 print $q->header ("image/$type");
 
