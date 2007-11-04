@@ -7,15 +7,18 @@ use DBI;
 use CGI ':standard';
 
 my $q = new CGI;
-print $q->header ("image/png");
 
 do '/etc/polony-tools/config.pl';
 
 my ($domain, $prefix) = split (",", $ENV{PATH_INFO});
 $domain =~ s,^/,,;
-$prefix =~ s,\.png$,,i;
 
-print STDERR "$domain, $prefix\n";
+my $type = "png";
+if ($prefix =~ s,\.(jpg|jp2|png)$,,i) { $type = lc $1; }
+
+print $q->header ("image/$type");
+
+print STDERR "$domain, $prefix, $type\n";
 
 my $mogc;
 for (qw(1 2 3 4 5))
@@ -42,19 +45,19 @@ foreach (@$keys)
 
     if (/\.raw$/i)
     {
-	$filter = "$convert -endian lsb -size 1000x1000 gray:- $transform png:-";
+	$filter = "$convert -endian lsb -size 1000x1000 gray:- $transform $type:-";
     }
     elsif (/\.raw.g?z$/i)
     {
-	$filter = "zcat | $convert -endian lsb -size 1000x1000 gray:- $transform png:-";
+	$filter = "zcat | $convert -endian lsb -size 1000x1000 gray:- $transform $type:-";
     }
     elsif (/\.tiff?$/i)
     {
-	$filter = "$convert tif:- $transform png:-";
+	$filter = "$convert tif:- $transform $type:-";
     }
     elsif (/\.tiff?\.g?z$/i)
     {
-	$filter = "zcat | $convert tif:- $transform png:-";
+	$filter = "zcat | $convert tif:- $transform $type:-";
     }
     $key = $_;
     last if defined $filter;
