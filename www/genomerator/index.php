@@ -22,6 +22,7 @@ else
 <meta name="keywords" content="Personal Genome Project, PGP" />
 <link href="style.css" rel="stylesheet" type="text/css" />
 
+
 <script language="javascript" type="text/javascript" src="genomerator.js"></script>
 <style>
 #location_box {
@@ -52,20 +53,32 @@ else
 }
 
 #footer {
-	height: 200px;
+	height: 1000px;
 }
+
+
+#left { width: 350px; }
+#right { float: left; clear: left; width: 350px; }
+#goto { width: 340px; }
+#footer { float: right; clear: none; }
+#head { width:350px; }
+#wrap { width:1360px; }
 </style>
 </head>
 
 <body onload="load_grid_image('/framegrid.cgi?dsid=<?=$dsid?>;gridw=50;gridh=50;imagew=350;imageh=350;format=png'); load_frame_data('<?=$dsid?>'); load_cycle_list('<?=$dsid?>');">
 <div id="wrap">
+ <div style="float: left;">
+
     <div id="head"></div>
  <div id="left">
    <div id="grid_image" onmousedown="JavaScript: display_elements(event);">
 	<span id="little_box" onmousedown="JavaScript: flag_no_move();"></span>
    </div>
-  </div>
-  <div id="right">
+
+ </div>
+ <div id="right">
+<br>
         <div id="goto">
 		<table width="300" border="0" cellspacing="0" cellpadding="0">
   <tr>
@@ -89,12 +102,11 @@ else
          <div id="rightbody">
 		   <p>Stuff You Can Do:</p>
 		   
-           <img src="images/select_all.png" alt="Select All" width="90" height="30" onclick="JavaScript: check_all_boxes(true);" /><br />
-           <br />
-         <img src="images/select_none.png" alt="Select None" width="90" height="30" onclick="JavaScript: check_all_boxes(false);"/><br />
-         <br />
+           <img src="images/select_all.png" alt="Select All" width="90" height="30" onclick="JavaScript: check_all_boxes(true);" />
+         <img src="images/select_none.png" alt="Select None" width="90" height="30" onclick="JavaScript: check_all_boxes(false);"/>
     <img src="images/download.png" alt="Dowload Selected" width="135" height="30" onclick="JavaScript: document.download.submit();" /></div>
       </div>
+</div>
       <div id="footer">
       </div>
 	  
