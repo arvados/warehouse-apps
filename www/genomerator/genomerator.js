@@ -96,16 +96,18 @@ function load_fullsize_image(num_images,location,current_position,cycle) {
 	
 	// Pad the extension if necessary
 	var final_extension	= string_pad(String(extension),4,'0','left');
-	filename = location + String(final_extension) + '.jpg';
-	description = description + filename + "<br />&nbsp;</span>";
+	var prefix = location + String(final_extension);
+	description = description + prefix + ".jpg<br />&nbsp;</span>";
 	
 	current_image_data	= new Array(num_images,location,current_position,cycle);
 
 	var extralinks = "<br/>Links to other formats: <ul>"
-	+ "<li><a href=\""+filename+"\">full size jpeg</a>"
+	+ "<li><a href=\""+prefix+".jpg\">full size jpeg</a>"
+	+ "<li><a href=\""+prefix+".500.jpg\">500x500 jpeg</a>"
+	+ "<li><a href=\""+prefix+".200.jpg\">200x200 jpeg</a>"
 	+ "</ul><br/>&nbsp;";
 	
-	document.getElementById("footer").innerHTML	= "<img src=\""+filename+"\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+filename+"\" />" + description + extralinks;
+	document.getElementById("footer").innerHTML	= "<img src=\""+prefix+".jpg\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+prefix+".jpg\" />" + description + extralinks;
 }
 
 function display_cycle_list(cycle_data) {
