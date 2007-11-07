@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+
+###MR_DESCRIPTION:gzipped stacks of segmented images -> aligned stacks of segmented images
+###MR_INPUT:jobs
+###MR_KNOBS:FOCUSPIXELS=20000
+###MR_KNOBS:ALIGNWINDOW=15
+###MR_KNOBS:OBJECTTHRESHOLD=7000
+###MR_KNOBS:GZIP=no
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # init
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
+  open STDIN, "mrtask-streaminputkeys |" or die "Input pipe failed: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    chomp;
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # map
+  $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/align-call";
+
+  my (@hybrid) = split (",", $ENV{KNOB_HYBRID});
+  my (@baseorder) = split (",", $ENV{KNOB_BASEORDER});
+  $ENV{HYBRIDDIRORDER} = "@hybrid";
+  $ENV{DIRORDER} = "@baseorder";
+  for (qw(FOCUSPIXELS ALIGNWINDOW OBJECTTHRESHOLD))
+  {
+    $ENV{$_} = $ENV{"KNOB_$_"};
+  }
+
+  my ($gzipflag) = $ENV{"KNOB_GZIP"} =~ /^y/i;
+  if ($gzipflag)
+  {
+    open (STDOUT, "|gzip") or die "Can't open output filter: $!";
+  }
+
+  #this should be in (numerical) frame order (!?!)
+  open (STDIN, "mrtask-streaminputkeys "
+	. "| mrtask-streaminput "
+	. "| zcat "
+	. "| perl -S find_objects-register_raw_pipe.pl |"
+      or die "Input pipe failed: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    print "$ENV{MR_INPUT} $_";
+  }
+  close STDIN or die "Input stream exited $?";
+
+  if ($gzipflag)
+  {
+    close STDOUT or die "Output filter exited $?";
+  }
+}
