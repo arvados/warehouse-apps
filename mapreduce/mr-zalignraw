@@ -48,7 +48,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       or die "Input pipe failed: $!";
   while (defined ($_ = <STDIN>))
   {
-    print "$ENV{MR_INPUT} $_";
+    print "$_";
   }
   close STDIN or die "Input stream exited $?";
 
