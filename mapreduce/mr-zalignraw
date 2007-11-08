@@ -44,7 +44,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   open (STDIN, "mrtask-streaminputkeys "
 	. "| mrtask-streaminput "
 	. "| zcat "
-	. "| perl -S find_objects-register_raw_pipe.pl |"
+	. "| perl -S find_objects-register_raw_pipe.pl |")
       or die "Input pipe failed: $!";
   while (defined ($_ = <STDIN>))
   {
