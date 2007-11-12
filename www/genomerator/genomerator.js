@@ -107,7 +107,7 @@ function load_fullsize_image(num_images,location,current_position,cycle) {
 	+ "<li><a href=\""+prefix+".200.jpg\">200x200 jpeg</a>"
 	+ "</ul><br/>&nbsp;";
 	
-	document.getElementById("footer").innerHTML	= "<img src=\""+prefix+".jpg\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+prefix+".jpg\" />" + description + extralinks;
+	document.getElementById("right").innerHTML	= "<img src=\""+prefix+".jpg\" width=\"1000\" height=\"1000\" border=\"0\" alt=\""+prefix+".jpg\" />" + description + extralinks;
 }
 
 function display_cycle_list(cycle_data) {

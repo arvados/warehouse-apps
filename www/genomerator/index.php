@@ -68,17 +68,11 @@ else
 
 <body onload="load_grid_image('/framegrid.cgi?dsid=<?=$dsid?>;gridw=50;gridh=50;imagew=350;imageh=350;format=png'); load_frame_data('<?=$dsid?>'); load_cycle_list('<?=$dsid?>');">
 <div id="wrap">
- <div style="float: left;">
-
-    <div id="head"></div>
  <div id="left">
+  <div id="head"></div>
    <div id="grid_image" onmousedown="JavaScript: display_elements(event);">
 	<span id="little_box" onmousedown="JavaScript: flag_no_move();"></span>
    </div>
-
- </div>
- <div id="right">
-<br>
         <div id="goto">
 		<table width="300" border="0" cellspacing="0" cellpadding="0">
   <tr>
@@ -86,7 +80,8 @@ else
     <td width="75"><input name="goto_frame" id="goto_frame" type="text" size="8" onChange="JavaScript: retrieve_grid_location(document.getElementById('goto_frame').value);"/></td>
     <td><img src="images/go.png" width="26" height="23" onClick="JavaScript: retrieve_grid_location(document.getElementById('goto_frame').value);" /></td>
   </tr>
-</table></div>
+		</table>
+	</div>
     <h1> <span id="location_box">Location: </span>Frame <span id="frame_number">1</span> from <?=$dsid?> images</h1>
 		 <div id="leftbody">
 		   <div id="menu">
@@ -99,17 +94,15 @@ else
 		  </form>
         </div>
 	    </div>
-         <div id="rightbody">
+         <div id="stuff">
 		   <p>Stuff You Can Do:</p>
 		   
            <img src="images/select_all.png" alt="Select All" width="90" height="30" onclick="JavaScript: check_all_boxes(true);" />
          <img src="images/select_none.png" alt="Select None" width="90" height="30" onclick="JavaScript: check_all_boxes(false);"/>
-    <img src="images/download.png" alt="Dowload Selected" width="135" height="30" onclick="JavaScript: document.download.submit();" /></div>
+    <img src="images/download.png" alt="Dowload Selected" width="135" height="30" onclick="JavaScript: document.download.submit();" />
+ </div>
       </div>
-</div>
-      <div id="footer">
-      </div>
-	  
+  <div id="right"></div>
 </div>
 </body>
 </html>

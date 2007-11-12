@@ -3,7 +3,6 @@ body {
 	font-size: 12px;
 	margin: 0px;
 	background-color: #FFF;
-	text-align: center;
 }
 
 img { border: 0px; }
@@ -17,7 +16,6 @@ h1 { font-size: 16px; margin-top: 10px; }
 h2 { font-size: 14px; }
 h3 { font-size: 12px; }
 
-
 a{ color: #F37121; text-decoration: underline; }
 a:link{ color: #F37121; text-decoration: underline; }
 a:visited{ color: #F37121; text-decoration: underline; }
@@ -30,49 +28,67 @@ hr { height:1px; color: #DFDFDF; background: #DFDFDF; border: none;}
 /***********************************************/
 
 #wrap { 
-width: 1000px;
-	margin: 0 auto;
-	text-align:left;
-	position: relative;
+width: 1360px;
+margin: 0 auto;
+text-align:left;
+position: relative;
  }
  
-#head {
-width:1000px;
+ #head {
+width:350px;
 height:130px;
-margin: 4px 0px 0px 0px;
+margin: 0px 0px 0px 0px;
 padding: 0px;
-background-image: url(images/head_back.png); background-repeat: no-repeat;
- }
+background-image: url(images/head_back_sm.png); background-repeat: no-repeat;
+}
  
 #left {
 float: left;
 clear: none;
 width: 350px;
-height: 350px;
 text-align: left;
-border: 1px solid #DFDFDF;
  }
  
 #right {
-float: right;
-width: 640px;
-height: 350px;
-text-align: left;
-}
-
-#footer {
 width: 1000px;
-float: left;
-clear: both;
-margin: 10px 0px 0px 0px;
+float: right;
+margin: 5px 0px 0px 0px;
 border: 1px solid #DFDFDF;
 background-color: #EEE;
-height: 280px;
 }
 
 /***********************************************/
+
 /* Container Divs                                 */
+
 /***********************************************/
+
+#location_box {
+	display: none;
+	float: right;
+	clear: none;
+	width: 200px;
+	text-align: right;
+	height: 20px;
+	font-size: 10px;
+	color: #CCC;
+}
+
+#little_box {
+	border: 1px solid #5FACEF;
+	background: #5FACEF;
+	display: none;
+	position: relative;
+	font-size: 6px;
+}
+
+#grid_image {
+	width: 350px;
+	height: 350px;
+	margin: 0px;
+	padding: 0px;
+	cursor:crosshair;
+}
 
 #menu {
 width: 280px;
@@ -86,14 +102,13 @@ overflow: auto;
 }
 
 #goto {
-width: 630px;
+width: 350px;
 float: left;
 background-color: #FFF;
 padding: 2px;
 height: 40px;
 border-bottom: 1px solid #DFDFDF;
 }
-
 
 .blocks { 
 height: 30px;
@@ -103,12 +118,32 @@ border-bottom: 1px solid #A5A5A5; }
 width: 280px;
 float: left; }
 
-#rightbody {
+#stuff {
 width: 320px;
 float: right;
 }
 
 #image_caption {
-	padding-left: 5px;
-	margin-top: 5px;
+padding-left: 5px;
+margin-top: 5px;
+}
+
+.twoby {
+width: 495px;
+height: 495px;
+display: block;
+float: left;
+clear: right;
+padding-right: 5px;
+padding-bottom: 5px;
+}
+
+.fourby {
+width: 245px;
+height: 245px;
+display: block;
+float: left;
+clear: right;
+padding-right: 5px;
+padding-bottom: 5px;
 }
