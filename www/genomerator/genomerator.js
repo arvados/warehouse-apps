@@ -221,8 +221,8 @@ function display_elements(e) {
 	var grid	= document.getElementById("grid_image");
 	var left	= document.getElementById("left");
 
-	var offset_y	= Number(wrapper.offsetTop) + Number(left.offsetTop);
-	var offset_x	= wrapper.offsetLeft + left.offsetLeft;
+	var offset_y	= Number(wrapper.offsetTop) + Number(grid.offsetTop) + Number(left.offsetTop);
+	var offset_x	= wrapper.offsetLeft + grid.offsetLeft + left.offsetLeft;
 	
 	
 	var regex	= /Safari/;
