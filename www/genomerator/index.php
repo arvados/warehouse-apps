@@ -24,46 +24,6 @@ else
 
 
 <script language="javascript" type="text/javascript" src="genomerator.js"></script>
-<style>
-#location_box {
-	display: none;
-	float: right;
-	clear: none;
-	width: 200px;
-	text-align: right;
-	height: 20px;
-	font-size: 10px;
-	color: #CCC;
-}
-
-#little_box {
-	border: 1px solid #5FACEF;
-	background: #5FACEF;
-	display: none;
-	position: relative;
-	font-size: 6px;
-}
-
-#grid_image {
-	width: 350px;
-	height: 350px;
-	margin: 0px;
-	padding: 0px;
-	cursor:crosshair;
-}
-
-#footer {
-	height: 1000px;
-}
-
-
-#left { width: 350px; }
-#right { float: left; clear: left; width: 350px; }
-#goto { width: 340px; }
-#footer { float: right; clear: none; }
-#head { width:350px; }
-#wrap { width:1360px; }
-</style>
 </head>
 
 <body onload="load_grid_image('/framegrid.cgi?dsid=<?=$dsid?>;gridw=50;gridh=50;imagew=350;imageh=350;format=png'); load_frame_data('<?=$dsid?>'); load_cycle_list('<?=$dsid?>');">
