@@ -64,5 +64,9 @@ if ($fh)
 }
 if (!close STDIN)
 {
-  die "mr-$ENV{MR_FUNCTION} failed: $!";
+  die "mr-$ENV{MR_FUNCTION} failed to close stdin: $!";
+}
+if (!close STDERR)
+{
+  die "mr-$ENV{MR_FUNCTION} failed to close stderr: $!";
 }
