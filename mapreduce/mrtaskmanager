@@ -55,13 +55,6 @@ while (read STDIN, $buf, 65536)
   }
   print $fh $buf;
 }
-if ($fh)
-{
-  if (!close $fh)
-  {
-    die "MogileFS write failed: $!";
-  }
-}
 if (!close STDIN)
 {
   die "mr-$ENV{MR_FUNCTION} failed to close stdin: $!";
@@ -69,6 +62,13 @@ if (!close STDIN)
 if (!close STDOUT)
 {
   die "mr-$ENV{MR_FUNCTION} failed to close stdout: $!";
+}
+if ($fh)
+{
+  if (!close $fh)
+  {
+    die "MogileFS write failed: $!";
+  }
 }
 if (!close STDERR)
 {
