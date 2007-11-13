@@ -66,6 +66,10 @@ if (!close STDIN)
 {
   die "mr-$ENV{MR_FUNCTION} failed to close stdin: $!";
 }
+if (!close STDOUT)
+{
+  die "mr-$ENV{MR_FUNCTION} failed to close stdout: $!";
+}
 if (!close STDERR)
 {
   die "mr-$ENV{MR_FUNCTION} failed to close stderr: $!";
