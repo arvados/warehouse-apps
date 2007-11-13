@@ -33,8 +33,7 @@ while (read STDIN, $buf, 65536)
 	     hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
 	};
       $fh = eval {
-	$mogc->new_file ("mrjobstep/$ENV{MR_JOB_ID}/$ENV{MR_ID}",
-			 $ENV{MOGILEFS_CLASS});
+          $mogc->new_file ($ENV{MR_OUTPUTKEY}, $ENV{MOGILEFS_CLASS});
       };
       last if $fh;
       sleep 1;
@@ -47,6 +46,10 @@ if ($fh)
 {
   if (!close $fh)
   {
-    die "MogileFS write failure";
+    die "MogileFS write failed: $!";
   }
 }
+if (!close STDIN) 
+{ 
+    die "mr-$ENV{MR_FUNCTION} failed: $!"; 
+} 
