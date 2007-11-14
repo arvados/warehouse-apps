@@ -4,7 +4,7 @@ sub readfrom
 {
     my $watcher = open (shift @_, "-|");
     return 0 if !defined $watcher;
-    return 1 if $watcher == 0;
+    return 1 if $watcher;
 
     my @caller = caller;
     my @children;
