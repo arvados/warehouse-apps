@@ -2,7 +2,9 @@ package Safepipe;
 
 sub readfrom
 {
-    open (shift @_, "-|") && return;
+    my $watcher = open (shift @_, "-|");
+    return 0 if !defined $watcher;
+    return 1 if $watcher == 0;
 
     my @caller = caller;
     my @children;
