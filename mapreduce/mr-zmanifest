@@ -3,6 +3,8 @@
 ###MR_DESCRIPTION:gzipped files
 ###MR_INPUT:jobs
 
+use Safepipe;
+
 if ($ENV{MR_LEVEL} == 0)
 {
   # init
@@ -19,15 +21,14 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   # map
-  open (STDIN, "mrtask-streaminputkeys "
-	. "| mrtask-streaminput "
-	. "| zcat "
-	. "| md5sum |")
+  Safepipe::readfrom (STDIN, "mrtask-streaminputkeys",
+		      "mrtask-streaminput",
+		      "zcat",
+		      "md5sum")
       or die "Input pipe failed: $!";
   while (defined ($_ = <STDIN>))
   {
     print "$ENV{MR_INPUT} $_";
   }
   close STDIN or die "Input stream exited $?";
-
 }
