@@ -7,7 +7,7 @@
 ###MR_KNOBS:OBJECTTHRESHOLD=7000
 ###MR_KNOBS:GZIP=no
 
-use Safepine; 
+use Safepipe; 
 
 if ($ENV{MR_LEVEL} == 0)
 {
