@@ -7,6 +7,8 @@
 ###MR_KNOBS:OBJECTTHRESHOLD=7000
 ###MR_KNOBS:GZIP=no
 
+use Safepine; 
+
 if ($ENV{MR_LEVEL} == 0)
 {
   # init
@@ -40,12 +42,12 @@ elsif ($ENV{MR_LEVEL} == 1)
     open (STDOUT, "|gzip") or die "Can't open output filter: $!";
   }
 
-  #this should be in (numerical) frame order (!?!)
-  open (STDIN, "mrtask-streaminputkeys "
-	. "| mrtask-streaminput "
-	. "| zcat "
-	. "| perl -S find_objects-register_raw_pipe.pl |")
-      or die "Input pipe failed: $!";
+  Safepipe::readfrom (STDIN, "mrtask-streaminputkeys ",
+	"mrtask-streaminput ",
+	"zcat ",
+	"perl -S find_objects-register_raw_pipe.pl")
+      or die "Input pipe failed: $!";  
+
   while (defined ($_ = <STDIN>))
   {
     print "$_";
