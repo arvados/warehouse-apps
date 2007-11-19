@@ -345,7 +345,7 @@ while (%proc_job)
     {
       # enough jobsteps have succeeded that $time_slowest_success might
       # be meaningful
-      if (@taskslot >= keys %proc_job * 2)
+      if (@taskslot >= 2 * keys %proc_job)
       {
 	# at least half of our task slots (cpus) are idle
 	for (grep { $proc_time{$_} + $time_slowest_success * 2 < time }
