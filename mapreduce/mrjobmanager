@@ -122,6 +122,7 @@ Log ($dbh, $job_id, undef, "start");
 $SIG{'INT'} = \&croak;
 $SIG{'QUIT'} = \&croak;
 $SIG{'TERM'} = \&croak;
+my $time_slowest_success = 60;	# always reasonable to allow this long
 
 
 
@@ -155,6 +156,7 @@ Log ($dbh, $job_id, undef, "process jobsteps");
 
 my %proc_job;
 my %proc_slot;
+my %proc_time;
 my @freeslot = (0..$#taskslot);
 my %job_stderr;
 my %reader;
@@ -220,6 +222,7 @@ while (($id, $input, $attempts) = $sth->fetchrow)
   }
   shift @freeslot;
   $proc_job{$childpid} = $id;
+  $proc_time{$childpid} = time;
   $proc_slot{$childpid} = $childslot;
   # assert (!exists $taskslot[$childslot]->{pid});
   $taskslot[$childslot]->{pid} = $childpid;
@@ -249,9 +252,19 @@ while (($id, $input, $attempts) = $sth->fetchrow)
     my $pid = waitpid (-1, WNOHANG);
     if ($pid > 0) {
       $gotsome = 1;
-      Log ($dbh, $job_id, $proc_job{$pid}, "child $pid exit $?");
-      if ($?) { ++$tasks_failed; }
-      else { ++$tasks_succeeded; }
+      my $whatslot = ($taskslot[$proc_slot{$pid}]->{node}
+		      . "."
+		      . $taskslot[$proc_slot{$pid}]->{cpu});
+      Log ($dbh, $job_id, $proc_job{$pid}, "child $pid on $whatslot exit $?");
+      if ($?) {
+	++$tasks_failed;
+      }
+      else {
+	++$tasks_succeeded;
+	my $elapsed = time - $proc_time{$pid};
+	$time_slowest_success = $elapsed
+	    if $time_slowest_success < $elapsed;
+      }
       my $finish_sth = $dbh->prepare ("update mrjobstep set
                                        finishtime=now(),
                                        exitcode=?,
@@ -265,6 +278,7 @@ while (($id, $input, $attempts) = $sth->fetchrow)
       delete $reader{$proc_job{$pid}};
       delete $job_stderr{$proc_job{$pid}};
       delete $proc_job{$pid};
+      delete $proc_time{$pid};
       delete $taskslot[$proc_slot{$pid}]->{pid};
       push @freeslot, $proc_slot{$pid};
       delete $proc_slot{$pid};
@@ -292,9 +306,19 @@ while (%proc_job)
   my $pid = waitpid (-1, WNOHANG);
   if ($pid > 0) {
     $gotsome = 1;
-    Log ($dbh, $job_id, $proc_job{$pid}, "child $pid exit $?");
-    if ($?) { ++$tasks_failed; }
-    else { ++$tasks_succeeded; }
+    my $whatslot = ($taskslot[$proc_slot{$pid}]->{node}
+		    . "."
+		    . $taskslot[$proc_slot{$pid}]->{cpu});
+    Log ($dbh, $job_id, $proc_job{$pid}, "child $pid on $whatslot exit $?");
+    if ($?) {
+      ++$tasks_failed;
+    }
+    else {
+      ++$tasks_succeeded;
+      my $elapsed = time - $proc_time{$pid};
+      $time_slowest_success = $elapsed
+	  if $time_slowest_success < $elapsed;
+    }
     my $finish_sth = $dbh->prepare ("update mrjobstep set
                                      finishtime=now(),
                                      exitcode=?,
@@ -307,14 +331,44 @@ while (%proc_job)
     close $reader{$proc_job{$pid}};
     delete $reader{$proc_job{$pid}};
     delete $job_stderr{$proc_job{$pid}};
+    delete $proc_job{$pid};
+    delete $proc_time{$pid};
     delete $taskslot[$proc_slot{$pid}]->{pid};
     push @freeslot, $proc_slot{$pid};
     delete $proc_slot{$pid};
-    delete $proc_job{$pid};
   }
 
-  select (undef, undef, undef, 0.1) if !$gotsome;
+  if (!$gotsome)
+  {
+    # nothing better to do
+    if ($tasks_succeeded > keys %proc_job)
+    {
+      # enough jobsteps have succeeded that $time_slowest_success might
+      # be meaningful
+      if (@taskslot >= keys %proc_job * 2)
+      {
+	# at least half of our task slots (cpus) are idle
+	for (grep { $proc_time{$_} + $time_slowest_success * 2 < time }
+	    keys %proc_time)
+	{
+	  # pid $_ has taken more than twice as long as the longest
+	  # successful job in this round.  It's probably hung.  Kill
+	  # it, and restart it in the next round.
+
+	  Log ($dbh, $job_id, $proc_job{$_}, "sending SIGINT x 2 to pid $_");
+	  kill 2, $_;
+	  select (undef, undef, undef, 0.1);
+	  kill 2, $_;
+	}
+      }
+    }
+    select (undef, undef, undef, 0.1);
+  }
 }
+
+# this should ensure that we terminate even if some jobs really
+# do take many times longer
+$time_slowest_success = $time_slowest_success * 2;
 
 if ($tasks_succeeded > 0 || ($tasks_failed > 0 && $tasks_failed < 5))
 {
