@@ -34,7 +34,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   while (2000000 == read (STDIN, $_, 2000000))
   {
     $bytesread += 2000000; 
-    $gz->gzwrite ($segment) or die "error writing: $gzerrno\n";
+    $gz->gzwrite ($_) or die "error writing: $gzerrno\n";
   }
   if ($bytesread) { 
   	warn "read $bytesread bytes\n"; 
