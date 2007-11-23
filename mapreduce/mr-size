@@ -23,7 +23,6 @@ elsif ($ENV{MR_LEVEL} == 1)
   # map
   Safepipe::readfrom (STDIN, "mrtask-streaminputkeys",
 		      "mrtask-streaminput",
-		      "zcat",
 		      "wc -c")
       or die "Input pipe failed: $!";
   while (defined ($_ = <STDIN>))
