@@ -100,8 +100,8 @@ while (!$main::DRAIN || $main::children > 0)
 	$job_nodes =~ s/\s+/,/g;
 	@nodes_arg = ("--nodelist", $job_nodes);
       }
-      debuglog ("salloc --immediate --exclusive @nodes_arg mrjobmanager $job_id");
-      exec ("salloc", "--immediate", "--exclusive", @nodes_arg, "mrjobmanager", $job_id);
+      debuglog ("salloc --immediate --exclusive --job-name=mr$job_id @nodes_arg mrjobmanager $job_id");
+      exec ("salloc", "--immediate", "--exclusive", "--job-name=mr$job_id", @nodes_arg, "mrjobmanager", $job_id);
       exit (1);
     }
   }
