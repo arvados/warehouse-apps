@@ -5,6 +5,7 @@ program_source		= register-raw-translate.c
 
 libraries		= -lm
 
+CLFAGS=-O3 -foptimize-sibling-calls -fno-branch-count-reg
 
 include $(srcroot)/build-tools/makefiles/programs.mk
 
