@@ -1,11 +1,7 @@
 #!/usr/bin/perl
 
-###MR_DESCRIPTION:gzipped stacks of segmented images -> aligned stacks of segmented images
+###MR_DESCRIPTION:gzipped data -> decompressed -> recompressed
 ###MR_INPUT:jobs
-###MR_KNOBS:FOCUSPIXELS=20000
-###MR_KNOBS:ALIGNWINDOW=15
-###MR_KNOBS:OBJECTTHRESHOLD=7000
-###MR_KNOBS:GZIP=no
 
 use Safepipe; 
 
