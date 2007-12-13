@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+###MR_DESCRIPTION:gzipped data -> decompressed 
+###MR_INPUT:jobs
+
+use Safepipe; 
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # init
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
+  open STDIN, "mrtask-streaminputkeys |" or die "Input pipe failed: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    chomp;
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # map
+  Safepipe::readfrom (STDIN, "mrtask-streaminputkeys ",
+	"mrtask-streaminput ",
+	"zcat ")
+      or die "Input pipe failed: $!";  
+
+  while (defined ($_ = <STDIN>))
+  {
+    print "$_";
+  }
+  close STDIN or die "Input stream exited $?";
+}
