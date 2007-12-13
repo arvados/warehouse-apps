@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+
+###MR_DESCRIPTION:gzipped stacks of segmented images -> aligned stacks of segmented images
+###MR_INPUT:jobs
+###MR_KNOBS:FOCUSPIXELS=20000
+###MR_KNOBS:ALIGNWINDOW=15
+###MR_KNOBS:OBJECTTHRESHOLD=7000
+###MR_KNOBS:GZIP=no
+
+use Safepipe; 
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # init
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
+  open STDIN, "mrtask-streaminputkeys |" or die "Input pipe failed: $!";
+  while (defined ($_ = <STDIN>))
+  {
+    chomp;
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+  close STDIN or die "Input stream exited $?";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # map
+  open (STDOUT, "|gzip") or die "Can't open output filter: $!";
+
+  Safepipe::readfrom (STDIN, "mrtask-streaminputkeys ",
+	"mrtask-streaminput ",
+	"zcat ")
+      or die "Input pipe failed: $!";  
+
+  while (defined ($_ = <STDIN>))
+  {
+    print "$_";
+  }
+  close STDIN or die "Input stream exited $?";
+  close STDOUT or die "Output filter exited $?";
+}
