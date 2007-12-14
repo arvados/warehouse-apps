@@ -54,7 +54,7 @@ if ($ENV{MR_LEVEL} == 0)
 
   foreach (1..$nframes)
   {
-    print STDERR "+++mr_jobstep 1 $key $_+++\n";
+    print STDERR "+++mrjobstep 1 $key $_+++\n";
   }
 }
 
