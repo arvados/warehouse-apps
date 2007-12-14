@@ -431,14 +431,21 @@ my $key = $whc->write_finish;
 
 
 
-Log ($dbh, $job_id, undef, "key is $key");
+if ($key)
+{
+    Log ($dbh, $job_id, undef, "output key is $key");
 
-$dbh->do ("update mrjob set output=? where id=?", undef,
-	  $key, $job_id)
-    or croak ($dbh->errstr);
+    $dbh->do ("update mrjob set output=? where id=?", undef,
+	      $key, $job_id)
+	or croak ($dbh->errstr);
 
-$whc->store_manifest_by_name ($key, undef, "/job$job_id")
-    or croak ($whc->errstr);
+    $whc->store_manifest_by_name ($key, undef, "/job$job_id")
+	or croak ($whc->errstr);
+}
+else
+{
+    Log ($dbh, $job_id, undef, "no output key");
+}
 
 
 
