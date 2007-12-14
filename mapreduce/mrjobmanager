@@ -425,7 +425,7 @@ $dbh->do ("update mrjob set output=? where id=?", undef,
 	  $key, $job_id)
     or croak ($dbh->errstr);
 
-$whc->store_manifest_name ($key, undef, "/job/$job_id")
+$whc->store_manifest_name ($key, undef, "/job$job_id")
     or croak ($whc->errstr);
 
 
