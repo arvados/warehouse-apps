@@ -24,13 +24,14 @@ if ($ENV{MR_LEVEL} == 0)
 
   # figure out how many frames there are
 
-  my $nframes = 0;
+  my $nframes;
   my $nframes_max = 0;
   $manifest->rewind;
   while (my $stream = $manifest->subdir_next)
   {
     next unless $stream->name =~ m,^\./IMAGES/RAW/([^/]+)$,;
 
+    $nframes = 0;
     my $cyclename_is_numeric = $1 =~ /^\d+$/;
     $stream->rewind;
 
@@ -52,7 +53,7 @@ if ($ENV{MR_LEVEL} == 0)
     $nframes_max = $nframes if $nframes_max < $nframes;
   }
 
-  foreach (1..$nframes)
+  foreach (1..$nframes_max)
   {
     print STDERR "+++mrjobstep 1 $key $_+++\n";
   }
