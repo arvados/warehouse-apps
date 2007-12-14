@@ -153,6 +153,7 @@ create table if not exists mrjob (
  finishtime datetime,
  jobmanager_id bigint,
  success tinyint,
+ output text,
  unique(global_id)
 )
   },
@@ -167,6 +168,7 @@ create table if not exists mrjobstep (
  finishtime datetime,
  node varchar(63),
  exitcode int,
+ output text,
  stderr text,
  attempts int not null default 0,
  index(jobid)
