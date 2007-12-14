@@ -1,0 +1,109 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:one stream per cycle -> one stream per frame
+###MR_INPUT:manifest
+
+use Warehouse;
+use Warehouse::Manifest;
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # get manifest
+
+  my $key = $ENV{MR_INPUT0};
+  if ($key !~ /^[0-9a-f]{32}(,[0-9a-f]{32})*$/)
+  {
+    $key = $whc->fetch_manifest_key_by_name ($key)
+	or die $whc->errstr;
+  }
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $key);
+
+  # figure out how many frames there are
+
+  my $nframes = 0;
+  my $nframes_max = 0;
+  $manifest->rewind;
+  while (my $stream = $manifest->subdir_next)
+  {
+    next unless $stream->name =~ m,^\./IMAGES/RAW/([^/]+)$,;
+
+    my $cyclename_is_numeric = $1 =~ /^\d+$/;
+    $stream->rewind;
+
+    while (my ($pos, $size, $filename) = $stream->file_next)
+    {
+      last if !defined $pos;
+
+      if ($filename =~ /^(SC|WL)_(\d{4})\.(tif|raw)(\.g?z)?$/i)
+      {
+	my $frameno = $2;
+	if ($1 eq "SC" && !$cyclename_is_numeric)
+	{
+	  $frameno = 1 + (($frameno - 1) >> 2);
+	}
+	$nframes = $frameno if $nframes < $frameno;
+      }
+    }
+    last if $nframes == $nframes_max && $nframes > 0;
+    $nframes_max = $nframes if $nframes_max < $nframes;
+  }
+
+  foreach (1..$nframes)
+  {
+    print STDERR "+++mr_jobstep 1 $key $_+++\n";
+  }
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my ($key, $myframeno) = split (" ", $ENV{MR_INPUT});
+  my $framestream = new Warehouse::Stream (whc => $whc);
+  $framestream->name ("./frame/".$myframeno);
+  $framestream->clear;
+
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $key);
+  $manifest->rewind;
+  while (my $stream = $manifest->subdir_next)
+  {
+    $stream->name =~ m,^\./IMAGES/RAW/([^/]+)$, or next;
+
+    my $last_imageno = -1;
+    my $cycle = $1;
+    my $cyclename_is_numeric = $cycle =~ /^\d+$/;
+    while (my ($pos, $size, $filename) = $stream->file_next)
+    {
+      last if !defined $pos;
+
+      if ($filename =~ /^(SC|WL)_(\d{4})\.(tif|raw)(\.g?z)?$/i)
+      {
+	my $imageno = $2;
+	next unless $imageno > $last_imageno;
+
+	my $thisframeno = $imageno;
+	if ($1 eq "SC" && !$cyclename_is_numeric)
+	{
+	  $thisframeno = 1 + (($imageno - 1) >> 2);
+	}
+	last if $thisframeno > $myframeno;
+	next if $thisframeno < $myframeno;
+
+	$stream->seek ($pos);
+	$framestream->write_start ($cycle.",".$filename);
+	while (my $dataref = $stream->read_until ($size+$pos))
+	{
+	  $framestream->write_data ($dataref);
+	}
+	$framestream->write_finish;
+      }
+    }
+  }
+  my $fragkey = $whc->store_block ($framestream->as_string)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout ".$fragkey."+++\n";
+  print STDERR $whc->iostats;
+}
