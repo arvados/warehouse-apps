@@ -411,7 +411,7 @@ $sth = $dbh->prepare ("select output from mrjobstep
                        where jobid=? and level=?
 		       order by id");
 $sth->execute ($job_id, $maxlevel) or croak ($dbh->errstr);
-while (($output) = $sth->fetchrow)
+while (my ($output) = $sth->fetchrow)
 {
   $whc->write_data ($whc->fetch_block ($output) or die "fetch_block failed");
 }
