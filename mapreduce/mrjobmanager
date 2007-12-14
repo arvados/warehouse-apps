@@ -397,6 +397,10 @@ elsif ($tasks_failed > 0)
 
 
 
+my $success = 1;
+
+
+
 Log ($dbh, $job_id, undef, "reduce");
 
 my $whc = new Warehouse or die "failed to create Warehouse client";
@@ -408,12 +412,20 @@ my ($maxlevel) = $sth->fetchrow;
 
 $whc->write_start (1);
 $sth = $dbh->prepare ("select output from mrjobstep
-                       where jobid=? and level=?
+                       where jobid=? and level=? and output is not null
 		       order by id");
 $sth->execute ($job_id, $maxlevel) or croak ($dbh->errstr);
 while (my ($output) = $sth->fetchrow)
 {
-  $whc->write_data ($whc->fetch_block ($output) or die "fetch_block failed");
+  if (my $outblock = $whc->fetch_block ($output))
+  {
+    $whc->write_data ($outblock);
+  }
+  else
+  {
+    $whc->write_data ("XXX fetch_block($output) failed XXX\n");
+    $success = 0;
+  }
 }
 my $key = $whc->write_finish;
 
@@ -432,9 +444,9 @@ $whc->store_manifest_name ($key, undef, "/job$job_id")
 
 Log ($dbh, $job_id, undef, "finish");
 
-$sth = $dbh->prepare ("update mrjob set finishtime=now(), success=1
+$sth = $dbh->prepare ("update mrjob set finishtime=now(), success=?
                        where id=? and jobmanager_id=?");
-$sth->execute ($job_id, $jobmanager_id) or croak ($dbh->errstr);
+$sth->execute ($success, $job_id, $jobmanager_id) or croak ($dbh->errstr);
 
 exit 0;
 
