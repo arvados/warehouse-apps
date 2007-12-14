@@ -26,6 +26,10 @@ $SIG{'HUP'} = sub
 	." children to finish\n");
   $main::DRAIN = 1;
 };
+$SIG{'USR1'} = sub
+{
+  $main::ENV{MR_DEBUG} = !$main::ENV{MR_DEBUG};
+};
 
 
 
