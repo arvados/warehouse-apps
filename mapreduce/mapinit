@@ -28,7 +28,11 @@ $SIG{'HUP'} = sub
 };
 $SIG{'USR1'} = sub
 {
-  $main::ENV{MR_DEBUG} = !$main::ENV{MR_DEBUG};
+  $main::ENV{MR_DEBUG} = 1;
+};
+$SIG{'USR2'} = sub
+{
+  $main::ENV{MR_DEBUG} = 0;
 };
 
 
