@@ -210,7 +210,7 @@ while (($id, $input, $attempts) = $sth->fetchrow)
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
-    my $execstr = "srun --nodelist='$childnode' -n1 -c1 -N1 -D /tmp sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/src/mapreduce/mrtaskmanager'";
+    my $execstr = "srun --nodelist='$childnode' -n1 -c1 -N1 -D /tmp --job-name='mr$job_id.$id' sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/src/mapreduce/mrtaskmanager'";
     print STDERR ("$execstr\n") if $ENV{MR_DEBUG};
     exec($execstr);
     exit(1);
