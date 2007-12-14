@@ -437,7 +437,7 @@ $dbh->do ("update mrjob set output=? where id=?", undef,
 	  $key, $job_id)
     or croak ($dbh->errstr);
 
-$whc->store_manifest_name ($key, undef, "/job$job_id")
+$whc->store_manifest_by_name ($key, undef, "/job$job_id")
     or croak ($whc->errstr);
 
 
@@ -446,7 +446,8 @@ Log ($dbh, $job_id, undef, "finish");
 
 $sth = $dbh->prepare ("update mrjob set finishtime=now(), success=?
                        where id=? and jobmanager_id=?");
-$sth->execute ($success, $job_id, $jobmanager_id) or croak ($dbh->errstr);
+$sth->execute ($success, $job_id, $jobmanager_id)
+    or croak ($dbh->errstr);
 
 exit 0;
 
