@@ -14,7 +14,17 @@ use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 use Warehouse;
 
 do '/etc/polony-tools/config.pl';
-my $max_nprocs = 64;
+
+
+
+$SIG{'USR1'} = sub
+{
+  $main::ENV{MR_DEBUG} = 1;
+};
+$SIG{'USR2'} = sub
+{
+  $main::ENV{MR_DEBUG} = 0;
+};
 
 
 
