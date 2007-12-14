@@ -2,6 +2,7 @@
 
 use strict;
 use DBI;
+use Warehouse;
 
 my $Qrevision = escapeHTML($q->param('revision'));
 my $Qmrfunction = escapeHTML($q->param('mrfunction'));
@@ -21,7 +22,7 @@ Revision: $Qrevision<br>
 Map/reduce function: $Qmrfunction<br>
 <input type=hidden name=nodelist value="$Qnodelist">
 Nodes: $Qnodelist<br>
-Jobs:<br>
+Input manifest:<br>
 };
 
 my $whc = new Warehouse;
