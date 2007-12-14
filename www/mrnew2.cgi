@@ -22,6 +22,11 @@ if ($mrparam{'MR_INPUT'} eq 'jobs')
   eval `cat mrnew2-jobs.cgi` or die "$!";
   exit;
 }
+if ($mrparam{'MR_INPUT'} eq 'manifest')
+{
+  eval `cat mrnew2-manifest.cgi` or die "$!";
+  exit;
+}
 
 print qq{
 <html>
