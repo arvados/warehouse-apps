@@ -70,7 +70,7 @@ while (my @row = $sth->fetchrow)
     s/.*/<a href=\"whget.cgi\/$&\">$&<\/a>/
 	if defined;
   }
-  push @row, "<a href=\"mrlog.cgi?id=$row[0]\">log</a>";
+  push @row, "<a href=\"mrlog.cgi?id=$jobid\">log</a>";
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
   print "</tr>\n";
