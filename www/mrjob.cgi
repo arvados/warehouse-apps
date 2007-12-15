@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+# -*- mode: perl; perl-indent-level: 2; -*-
+
 use strict;
 use DBI;
 use CGI ':standard';
@@ -46,7 +48,8 @@ my $sth = $dbh->prepare("
       mrjob.finishtime,
       unix_timestamp(mrjob.finishtime)-unix_timestamp(mrjob.starttime),
       count(mrjobstep.id),
-      mrjob.success
+      mrjob.success,
+      mrjob.output
     from mrjob
     left join mrjobstep on mrjob.id=mrjobstep.jobid
     where mrjob.id=?
@@ -67,9 +70,10 @@ while (my @row = $sth->fetchrow)
   for (@row) { $_ = escapeHTML($_); }
   for ($row[5]) { s/,/, /g; }
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
-  if ($row[-1])
+  for ($row[12])
   {
-    push @row, "<a href=\"get.php?format=text&domain=images&dkey=mrjob/$jobid\">view</a>";
+    s/.*/<a href=\"whget.cgi\/$&\">$&<\/a>/
+	if defined;
   }
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
