@@ -40,7 +40,8 @@ my $sth = $dbh->prepare("
       mrjob.finishtime,
       unix_timestamp(mrjob.finishtime)-unix_timestamp(mrjob.starttime),
       count(mrjobstep.id),
-      mrjob.success
+      mrjob.success,
+      mrjob.output
     from mrjob
     left join mrjobstep on mrjob.id=mrjobstep.jobid and ((mrjobstep.finishtime is null) = (mrjob.finishtime is null))
     group by mrjob.id
@@ -52,7 +53,7 @@ print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Done/-ToDo Success OutputSize));
+print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Done/-ToDo Success Output Log));
 print q{
 </tr>
 };
@@ -64,6 +65,12 @@ while (my @row = $sth->fetchrow)
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
   $row[10] = 0-$row[10] if !defined $row[8];
   $row[0] = "<a href=\"mrjob.cgi?id=$row[0]\">$row[0]</a>";
+  for ($row[12])
+  {
+    s/.*/<a href=\"whget.cgi\/$&\">$&<\/a>/
+	if defined;
+  }
+  push @row, "<a href=\"mrlog.cgi?id=$row[0]\">log</a>";
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
   print "</tr>\n";
