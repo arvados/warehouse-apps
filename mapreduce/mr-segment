@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-###MR_DESCRIPTION:(frame ID, cycles) -> gzipped stack of segmented raw images
-###MR_INPUT:frames
+###MR_DESCRIPTION:stacks of [compressed] images -> stacks of raw segmented images
+###MR_INPUT:manifest
 ###MR_KNOBS:GZIP=yes
 
 use strict; 
@@ -62,12 +62,12 @@ elsif ($ENV{MR_LEVEL} == 1)
 	       size => '1000x1000',
 	       endian => 'lsb');
 	}
-	elsif ($filename =~ /\.tiff?$/i)
+	elsif ($filename =~ s/\.tiff?$/.raw/i)
 	{
 	  $mask = Image::Magick->new
 	      (magick => 'tif');
 	}
-	elsif ($filename =~ /\.jpe?g$/i)
+	elsif ($filename =~ s/\.jpe?g$/.raw/i)
 	{
 	  $mask = Image::Magick->new
 	      (magick => 'jpg');
