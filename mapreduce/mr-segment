@@ -50,7 +50,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	if ($filename =~ s/\.g?z$//i)
 	{
 	  my $zblob = $inblob;
-	  gunzip \$zblob => $inblob
+	  undef $inblob;
+	  gunzip \$zblob => \$inblob
 	      or die $GunzipError;
 	}
 
@@ -72,6 +73,12 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  $mask = Image::Magick->new
 	      (magick => 'jpg');
 	}
+	else
+	{
+	  die "Unsupported image type: $filename";
+	}
+
+	die "Failed to create image" if !$mask;
 
 	$mask->BlobToImage($inblob); 
 	my $image = $mask->Clone();
