@@ -7,7 +7,7 @@
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use IO::Compress:Gzip qw($GzipError);
+use IO::Compress::Gzip qw($GzipError);
 
 my $manifestkey = $ENV{MR_INPUT0};
 
