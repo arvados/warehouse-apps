@@ -35,6 +35,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
+	last if !defined $pos;
 	if ($filename =~ /\.g?z$/i) # already compressed, just copy
 	{
 	  $outstream->write_start ($filename);
