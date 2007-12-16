@@ -9,8 +9,8 @@ use Image::Magick;
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use IO::Compress::Gzip (gzip $GzipError);
-use IO::Uncompress::Gunzip (gunzip $GunzipError);
+use IO::Compress::Gzip qw(gzip $GzipError);
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 
 my $manifestkey = $ENV{MR_INPUT0};
 
