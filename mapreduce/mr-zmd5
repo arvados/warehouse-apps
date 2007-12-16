@@ -50,6 +50,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  {
 	    $zblob .= $$dataref;
 	  }
+	  my $inblob;
 	  gunzip \$zblob => \$inblob
 	      or die $GunzipError;
 	  $ctx->add ($inblob);
