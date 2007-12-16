@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
 
 use strict;
 use DBI;
@@ -68,13 +69,13 @@ while (my @row = $sth->fetchrow)
   $row[0] = "<a href=\"mrjob.cgi?id=$jobid\">$row[0]</a>";
   for ($row[12])
   {
-    s/.*/<a href=\"whget.cgi\/$&\">$&<\/a>/
+    $_ = "<a href=\"whget.cgi\/$_\">".substr($_,0,8)."<\/a>"
 	if defined;
   }
   my $input0 = pop @row;
   if ($input0 =~ /^[0-9a-f]{32}[,0-9a-f]*$/) {
     my $atag = "<a href=\"whget.cgi/$input0/\">";
-    $row[3] .= "($atag".substr($input0,0,12)."...</a>)";
+    $row[3] .= "($atag<code>".substr($input0,0,8)."</code></a>)";
   }
 
   push @row, "<a href=\"mrlog.cgi?id=$jobid\">log</a>";
