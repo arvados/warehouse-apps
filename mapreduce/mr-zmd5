@@ -7,7 +7,7 @@
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use IO::Uncompress::Gunzip qw(gunzip $GzipError);
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::MD5;
 
 my $manifestkey = $ENV{MR_INPUT0};
