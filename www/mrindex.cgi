@@ -26,7 +26,7 @@ my $sth = $dbh->prepare("select dmid from mogilefs.domain where namespace=?");
 $sth->execute ($main::mogilefs_default_domain) or die $dbh->errstr;
 my ($dmid) = $sth->fetchrow ();
 
-my $limit = ($q->param('showall') ? "" : "limit 10");
+my $limit = ($q->param('showall') ? "" : "limit 30");
 
 my $sth = $dbh->prepare("
     select mrjob.id,
