@@ -40,7 +40,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	last if !defined $pos;
 
-	my $blob = "";
+	my $inblob = "";
 	$instream->seek ($pos);
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
@@ -82,7 +82,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
 	$image->Composite(image=>$mask, compose=>'Multiply');
 
-	$outblob = $image->ImageToBlob
+	my $outblob = $image->ImageToBlob
 	    (magick => 'gray',
 	     endian => 'lsb',
 	     depth => 16);
