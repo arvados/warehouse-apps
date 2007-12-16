@@ -19,9 +19,9 @@ createtables ($dbh);
 
 
 $main::DRAIN = 0;
-$SIG{'HUP'} = sub
+$SIG{'TERM'} = sub
 {
-  warn ("$0 $$ SIGHUP, wait for "
+  warn ("$0 $$ SIGTERM, wait for "
 	. (0 + $main::children)
 	." children to finish\n");
   $main::DRAIN = 1;
