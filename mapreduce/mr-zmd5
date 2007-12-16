@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:uncompress any *.gz and output an md5.txt (md5 filename) for each subdir
+###MR_INPUT:manifest
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GzipError);
+use Digest::MD5;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  my $whc = new Warehouse;
+
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    if ($instream->name eq $wantsubdir)
+    {
+      my $outstream = new Warehouse::Stream (whc => $whc);
+      $outstream->name ($instream->name);
+      $outstream->clear;
+      $outstream->write_start ("md5.txt");
+
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos;
+
+	my $ctx = Digest::MD5->new;
+
+	$instream->seek ($pos);
+
+	if ($filename =~ s/\.g?z$//i)
+	{
+	  my $zblob = "";
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $zblob .= $$dataref;
+	  }
+	  gunzip \$zblob => \$inblob
+	      or die $GunzipError;
+	  $ctx->add ($inblob);
+	}
+	else
+	{
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $ctx->add ($$dataref);
+	  }
+	}
+	$outstream->write_data ($ctx->md5_hex . "  " . $filename . "\n");
+      }
+
+      $outstream->write_finish;
+
+      my $fragkey = $whc->store_block ($outstream->as_string)
+	  or die "store_block failed: ".$whc->errstr;
+      print STDERR "+++mrout ".$fragkey."+++\n";
+      print STDERR $whc->iostats;
+      exit 0;
+    }
+  }
+  die "Subdir not found: $wantsubdir";
+}
