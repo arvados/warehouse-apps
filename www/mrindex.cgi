@@ -65,11 +65,13 @@ while (my @row = $sth->fetchrow)
   for (@row) { $_ = escapeHTML($_); }
   for ($row[5]) { s/,/, /g; }
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
+  for ($row[8]) { s/.* /.../; }
+  for ($row[9]) { $_ = "<b>$_</b>"; }
   $row[10] = 0-$row[10] if !defined $row[8];
   $row[0] = "<a href=\"mrjob.cgi?id=$jobid\">$row[0]</a>";
   for ($row[12])
   {
-    $_ = "<a href=\"whget.cgi\/$_\">".substr($_,0,8)."<\/a>"
+    $_ = "<a href=\"whget.cgi\/$_\"><code>".substr($_,0,8)."</code><\/a>"
 	if defined;
   }
   my $input0 = pop @row;
