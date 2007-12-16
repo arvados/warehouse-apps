@@ -72,8 +72,9 @@ while (my @row = $sth->fetchrow)
 	if defined;
   }
   my $input0 = pop @row;
-  if ($input0 =~ /^[0-9a-f]{32}/) {
-    $row[3] .= "(".substr($input0,0,12)."...)";
+  if ($input0 =~ /^[0-9a-f]{32}[,0-9a-f]*$/) {
+    my $atag = "<a href=\"whget.cgi/$input0/\">";
+    $row[3] .= "($atag".substr($input0,0,12)."...</a>)";
   }
 
   push @row, "<a href=\"mrlog.cgi?id=$jobid\">log</a>";
