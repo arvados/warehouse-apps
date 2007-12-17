@@ -62,7 +62,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $ctx->add ($$dataref);
 	  }
 	}
-	$outstream->write_data ($ctx->md5_hex . "  " . $filename . "\n");
+	$outstream->write_data ($ctx->hexdigest . "  " . $filename . "\n");
       }
 
       $outstream->write_finish;
