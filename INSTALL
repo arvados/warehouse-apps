@@ -8,7 +8,10 @@ Install prerequisites:
 Install perl module prerequisites:
 
  perl -MCPAN -e 'install IO::Compress::Zlib'
+ perl -MCPAN -e 'install IO::Compress::Gzip'
+ perl -MCPAN -e 'install IO::Uncompress::Gunzip'
  perl -MCPAN -e 'install MogileFS::Client'
+ perl -MCPAN -e 'install Digest::MD5'
 
 Create /usr/local/polony-tools so that www-data can install stuff:
 
