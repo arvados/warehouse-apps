@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
 
 # mrjobmanager: initiate and supervise all map and reduce tasks for one job.
 #
@@ -259,47 +260,9 @@ while (($id, $input, $attempts) = $sth->fetchrow)
 
   while (!@freeslot)
   {
-    my $gotsome = readfrompipes (\%reader, \%proc_job, \%job_stderr, \%job_output);
-    
-    my $pid = waitpid (-1, WNOHANG);
-    if ($pid > 0) {
-      $gotsome = 1;
-      my $whatslot = ($taskslot[$proc_slot{$pid}]->{node}
-		      . "."
-		      . $taskslot[$proc_slot{$pid}]->{cpu});
-      my $jobstepid = $proc_job{$pid};
-      Log ($dbh, $job_id, $jobstepid, "child $pid on $whatslot exit $?");
-      if ($?) {
-	++$tasks_failed;
-      }
-      else {
-	++$tasks_succeeded;
-	my $elapsed = time - $proc_time{$pid};
-	$time_slowest_success = $elapsed
-	    if $time_slowest_success < $elapsed;
-      }
-      my $finish_sth = $dbh->prepare ("update mrjobstep set
-                                       finishtime=now(),
-                                       exitcode=?,
-				       output=?,
-                                       stderr=?
-                                       where id=? and jobid=?");
-      $finish_sth->execute ($?,
-			    $job_output{$jobstepid},
-			    $job_stderr{$jobstepid},
-			    $jobstepid,
-			    $job_id);
-      close $reader{$jobstepid};
-      delete $reader{$jobstepid};
-      delete $job_output{$jobstepid};
-      delete $job_stderr{$jobstepid};
-      delete $proc_job{$pid};
-      delete $proc_time{$pid};
-      delete $taskslot[$proc_slot{$pid}]->{pid};
-      push @freeslot, $proc_slot{$pid};
-      delete $proc_slot{$pid};
-    }
-
+    my $gotsome
+	= readfrompipes ()
+	+ reapchildren ();
     select (undef, undef, undef, 0.1) if !$gotsome;
   }
 
@@ -317,46 +280,9 @@ while (($id, $input, $attempts) = $sth->fetchrow)
 Log ($dbh, $job_id, undef, "wait for last ".(scalar keys %proc_job)." children to finish");
 while (%proc_job)
 {
-  my $gotsome = readfrompipes (\%reader, \%proc_job, \%job_stderr, \%job_output);
-
-  my $pid = waitpid (-1, WNOHANG);
-  if ($pid > 0) {
-    $gotsome = 1;
-    my $whatslot = ($taskslot[$proc_slot{$pid}]->{node}
-		    . "."
-		    . $taskslot[$proc_slot{$pid}]->{cpu});
-    my $jobstepid = $proc_job{$pid};
-    Log ($dbh, $job_id, $jobstepid, "child $pid on $whatslot exit $?");
-    if ($?) {
-      ++$tasks_failed;
-    }
-    else {
-      ++$tasks_succeeded;
-      my $elapsed = time - $proc_time{$pid};
-      $time_slowest_success = $elapsed
-	  if $time_slowest_success < $elapsed;
-    }
-    my $finish_sth = $dbh->prepare ("update mrjobstep set
-                                     finishtime=now(),
-                                     exitcode=?,
-                                     output=?,
-                                     stderr=?
-                                     where id=? and jobid=?");
-    $finish_sth->execute ($?,
-			  $job_output{$jobstepid},
-			  $job_stderr{$jobstepid},
-			  $jobstepid,
-			  $job_id);
-    close $reader{$jobstepid};
-    delete $reader{$jobstepid};
-    delete $job_output{$jobstepid};
-    delete $job_stderr{$jobstepid};
-    delete $proc_job{$pid};
-    delete $proc_time{$pid};
-    delete $taskslot[$proc_slot{$pid}]->{pid};
-    push @freeslot, $proc_slot{$pid};
-    delete $proc_slot{$pid};
-  }
+  my $gotsome
+      = readfrompipes ()
+      + reapchildren ();
 
   if (!$gotsome)
   {
@@ -470,20 +396,63 @@ exit 0;
 
 
 
+sub reapchildren
+{
+  my $pid = waitpid (-1, WNOHANG);
+  return 0 if $pid <= 0;
+
+  my $whatslot = ($taskslot[$proc_slot{$pid}]->{node}
+		  . "."
+		  . $taskslot[$proc_slot{$pid}]->{cpu});
+  my $jobstepid = $proc_job{$pid};
+  Log ($dbh, $job_id, $jobstepid, "child $pid on $whatslot exit $?");
+  if ($?) {
+    ++$tasks_failed;
+  }
+  else {
+    ++$tasks_succeeded;
+    my $elapsed = time - $proc_time{$pid};
+    $time_slowest_success = $elapsed
+	if $time_slowest_success < $elapsed;
+  }
+  my $finish_sth = $dbh->prepare
+      ("update mrjobstep set
+	finishtime=now(),
+	exitcode=?,
+	output=?,
+	stderr=?
+	where id=? and jobid=?");
+  $finish_sth->execute ($?,
+			$job_output{$jobstepid},
+			$job_stderr{$jobstepid},
+			$jobstepid,
+			$job_id);
+  close $reader{$jobstepid};
+  delete $reader{$jobstepid};
+  delete $job_output{$jobstepid};
+  delete $job_stderr{$jobstepid};
+  delete $proc_job{$pid};
+  delete $proc_time{$pid};
+  delete $taskslot[$proc_slot{$pid}]->{pid};
+  push @freeslot, $proc_slot{$pid};
+  delete $proc_slot{$pid};
+  1;
+}
+
+
 sub readfrompipes
 {
-  my ($reader, $proc_job, $job_stderr, $job_output) = @_;
   my $gotsome = 0;
-  foreach my $job (keys %$reader)
+  foreach my $job (keys %reader)
   {
     my $buf;
-    while (0 < sysread ($$reader{$job}, $buf, 1024))
+    while (0 < sysread ($reader{$job}, $buf, 1024))
     {
       $gotsome = 1;
-      $$job_stderr{$job} .= $buf;
+      $job_stderr{$job} .= $buf;
       print STDERR $buf if $ENV{MR_DEBUG};
 
-      while ($$job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
+      while ($job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
       {
 	my ($level, $input) = ($1, $2);
 	my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
@@ -491,9 +460,9 @@ sub readfrompipes
 	$newjobstep_sth->execute ($job_id, $level, $input)
 	    or croak ($dbh->errstr);
       }
-      while ($$job_stderr{$job} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
+      while ($job_stderr{$job} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
       {
-	$$job_output{$job} = $1;
+	$job_output{$job} = $1;
       }
     }
   }
