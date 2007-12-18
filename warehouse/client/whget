@@ -25,7 +25,7 @@ $source !~ m,/$,		# either you only want one file,
     or $localbase =~ s,/$,,	# or you specified a local directory/,
     or usage();			# or you're confused
 
-my ($key_or_name, $path) = split ("/", $source, 2);
+my ($key_or_name, $path) = $source =~ m|^(/?[^/]*)/(.*)|;
 
 my $manifestkey;
 my $manifestname;
