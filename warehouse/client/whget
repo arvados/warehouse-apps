@@ -63,6 +63,7 @@ if (!defined $wantsubdir)
     # just want the manifest
     if (-d $localbase)
     {
+	$localbase =~ s,/$,,;
 	if (defined $manifestname)
 	{
 	    $localbase .= "/".$manifestname;
