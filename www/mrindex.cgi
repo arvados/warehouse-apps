@@ -27,7 +27,9 @@ my $sth = $dbh->prepare("select dmid from mogilefs.domain where namespace=?");
 $sth->execute ($main::mogilefs_default_domain) or die $dbh->errstr;
 my ($dmid) = $sth->fetchrow ();
 
-my $limit = ($q->param('showall') ? "" : "limit 30");
+my $show = 0 + $q->param('showall');
+$show = 30 if !$show;
+my $limit = ($q->param('showall') ? "" : "limit $show");
 
 my $sth = $dbh->prepare("
     select mrjob.id,
@@ -89,7 +91,13 @@ print q{
 </table>
 };
 
-if ($limit) { print "<p><a href=\"mrindex.cgi?showall=1\">show all</a></p>"; }
+if ($limit)
+{
+  my $showmore = $show*2;
+  print "<p>";
+  print "<a href=\"mrindex.cgi?show=$showmore\">show $showmore</a> | ";
+  print "<a href=\"mrindex.cgi?showall=1\">show all</a></p>";
+}
 
 print q{
 </body>
