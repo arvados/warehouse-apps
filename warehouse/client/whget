@@ -72,22 +72,27 @@ if (!defined $wantsubdir)
 	    $localbase .= "/".$manifestkey;
 	}
     }
-    if ($localbase eq "-")
+    my $localfile = $localbase;
+    if ($localfile eq "-")
     {
-	$localbase = "&STDOUT";
+	$localfile = "&STDOUT";
     }
-    if (!open M, ">$localbase")
+    if (!$opt{n} && !open M, ">$localfile")
     {
-	die "Can't open $localbase: $!";
+	die "Can't open $localfile: $!";
     }
+    my $ctx;
+    $ctx = Digest::MD5->new if $opt{v};
     while (1)
     {
-	print M $manifest;
+	$ctx->add ($manifest) if $opt{v};
+	print M $manifest unless $opt{n};
 	last if !@manifesthash;
 	$manifest = $whc->fetch_block (shift @manifesthash)
 	    or die "fetch_block failed";
     }
-    close M or die "Error writing $localbase: $!";
+    $opt{n} or close M or die "Error writing $localbase: $!";
+    !$opt{v} or print STDERR $ctx->hexdigest."  $localbase\n";
     exit 0;
 }
 
