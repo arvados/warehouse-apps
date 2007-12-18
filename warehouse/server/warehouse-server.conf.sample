@@ -1,5 +1,5 @@
 $Warehouse::Server::DatabaseDSN
-    = [ "DBI:mysql:database=warehouse;host=dbhost",
+    = [ "DBI:mysql:database=warehouse;host=localhost",
 	"whserver",
 	"DBPASSWORDHERE" ];
 
