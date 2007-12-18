@@ -18,10 +18,9 @@ print STDERR map { "opt{$_} = $opt{$_}\n" } keys %opt
     if $opt{v} >= 3;
 
 my $localbase = shift @ARGV or usage();
-my $remotepath = shift @ARGV or usage();
-my ($remoteserver, $remotedir) = $remotepath =~ /^http:\/\/(.*?)(\/.+)$/
-    or usage();
-my $whc = new Warehouse ("warehouse_servers" => $remoteserver,
+@ARGV == 0 or usage();
+
+my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"}
 			 "mogilefs_trackers" => $opt{"mogilefs-trackers"});
 my $manifest = "";
 
@@ -33,13 +32,20 @@ my @manifest_hash = $whc->write_finish;
 foreach (@manifest_hash) { s/^-\d+ //; }
 my $manifest_key = join (",", @manifest_hash);
 
-print "storing: $remotedir => $manifest_key\n";
+print "Manifest key is: $manifest_key\n";
 
-my $oldkey = $whc->fetch_manifest_key_by_name ($remotedir);
-$whc->store_manifest_by_name ($manifest_key, $oldkey, $remotedir);
 
-my $checkkey = $whc->fetch_manifest_key_by_name ($remotedir);
-print "fetch says: $remotedir => $checkkey\n";
+
+if (my $manifestname = $opt{"name"})
+{
+    print "storing: $manifestname => $manifest_key\n";
+
+    my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
+    $whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
+
+    my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
+    print "fetch says: $manifestname => $checkkey\n";
+}
 
 
 
@@ -96,7 +102,15 @@ sub traverse
 
 sub usage
 {
-    die "usage: $0 localdir http://warehouse.addr:port/remotedir\n";
+    die <<EOF
+usage:
+    $0 [options] localdir
+options:
+    --warehouse-controllers=host:port
+    --mogilefs-trackers=host:port,host:port
+    --name=/manifestname
+EOF
+;
 }
 
 sub md5_file
