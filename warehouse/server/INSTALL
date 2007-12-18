@@ -1,0 +1,50 @@
+Create accounts and database for warehouse system:
+
+ create database warehouse;
+ grant all privileges on warehouse.* to whserver@'%';
+ set password for whserver@'%' = old_password('YOURPASSWORDHERE');
+
+Extract current version:
+
+ cd /tmp
+ svn export http://tomc.freelogy.org/repos/tomc/warehouse/trunk ./warehouse
+ cd ./warehouse
+
+Create database tables:
+
+ su -u www-data -- sh -c 'cd server && perl setup.pl'
+
+Create /etc/warehouse/warehouse-server.conf to suit:
+
+ mkdir -p /etc/warehouse
+ cp -i server/warehouse-server.conf.sample /etc/warehouse/warehouse-server.conf
+ vi /etc/warehouse/warehouse-server.conf
+
+Create /etc/warehouse/warehouse-client.conf to suit -- see
+../client/INSTALL for details.
+
+Test and install the Perl API, server, and sample client programs:
+
+ (
+ set -ex
+ perl Makefile.PL
+ make
+ make test
+ make install
+ )
+
+Create supervised service:
+
+ (
+ set -ex
+ sudo apt-get install runit
+ 
+ d=/var/service/warehoused
+ sudo mkdir -p $d/log/main
+ sudo chmod +t $d
+ (echo '#!/bin/sh'; echo 'exec svlogd -tt main') \
+   | sudo bash -c "cat >$d/log/run"
+ (echo '#!/bin/sh'; echo 'exec warehoused 2>&1') \
+   | sudo bash -c "cat >$d/run"
+ sudo chmod +x $d/run $d/log/run
+ )

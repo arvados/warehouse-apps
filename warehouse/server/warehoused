@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+
+use Warehouse::Server;
+
+do '/etc/warehouse/warehouse-server.conf' or die "Failed to load config file";
+
+open STDERR, ">&STDOUT";
+
+my $whs = Warehouse::Server->new
+	( DatabaseDSN => $Warehouse::Server::DatabaseDSN,
+	  ListenAddress => $Warehouse::Server::ListenAddress,
+	  ListenPort => $Warehouse::Server::ListenPort );
+
+print "Listening at " . $whs->url . "\n";
+
+$whs->run;

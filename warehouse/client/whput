@@ -1,0 +1,132 @@
+#!/usr/bin/perl
+
+use strict;
+
+use Warehouse;
+use Digest::MD5;
+use HTTP::Request::Common;
+use LWP::UserAgent;
+
+my $localbase = shift @ARGV or usage();
+my $remotepath = shift @ARGV or usage();
+my ($remoteserver, $remotedir) = $remotepath =~ /^http:\/\/(.*?)(\/.+)$/
+    or usage();
+my $whc = new Warehouse ("warehouse_servers" => $remoteserver);
+my $manifest = "";
+
+traverse ($localbase, "", ".", \$manifest);
+
+$whc->write_start;
+$whc->write_data ($manifest);
+my @manifest_hash = $whc->write_finish;
+foreach (@manifest_hash) { s/^-\d+ //; }
+my $manifest_key = join (",", @manifest_hash);
+
+print "storing: $remotedir => $manifest_key\n";
+
+my $oldkey = $whc->fetch_manifest_key_by_name ($remotedir);
+$whc->store_manifest_by_name ($manifest_key, $oldkey, $remotedir);
+
+my $checkkey = $whc->fetch_manifest_key_by_name ($remotedir);
+print "fetch says: $remotedir => $checkkey\n";
+
+
+
+sub traverse
+{
+    my ($localbase, $localsubdir, $remotedir, $manifestref) = @_;
+    my $localdir = $localbase . $localsubdir;
+    my @subdir;
+    my $streampos = 0;
+    my @file_positions;
+
+    $whc->write_start;
+    opendir D, "$localdir" or die "Can't open $localdir: $!";
+    foreach my $file (sort readdir D)
+    {
+	if ($file eq '.' || $file eq '..')
+	{
+	    next;
+	}
+	if (-l "$localdir/$file")
+	{
+	    warn "Skipped symbolic link: $localdir/$file\n";
+	    next;
+	}
+	if (-d "$localdir/$file")
+	{
+	    push @subdir, $file;
+	    next;
+	}
+	my $filesize = send_file ($whc, "$localdir/$file");
+	push @file_positions, "${streampos}:${filesize}:${file}";
+	$streampos += $filesize;
+    }
+    closedir D;
+    my @stream_hashes = $whc->write_finish;
+
+    for (@file_positions) { s/ /_/g; }
+    my $subdir_stream = "$remotedir @stream_hashes @file_positions\n";
+    $$manifestref .= $subdir_stream;
+
+    printf STDERR ("$remotedir: stored %d files in %d blocks\n",
+		   scalar @file_positions,
+		   scalar @stream_hashes);
+    printf STDERR $whc->iostats;
+
+    foreach my $subdir (@subdir)
+    {
+	traverse ($localbase,
+		  "$localsubdir/$subdir",
+		  "$remotedir/$subdir",
+		  $manifestref);
+    }
+}
+
+sub usage
+{
+    die "usage: $0 localdir http://warehouse.addr:port/remotedir\n";
+}
+
+sub md5_file
+{
+    my $file = shift;
+    open FILE, "<$file" or die "Can't open $file: $!";
+    my $m = Digest::MD5->new;
+    my $buf;
+    my $bytes;
+    while ($bytes = read FILE, $buf, 1048576) {
+	$m->add($buf);
+    }
+    if (!defined $bytes)
+    {
+	die "Read error: $file: $!";
+    }
+    close FILE or die "Read error: $file: $!";
+    return $m->digest;
+}
+
+sub binhex
+{
+    unpack ("H*", shift @ARGV);
+}
+
+sub send_file
+{
+    my $whc = shift;
+    my $file = shift;
+    open FILE, "<$file" or die "Can't open $file: $!";
+    my $buf;
+    my $bytes;
+    my $totalsize = 0;
+    while ($bytes = read FILE, $buf, 1048576) {
+	$whc->write_data ($buf) or die "Warehouse::write_data failed";
+	$totalsize += $bytes;
+    }
+    if (!defined $bytes)
+    {
+	die "Read error: $file: $!";
+    }
+    close FILE or die "Read error: $file: $!";
+    return $totalsize;
+}

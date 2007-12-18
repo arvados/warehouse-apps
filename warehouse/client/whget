@@ -1,0 +1,276 @@
+#!/usr/bin/perl
+
+use strict;
+
+use Warehouse;
+use Digest::MD5;
+use HTTP::Request::Common;
+use LWP::UserAgent;
+
+my %opt;
+while ($ARGV[0] =~ /^-(?:-(\S+?)(=(.*))?|([^-]+))$/)
+{
+    if ($4) { map { $opt{$_}++ } split ("", $4); }
+    else { $opt{$1} = defined ($2) ? $3 : 1; }
+    shift @ARGV;
+}
+print STDERR map { "opt{$_} = $opt{$_}\n" } keys %opt
+    if $opt{v} >= 3;
+
+my $remotepath = shift @ARGV or usage();
+my $localbase = shift @ARGV or usage();
+my ($remoteserver, $manifestkey, $manifestname, $path)
+    = $remotepath =~ m,^http://([^/=]+)(?:[=/]([0-9a-f]{32}(?:\,[0-9a-f]{32})*)|(/[^/]+))(/.*)?$,
+    or usage();
+$remotepath !~ m,/$,
+    or $localbase =~ s,/$,,
+    or usage();
+
+my ($wantsubdir, $wantfile)
+    = $path =~ m|^(.*)/([^/]*)$|;
+my $whc = new Warehouse ("warehouse_servers" => $remoteserver);
+if (!defined $manifestkey)
+{
+    $manifestkey = $whc->fetch_manifest_key_by_name ($manifestname)
+	or die "Could not get key for '$manifestname': ".$whc->errstr;
+}
+
+# $manifestkey is a comma-separated list of hashes of the blocks that
+# make up the manifest.
+
+my @manifesthash = split (",", $manifestkey);
+my $manifest = $whc->fetch_block (shift @manifesthash)
+    or die "fetch_block failed";
+
+if (!defined $wantsubdir)
+{
+    # just want the manifest
+    if (-d $localbase)
+    {
+	if (defined $manifestname)
+	{
+	    $localbase .= "/".$manifestname;
+	}
+	else
+	{
+	    $localbase .= "/".$manifestkey;
+	}
+    }
+    if (!open M, ">$localbase")
+    {
+	die "Can't open $localbase: $!";
+    }
+    while (1)
+    {
+	print M $manifest;
+	last if !@manifesthash;
+	$manifest = $whc->fetch_block (shift @manifesthash)
+	    or die "fetch_block failed";
+    }
+    close M or die "Error writing $localbase: $!";
+    exit 0;
+}
+
+# $manifest is the current block; @manifesthash is a list of hashes of
+# subsequent blocks.
+
+while (0 < length $manifest)
+{
+    $manifest =~ s/^([^\n]*)\n//
+	or die "no newline at end of manifest";
+    my @subdir = split (" ", $1);
+    my $subdir_name = shift @subdir;
+
+    $subdir_name =~ s/^\.//
+	or die "subdir name '$subdir_name' does not start with period";
+    if ($subdir_name eq $wantsubdir ||
+	($opt{r} &&
+	 $wantfile eq "" &&
+	 substr($subdir_name, 0, 1 + length $wantsubdir) eq $wantsubdir."/"))
+    {
+	my $localsubdir = substr ($subdir_name, length $wantsubdir);
+
+	print STDERR "consider: .$subdir_name as $localbase$localsubdir\n"
+	    if $opt{v} >= 3;
+
+	my @hash;
+	while (@subdir)
+	{
+	    if ($subdir[0] =~ /^-(\d+)$/)
+	    {
+		push @hash, splice @subdir, 0, 2;
+	    }
+	    elsif ($subdir[0] =~ /^[0-9a-f]{32}([-\+]\d+)?$/)
+	    {
+		push @hash, shift @subdir;
+	    }
+	    else
+	    {
+		last;
+	    }
+	}
+
+	my $data = "";
+	my $streampos = 0;
+
+	foreach (@subdir)
+	{
+	    my ($pos, $size, $name) = split (":", $_, 3);
+	    if ($wantfile eq "" || $wantfile eq $name)
+	    {
+		print STDERR "want:  $pos $size $name\n"
+		    if $opt{v} >= 3;
+
+		# read data, or skip blocks, until we are at $streampos==$pos
+
+		my $sizehint;
+		while (@hash &&
+		       $hash[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)$/ &&
+		       $pos >= ($streampos
+				+ ($sizehint = ($2 eq '-'
+						? $Warehouse::blocksize - $3
+						: $3))
+				+ length $data))
+		{
+		    shift @hash if !defined $1;
+		    print STDERR "skip $hash[0]\n"
+			if $opt{v} >= 3;
+		    shift @hash;
+
+		    $streampos += length $data;
+		    $streampos += $sizehint;
+		    $data = "";
+		}
+		while ($pos > $streampos + length $data
+		       && @hash)
+		{
+		    # skip "blockshortness" token
+		    shift @hash if $hash[0] =~ /^-\d+$/;
+
+		    $streampos += length $data;
+		    print STDERR "fetch $hash[0]\n"
+			if $opt{v} >= 3;
+		    $data = $whc->fetch_block (shift @hash)
+			or die "fetch_block failed";
+
+		    # this loop should only run once if blockshortness
+		    # tokens are present
+		}
+		if ($pos > $streampos
+		    && $pos <= $streampos + length $data)
+		{
+		    substr ($data, 0, $pos - $streampos) = "";
+		    $streampos = $pos;
+		}
+		if ($pos != $streampos)
+		{
+		    die "Internal error: sought $pos but at $streampos";
+		}
+
+		# write bytes from $data, and fetch subsequent blocks,
+		# until $size bytes have been written
+
+		my $localfile = $localbase.$localsubdir;
+		$localfile .= "/".$name if $wantfile eq "";
+
+		make_parent_dirs ($localfile)
+		    unless $opt{n};
+
+		print STDERR "write to: $localfile\n"
+		    if $opt{v} >= 3;
+		open F, ">$localfile"
+		    or die "Can't open $localfile for writing: $!"
+		    unless $opt{n};
+
+		my $ctx;
+		$ctx = Digest::MD5->new
+		    if $opt{v};
+		while ($pos + $size > $streampos + length $data)
+		{
+		    $ctx->add ($data)
+			if $opt{v};
+		    print F $data
+			or die "Error writing to $localfile: $!"
+			unless $opt{n};
+
+		    $streampos += length $data;
+
+		    # skip "blockshortness" token
+		    shift @hash if $hash[0] =~ /^-\d+$/;
+
+		    print STDERR "fetch $hash[0]\n"
+			if $opt{v} >= 3;
+		    $data = $whc->fetch_block (shift @hash)
+			or die "fetch_block failed";
+		}
+
+		$ctx->add (substr ($data, 0, $pos + $size - $streampos))
+		    if $opt{v};
+		print F substr ($data, 0, $pos + $size - $streampos)
+		    or die "Error writing to $localfile: $!"
+		    unless $opt{n};
+		close F
+		    or die "Error writing to $localfile: $!"
+		    unless $opt{n};
+
+		substr ($data, 0, $pos + $size - $streampos) = "";
+		$streampos = $pos + $size;
+
+		do {
+		    my $md5hex = $ctx->hexdigest;
+		    print STDERR "$md5hex  $localfile\n";
+		} if $opt{v};
+	    }
+	}
+    }
+
+    if (@manifesthash &&
+	$Warehouse::blocksize > 2 * length $manifest)
+    {
+	my $nextblock = $whc->fetch_block (shift @manifesthash)
+	    or die "fetch_block failed";
+	$manifest .= $nextblock;
+    }
+}
+
+print STDERR $whc->iostats
+    if $opt{v};
+
+
+sub make_parent_dirs
+{
+    my $path = shift @_;
+    return unless $path =~ s|/[^/]+$||;
+    return if -d $path;
+    make_parent_dirs ($path);
+    mkdir $path;
+}
+
+
+sub usage
+{
+    my ($me) = $0 =~ m|([^/]+)$|;
+    die <<EOF
+Fetch a file:
+       $me http://warehouse.addr:port/key/[remotesubdir/]filename localfile
+       $me http://warehouse.addr:port/name/[remotesubdir/]filename localfile
+Fetch a directory:
+       $me http://warehouse.addr:port/key/[remotesubdir/] localdir/
+       $me http://warehouse.addr:port/name/[remotesubdir/] localdir/
+Fetch a directory tree:
+       $me -r http://warehouse.addr:port/key/[remotesubdir/] localdir/
+       $me -r http://warehouse.addr:port/name/[remotesubdir/] localdir/
+Fetch a raw manifest:
+       $me http://warehouse.addr:port/key localdestfile
+       $me http://warehouse.addr:port/name localdestfile
+       $me http://warehouse.addr:port/key localdestdir/
+       $me http://warehouse.addr:port/name localdestdir/
+options:
+ -r   fetch files from remotesubdir/* as well as remotesubdir
+ -n   don't write to local filesystem, just fetch data from warehouse
+ -v   verbose: print md5sums of extracted files
+ -vv  more verbose: info messages
+ -vvv more verbose: debug messages
+EOF
+;
+}

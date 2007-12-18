@@ -1,0 +1,2 @@
+$Warehouse::memcached_servers_arrayref = [];
+1;

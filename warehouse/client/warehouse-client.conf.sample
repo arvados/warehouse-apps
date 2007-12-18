@@ -1,0 +1,11 @@
+$Warehouse::blocksize = 64*1024*1024;
+
+$Warehouse::warehouse_servers
+    = "warehouse.server.host.name:24848";
+
+$Warehouse::mogilefs_trackers = "mogilefs.tracker.host.name:6001";
+$Warehouse::mogilefs_domain = "warehouse";
+$Warehouse::mogilefs_directory_class = "directory"; # recommend mindevcount=3
+$Warehouse::mogilefs_file_class = "file"; # recommend mindevcount=2
+
+1;

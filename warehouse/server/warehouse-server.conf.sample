@@ -1,0 +1,6 @@
+$Warehouse::Server::DatabaseDSN
+    = [ "DBI:mysql:database=warehouse;host=dbhost",
+	"whserver",
+	"DBPASSWORDHERE" ];
+
+1;
