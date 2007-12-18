@@ -7,11 +7,22 @@ use Digest::MD5;
 use HTTP::Request::Common;
 use LWP::UserAgent;
 
+my %opt;
+while ($ARGV[0] =~ /^-(?:-(\S+?)(=(.*))?|([^-]+))$/)
+{
+    if ($4) { map { $opt{$_}++ } split ("", $4); }
+    else { $opt{$1} = defined ($2) ? $3 : 1; }
+    shift @ARGV;
+}
+print STDERR map { "opt{$_} = $opt{$_}\n" } keys %opt
+    if $opt{v} >= 3;
+
 my $localbase = shift @ARGV or usage();
 my $remotepath = shift @ARGV or usage();
 my ($remoteserver, $remotedir) = $remotepath =~ /^http:\/\/(.*?)(\/.+)$/
     or usage();
-my $whc = new Warehouse ("warehouse_servers" => $remoteserver);
+my $whc = new Warehouse ("warehouse_servers" => $remoteserver,
+			 "mogilefs_trackers" => $opt{"mogilefs-trackers"});
 my $manifest = "";
 
 traverse ($localbase, "", ".", \$manifest);
