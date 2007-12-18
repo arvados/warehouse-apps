@@ -4,7 +4,6 @@ package Warehouse::Server;
 
 use HTTP::Daemon;
 use HTTP::Response;
-use Crypt::GpgME;
 use Digest::MD5;
 use DBI;
 
