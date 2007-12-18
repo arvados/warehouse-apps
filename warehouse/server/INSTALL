@@ -1,3 +1,8 @@
+Install prerequisites:
+
+ sudo perl -MCPAN -e 'install Cache::Memcached'
+ sudo perl -MCPAN -e 'install MogileFS::Client'
+
 Create accounts and database for warehouse system:
 
  create database warehouse;
@@ -10,15 +15,15 @@ Extract current version:
  svn export http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse
  cd ./warehouse
 
-Create database tables:
-
- su -u www-data -- sh -c 'cd server && perl setup.pl'
-
 Create /etc/warehouse/warehouse-server.conf to suit:
 
  mkdir -p /etc/warehouse
  cp -i server/warehouse-server.conf.sample /etc/warehouse/warehouse-server.conf
  vi /etc/warehouse/warehouse-server.conf
+
+Create database tables:
+
+ su -u www-data -- sh -c 'cd server && perl setup.pl'
 
 Create /etc/warehouse/warehouse-client.conf to suit -- see
 ../client/INSTALL for details.
