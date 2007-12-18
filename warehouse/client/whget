@@ -17,18 +17,33 @@ while ($ARGV[0] =~ /^-(?:-(\S+?)(=(.*))?|([^-]+))$/)
 print STDERR map { "opt{$_} = $opt{$_}\n" } keys %opt
     if $opt{v} >= 3;
 
-my $remotepath = shift @ARGV or usage();
+my $source = shift @ARGV or usage();
 my $localbase = shift @ARGV or usage();
-my ($remoteserver, $manifestkey, $manifestname, $path)
-    = $remotepath =~ m,^http://([^/=]+)(?:[=/]([0-9a-f]{32}(?:\,[0-9a-f]{32})*)|(/[^/]+))(/.*)?$,
-    or usage();
-$remotepath !~ m,/$,
-    or $localbase =~ s,/$,,
-    or usage();
+@ARGV == 0 or usage();
+
+$source !~ m,/$,		# either you only want one file,
+    or $localbase =~ s,/$,,	# or you specified a local directory/,
+    or usage();			# or you're confused
+
+my ($key_or_name, $path) = split ("/", $source, 2);
+
+my $manifestkey;
+my $manifestname;
+if ($key_or_name =~ /^[0-9a-f]{32}(,[0-9a-f]{32})*$/)
+{
+    $manifestkey = $key_or_name;
+}
+else
+{
+    $manifestname = $key_or_name;
+}
 
 my ($wantsubdir, $wantfile)
     = $path =~ m|^(.*)/([^/]*)$|;
-my $whc = new Warehouse ("warehouse_servers" => $remoteserver,
+
+
+
+my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
 			 "mogilefs_trackers" => $opt{"mogilefs-trackers"});
 if (!defined $manifestkey)
 {
@@ -56,6 +71,10 @@ if (!defined $wantsubdir)
 	{
 	    $localbase .= "/".$manifestkey;
 	}
+    }
+    if ($localbase eq "-")
+    {
+	$localbase = "&STDOUT";
     }
     if (!open M, ">$localbase")
     {
@@ -252,26 +271,28 @@ sub usage
 {
     my ($me) = $0 =~ m|([^/]+)$|;
     die <<EOF
-Fetch a file:
-       $me http://warehouse.addr:port/key/[remotesubdir/]filename localfile
-       $me http://warehouse.addr:port/name/[remotesubdir/]filename localfile
+Fetch a file from a manifest:
+       $me [options] /key/[subdir/]filename localfile
+       $me [options] /name/[subdir/]filename localfile
 Fetch a directory:
-       $me http://warehouse.addr:port/key/[remotesubdir/] localdir/
-       $me http://warehouse.addr:port/name/[remotesubdir/] localdir/
+       $me [options] /key/[subdir/] localdir/
+       $me [options] /name/[subdir/] localdir/
 Fetch a directory tree:
-       $me -r http://warehouse.addr:port/key/[remotesubdir/] localdir/
-       $me -r http://warehouse.addr:port/name/[remotesubdir/] localdir/
+       $me -r [options] /key/[subdir/] localdir/
+       $me -r [options] /name/[subdir/] localdir/
 Fetch a raw manifest:
-       $me http://warehouse.addr:port/key localdestfile
-       $me http://warehouse.addr:port/name localdestfile
-       $me http://warehouse.addr:port/key localdestdir/
-       $me http://warehouse.addr:port/name localdestdir/
+       $me [options] /key localdestfile
+       $me [options] /name localdestfile
+       $me [options] /key localdestdir/
+       $me [options] /name localdestdir/
 options:
- -r   fetch files from remotesubdir/* as well as remotesubdir
- -n   don't write to local filesystem, just fetch data from warehouse
- -v   verbose: print md5sums of extracted files
- -vv  more verbose: info messages
- -vvv more verbose: debug messages
+ -r    fetch subdir/*/*/files as well as subdir/files
+ -n    don't write to local filesystem, just fetch data from warehouse
+ -v    verbose: print md5sums of extracted files
+ -vv   more verbose: info messages
+ -vvv  more verbose: debug messages
+ --warehouse-controllers=host:port,host:port
+ --mogilefs-trackers=host:port,host:port
 EOF
 ;
 }
