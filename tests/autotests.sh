@@ -25,6 +25,12 @@ ln -sfn "$install" ./=install
 "$src"/mkx install
 popd
 
+pushd "$src/warehouse"
+perl Makefile.PL PREFIX="$install"
+make
+make install
+popd
+
 PATH="$install/bin:$PATH"
 
 for f in "$src"/tests/test-*.sh

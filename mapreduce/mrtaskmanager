@@ -7,7 +7,7 @@ use MogileFS::Client;
 
 $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/bin";
 $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/mapreduce";
-$ENV{PERLLIB} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/mapreduce";
+$ENV{PERLLIB} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/warehouse/lib:/usr/local/polony-tools/$ENV{MR_REVISION}/src/mapreduce";
 
 foreach (split ("\n", $ENV{MR_KNOBS}))
 {
