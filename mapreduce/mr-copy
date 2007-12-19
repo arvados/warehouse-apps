@@ -3,6 +3,8 @@
 
 ###MR_DESCRIPTION:write a new manifest of exactly the same data
 ###MR_INPUT:manifest
+###MR_KNOB:#SOURCE_MOGILEFS_TRACKERS=host:port
+###MR_KNOB:#SOURCE_WAREHOUSE_CONTROLLERS=host:port
 
 use strict; 
 use Image::Magick;
@@ -21,16 +23,23 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   my $wantsubdir = $ENV{MR_INPUT};
-  my $whc = new Warehouse;
+  my $whc_dest = new Warehouse;
+  my $whc_source
+      = ($ENV{KNOB_SOURCE_MOGILEFS_TRACKERS} ||
+	 $ENV{KNOB_SOURCE_WAREHOUSE_CONTROLLERS})
+      ? new Warehouse
+      ("mogilefs_trackers" => $ENV{KNOB_SOURCE_MOGILEFS_TRACKERS},
+       "warehouse_controllers" => $ENV{KNOB_SOURCE_WAREHOUSE_CONTROLLERS})
+      : $whc_dest;
 
-  my $manifest = new Warehouse::Manifest (whc => $whc,
+  my $manifest = new Warehouse::Manifest (whc => $whc_source,
 					  key => $manifestkey);
   $manifest->rewind;
   while (my $instream = $manifest->subdir_next)
   {
     if ($instream->name eq $wantsubdir)
     {
-      my $outstream = new Warehouse::Stream (whc => $whc);
+      my $outstream = new Warehouse::Stream (whc => $whc_dest);
       $outstream->name ($instream->name);
       $outstream->clear;
 
@@ -46,10 +55,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 	$outstream->write_finish;
       }
-      my $fragkey = $whc->store_block ($outstream->as_string)
-	  or die "store_block failed: ".$whc->errstr;
+      my $fragkey = $whc_dest->store_block ($outstream->as_string)
+	  or die "store_block failed: ".$whc_dest->errstr;
       print STDERR "+++mrout ".$fragkey."+++\n";
-      print STDERR $whc->iostats;
+      print STDERR $whc_source->iostats;
+      print STDERR $whc_dest->iostats if $whc_source ne $whc_dest;
       exit 0;
     }
   }
