@@ -28,9 +28,7 @@ traverse ($localbase, "", ".", \$manifest);
 
 $whc->write_start;
 $whc->write_data ($manifest);
-my @manifest_hash = $whc->write_finish;
-foreach (@manifest_hash) { s/^-\d+ //; }
-my $manifest_key = join (",", @manifest_hash);
+my $manifest_key = $whc->write_finish;
 
 print "Manifest key is: $manifest_key\n";
 
