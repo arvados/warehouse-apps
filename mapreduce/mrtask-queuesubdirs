@@ -9,8 +9,8 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 
 my $whc = new Warehouse
-    (mogilefs_trackers => $ENV{KNOB_SOURCE_MOGILEFS_TRACKERS},
-     warehouse_controllers => $ENV{KNOB_SOURCE_WAREHOUSE_CONTROLLERS};
+    ("mogilefs_trackers" => $ENV{KNOB_SOURCE_MOGILEFS_TRACKERS},
+     "warehouse_controllers" => $ENV{KNOB_SOURCE_WAREHOUSE_CONTROLLERS});
 
 my $nextlevel = $ENV{MR_LEVEL} + 1;
 my $key = $ENV{MR_INPUT};

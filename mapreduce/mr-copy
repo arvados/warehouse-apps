@@ -17,7 +17,7 @@ my $manifestkey = $ENV{MR_INPUT0};
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey;
-  do "mrtask-queuesubdirs";
+  do "mrtask-queuesubdirs" or die "mrtask-queuesubdirs failed: $! $@";
 }
 
 elsif ($ENV{MR_LEVEL} == 1)
