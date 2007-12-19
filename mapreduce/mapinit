@@ -162,6 +162,9 @@ create table if not exists mrjob (
  jobmanager_id bigint,
  success tinyint,
  output text,
+ steps_todo int,
+ steps_done int,
+ steps_running int,
  unique(global_id)
 )
   },
