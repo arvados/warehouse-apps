@@ -67,7 +67,7 @@ while (my @row = $sth->fetchrow)
   my ($jobid) = @row;
   for (@row) { $_ = escapeHTML($_); }
   for ($row[5]) { s/,/, /g; }
-  for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
+  for ($row[6]) { s/\n/<br>/g; s/,/, /g; s/=/ =/g; }
   for ($row[8]) { s/.* /.../; }
   for ($row[9]) { $_ = "<b>$_</b>"; }
   $row[0] = "<a href=\"mrjob.cgi?id=$jobid\">$row[0]</a>";
