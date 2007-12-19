@@ -124,6 +124,35 @@ sub as_string
 
 
 
+=head2 as_key
+
+ my $key = $stream->as_key;
+
+Returns a key (comma-separated list of hashes) -- like as_string, but
+no subdir name or filenames, and commas instead of spaces.
+
+=cut
+
+sub as_key
+{
+  my $self = shift;
+
+  if (exists $self->{write_buf})
+  {
+    $self->_write_flush (1) or die "_write_flush failed";
+
+    die "as_string called while still writing ".$self->{write_filename}
+	if exists $self->{write_filename};
+
+    return join (",",
+		 map { /^([0-9a-f]{32})/; $1; } @{$self->{myhashes}});
+  }
+
+  die "as_key not supported unless write_* used";
+}
+
+
+
 =head2 clear
 
  $stream->clear;
