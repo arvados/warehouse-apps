@@ -415,10 +415,7 @@ $sth = $dbh->prepare ("update mrjob set finishtime=now(), success=?
 $sth->execute ($success, $job_id, $jobmanager_id)
     or croak ($dbh->errstr);
 
-$metastream->write_finish;
-$dbh->do ("update mrjob set metakey=? where id=?",
-	  undef,
-	  $metastream->as_key, $job_id);
+cleanup_meta();
 exit 0;
 
 
@@ -543,9 +540,12 @@ sub Log				# ($jobstep_id, $logmessage)
 
 sub croak
 {
-  cleanup() if $dbh;
   my ($package, $file, $line) = caller;
-  die "$_[0] at $file line $line\n";
+  my $message = "@_ at $file line $line\n";
+  Log (undef, $message);
+  cleanup() if $dbh;
+  cleanup_meta() if $metastream;
+  die;
 }
 
 
@@ -556,4 +556,13 @@ sub cleanup
   $sth->execute ($jobmanager_id);
   $sth = $dbh->prepare ("update mrjob set success=0, finishtime=now() where id=? and jobmanager_id=? and finishtime is null");
   $sth->execute ($job_id, $jobmanager_id);
+}
+
+
+sub cleanup_meta
+{
+  $metastream->write_finish;
+  $dbh->do ("update mrjob set metakey=? where id=?",
+	    undef,
+	    $metastream->as_key, $job_id);
 }
