@@ -38,8 +38,14 @@ else
     $manifestname = $key_or_name;
 }
 
-my ($wantsubdir, $wantfile)
-    = $path =~ m|^(.*)/([^/]*)$|;
+my $justrawmanifest = 1;
+my ($wantsubdir, $wantfile);
+if ($path =~ m|^(.*)/([^/]*)$|)
+{
+    $wantsubdir = $1;
+    $wantfile = $2;
+    $justrawmanifest = 0;
+}
 
 
 
@@ -58,9 +64,8 @@ my @manifesthash = split (",", $manifestkey);
 my $manifest = $whc->fetch_block (shift @manifesthash)
     or die "fetch_block failed";
 
-if (!defined $wantsubdir)
+if ($justrawmanifest)
 {
-    # just want the manifest
     if (-d $localbase)
     {
 	$localbase =~ s,/$,,;
@@ -278,18 +283,18 @@ sub usage
     my ($me) = $0 =~ m|([^/]+)$|;
     die <<EOF
 Fetch a file from a manifest:
-       $me [options] /key/[subdir/]filename localfile
+       $me [options] key/[subdir/]filename localfile
        $me [options] /name/[subdir/]filename localfile
 Fetch a directory:
-       $me [options] /key/[subdir/] localdir/
+       $me [options] key/[subdir/] localdir/
        $me [options] /name/[subdir/] localdir/
 Fetch a directory tree:
-       $me -r [options] /key/[subdir/] localdir/
+       $me -r [options] key/[subdir/] localdir/
        $me -r [options] /name/[subdir/] localdir/
 Fetch a raw manifest:
-       $me [options] /key localdestfile
+       $me [options] key localdestfile
        $me [options] /name localdestfile
-       $me [options] /key localdestdir/
+       $me [options] key localdestdir/
        $me [options] /name localdestdir/
 options:
  -r    fetch subdir/*/*/files as well as subdir/files
