@@ -471,7 +471,7 @@ sub reapchildren
 			$jobstepid,
 			$job_id);
   map {
-    Log ($jobstepid, "stderr $_\n");
+    Log ($jobstepid, "stderr $_");
   } split ("\n", $job_stderr{$jobstepid});
 
   close $reader{$jobstepid};
