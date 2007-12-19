@@ -42,13 +42,13 @@ my $sth = $dbh->prepare("
       mrjob.starttime,
       mrjob.finishtime,
       unix_timestamp(mrjob.finishtime)-unix_timestamp(mrjob.starttime),
-      count(mrjobstep.id),
+      steps_todo,
+      steps_done,
+      steps_running,
       mrjob.success,
       mrjob.output,
       mrjob.input0
     from mrjob
-    left join mrjobstep on mrjob.id=mrjobstep.jobid and ((mrjobstep.finishtime is null) = (mrjob.finishtime is null))
-    group by mrjob.id
     order by mrjob.id desc
     $limit");
 $sth->execute () or die $dbh->errstr;
@@ -57,7 +57,7 @@ print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Done/-ToDo Success Output Log));
+print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed ToDo Done Run Success Output Log));
 print q{
 </tr>
 };
@@ -69,9 +69,8 @@ while (my @row = $sth->fetchrow)
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
   for ($row[8]) { s/.* /.../; }
   for ($row[9]) { $_ = "<b>$_</b>"; }
-  $row[10] = 0-$row[10] if !defined $row[8];
   $row[0] = "<a href=\"mrjob.cgi?id=$jobid\">$row[0]</a>";
-  for ($row[12])
+  for ($row[14])
   {
     $_ = "<a href=\"whget.cgi\/$_\"><code>".substr($_,0,8)."</code><\/a>"
 	if defined;
