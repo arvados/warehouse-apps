@@ -529,9 +529,8 @@ sub fhbits
 
 sub Log				# ($jobstep_id, $logmessage)
 {
-  my $metastream = shift @_;
   my $fh = select STDERR; $|=1; select $fh;
-  my $message = sprintf ("%d %s %s %s\n", $$, @_);
+  my $message = sprintf ("%d %d %s %s\n", $job_id, $$, @_);
   print STDERR $message;
 
   return if !$metastream;
