@@ -193,6 +193,7 @@ sub write_start
   my $filename = shift;
   $self->{write_filename} = $filename;
   $self->{write_filepos} = $self->{write_pos};
+  die "write_start without clear" if !defined $self->{write_pos};
 }
 
 
@@ -211,8 +212,7 @@ sub write_data
   my $self = shift;
   my $data = shift;
   die "write_data without matching write_start"
-      if (!defined $self->{write_filename} ||
-	  !defined $self->{write_filepos});
+      if !defined $self->{write_filename};
   my $dataref = ref $data ? $data : \$data;
 
   $self->{write_pos} += length $$dataref;
