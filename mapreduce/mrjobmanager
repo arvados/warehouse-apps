@@ -43,6 +43,7 @@ die $DBI::errstr if !$dbh;
 
 my $whc = new Warehouse or die "failed to create Warehouse client";
 my $metastream = new Warehouse::Stream (whc => $whc);
+$metastream->clear;
 $metastream->name (".");
 $metastream->write_start ("log.txt");
 
