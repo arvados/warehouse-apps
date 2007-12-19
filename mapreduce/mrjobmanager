@@ -430,7 +430,7 @@ sub update_progress_stats
        undef,
        $tasks_todo, $tasks_succeeded_total, $tasks_running, $job_id);
   Log (undef,
-       "status $tasks_todo todo $tasks_done done $tasks_running running");
+       "status $tasks_todo todo $tasks_succeeded_total done $tasks_running running");
 }
 
 
