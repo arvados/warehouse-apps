@@ -20,7 +20,7 @@ print STDERR map { "opt{$_} = $opt{$_}\n" } keys %opt
 my $localbase = shift @ARGV or usage();
 @ARGV == 0 or usage();
 
-my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"}
+my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
 			 "mogilefs_trackers" => $opt{"mogilefs-trackers"});
 my $manifest = "";
 
