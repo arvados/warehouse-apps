@@ -42,7 +42,7 @@ my $whc = new Warehouse ("warehouse_servers" => $remoteserver);
 my $manifestblock;
 if ($key =~ /^[0-9a-f]{32}$/) {
     $manifestblock = $whc->fetch_block ($key)
-	or die "fetch_block failed";
+	or header_and_die (1, "fetch_block failed");
 }
 elsif ($key =~ /^[0-9a-f]{32}(,[0-9a-f]{32})+$/)
 {
@@ -64,7 +64,7 @@ if ($manifestblock =~ /^[0-9a-f]{32}(,[0-9a-f]{32})*\n?$/)
 {
     @manifesthash = split (",", $manifestblock);
     $manifestblock = $whc->fetch_block (shift @manifesthash)
-	or die "fetch_block failed";
+	or header_and_die (1, "fetch_block failed");
 }
 
 if ($wantsubdir eq "" && $wantfile eq "=")
@@ -74,7 +74,7 @@ if ($wantsubdir eq "" && $wantfile eq "=")
   while (@manifesthash)
   {
     $manifestblock = $whc->fetch_block (shift @manifesthash)
-	or die "fetch_block failed";
+	or header_and_die (1, "fetch_block failed");
     print $manifestblock;
   }
   exit 0;
@@ -86,12 +86,12 @@ MANIFESTBLOCK:
 while (length $manifestblock)
 {
     $manifestblock =~ s/^([^\n]*)\n//
-	or die "no newline at end of manifest";
+	or header_and_die (!$headerdone, "no newline at end of manifest");
     my @subdir = split (" ", $1);
     my $subdir_name = shift @subdir;
 
     $subdir_name =~ s/^\.//
-	or die "subdir name '$subdir_name' does not start with period";
+	or header_and_die (!$headerdone, "subdir name '$subdir_name' does not start with period");
 
     if ($wantfile eq "")
     {
@@ -165,7 +165,7 @@ while (length $manifestblock)
 	$Warehouse::blocksize > 2 * length $manifestblock)
     {
 	my $nextblock = $whc->fetch_block (shift @manifesthash)
-	    or die "fetch_block failed";
+	    or header_and_die (!$headerdone, "fetch_block failed");
 	$manifestblock .= $nextblock;
     }
 }
@@ -178,6 +178,23 @@ if ($wantfile eq "")
 
 print $q->header (-status=>404);
 print "Not found: $wantfile in $wantsubdir\n";
+
+
+sub header_and_die
+{
+    my $needheader = shift;
+    if ($needheader)
+    {
+	print $q->header (-type=>'text/plain',
+			  -status=>500);
+	print @_;
+	exit 1;
+    }
+    else
+    {
+	die @_;
+    }
+}
 
 
 sub guesstype
