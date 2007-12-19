@@ -47,6 +47,7 @@ my $sth = $dbh->prepare("
       steps_running,
       mrjob.success,
       mrjob.output,
+      mrjob.metakey,
       mrjob.input0
     from mrjob
     order by mrjob.id desc
@@ -57,7 +58,7 @@ print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed ToDo Done Run Success Output Log));
+print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed ToDo Done Run Success Output Meta));
 print q{
 </tr>
 };
@@ -70,10 +71,14 @@ while (my @row = $sth->fetchrow)
   for ($row[8]) { s/.* /.../; }
   for ($row[9]) { $_ = "<b>$_</b>"; }
   $row[0] = "<a href=\"mrjob.cgi?id=$jobid\">$row[0]</a>";
-  for ($row[14])
+  for (14, 15)
   {
-    $_ = "<a href=\"whget.cgi\/$_\"><code>".substr($_,0,8)."</code><\/a>"
-	if defined;
+    my $raw = $_ eq 15 ? "/=" : "";
+    for ($row[$_])
+    {
+      $_ = "<a href=\"whget.cgi\/$_$raw\"><code>".substr($_,0,8)."</code><\/a>"
+	  if defined;
+    }
   }
   my $input0 = pop @row;
   if ($input0 =~ /^[0-9a-f]{32}[,0-9a-f]*$/) {
