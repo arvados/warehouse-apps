@@ -52,8 +52,25 @@ Install prerequisites:
 Create configuration files: see server/INSTALL and client/INSTALL for
 details.
 
-Install Warehouse:
+Download the Warehouse API source code:
 
+ apt-get install -y subversion
+ cd /usr/local/src
+ svn co http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse
+
+Create /etc/warehouse/.
+
+ mkdir -p /etc/warehouse
+
+Copy /usr/local/src/warehouse/client/warehouse-client.conf.sample to
+/etc/warehouse/warehouse-client.conf and edit to suit.
+
+Copy /usr/local/src/warehouse/client/memcached.conf.pl.sample to
+/etc/warehouse/memcached.conf.pl and edit to suit.
+
+Test and install the Warehouse API:
+
+ cd /usr/local/src/warehouse
  perl Makefile.PL
  make
  make test
