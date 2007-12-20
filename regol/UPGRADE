@@ -1,0 +1,19 @@
+Update your local copy of the source code:
+
+ cd /usr/local/src/regol
+ svn update
+
+Clean, build, and install:
+
+ ./configure
+ make
+ make test
+ make install
+
+Restart the service.
+
+ sv term /var/service/regol
+
+Reload apache configuration.
+
+ apache2ctl graceful
