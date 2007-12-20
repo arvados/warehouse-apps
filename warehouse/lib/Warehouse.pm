@@ -133,8 +133,7 @@ sub _init
 	if !defined $self->{memcached_size_threshold};
 
     $self->{memcached_servers} = $memcached_servers_arrayref
-	if (!defined $self->{memcached_servers} &&
-	    $self->{memcached_size_threshold} >= 0);
+	if !defined $self->{memcached_servers};
 
     $self->{mogilefs_trackers} = $mogilefs_trackers
 	if !defined $self->{mogilefs_trackers};
@@ -198,12 +197,6 @@ sub _init
 	    'debug' => 0,
 	};
 	$self->{memc}->enable_compress (0);
-    }
-    else
-    {
-	warn "Warehouse: Memcached disabled because no servers are configured\n"
-	    if $self->{memcached_size_threshold} >= 0;
-	$self->{memcached_size_threshold} = -1;
     }
 
     if ($self->{memcached_size_threshold} + 1
