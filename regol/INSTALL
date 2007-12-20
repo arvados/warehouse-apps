@@ -12,7 +12,7 @@ Install runit.
 Fetch the regol code.
 
  cd /usr/local/src
- svn export http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/regol
+ svn co http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/regol
 
 Install the regol runtime program.
 

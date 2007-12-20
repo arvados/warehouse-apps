@@ -12,7 +12,7 @@ Create accounts and database for warehouse system:
 Extract current version:
 
  cd /tmp
- svn export http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse
+ svn co http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse
  cd ./warehouse
 
 Create /etc/warehouse/warehouse-server.conf to suit:
