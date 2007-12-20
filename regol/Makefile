@@ -5,8 +5,10 @@ INSTALLWWW?=/var/www
 A_SITES_AVAILABLE?=/etc/apache2/sites-available
 A_SITES_ENABLED?=/etc/apache2/sites-enabled
 
+export INSTALLWWW
+
 all:
-	perl -pe 's/{([A-Z_]+)}/$$ENV{$$1}/eg' < src/regol-www.conf.in > regol-www.conf
+	perl -pe 's/{([A-Z_]+)}/$$ENV{$$1} or die "no $$1"/eg' < src/regol-www.conf.in > regol-www.conf
 test:
 install:
 	install -g 0 -o 0 src/regol-service $(INSTALLBIN)/
