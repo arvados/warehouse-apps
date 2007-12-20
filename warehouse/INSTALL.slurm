@@ -1,10 +1,4 @@
-Copy warehouse-client.conf.sample to
-/etc/warehouse/warehouse-client.conf and edit to suit.
-
-Copy memcached.conf.pl.sample to /etc/warehouse/memcached.conf.pl and
-edit to suit.
-
-Or, after you've installed the Warehouse module on all slurm compute
+After you've installed the Warehouse module on all slurm compute
 nodes, use "memcached-show-servers.pl" to create a memcached.conf.pl
 file for you:
 
