@@ -129,8 +129,12 @@ sub _init
     $self->{warehouse_servers} = $warehouse_servers
 	if !defined $self->{warehouse_servers};
 
+    $self->{memcached_size_threshold} = 1048576
+	if !defined $self->{memcached_size_threshold};
+
     $self->{memcached_servers} = $memcached_servers_arrayref
-	if !defined $self->{memcached_servers};
+	if (!defined $self->{memcached_servers} &&
+	    $self->{memcached_size_threshold} >= 0);
 
     $self->{mogilefs_trackers} = $mogilefs_trackers
 	if !defined $self->{mogilefs_trackers};
@@ -143,9 +147,6 @@ sub _init
 
     $self->{mogilefs_file_class} = $mogilefs_file_class
 	if !defined $self->{mogilefs_file_class};
-
-    $self->{memcached_size_threshold} = 1048576
-	if !defined $self->{memcached_size_threshold};
 
     $self->{mogilefs_size_threshold} = 0
 	if !defined $self->{mogilefs_size_threshold};
@@ -189,7 +190,8 @@ sub _init
     }
     die "Can't connect to MogileFS" if !$self->{mogc};
 
-    if (@{$self->{memcached_servers}})
+    if (@{$self->{memcached_servers}} &&
+	$self->{memcached_size_threshold} >= 0)
     {
 	$self->{memc} = new Cache::Memcached {
 	    'servers' => $self->{memcached_servers},
