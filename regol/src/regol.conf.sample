@@ -1,0 +1,6 @@
+$DatabaseDSN
+    = [ "DBI:mysql:database=regol;host=localhost",
+	"regol",
+	"DBPASSWORDHERE" ];
+
+1;
