@@ -32,6 +32,7 @@ Install libgpgme this way on < feisty systems:
 
             (
              set -ex
+             cd /tmp/gpgme
              for f in libgpgme11*.deb; do
               sudo salloc -N47 sbcast --force "$f" "/tmp/$f"
              done
