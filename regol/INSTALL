@@ -22,6 +22,13 @@ Install the regol runtime program.
  make test
  make install
 
+Log in to MySQL as root ("mysql -u root -p mysql") and create a mysql
+account and a database.
+
+ create database regol;
+ grant all privileges on regol.* to regol@localhost;
+ set password for regol@localhost = old_password('DBPASSWORDHERE');
+
 Copy /etc/regol.conf.sample to /etc/regol.conf and edit to suit.
 
 Set up a supervised service.
