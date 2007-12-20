@@ -69,14 +69,24 @@ Dies on failure.
 
 =over
 
-=item mogilefs_domain
+=item warehouse_servers
 
-MogileFS domain.  Comes from warehouse-client.conf if not specified.
+Comma-separted list of warehouse servers: host:port,host:port,...
+Comes from warehouse-client.conf if not specified.
+
+=item memcached_servers
+
+Memcached servers (arrayref; see Cache::Memcached(3)).  Comes from
+memcached.conf.pl if not specified.
 
 =item mogilefs_trackers
 
 Comma-separated list of MogileFS tracker hosts.  Comes from
 warehouse-client.conf if not specified.
+
+=item mogilefs_domain
+
+MogileFS domain.  Comes from warehouse-client.conf if not specified.
 
 =item mogilefs_directory_class
 
@@ -87,6 +97,12 @@ warehouse-client.conf if not specified.
 
 MogileFS class used for storing files.  Comes from
 warehouse-client.conf if not specified.
+
+=item memcached_size_threshold
+
+Maximum data size to store in memcached.  Default is 1 megabyte.  Zero
+means never use memcached for data.  Negative means never use
+memcached for either data or mogilefs paths.
 
 =back
 
@@ -106,8 +122,15 @@ sub _init
     my Warehouse $self = shift;
     my $attempts = 0;
 
+    $self->{memcached_size_threshold} = -1
+	if (defined $self->{mogilefs_trackers} &&
+	    !defined $self->{memcached_servers});
+
     $self->{warehouse_servers} = $warehouse_servers
 	if !defined $self->{warehouse_servers};
+
+    $self->{memcached_servers} = $memcached_servers_arrayref
+	if !defined $self->{memcached_servers};
 
     $self->{mogilefs_trackers} = $mogilefs_trackers
 	if !defined $self->{mogilefs_trackers};
@@ -166,18 +189,19 @@ sub _init
     }
     die "Can't connect to MogileFS" if !$self->{mogc};
 
-    if (@$memcached_servers_arrayref)
+    if (@{$self->{memcached_servers}})
     {
 	$self->{memc} = new Cache::Memcached {
-	    'servers' => $memcached_servers_arrayref,
+	    'servers' => $self->{memcached_servers},
 	    'debug' => 0,
 	};
 	$self->{memc}->enable_compress (0);
     }
     else
     {
+	warn "Warehouse: Memcached disabled because no servers are configured\n"
+	    if $self->{memcached_size_threshold} >= 0;
 	$self->{memcached_size_threshold} = -1;
-	warn "Warehouse: Memcached is disabled\n";
     }
 
     if ($self->{memcached_size_threshold} + 1
@@ -388,7 +412,9 @@ sub fetch_block
     }
 
     my $data;
-    if (!defined $sizehint || $sizehint <= $self->{memcached_size_threshold})
+    if ((!defined $sizehint && 0 < $self->{memcached_size_threshold})
+	||
+	$sizehint <= $self->{memcached_size_threshold})
     {
 	$self->{stats_memread_attempts} ++;
 	$data = $self->{memc}->get ($hash);
@@ -646,14 +672,16 @@ sub _get_file_data
 	my $pathref;
 	if ($trycache)
 	{
-	    $pathref = $self->{memc}->get ("\@".$hash);
+	    $pathref = $self->{memc}->get ("\@".$hash)
+		unless $self->{memcached_size_threshold} < 0;
 	    next if !$pathref;
 	}
 	else
 	{
 	    my @paths = $self->{mogc}->get_paths ($hash, { noverify => 1 });
 	    $pathref = \@paths;
-	    $self->{memc}->set ("\@".$hash, $pathref);
+	    $self->{memc}->set ("\@".$hash, $pathref)
+		unless $self->{memcached_size_threshold} < 0;
 	}
 	if ($self->{rand01} && @$pathref > 1)
 	{
