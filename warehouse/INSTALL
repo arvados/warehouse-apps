@@ -10,37 +10,37 @@ Install libgpgme this way on < feisty systems:
 
     (a) On the first system:
 
-	(
-	 set -ex
-	 sudo apt-get install -y dpkg-dev debhelper dpatch fakeroot
-	 sudo apt-get install -y libgpg-error-dev
-	 mkdir /tmp/gpgme
-	 cd /tmp/gpgme
-	 wget http://us.archive.ubuntu.com/ubuntu/pool/main/g/gpgme1.0/gpgme1.0_1.1.2-2ubuntu2.dsc
-	 wget http://us.archive.ubuntu.com/ubuntu/pool/main/g/gpgme1.0/gpgme1.0_1.1.2-2ubuntu2.diff.gz
-	 wget http://us.archive.ubuntu.com/ubuntu/pool/main/g/gpgme1.0/gpgme1.0_1.1.2.orig.tar.gz
-	 sudo dpkg-source -x gpgme1.0_1.1.2-2ubuntu2.dsc
-	 (cd gpgme1.0-1.1.2/ && sudo dpkg-buildpackage -rfakeroot -uc -b)
-	 sudo dpkg -i libgpgme11_1.1.2-2ubuntu2_amd64.deb
-	 sudo dpkg -i libgpgme11-dev_1.1.2-2ubuntu2_amd64.deb
-	)
+        (
+         set -ex
+         sudo apt-get install -y dpkg-dev debhelper dpatch fakeroot
+         sudo apt-get install -y libgpg-error-dev
+         mkdir /tmp/gpgme
+         cd /tmp/gpgme
+         wget http://us.archive.ubuntu.com/ubuntu/pool/main/g/gpgme1.0/gpgme1.0_1.1.2-2ubuntu2.dsc
+         wget http://us.archive.ubuntu.com/ubuntu/pool/main/g/gpgme1.0/gpgme1.0_1.1.2-2ubuntu2.diff.gz
+         wget http://us.archive.ubuntu.com/ubuntu/pool/main/g/gpgme1.0/gpgme1.0_1.1.2.orig.tar.gz
+         sudo dpkg-source -x gpgme1.0_1.1.2-2ubuntu2.dsc
+         (cd gpgme1.0-1.1.2/ && sudo dpkg-buildpackage -rfakeroot -uc -b)
+         sudo dpkg -i libgpgme11_1.1.2-2ubuntu2_amd64.deb
+         sudo dpkg -i libgpgme11-dev_1.1.2-2ubuntu2_amd64.deb
+        )
 
     (b) On systems 2..N:
 
-	(i) Distribute the .deb packages you built on the first system:
+        (i) Distribute the .deb packages you built on the first system:
 
-	    (
-	     set -ex
-	     for f in libgpgme11*.deb; do
-	      sudo salloc -N47 sbcast --force "$f" "/tmp/$f"
-	     done
-	    )
+            (
+             set -ex
+             for f in libgpgme11*.deb; do
+              sudo salloc -N47 sbcast --force "$f" "/tmp/$f"
+             done
+            )
 
-	(ii) Install them:
+        (ii) Install them:
 
-	    sudo srun -N47 apt-get install -y libgpg-error-dev
-	    sudo srun -N47 dpkg -i /tmp/libgpgme11_1.1.2-2ubuntu2_amd64.deb
-	    sudo srun -N47 dpkg -i /tmp/libgpgme11-dev_1.1.2-2ubuntu2_amd64.deb
+            sudo srun -N47 apt-get install -y libgpg-error-dev
+            sudo srun -N47 dpkg -i /tmp/libgpgme11_1.1.2-2ubuntu2_amd64.deb
+            sudo srun -N47 dpkg -i /tmp/libgpgme11-dev_1.1.2-2ubuntu2_amd64.deb
 
 Install prerequisites:
 
