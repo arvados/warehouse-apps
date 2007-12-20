@@ -1,0 +1,13 @@
+Update the Warehouse API source code:
+
+ cd /usr/local/src/warehouse
+ svn update
+
+Clean, build, and install:
+
+ perl Makefile.PL
+ make clean
+ perl Makefile.PL
+ make
+ make test
+ make install
