@@ -34,7 +34,8 @@ our $VERSION = '0.01';
  my $sample_content = "some binary data";
 
  # Store data
- my $filehash = $whc->store_block ($sample_content);
+ my $filehash = $whc->store_block ($sample_content)
+     or die "write failed: ".$whc->errstr;
 
  # Store a [possibly >64MB] file into multiple blocks
  $whc->write_start or die "Write failed";
@@ -248,25 +249,48 @@ sub store_block
 
     if (length $$dataref >= $self->{mogilefs_size_threshold})
     {
-	$self->{stats_wrote_attempts} ++;
-	my $mogfh = $self->{mogc}->new_file ($hash, $mogilefs_class);
-	if (!print $mogfh $$dataref)
+	eval
 	{
-	    warn "MogileFS write failed: $!";
-	    close $mogfh;
+	    $self->_mogilefs_write ($hash, $dataref, $mogilefs_class);
+	}
+	or eval
+	{
+	    $self->_mogilefs_write ($hash, $dataref, $mogilefs_class);
+	}
+	or do
+	{
+	    $self->{errstr} = $@;
 	    return undef;
 	}
-	if (!close $mogfh)
-	{
-	    warn "MogileFS write failed: $!";
-	    return undef;
-	}
-	$self->{stats_wrote_bytes} += length $$dataref;
-	$self->{stats_wrote_blocks} ++;
     }
 
     return $hash;
 }
+
+
+
+sub _mogilefs_write
+{
+    my $self = shift;
+    my $hash = shift;
+    my $dataref = shift;
+    my $class = shift;
+    $self->{stats_wrote_attempts} ++;
+    my $mogfh = $self->{mogc}->new_file ($hash, $class);
+    if (!print $mogfh $$dataref)
+    {
+	close $mogfh;
+	die "MogileFS write failed: $!";
+    }
+    if (!close $mogfh)
+    {
+	die "MogileFS write failed: $!";
+    }
+    $self->{stats_wrote_bytes} += length $$dataref;
+    $self->{stats_wrote_blocks} ++;
+    1;
+}
+
 
 
 =head2 write_start
