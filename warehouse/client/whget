@@ -50,7 +50,9 @@ if ($path =~ m|^(.*)/([^/]*)$|)
 
 
 my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
-			 "mogilefs_trackers" => $opt{"mogilefs-trackers"});
+			 "mogilefs_trackers" => $opt{"mogilefs-trackers"},
+			 "debug_mogilefs_paths" => ($opt{v} >= 3),
+			 );
 if (!defined $manifestkey)
 {
     $manifestkey = $whc->fetch_manifest_key_by_name ($manifestname)

@@ -21,7 +21,9 @@ my $localbase = shift @ARGV or usage();
 @ARGV == 0 or usage();
 
 my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
-			 "mogilefs_trackers" => $opt{"mogilefs-trackers"});
+			 "mogilefs_trackers" => $opt{"mogilefs-trackers"},
+			 "debug_mogilefs_paths" => ($opt{v} >= 3),
+			 );
 my $manifest = "";
 
 traverse ($localbase, "", ".", \$manifest);
