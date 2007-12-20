@@ -414,7 +414,7 @@ sub fetch_block
     my $data;
     if ((!defined $sizehint && 0 < $self->{memcached_size_threshold})
 	||
-	$sizehint <= $self->{memcached_size_threshold})
+	(defined $sizehint && $sizehint <= $self->{memcached_size_threshold}))
     {
 	$self->{stats_memread_attempts} ++;
 	$data = $self->{memc}->get ($hash);
