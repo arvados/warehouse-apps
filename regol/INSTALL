@@ -31,6 +31,14 @@ account and a database.
 
 Copy /etc/regol.conf.sample to /etc/regol.conf and edit to suit.
 
+ cp -i /etc/regol.conf.sample /etc/regol.conf </dev/null
+ vi /etc/regol.conf
+
+Set suitable permissions on /etc/regol.conf.
+
+ chown root:www-data /etc/regol.conf
+ chmod 640 /etc/regol.conf
+
 Set up a supervised service.
 
  cd /usr/local/src/regol
