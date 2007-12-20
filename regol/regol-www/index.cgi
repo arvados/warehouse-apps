@@ -1,4 +1,4 @@
-!#/usr/bin/perl
+#!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
 use strict;
