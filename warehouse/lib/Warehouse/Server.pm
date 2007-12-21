@@ -334,6 +334,8 @@ sub _callback_job_list
 			     my $v = $job->{$_};
 			     $v =~ s/\\/\\\\/g;
 			     $v =~ s/\n/\\n/g;
+			     $_ = "inputkey" if $_ eq "input0";
+			     $_ = "outputkey" if $_ eq "output";
 			     $_."=".$v;
 			 } keys %$job)
 	    . "\n\n";
