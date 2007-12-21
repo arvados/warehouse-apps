@@ -261,10 +261,17 @@ sub run
 	    elsif ($r->method eq "GET" and $r->url->path eq "/job/list")
 	    {
 		my $where = "1=1";
-		if ($r->url->query =~ /^(\d*)-(\d*)$/)
+		if ($r->url->query =~ /^(\d+)-(\d+)$/)
 		{
-		    $where .= " and id >= $1" if defined $1;
-		    $where .= " and id <= $2" if defined $2;
+		    $where = "id >= $1 and id <= $2";
+		}
+		elsif ($r->url->query =~ /^(\d+)-$/)
+		{
+		    $where = "id >= $1";
+		}
+		elsif ($r->url->query =~ /^(\d+)$/)
+		{
+		    $where = "id = $1";
 		}
 
 		my $resp = HTTP::Response->new (200, "OK", []);
