@@ -328,7 +328,7 @@ sub _callback_job_list
 			     my $v = $job->{$_};
 			     $v =~ s/\\/\\\\/g;
 			     $v =~ s/\n/\\n/g;
-			     $_."=".$v."\n";
+			     $_."=".$v;
 			 } keys %$job)
 	    . "\n\n";
 	$self->{md5_ctx}->add ($data);
