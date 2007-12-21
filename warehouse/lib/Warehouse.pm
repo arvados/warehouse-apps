@@ -653,22 +653,35 @@ sub job_list
     if ($resp->is_success)
     {
 	my @ret;
+	my $ctx = Digest::MD5->new;
+	my $checkmd5;
 	foreach (split /\n\n/, $resp->content)
 	{
-	    my %h;
-	    foreach (split /\n/)
+	    if (/^([0-9a-f]{32})\n$/)
 	    {
-		my ($k, $v) = split /=/, $_, 2;
-		$h{$k} = $v;
+		$checkmd5 = $1;
 	    }
-	    push @ret, \%h;
+	    else
+	    {
+		$ctx->add ($_);
+		undef $checkmd5;
+		my %h;
+		foreach (split /\n/)
+		{
+		    my ($k, $v) = split /=/, $_, 2;
+		    $h{$k} = $v;
+		}
+		push @ret, \%h;
+	    }
 	}
-	return \@ret;
-    }
-    else
-    {
+	if ($checkmd5 eq $ctx->hexdigest)
+	{
+	    return \@ret;
+	}
+	warn "Checksum mismatch";
 	return undef;
     }
+    return undef;
 }
 
 
