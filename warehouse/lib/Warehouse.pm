@@ -637,12 +637,38 @@ sub list_manifests
 
 =head2 job_list
 
+    my $joblist = $whc->job_list;
+    my $joblist = $whc->job_list (id_min => 123, id_max => 345);
+
 =cut
 
 sub job_list
 {
-    my $joblist = $whc->job_list;
-    my $joblist = $whc->job_list (id_min => 123, id_max => 345);
+    my $self = shift;
+    my %what = @_;
+    my $url = "http://".$self->{warehouse_servers}."/job/list";
+    $url .= "?".$what{id_min}."-".$what{id_max}
+	if $what{id_min} || $what{id_max};
+    my $resp = $self->{ua}->get ($url);
+    if ($resp->is_success)
+    {
+	my @ret;
+	foreach (split /\n\n/, $resp->content)
+	{
+	    my %h;
+	    foreach (split /\n/)
+	    {
+		my ($k, $v) = split /=/, $_, 2;
+		$h{$k} = $v;
+	    }
+	    push @ret, \%h;
+	}
+	return \@ret;
+    }
+    else
+    {
+	return undef;
+    }
 }
 
 
