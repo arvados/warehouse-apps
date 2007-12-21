@@ -49,6 +49,7 @@ Install prerequisites:
  sudo perl -MCPAN -e 'install Cache::Memcached'
  sudo perl -MCPAN -e 'install MogileFS::Client'
  sudo perl -MCPAN -e 'install Crypt::GpgME'
+ sudo perl -MCPAN -e 'install IO::Uncompress::Gunzip'
 
 Create configuration files: see server/INSTALL and client/INSTALL for
 details.
