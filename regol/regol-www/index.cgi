@@ -25,7 +25,7 @@ print q{
 <h2>available</h2>
 <pre>};
 
-printf ("%-15s %4s %-33s %-33s %-20s %10s\n", qw(warehouse job input output starttime elapsed));
+printf ("%-15s %4s %-12.12s %-33s %-33s %-20s %10s\n", qw(warehouse job function input output starttime elapsed));
 
 my $sth = $main::dbh->prepare ("select *,
  unix_timestamp(finishtime)-unix_timestamp(starttime) elapsed
@@ -34,9 +34,10 @@ $sth->execute ()
     or die DBI->errstr;
 while (my $job = $sth->fetchrow_hashref)
 {
-  printf ("%-15s %4d %-33s %-33s %-20s %10s\n",
+  printf ("%-15s %4d %-12.12s %-33s %-33s %-20s %10s\n",
 	  escapeHTML ($job->{warehousename}),
 	  $job->{id},
+	  $job->{mrfunction},
 	  substr ($job->{inputkey}, 0, 33),
 	  substr ($job->{outputkey}, 0, 33),
 	  $job->{starttime},
