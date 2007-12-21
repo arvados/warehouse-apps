@@ -49,9 +49,9 @@ $sth->execute ()
 while (my $w = $sth->fetchrow_hashref)
 {
   printf ("%-15s %8d %s\n",
-	  escapeHTML ($job->{warehousename}),
-	  escapeHTML ($job->{lastupdate_sec}),
-	  escapeHTML ($job->{servers}));
+	  escapeHTML ($w->{warehousename}),
+	  escapeHTML ($w->{lastupdate_sec}),
+	  escapeHTML ($w->{servers}));
 }
 
 print q{</pre>
