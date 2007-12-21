@@ -85,7 +85,7 @@ sub setup_tables
 {
   map { $dbh->do ($_) } split (/;\n/, <<EOF);
 
-  create table job;
+  create table job ();
   alter table job add controller char(64);
   alter table job add id bigint;
   alter table job add starttime datetime;
@@ -98,7 +98,7 @@ sub setup_tables
   alter table job add metakey text;
   alter table job add unique(controller,id);
 
-  create table myjob;
+  create table myjob ();
   alter table myjob add controller char(64);
   alter table myjob add id bigint;
   alter table myjob add orig_id bigint;
