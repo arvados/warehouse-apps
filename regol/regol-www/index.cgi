@@ -26,6 +26,8 @@ print q{
 <pre>};
 
 my $sth = $main::dbh->prepare ("select controller, id, starttime, finishtime from job order by starttime desc limit 20");
+$sth->execute ()
+    or die DBI->errstr;
 while (my $job = $sth->fetchrow_hashref)
 {
   printf ("%-20s %4d %-20s %-20s\n",

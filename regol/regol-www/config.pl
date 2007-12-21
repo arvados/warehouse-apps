@@ -11,3 +11,10 @@ $main::dbh = DBI->connect(@$main::DatabaseDSN) or do
     print "500 could not connect to database: ".DBI->errstr;
     exit 1;
 };
+
+$SIG{__DIE__} = sub
+{
+    print CGI->header (-status=>500);
+    print "500 @_";
+    exit 1;
+};
