@@ -16,7 +16,7 @@ $SIG{TERM} = $SIG{HUP} = $SIG{INT} = sub { $main::drain = 1; };
 my $wh = $main::Warehouses;
 map
 {
-  $wh->{$_}->{whc} = new Warehouse $wh->{$_}
+  $wh->{$_}->{whc} = new Warehouse %{$wh->{$_}}
   or delete $wh->{$_}
 } keys %$wh;
 
