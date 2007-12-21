@@ -13,30 +13,30 @@ my $dbh = DBI->connect(@$main::DatabaseDSN)
 $main::drain = 0;
 $SIG{TERM} = $SIG{HUP} = $SIG{INT} = sub { $main::drain = 1; };
 
+setup_tables();
+
 my $wh = $main::Warehouses;
 foreach (keys %$wh)
 {
   if ($wh->{$_}->{whc} = new Warehouse %{$wh->{$_}})
   {
-    $dbh->do ("insert ignore into controller set controller=?",
-	      undef,
-	      $wh->{$warehousename}->{warehouse_servers});
+    $dbh->do ("replace into warehouse (name, servers) values (?,?)", undef,
+	      $_, $wh->{$_}->{warehouse_servers});
   }
   else
   {
-    print STDERR "Can't create new Warehouse object for $_";
+    warn "Can't create new Warehouse object for $_";
     delete $wh->{$_};
   }
 }
 
-setup_tables();
 while (1)
 {
   foreach (keys %$wh)
   {
-    update_job_table($_);    # find out about new jobs from controller
-    purge_myjob_table($_);	# remove jobs after they start running
-    if (count_myjobs($_) == 0) # if all of my submitted jobs are running...
+    update_job_table($_);	# find out about new jobs from controller
+    purge_todo_table($_);	# remove jobs after they start running
+    if (count_todo($_) == 0)	# if all of my submitted jobs are running...
     {
       schedule_something($_);
     }
@@ -52,23 +52,21 @@ sub update_job_table
   my $warehousename = shift;
   return undef unless $wh->{$warehousename}->{warehouse_servers};
 
-  my $arrayref = $wh->{$warehousename}->{whc}->job_list;
-  return undef if !@$arrayref;
+  my $arrayref = $wh->{$warehousename}->{whc}->job_list
+      or return undef;
 
-  $dbh->do ("update controller set lastupdate=now() where controller=?",
-	    undef,
-	    $wh->{$warehousename}->{warehouse_servers});
+  $dbh->do ("update warehouse set lastupdate=now() where name=?", undef,
+	    $warehousename);
 
   foreach (@$arrayref)
   {
-    $dbh->do ("insert ignore into job (controller,id) values (?,?)",
-	      undef,
-	      $wh->{$warehousename}->{warehouse_servers},
+    $dbh->do ("insert ignore into job (warehousename, id) values (?,?)", undef,
+	      $warehousename,
 	      $_->{id});
     $dbh->do ("update job set
 	       starttime=?, finishtime=?, knobs=?,
 	       inputkey=?, outputkey=?, metakey=?
-	       where controller=? and id=?",
+	       where warehousename=? and id=?",
 	      undef,
 	      $_->{starttime} || undef,
 	      $_->{finishtime} || undef,
@@ -76,21 +74,21 @@ sub update_job_table
 	      $_->{inputkey},
 	      $_->{outputkey} || undef,
 	      $_->{metakey} || undef,
-	      $wh->{$warehousename}->{warehouse_servers},
+	      $warehousename,
 	      $_->{id});
   }
 }
 
 
-sub purge_myjob_table
+sub purge_todo_table
 {
 }
 
 
-sub count_myjobs
+sub count_todo
 {
   my $warehousename = shift;
-  my $sth = $dbh->prepare ("select count(*) from myjob where controller=?");
+  my $sth = $dbh->prepare ("select count(*) from todo where warehousename=?");
   $sth->execute ($warehousename) or return -1;
   my @r = $sth->fetchrow () or return -1;
   return $r[0];
@@ -108,7 +106,7 @@ sub setup_tables
 
   create table if not exists job
   (
-   controller char(64),
+   warehousename char(64),
    id bigint,
    starttime datetime,
    finishtime datetime,
@@ -118,23 +116,22 @@ sub setup_tables
    inputkey text,
    outputkey text,
    metakey text,
-   unique(controller,id)
+   unique(warehousename,id)
   );
 
-  create table if not exists myjob
+  create table if not exists todo
   (
-   id bigint auto_increment primary key,
-   controller char(64),
-   orig_id bigint,
-   unique(controller,orig_id)
+   warehousename char(64),
+   id bigint,
+   unique(warehousename,id)
   );
 
-  create table if not exists controller
+  create table if not exists warehouse
   (
-   id bigint auto_increment primary key,
-   controller char(64),
+   name char(64),
+   servers char(255),
    lastupdate datetime,
-   unique(controller)
+   unique(name)
   );
 EOF
     ;
