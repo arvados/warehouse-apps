@@ -14,7 +14,7 @@ install:
 	install -g 0 -o 0 src/regol-service $(INSTALLBIN)/
 	install -g 0 -o 0 regol-www.conf $(A_SITES_AVAILABLE)/
 	install -g 0 -o 0 src/regol.conf.sample $(INSTALLETC)/
-	cp -irp regol-www $(INSTALLWWW)/
+	cp -frp regol-www $(INSTALLWWW)/
 enable-service: /etc/regol.conf
 	./scripts/enable-service.sh
 enable-www: /etc/regol.conf
