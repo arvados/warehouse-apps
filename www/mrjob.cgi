@@ -161,7 +161,7 @@ while (my @row = $sth->fetchrow)
 {
   for (@row) { $_ = escapeHTML($_); }
   for ($row[2]) { s/\n/<br>/g; }
-  for (@row[3,4,5]) { s/^/T+/ if defined; }
+  for (@row[3,4,5]) { s/^/T+/, s/\+-/-/ if defined; }
   for ($row[6]) { $_ = "<b>$_</b>" if defined; }
   if ($row[-1])
   {
