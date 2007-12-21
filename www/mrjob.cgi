@@ -67,7 +67,7 @@ my $jobstarttime;
 while (my @row = $sth->fetchrow)
 {
   my ($jobid) = @row;
-  $jobstarttime = $row[8];
+  $jobstarttime = $row[7];
   for (@row) { $_ = escapeHTML($_); }
   for ($row[5]) { s/,/, /g; }
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
