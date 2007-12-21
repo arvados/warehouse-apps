@@ -49,12 +49,12 @@ sub update_job_table
 	       inputkey=?, outputkey=?, metakey=?
 	       where controller=? and id=?",
 	      undef,
-	      $_->{starttime} or undef,
-	      $_->{finishtime} or undef,
+	      $_->{starttime} || undef,
+	      $_->{finishtime} || undef,
 	      unescape ($_->{knobs}),
 	      $_->{inputkey},
-	      $_->{outputkey} or undef,
-	      $_->{metakey} or undef,
+	      $_->{outputkey} || undef,
+	      $_->{metakey} || undef,
 	      $wh->{$warehousename}->{warehouse_servers},
 	      $_->{id});
   }
