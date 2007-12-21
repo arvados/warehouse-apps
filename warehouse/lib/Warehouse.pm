@@ -128,10 +128,6 @@ sub _init
     my Warehouse $self = shift;
     my $attempts = 0;
 
-    $self->{memcached_size_threshold} = -1
-	if (defined $self->{mogilefs_trackers} &&
-	    !defined $self->{memcached_servers});
-
     $self->{warehouse_servers} = $warehouse_servers
 	if !defined $self->{warehouse_servers};
 
