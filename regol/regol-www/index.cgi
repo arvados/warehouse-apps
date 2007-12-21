@@ -48,7 +48,7 @@ $sth->execute ()
     or die DBI->errstr;
 while (my $w = $sth->fetchrow_hashref)
 {
-  printf ("%-15s %8d %s\n",
+  printf ("%-15s %12d %s\n",
 	  escapeHTML ($w->{name}),
 	  escapeHTML ($w->{lastupdate_sec}),
 	  escapeHTML ($w->{servers}));
