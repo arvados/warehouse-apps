@@ -37,6 +37,7 @@ while (1)
 sub update_job_table
 {
   my $warehousename = shift;
+  return undef unless $wh->{$warehousename}->{warehouse_servers};
   my $arrayref = $wh->{$warehousename}->{whc}->job_list;
   foreach (@$arrayref)
   {
