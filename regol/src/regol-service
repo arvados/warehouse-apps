@@ -64,12 +64,13 @@ sub update_job_table
 	      $warehousename,
 	      $_->{id});
     $dbh->do ("update job set
-	       starttime=?, finishtime=?, knobs=?,
+	       starttime=?, finishtime=?, success=?, knobs=?,
 	       inputkey=?, outputkey=?, metakey=?
 	       where warehousename=? and id=?",
 	      undef,
 	      $_->{starttime} || undef,
 	      $_->{finishtime} || undef,
+	      defined $_->{success} ? $_->{success} : undef,
 	      unescape ($_->{knobs}),
 	      $_->{inputkey},
 	      $_->{outputkey} || undef,
@@ -110,6 +111,7 @@ sub setup_tables
    id bigint,
    starttime datetime,
    finishtime datetime,
+   success tinyint,
    wantredo_nnodes int,
    spec_md5 char(32),
    knobs text,
@@ -118,6 +120,7 @@ sub setup_tables
    metakey text,
    unique(warehousename,id)
   );
+  alter table job add success tinyint after finishtime;
 
   create table if not exists todo
   (

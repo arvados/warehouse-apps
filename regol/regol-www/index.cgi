@@ -30,6 +30,7 @@ printf ("%-15s %4s %20s %10s\n", qw(warehouse job starttime elapsed));
 my $sth = $main::dbh->prepare ("select
  warehousename,
  id,
+ success,
  starttime,
  unix_timestamp(finishtime)-unix_timestamp(starttime) elapsed
  from job order by starttime desc limit 40");
@@ -37,11 +38,11 @@ $sth->execute ()
     or die DBI->errstr;
 while (my $job = $sth->fetchrow_hashref)
 {
-  printf ("%-15s %4d %20s %10d\n",
+  printf ("%-15s %4d %20s %10s\n",
 	  escapeHTML ($job->{warehousename}),
 	  $job->{id},
 	  $job->{starttime},
-	  $job->{elapsed});
+	  $job->{success} ? $job->{elapsed} : "");
 }
 
 print q{</pre>
