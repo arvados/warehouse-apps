@@ -42,7 +42,7 @@ while (1)
     }
     exit 0 if $main::drain;
   }
-  sleep(5);
+  sleep (60);
   exit 0 if $main::drain;
 }
 
