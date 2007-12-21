@@ -14,11 +14,20 @@ $main::drain = 0;
 $SIG{TERM} = $SIG{HUP} = $SIG{INT} = sub { $main::drain = 1; };
 
 my $wh = $main::Warehouses;
-map
+foreach (keys %$wh)
 {
-  $wh->{$_}->{whc} = new Warehouse %{$wh->{$_}}
-  or delete $wh->{$_}
-} keys %$wh;
+  if ($wh->{$_}->{whc} = new Warehouse %{$wh->{$_}})
+  {
+    $dbh->do ("insert ignore into controller set controller=?",
+	      undef,
+	      $wh->{$warehousename}->{warehouse_servers});
+  }
+  else
+  {
+    print STDERR "Can't create new Warehouse object for $_";
+    delete $wh->{$_};
+  }
+}
 
 setup_tables();
 while (1)
@@ -42,7 +51,14 @@ sub update_job_table
 {
   my $warehousename = shift;
   return undef unless $wh->{$warehousename}->{warehouse_servers};
+
   my $arrayref = $wh->{$warehousename}->{whc}->job_list;
+  return undef if !@$arrayref;
+
+  $dbh->do ("update controller set lastupdate=now() where controller=?",
+	    undef,
+	    $wh->{$warehousename}->{warehouse_servers});
+
   foreach (@$arrayref)
   {
     $dbh->do ("insert ignore into job (controller,id) values (?,?)",
@@ -111,6 +127,14 @@ sub setup_tables
    controller char(64),
    orig_id bigint,
    unique(controller,orig_id)
+  );
+
+  create table if not exists controller
+  (
+   id bigint auto_increment primary key,
+   controller char(64),
+   lastupdate datetime,
+   unique(controller)
   );
 EOF
     ;
