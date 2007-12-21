@@ -258,6 +258,27 @@ sub run
 		     [], $result);
 		$c->send_response ($resp);
 	    }
+	    elsif ($r->method eq "GET" and
+		   $r->url->path =~ m/^\/job\/list(?:\?(\d*)-(\d*))?$/)
+	    {
+		my $id_min = $1;
+		my $id_max = $2;
+
+		my $where = "1=1";
+		$where .= " and id >= $id_min" if defined $id_min;
+		$where .= " and id <= $id_max" if defined $id_max;
+
+		my $resp = HTTP::Response->new (200, "OK", []);
+		$resp->{sth} = $self->{dbh}->prepare
+		    ("select * from mapreduce.mrjob where $where order by id")
+		    or die DBI->errstr;
+		$resp->{sth}->execute()
+		    or die DBI->errstr;
+		$resp->{md5_ctx} = Digest::MD5->new;
+		$resp->{sth_finished} = 0;
+		$resp->content (sub { _callback_job_list ($resp) });
+		$c->send_response ($resp);
+	    }
 	    else
 	    {
 		my $resp = HTTP::Response->new
@@ -282,6 +303,34 @@ sub _callback_manifest
     elsif (my @row = $self->{sth}->fetchrow_array)
     {
 	my $data = "@row\n";
+	$self->{md5_ctx}->add ($data);
+	return $data;
+    }
+    else
+    {
+	$self->{sth_finished} = 1;
+	return $self->{md5_ctx}->hexdigest . "\n";
+    }
+}
+
+sub _callback_job_list
+{
+    my $self = shift;
+    if ($self->{sth_finished})
+    {
+	return undef;
+    }
+    elsif (my $job = $self->{sth}->fetchrow_hashref)
+    {
+	
+	my $data = join ("\n",
+			 map {
+			     my $v = $job->{$_};
+			     $v =~ s/\\/\\\\/g;
+			     $v =~ s/\n/\\n/g;
+			     $_."=".$v."\n";
+			 } keys %$job)
+	    . "\n\n";
 	$self->{md5_ctx}->add ($data);
 	return $data;
     }

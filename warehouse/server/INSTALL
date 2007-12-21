@@ -9,6 +9,10 @@ Create accounts and database for warehouse system:
  grant all privileges on warehouse.* to whserver@'%';
  set password for whserver@'%' = old_password('YOURPASSWORDHERE');
 
+Give the warehouse user permission to use the mapreduce database:
+
+ grant all privileges on mapreduce.* to whserver@'%';
+
 Extract current version:
 
  cd /tmp
