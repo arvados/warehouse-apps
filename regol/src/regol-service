@@ -85,23 +85,28 @@ sub setup_tables
 {
   map { $dbh->do ($_) } split (/;\n/, <<EOF);
 
-  create table job ( controller char(64) );
-  alter table job add controller char(64);
-  alter table job add id bigint;
-  alter table job add starttime datetime;
-  alter table job add finishtime datetime;
-  alter table job add wantredo_nnodes int;
-  alter table job add spec_md5 char(32);
-  alter table job add knobs text;
-  alter table job add inputkey text;
-  alter table job add outputkey text;
-  alter table job add metakey text;
-  alter table job add unique(controller,id);
+  create table if not exists job
+  (
+   controller char(64),
+   id bigint,
+   starttime datetime,
+   finishtime datetime,
+   wantredo_nnodes int,
+   spec_md5 char(32),
+   knobs text,
+   inputkey text,
+   outputkey text,
+   metakey text,
+   unique(controller,id)
+  );
 
-  create table myjob ( controller char(64) );
-  alter table myjob add controller char(64);
-  alter table myjob add id bigint;
-  alter table myjob add orig_id bigint;
+  create table if not exists myjob
+  (
+   id bigint auto_increment primary key,
+   controller char(64),
+   orig_id bigint,
+   unique(controller,orig_id)
+  );
 EOF
     ;
 }
