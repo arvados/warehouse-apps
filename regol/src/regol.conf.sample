@@ -1,6 +1,21 @@
-$DatabaseDSN
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+$main::DatabaseDSN
     = [ "DBI:mysql:database=regol;host=localhost",
 	"regol",
 	"DBPASSWORDHERE" ];
+
+$main::Warehouses = {
+  "templeton" =>
+  {
+    "warehouse_servers" => "tomc.oxf.freelogy.org:24848",
+    "mogilefs_trackers" => "tomc.oxf.freelogy.org:6001",
+  },
+  "uncle" =>
+  {
+    "warehouse_servers" => "uncle-controller.nrb.freelogy.org:24848",
+    "mogilefs_trackers" => "uncle-controller.nrb.freelogy.org:6001",
+  },
+};
 
 1;

@@ -1,3 +1,109 @@
 #!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+use DBI;
+use Warehouse;
+
+do '/etc/regol.conf' or die "No config file /etc/regol.conf";
+
+my $dbh = DBI->connect(@$main::DatabaseDSN)
+    or die "DBI connect failed: ".DBI->errstr;
+
+$main::drain = 0;
+$SIG{TERM} = $SIG{HUP} = $SIG{INT} = sub { $main::drain = 1; };
+
+my $wh = $main::Warehouses;
+map { $wh->{$_}->{whc} = new Warehouse $wh->{$_} } $wh;
+
+setup_tables();
+while (1)
+{
+  foreach (keys %$wh)
+  {
+    update_job_table($_);    # find out about new jobs from controller
+    purge_myjob_table($_);	# remove jobs after they start running
+    if (count_myjobs($_) == 0) # if all of my submitted jobs are running...
+    {
+      schedule_something($_);
+    }
+    exit 0 if $main::drain;
+  }
+  sleep(5);
+  exit 0 if $main::drain;
+}
+
+
+sub update_job_table
+{
+  my $warehousename = shift;
+  my $arrayref = $wh->{$warehousename}->{whc}->job_list;
+  foreach (@$arrayref)
+  {
+    $dbh->do ("insert ignore into job (controller,id) values (?,?)",
+	      undef,
+	      $wh->{$warehousename}->{warehouse_servers},
+	      $_->{id});
+    $dbh->do ("update job set
+	       starttime=?, finishtime=?, knobs=?,
+	       inputkey=?, outputkey=?, metakey=?
+	       where controller=? and id=?",
+	      undef,
+	      $_->{starttime} or undef,
+	      $_->{finishtime} or undef,
+	      unescape ($_->{knobs}),
+	      $_->{inputkey},
+	      $_->{outputkey} or undef,
+	      $_->{metakey} or undef,
+	      $wh->{$warehousename}->{warehouse_servers},
+	      $_->{id});
+  }
+}
+
+
+sub purge_myjob_table
+{
+}
+
+
+sub count_myjobs
+{
+  my $warehousename = shift;
+  my $sth = $dbh->prepare ("select count(*) from myjob where controller=?");
+  $sth->execute ($warehousename) or return -1;
+  my @r = $sth->fetchrow () or return -1;
+  return $r[0];
+}
+
+
+sub schedule_something
+{
+}
+
+
+sub setup_tables
+{
+  map { $dbh->do ($_) } split (/;\n/, <<EOF);
+
+  create table job;
+  alter table job add controller char(64);
+  alter table job add id bigint;
+  alter table job add starttime datetime;
+  alter table job add finishtime datetime;
+  alter table job add wantredo_nnodes int;
+  alter table job add spec_md5 char(32);
+  alter table job add knobs text;
+  alter table job add inputkey text;
+  alter table job add outputkey text;
+  alter table job add metakey text;
+  alter table job add unique(controller,id);
+
+  create table myjob;
+  alter table myjob add controller char(64);
+  alter table myjob add id bigint;
+  alter table myjob add orig_id bigint;
+EOF
+    ;
+}
 
 sleep 60;
