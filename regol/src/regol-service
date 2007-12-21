@@ -105,3 +105,12 @@ sub setup_tables
 EOF
     ;
 }
+
+
+sub unescape
+{
+  local $_ = shift;
+  s/\\n/\n/g;
+  s/\\\\/\\/g;
+  $_;
+}
