@@ -3,7 +3,6 @@ Install apache22, mysql5, php5.
 Install warehouse API.  Details:
 
  http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse/INSTALL
- http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse/client/INSTALL
 
 Install runit.
 
