@@ -45,8 +45,7 @@ my $sth = $dbh->prepare("
       nodes,
       knobs,
       mrjob.starttime,
-      mrjob.finishtime,
-      unix_timestamp(mrjob.finishtime)-unix_timestamp(mrjob.starttime),
+      unix_timestamp(if(mrjob.finishtime is null,now(),mrjob.finishtime))-unix_timestamp(mrjob.starttime) elapsed,
       count(mrjobstep.id),
       mrjob.success,
       mrjob.output
@@ -60,17 +59,19 @@ print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Steps Success Output));
+print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Elapsed Steps Success Output));
 print q{
 </tr>
 };
+my $jobstarttime;
 while (my @row = $sth->fetchrow)
 {
   my ($jobid) = @row;
+  $jobstarttime = $row[8];
   for (@row) { $_ = escapeHTML($_); }
   for ($row[5]) { s/,/, /g; }
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; }
-  for ($row[12])
+  for ($row[11])
   {
     s/.*/<a href=\"whget.cgi\/$&\">$&<\/a>/
 	if defined;
@@ -121,13 +122,22 @@ $fields{ExitCode} = 'exitcode';
 $fields{stderr} = 'stderr';
 
 my $sth = $dbh->prepare("select
- id,level,input,submittime,starttime,finishtime,
+ id,
+ level,
+ input,
+ unix_timestamp(submittime)-unix_timestamp(?) submitseconds,
+ unix_timestamp(starttime)-unix_timestamp(?) startseconds,
+ unix_timestamp(finishtime)-unix_timestamp(?) finishseconds,
  unix_timestamp(finishtime)-unix_timestamp(starttime) elapsed,
- attempts,node,exitcode,length(stderr)
+ attempts,
+ node,
+ exitcode,
+ length(stderr)
  from mrjobstep
  where jobid=?
  order by $order_str");
-$sth->execute ($jobid) or die $sth->errstr;
+$sth->execute ($jobstarttime, $jobstarttime, $jobstarttime, $jobid)
+    or die $sth->errstr;
 print "<tr>";
 print map ("<td><a href=\"?id=$jobid&amp;sort="
 	   . $fields{$_}
@@ -151,6 +161,8 @@ while (my @row = $sth->fetchrow)
 {
   for (@row) { $_ = escapeHTML($_); }
   for ($row[2]) { s/\n/<br>/g; }
+  for (@row[3,4,5]) { s/^/T+/ if defined; }
+  for ($row[6]) { $_ = "<b>$_</b>" if defined; }
   if ($row[-1])
   {
     $row[-1] = "<a href=\"mrjobstep.cgi?id=$row[0]\">$row[-1]&nbsp;bytes</a>";
