@@ -138,7 +138,7 @@ sub run
 		  " " . $c->peerhost() .
 		  " R" .
 		  " " . $r->method .
-		  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path))[0] .
+		  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
 		  "\n");
 
 	    $self->_reconnect if !$self->{dbh}->ping;
@@ -258,15 +258,14 @@ sub run
 		     [], $result);
 		$c->send_response ($resp);
 	    }
-	    elsif ($r->method eq "GET" and
-		   $r->url->path =~ m/^\/job\/list(?:\?(\d*)-(\d*))?$/)
+	    elsif ($r->method eq "GET" and $r->url->path eq "/job/list")
 	    {
-		my $id_min = $1;
-		my $id_max = $2;
-
 		my $where = "1=1";
-		$where .= " and id >= $id_min" if defined $id_min;
-		$where .= " and id <= $id_max" if defined $id_max;
+		if ($r->query =~ /^(\d*)-(\d*)$/)
+		{
+		    $where .= " and id >= $1" if defined $1;
+		    $where .= " and id <= $2" if defined $2;
+		}
 
 		my $resp = HTTP::Response->new (200, "OK", []);
 		$resp->{sth} = $self->{dbh}->prepare
