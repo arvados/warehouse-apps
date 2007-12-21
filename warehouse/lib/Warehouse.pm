@@ -664,6 +664,7 @@ sub job_list
 	    else
 	    {
 		$ctx->add ($_);
+		$ctx->add ("\n\n");
 		undef $checkmd5;
 		my %h;
 		foreach (split /\n/)
