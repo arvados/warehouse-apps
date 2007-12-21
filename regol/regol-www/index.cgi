@@ -30,11 +30,28 @@ $sth->execute ()
     or die DBI->errstr;
 while (my $job = $sth->fetchrow_hashref)
 {
-  printf ("%-20s %4d %-20s %-20s\n",
+  printf ("%-15s %4d %-20s %-20s\n",
 	  escapeHTML ($job->{warehousename}),
 	  $job->{id},
 	  $job->{starttime},
 	  $job->{finishtime});
+}
+
+print q{</pre>
+<h2>warehouses</h2>
+<pre>};
+
+printf ("%-15s %12s %s\n", qw(name lastupdate servers));
+
+my $sth = $main::dbh->prepare ("select name, servers, unix_timestamp(now())-unix_timestamp(lastupdate) lastupdate_sec from warehouse order by name");
+$sth->execute ()
+    or die DBI->errstr;
+while (my $w = $sth->fetchrow_hashref)
+{
+  printf ("%-15s %8d %s\n",
+	  escapeHTML ($job->{warehousename}),
+	  escapeHTML ($job->{lastupdate_sec}),
+	  escapeHTML ($job->{servers}));
 }
 
 print q{</pre>
