@@ -57,6 +57,11 @@ our $VERSION = '0.01';
  # Retrieve key of a named manifest
  my $key = $whc->fetch_manifest_key_by_name ($name);
 
+ # Get a list of mapreduce jobs
+ my $joblist = $whc->job_list;
+ my $joblist = $whc->job_list (id_min => 123, id_max => 345);
+ print map { "job ".$_->{id}." was a ".$_->{mrfunction}.".\n" } @$joblist;
+
 =head1 METHODS
 
 =head2 new
@@ -634,6 +639,18 @@ sub list_manifests
 
 
 
+=head2 job_list
+
+=cut
+
+sub job_list
+{
+    my $joblist = $whc->job_list;
+    my $joblist = $whc->job_list (id_min => 123, id_max => 345);
+}
+
+
+
 =head2 iostats
 
  print $whc->iostats;
@@ -690,7 +707,8 @@ sub _get_file_data
 	my $pathref;
 	if ($trycache)
 	{
-	    $pathref = $self->{memc}->get ("\@".$hash)
+	    $pathref = $self->{memc}->get
+		($hash."\@".$self->{mogilefs_trackers})
 		unless $self->{memcached_size_threshold} < 0;
 	    next if !$pathref;
 	}
@@ -698,7 +716,8 @@ sub _get_file_data
 	{
 	    my @paths = $self->{mogc}->get_paths ($hash, { noverify => 1 });
 	    $pathref = \@paths;
-	    $self->{memc}->set ("\@".$hash, $pathref)
+	    $self->{memc}->set
+		($hash."\@".$self->{mogilefs_trackers}, $pathref)
 		unless $self->{memcached_size_threshold} < 0;
 	}
 	if ($self->{rand01} && @$pathref > 1)
