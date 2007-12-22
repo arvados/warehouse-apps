@@ -35,7 +35,7 @@ print qq{
 <table>
 <tr>
  <td valign=top align=right>function</td>
- <td valign=top><b>$job{mrfunction}</b></td>
+ <td valign=top><b>$job{mrfunction}</b> revision <b>$job{revision}</b></td>
 </tr>
 <tr>
  <td valign=top align=right>input key</td>
