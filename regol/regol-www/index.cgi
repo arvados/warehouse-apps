@@ -19,8 +19,8 @@ print q{
 <h2>todo</h2>
 <pre>};
 
-my $fmt = "%-15s %4s %-12.12s %-33.33s %5s %7s %s\n";
-printf ($fmt, qw(warehouse job function input nodes photons ...));
+my $fmt = "%-15s %4s %-12.12s %4s %-33.33s %5s %7s %s\n";
+printf ($fmt, qw(warehouse job function rev input nodes photons ...));
 
 my $sth = $main::dbh->prepare ("select * from job
 				where wantredo_nnodes is not null");
@@ -36,7 +36,7 @@ while (my $job = $sth->fetchrow_hashref)
       . "\">edit</a>";
   printf ($fmt,
 	  $job->{warehousename}, $job->{id},
-	  $job->{mrfunction}, $job->{inputkey},
+	  $job->{mrfunction}, $job->{revision}, $job->{inputkey},
 	  $job->{wantredo_nnodes}, $job->{wantredo_photons},
 	  $editlink);
 }
