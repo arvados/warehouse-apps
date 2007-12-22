@@ -17,7 +17,31 @@ print q{
 </head>
 <body>
 <h2>todo</h2>
-<p>I have no jobs in my to-redo list.</p>
+};
+
+my $fmt = "%-15s %4s %-12.12s %-33.33s %5s %7s %s\n";
+printf ($fmt, qw(warehouse job function input nodes photons ...));
+
+my $sth = $main::dbh->prepare ("select * from job
+				where wantredo_nnodes is not null");
+$sth->execute ()
+    or die DBI->errstr;
+while (my $job = $sth->fetchrow_hashref)
+{
+  my $editlink = "<a href=\""
+      . escapeHTML("edit.cgi?warehousename="
+		   . $job->{warehousename}
+		   . "&id="
+		   . $job->{id})
+      . "\">edit</a>";
+  printf ($fmt,
+	  $job->{warehousename}, $job->{id},
+	  $job->{mrfunction}, $job->{inputkey},
+	  $job->{wantredo_nnodes}, $job->{wantredo_photons},
+	  $editlink);
+}
+
+print q{
 <h2>running</h2>
 <p>None of my queued jobs are running now.</p>
 <h2>done</h2>
@@ -29,19 +53,31 @@ printf ("%-15s %4s %-12.12s %-33s %-33s %-20s %10s\n", qw(warehouse job function
 
 my $sth = $main::dbh->prepare ("select *,
  unix_timestamp(finishtime)-unix_timestamp(starttime) elapsed
- from job order by starttime desc limit 40");
+ from job order by starttime desc");
 $sth->execute ()
     or die DBI->errstr;
 while (my $job = $sth->fetchrow_hashref)
 {
-  printf ("%-15s %4d %-12.12s %-33s %-33s %-20s %10s\n",
+  my $addme = "";
+  if ($job->{success} && !defined $job->{wantredo_nnodes})
+  {
+    $addme = "<a href=\""
+	. escapeHTML("edit2.cgi?warehousename="
+		     . $job->{warehousename}
+		     . "&id="
+		     . $job->{id}
+		     . "&nnodes=0&photons=1")
+	. "\">add...</a>";
+  }
+  printf ("%-15s %4d %-12.12s %-33s %-33s %-20s %10s %s\n",
 	  escapeHTML ($job->{warehousename}),
 	  $job->{id},
 	  $job->{mrfunction},
 	  substr ($job->{inputkey}, 0, 33),
 	  substr ($job->{outputkey}, 0, 33),
 	  $job->{starttime},
-	  $job->{success} ? $job->{elapsed} : "");
+	  $job->{success} ? $job->{elapsed} : "",
+	  $addme);
 }
 
 print q{</pre>

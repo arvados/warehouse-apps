@@ -80,6 +80,7 @@ sub update_job_table
 	      $warehousename,
 	      $_->{id});
   }
+  $dbh->do ("update job set spec_md5=md5(concat(mrfunction,inputkey,knobs))");
 }
 
 
@@ -116,6 +117,7 @@ sub setup_tables
    finishtime datetime,
    success tinyint,
    wantredo_nnodes int,
+   wantredo_photons int,
    spec_md5 char(32),
    knobs text,
    inputkey text,
@@ -125,6 +127,8 @@ sub setup_tables
   );
   alter table job add mrfunction char(32) after id;
   alter table job add success tinyint after finishtime;
+  alter table job add wantredo_photons int after wantredo_nnodes;
+  alter table job add key spec_md5 (spec_md5);
 
   create table if not exists todo
   (
