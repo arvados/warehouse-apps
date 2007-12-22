@@ -49,7 +49,9 @@ print q{</pre>
 <h2>available</h2>
 <pre>};
 
-printf ("%-15s %4s %-12.12s %-33s %-33s %-20s %10s\n", qw(warehouse job function input output starttime elapsed));
+$fmt = "%-15s %4s %-12.12s %4s %-33.33s %-33.33s %-20s %10s %s\n";
+printf ($fmt,
+	qw(warehouse job function rev input output starttime elapsed ...));
 
 my $sth = $main::dbh->prepare ("select *,
  unix_timestamp(finishtime)-unix_timestamp(starttime) elapsed
@@ -69,12 +71,13 @@ while (my $job = $sth->fetchrow_hashref)
 		     . "&nnodes=0&photons=1")
 	. "\">add...</a>";
   }
-  printf ("%-15s %4d %-12.12s %-33s %-33s %-20s %10s %s\n",
+  printf ($fmt,
 	  escapeHTML ($job->{warehousename}),
 	  $job->{id},
 	  $job->{mrfunction},
-	  substr ($job->{inputkey}, 0, 33),
-	  substr ($job->{outputkey}, 0, 33),
+	  $job->{revision},
+	  $job->{inputkey},
+	  $job->{outputkey},
 	  $job->{starttime},
 	  $job->{success} ? $job->{elapsed} : "",
 	  $addme);
