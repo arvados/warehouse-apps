@@ -9,6 +9,7 @@ do './config.pl' or die;
 do './functions.pl' or die;
 
 my $q = new CGI;
+print $q->header;
 
 my $job = $main::dbh->selectrow_hashref
     ("select * from job where id=? and warehousename=?",
