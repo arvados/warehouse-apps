@@ -285,6 +285,75 @@ sub run
 		$resp->content (sub { _callback_job_list ($resp) });
 		$c->send_response ($resp);
 	    }
+	    elsif ($r->method eq "POST" and $r->url->path eq "/job/new")
+	    {
+		my $result;
+		my $signedmessage = $r->content;
+
+		# XXX verify signature here XXX
+		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
+		my $plainmessage = $1;
+		my $verified = $plainmessage =~ /\S/;
+
+		if (!$verified)
+		{
+		    my $resp = HTTP::Response->new
+			(401, "SigFail",
+			 [], "Signature verification failed.\n");
+		    $c->send_response ($resp);
+		    last;
+		}
+
+		my %jobspec;
+		foreach (split (/\n/, $plainmessage))
+		{
+		    my ($k, $v) = split (/=/, $_, 2);
+		    $jobspec{$k} = $v;
+		}
+		my @fields = qw(mrfunction
+				revision
+				inputkey
+				knobs
+				nodes
+				photons);
+		if (my @missing = grep { !defined $jobspec{$_} } @fields)
+		{
+		    my $resp = HTTP::Response->new
+			(400, "Invalid request",
+			 [], "Invalid request: missing fields: @missing");
+		    $c->send_response ($resp);
+		    last;
+		}
+		my $ok = $self->{dbh}->do
+		    ("insert into mrjob
+		      (jobmanager_id, mrfunction, revision, nodes,
+		       input0, knobs, submittime)
+		      values (?, ?, ?, ?, ?, ?, now())",
+		     undef,
+		     -1,
+		     $jobspec{mrfunction},
+		     $jobspec{revision},
+		     $jobspec{nodes},
+		     $jobspec{inputkey},
+		     $jobspec{knobs});
+		my $jobid = $self->{dbh}->last_insert_id
+		    if $ok;
+		$ok = $self->{dbh}->do
+		    ("insert into mrjobstep (jobid, level, input, submittime)
+		      values (?, 0, ?, now())",
+		     undef,
+		     $jobid, $jobspec{inputkey})
+		    if $jobid;
+		$self->{dbh}->do
+		    ("update mrjob set jobmanager_id=null where id=?",
+		     undef, $jobid)
+		    if $jobid;
+		my $resp = HTTP::Response->new
+		    ($jobid ? 200 : 500,
+		     $jobid ? "OK" : "Error",
+		     [], $jobid);
+		$c->send_response ($resp);
+	    }
 	    else
 	    {
 		my $resp = HTTP::Response->new

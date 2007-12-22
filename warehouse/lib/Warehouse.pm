@@ -62,6 +62,9 @@ our $VERSION = '0.01';
  my $joblist = $whc->job_list (id_min => 123, id_max => 345);
  print map { "job ".$_->{id}." was a ".$_->{mrfunction}.".\n" } @$joblist;
 
+ # Submit a mapreduce job
+ my $jobid = $whc->job_new (mrfunction => "zmd5", ...);
+
 =head1 METHODS
 
 =head2 new
@@ -513,13 +516,7 @@ sub store_manifest_by_name
 	$oldkey = "NULL";
     }
     my $reqtext = "$newkey $oldkey $name";
-
-    # fake signature -- server won't notice anyway
-    my $signedreq = "-----BEGIN PGP SIGNED MESSAGE-----\n"
-	. "Faked\n\n"
-	. $reqtext
-	. "\n-----BEGIN PGP SIGNATURE-----\n"
-	. "Faked\n";
+    my $signedreq = $self->_sign ($reqtext);
 
     my $url = "http://".$self->{warehouse_servers}."/put";
     my $req = HTTP::Request->new (POST => $url);
@@ -683,6 +680,58 @@ sub job_list
 	return undef;
     }
     return undef;
+}
+
+
+
+=head2 job_new
+
+    my $id = $whc->job_new (mrfunction => "zmd5",
+			    revision => 836,
+			    inputkey => "f171d0aa385d601d13d3f5292a4ed4c5",
+			    knobs => "GZIP=yes\nFOO=bar",
+			    nodes => 20,
+			    photons => 1);
+
+=cut
+
+sub job_new
+{
+    my $self = shift;
+    my %job = @_;
+    map { for ($job{$_}) { s/\\/\\\\/g; s/\n/\\n/g; } } keys %job;
+
+    my $reqtext = join ("\n", map { $_."=".$job{$_} } keys %job);
+    my $signedreq = $self->_sign ($reqtext);
+
+    my $url = "http://".$self->{warehouse_servers}."/job/new";
+    my $req = HTTP::Request->new (POST => $url);
+    $req->header ('Content-Length' => length $signedreq);
+    $req->content ($signedreq);
+    my $r = $self->{ua}->request ($req);
+
+    if ($r->is_success)
+    {
+	if ($r->content =~ /^\d+$/)
+	{
+	    return $&;
+	}
+    }
+    return undef;
+}
+
+
+sub _sign
+{
+    my $self = shift;
+    my $text = shift;
+
+    # fake signature -- server won't notice anyway
+    return "-----BEGIN PGP SIGNED MESSAGE-----\n"
+	. "Faked\n\n"
+	. $text
+	. "\n-----BEGIN PGP SIGNATURE-----\n"
+	. "Faked\n";
 }
 
 
