@@ -63,13 +63,17 @@ while (my $job = $sth->fetchrow_hashref)
   my $addme = "";
   if ($job->{success} && !defined $job->{wantredo_nnodes})
   {
-    $addme = "<a href=\""
+    $addme = "    <a href=\""
 	. escapeHTML("edit2.cgi?warehousename="
 		     . $job->{warehousename}
 		     . "&id="
 		     . $job->{id}
 		     . "&nnodes=0&photons=1")
-	. "\">add...</a>";
+	. "\">add</a>";
+  }
+  elsif (defined $job->{wantredo_nnodes})
+  {
+    $addme = "todo";
   }
   printf ($fmt,
 	  escapeHTML ($job->{warehousename}),

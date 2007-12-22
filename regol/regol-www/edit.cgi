@@ -20,6 +20,7 @@ my $job = $main::dbh->selectrow_hashref
 my %job = %$job;
 
 $job{knobs} = unescape ($job{knobs});
+$job{inputkey} = unescape ($job{inputkey}); # just for pre-WarehouseAPI jobs
 map { $job{$_} = escapeHTML ($job{$_}) } keys %job;
 
 print qq{
