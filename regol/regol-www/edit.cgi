@@ -35,15 +35,15 @@ print qq{
 <table>
 <tr>
  <td valign=top align=right>function</td>
- <td valign=top><b><pre>$job{mrfunction}</pre></b></td>
+ <td valign=top><b>$job{mrfunction}</b></td>
 </tr>
 <tr>
  <td valign=top align=right>input key</td>
- <td valign=top><b><pre>$job{inputkey}</pre></b></td>
+ <td valign=top><b>$job{inputkey}</b></td>
 </tr>
 <tr>
  <td valign=top align=right>knobs</td>
- <td valign=top><b><pre>$job{knobs}</pre></b></td>
+ <td valign=top><b>$job{knobs}</b></td>
 </tr>
 <tr>
  <td valign=top align=right>number of nodes to allocate</td>
