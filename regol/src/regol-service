@@ -81,7 +81,7 @@ sub update_job_table
 	      $warehousename,
 	      $_->{id});
   }
-  $dbh->do ("update job set spec_md5=md5(concat(mrfunction,inputkey,knobs))");
+  $dbh->do ("update job set spec_md5=md5(concat(mrfunction,revision,inputkey,knobs))");
 }
 
 
