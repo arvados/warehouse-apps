@@ -17,7 +17,7 @@ print q{
 </head>
 <body>
 <h2>todo</h2>
-};
+<pre>};
 
 my $fmt = "%-15s %4s %-12.12s %-33.33s %5s %7s %s\n";
 printf ($fmt, qw(warehouse job function input nodes photons ...));
@@ -41,7 +41,7 @@ while (my $job = $sth->fetchrow_hashref)
 	  $editlink);
 }
 
-print q{
+print q{</pre>
 <h2>running</h2>
 <p>None of my queued jobs are running now.</p>
 <h2>done</h2>
