@@ -16,7 +16,7 @@ print q{
 <title>regol</title>
 </head>
 <body>
-<h2>todo</h2>
+<h2>wanttodo</h2>
 <pre>};
 
 my $fmt = "%-15s %4s %-12.12s %4s %-33.33s %5s %7s %s\n";
@@ -42,10 +42,24 @@ while (my $job = $sth->fetchrow_hashref)
 }
 
 print q{</pre>
-<h2>running</h2>
-<p>None of my queued jobs are running now.</p>
-<h2>done</h2>
-<p>None of my queued jobs have finished.</p>
+<h2>todo</h2>
+<pre>};
+
+my $fmt = "%-15s %6s %6s %-20s\n";
+printf ($fmt, qw(warehouse origid newid submittime));
+
+my $sth = $main::dbh->prepare ("select * from todo
+				order by warehousename, id_orig");
+$sth->execute ()
+    or die DBI->errstr;
+while (my $job = $sth->fetchrow_hashref)
+{
+  printf ($fmt,
+	  $job->{warehousename}, $job->{id_orig}, $job->{id_new},
+	  $job->{submittime});
+}
+
+print q{</pre>
 <h2>available</h2>
 <pre>};
 
