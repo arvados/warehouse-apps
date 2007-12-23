@@ -116,7 +116,7 @@ sub schedule_all_from_todo
   my $sth = $dbh->prepare ("select * from todo
 			    left join job on id_orig=id
 			    and todo.warehousename=job.warehousename
-			    where warehousename=?");
+			    where todo.warehousename=?");
   $sth->execute ($warehousename) or return -1;
   while (my $todo = $sth->fetchrow_hashref)
   {
