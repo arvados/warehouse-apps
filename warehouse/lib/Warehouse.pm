@@ -718,6 +718,14 @@ sub job_new
 	{
 	    return $&;
 	}
+	else
+	{
+	    $self->{errstr} = "Server reported success but did not supply a job id";
+	}
+    }
+    else
+    {
+	$self->{errstr} = $r->status_line;
     }
     return undef;
 }
