@@ -126,7 +126,7 @@ sub schedule_all_from_todo
 		 where warehousename=? and id_orig=?",
 		undef,
 		$todo->{warehousename}, $todo->{id_orig});
-      my $id_new = $whc->job_new
+      my $id_new = $wh->{$warehousename}->{whc}->job_new
 	  (mrfunction => $todo->{mrfunction},
 	   revision => $todo->{revision},
 	   inputkey => $todo->{inputkey},
