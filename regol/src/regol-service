@@ -146,7 +146,8 @@ sub schedule_all_from_todo
 		   where warehousename=? and id_orig=?",
 		  undef,
 		  $todo->{warehousename}, $todo->{id_orig});
-	Log ($warehousename, $todo->{id_orig}, "enqueue fail:", $whc->errstr);
+	Log ($warehousename, $todo->{id_orig}, "enqueue fail:",
+	     $wh->{$warehousename}->{whc}->errstr);
       }
     }
   }
