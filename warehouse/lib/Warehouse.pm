@@ -420,6 +420,8 @@ sub fetch_block
     $verifyflag = 1 if !defined $verifyflag;
     my $nowarnflag = shift;
 
+    return "" if $hash eq "d41d8cd98f00b204e9800998ecf8427e";
+
     my $sizehint;
     if ($hash =~ s/^(-(\d+) )//)
     {
