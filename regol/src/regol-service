@@ -34,12 +34,13 @@ while (1)
 {
   foreach (keys %$wh)
   {
-    update_job_table($_);	# find out about new jobs from controller
-    purge_todo_table($_);	# remove jobs after they start running
-    if (count_todo($_) == 0)	# if all of my submitted jobs are running...
+    update_job_table ($_);	# find out about new jobs from controller
+    purge_todo_table ($_);	# remove jobs from todo once they've finished
+    if (count_todo ($_) == 0)	# if all of my jobs on this wh are finished...
     {
-      schedule_something($_);
+      refill_todo ($_);
     }
+    schedule_all_from_todo ($_);# copy "todo" to warehouse job queue
     exit 0 if $main::drain;
   }
   sleep (60);
@@ -75,7 +76,7 @@ sub update_job_table
 	      $_->{finishtime} || undef,
 	      defined $_->{success} ? $_->{success} : undef,
 	      unescape ($_->{knobs}),
-	      $_->{inputkey},
+	      unescape ($_->{inputkey}),
 	      $_->{outputkey} || undef,
 	      $_->{metakey} || undef,
 	      $warehousename,
@@ -87,6 +88,15 @@ sub update_job_table
 
 sub purge_todo_table
 {
+  # clear completed jobs
+  $dbh->do ("delete from todo
+	     where concat(id_new,warehousename) in
+	     (select concat(id,warehousename) from job
+	      where finishtime is not null)");
+
+  # give up on stale jobs (submitted long ago, never started)
+  $dbh->do ("delete from todo
+	     where submittime<date_add(now(),interval -1 day)");
 }
 
 
@@ -100,8 +110,57 @@ sub count_todo
 }
 
 
-sub schedule_something
+sub schedule_all_from_todo
 {
+  my $warehousename = shift;
+  my $sth = $dbh->prepare ("select * from todo
+			    left join job on id_orig=id
+			    and todo.warehousename=job.warehousename
+			    where warehousename=?");
+  $sth->execute ($warehousename) or return -1;
+  while (my $todo = $sth->fetchrow_hashref)
+  {
+    if (!defined $todo->{id_new})
+    {
+      $dbh->do ("update todo set submittime=now()
+		 where warehousename=? and id_orig=?",
+		undef,
+		$todo->{warehousename}, $todo->{id_orig});
+      my $id_new = $whc->job_new
+	  (mrfunction => $todo->{mrfunction},
+	   revision => $todo->{revision},
+	   inputkey => $todo->{inputkey},
+	   knobs => $todo->{knobs},
+	   nodes => $todo->{wantredo_nnodes},
+	   photons => $todo->{wantredo_photons});
+      if ($id_new)
+      {
+	$dbh->do
+	    ("update todo set id_new=? where warehousename=? and id_orig=?",
+	     undef, $id_new, $todo->{warehousename}, $todo->{id_orig});
+	Log ($warehousename, $todo->{id_orig}, "re-queued as $id_new")
+      }
+      else
+      {
+	$dbh->do ("update todo set submittime=null
+		   where warehousename=? and id_orig=?",
+		  undef,
+		  $todo->{warehousename}, $todo->{id_orig});
+	Log ($warehousename, $todo->{id_orig}, "enqueue fail:", $whc->errstr);
+      }
+    }
+  }
+}
+
+
+sub refill_todo
+{
+  my $warehousename = shift;
+  $dbh->do ("insert into todo (warehousename, id_orig)
+	     select warehousename, id from job
+	     where warehousename=? and wantredo_nnodes>0",
+	    undef,
+	    $warehousename);
 }
 
 
@@ -136,9 +195,12 @@ sub setup_tables
   create table if not exists todo
   (
    warehousename char(64),
-   id bigint,
-   unique(warehousename,id)
+   id_orig bigint,
+   id_new bigint,
+   submittime datetime,
+   unique(warehousename,id_orig)
   );
+  alter table todo add submittime datetime after id;
 
   create table if not exists warehouse
   (
@@ -158,4 +220,10 @@ sub unescape
   s/\\n/\n/g;
   s/\\\\/\\/g;
   $_;
+}
+
+
+sub Log
+{
+  print STDERR "@_\n";
 }
