@@ -345,7 +345,7 @@ sub run
 		     $jobspec{nodes},
 		     $jobspec{inputkey},
 		     $jobspec{knobs});
-		my $jobid = $self->{dbh}->last_insert_id
+		my $jobid = $self->{dbh}->last_insert_id (undef, undef, undef, undef)
 		    if $ok;
 		$ok = $self->{dbh}->do
 		    ("insert into $mrdb.mrjobstep
