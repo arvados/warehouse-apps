@@ -16,7 +16,14 @@ my $q = new CGI;
 my $path_info = $ENV{PATH_INFO};# /1234abcd/subdir1/testfile
 $path_info =~ s,^/,,;		# 1234abcd/subdir1/testfile
 
-if ($path_info !~ m,/,)
+my $wantrawmanifest = 0;
+
+if ($path_info =~ /^([0-9a-f]{32})(\/=|\.txt)$/)
+{
+    $path_info = $1;
+    $wantrawmanifest = 1;
+}
+elsif ($path_info !~ m,/,)
 {
     # redirect .../whget.cgi/key -> .../whget.cgi/key/ so that
     # relative url's work predictably
@@ -67,7 +74,7 @@ if ($manifestblock =~ /^[0-9a-f]{32}(,[0-9a-f]{32})*\n?$/)
 	or header_and_die (1, "fetch_block failed");
 }
 
-if ($wantsubdir eq "" && $wantfile eq "=")
+if ($wantrawmanifest)
 {
   print $q->header (-type=>"text/plain");
   print $manifestblock;
