@@ -69,7 +69,7 @@ printf ($fmt,
 
 my $sth = $main::dbh->prepare ("select *,
  unix_timestamp(finishtime)-unix_timestamp(starttime) elapsed
- from job order by starttime desc");
+ from job order by starttime desc, id desc");
 $sth->execute ()
     or die DBI->errstr;
 while (my $job = $sth->fetchrow_hashref)
