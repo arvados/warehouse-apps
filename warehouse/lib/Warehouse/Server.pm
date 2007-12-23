@@ -47,6 +47,10 @@ Reference to an array with database connection info, for example:
     "whserver",
     "DBPASSWORDHERE" ]
 
+=item MapReduceDB
+
+Name of the mapreduce database.  Default is "mapreduce".
+
 =item ListenAddress
 
 IP address to listen on.  Default is "0.0.0.0".
@@ -77,6 +81,9 @@ sub _init
 
     $self->{ListenPort} = "24848"
 	if !defined $self->{ListenPort};
+
+    $self->{MapReduceDB} = "mapreduce"
+	if !defined $self->{MapReduceDB};
 
     $self->{daemon} = new HTTP::Daemon
 	( LocalAddr => $self->{ListenAddress},
@@ -275,8 +282,9 @@ sub run
 		}
 
 		my $resp = HTTP::Response->new (200, "OK", []);
+		my $mrdb = $self->{MapReduceDB};
 		$resp->{sth} = $self->{dbh}->prepare
-		    ("select * from mapreduce.mrjob where $where order by id")
+		    ("select * from $mrdb.mrjob where $where order by id")
 		    or die DBI->errstr;
 		$resp->{sth}->execute()
 		    or die DBI->errstr;
@@ -324,8 +332,9 @@ sub run
 		    $c->send_response ($resp);
 		    last;
 		}
+		my $mrdb = $self->{MapReduceDB};
 		my $ok = $self->{dbh}->do
-		    ("insert into mrjob
+		    ("insert into $mrdb.mrjob
 		      (jobmanager_id, mrfunction, revision, nodes,
 		       input0, knobs, submittime)
 		      values (?, ?, ?, ?, ?, ?, now())",
@@ -339,13 +348,15 @@ sub run
 		my $jobid = $self->{dbh}->last_insert_id
 		    if $ok;
 		$ok = $self->{dbh}->do
-		    ("insert into mrjobstep (jobid, level, input, submittime)
+		    ("insert into $mrdb.mrjobstep
+		      (jobid, level, input, submittime)
 		      values (?, 0, ?, now())",
 		     undef,
 		     $jobid, $jobspec{inputkey})
 		    if $jobid;
 		$self->{dbh}->do
-		    ("update mrjob set jobmanager_id=null where id=?",
+		    ("update $mrdb.mrjob
+		      set jobmanager_id=null where id=?",
 		     undef, $jobid)
 		    if $jobid;
 		my $resp = HTTP::Response->new
