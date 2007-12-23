@@ -151,6 +151,7 @@ my $time_slowest_success = 60;	# always reasonable to allow this long
 
 my $tasks_succeeded_total = 0;
 my $tasks_failed_total = 0;
+my $tasks_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 
 
@@ -376,7 +377,7 @@ $sth = $dbh->prepare ("select output from mrjobstep
 $sth->execute ($job_id, $maxlevel) or croak ($dbh->errstr);
 while (my ($output) = $sth->fetchrow)
 {
-  if (my $outblock = $whc->fetch_block ($output))
+  if (defined (my $outblock = $whc->fetch_block ($output)))
   {
     $whc->write_data ($outblock);
   }
@@ -442,13 +443,24 @@ sub reapchildren
 		  . "."
 		  . $taskslot[$proc_slot{$pid}]->{cpu});
   my $jobstepid = $proc_job{$pid};
-  Log ($jobstepid, "child $pid on $whatslot exit $?");
-  if ($?) {
+
+  my $exitcode = $?;
+  my $exitinfo = "exit $exitcode";
+  if (!exists $job_output{$jobstepid})
+  {
+    $exitinfo .= " with no output key";
+    $exitcode = -1 if $exitcode == 0 && $tasks_must_output_keys;
+  }
+  Log ($jobstepid, "child $pid on $whatslot $exitinfo");
+
+  if ($exitcode != 0)
+  {
     ++$tasks_todo;
     ++$tasks_failed;
     ++$tasks_failed_total;
   }
-  else {
+  else
+  {
     ++$tasks_succeeded;
     ++$tasks_succeeded_total;
     my $elapsed = time - $proc_time{$pid};
@@ -462,7 +474,7 @@ sub reapchildren
 	output=?,
 	stderr=?
 	where id=? and jobid=?");
-  $finish_sth->execute ($?,
+  $finish_sth->execute ($exitcode,
 			$job_output{$jobstepid},
 			$job_stderr{$jobstepid},
 			$jobstepid,
@@ -508,6 +520,7 @@ sub readfrompipes
       while ($job_stderr{$job} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
       {
 	$job_output{$job} = $1;
+	$tasks_must_output_keys = 1;
       }
     }
   }
