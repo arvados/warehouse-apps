@@ -283,10 +283,13 @@ sub _store_block_memcached
     {
 	$self->{stats_memwrote_attempts} ++;
 	$self->{stats_memwrote_blocks} ++;
-	$self->{memc}->set ($hash.".".$chunk,
-			    substr ($$dataref,
-				    $chunk * $memcached_max_data,
-				    $memcached_max_data));
+	my $frag = substr ($$dataref,
+			   $chunk * $memcached_max_data,
+			   $memcached_max_data);
+	$self->{memc}->set ($hash.".".$chunk, $frag);
+
+	warn "set ${hash}.${chunk} => ".(length $frag)."\n"
+	    if $self->{debug_memcached};
     }
     $self->{stats_memwrote_bytes} += length $$dataref;
 }
@@ -474,12 +477,12 @@ sub fetch_block
 		$data .= $frag;
 		last if !defined $sizehint
 		    && $memcached_max_data > length $frag;
-		warn "${hash}.${chunk} => ".(length $frag)."\n"
+		warn "get ${hash}.${chunk} => ".(length $frag)."\n"
 		    if $self->{debug_memcached};
 	    }
 	    else
 	    {
-		warn "${hash}.${chunk} => undef\n"
+		warn "get ${hash}.${chunk} => undef\n"
 		    if $self->{debug_memcached};
 		last;
 	    }
