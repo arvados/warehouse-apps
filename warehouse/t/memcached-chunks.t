@@ -7,8 +7,6 @@ use Warehouse;
 
 my $whc = new Warehouse
     (memcached_size_threshold => $Warehouse::blocksize,
-     mogilefs_size_threshold => $Warehouse::blocksize+1,
-     debug_mogilefs_paths => 1,
      debug_memcached => 1,
      );
 
