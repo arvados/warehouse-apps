@@ -8,7 +8,7 @@ use Cache::Memcached;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 
-$memcached_max_data = 1048576;
+$memcached_max_data = 1000000;
 
 do '/etc/warehouse/warehouse-client.conf'
     or die "Failed to load /etc/warehouse/warehouse-client.conf";
@@ -109,11 +109,17 @@ warehouse-client.conf if not specified.
 MogileFS class used for storing files.  Comes from
 warehouse-client.conf if not specified.
 
+=item mogilefs_size_threshold
+
+Minimum block size to store in mogilefs, in bytes.  Default is 0.  Do
+not use a value greater than 1 + memcached_size_threshold.
+
 =item memcached_size_threshold
 
-Maximum data size to store in memcached.  Default is 1 megabyte.  Zero
-means never use memcached for data.  Negative means never use
-memcached for either data or mogilefs paths.
+Maximum block size to store in memcached, in bytes.  Default is
+1000000.  Zero means never use memcached for data.  Negative means
+never use memcached for either data or mogilefs paths.  Blocks are
+stored in memcached as <= 1000000-byte chunks in any case.
 
 =back
 
