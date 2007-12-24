@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 6*64*2;
+use Test::More tests => 6*4*3;
 use Warehouse;
 
 my $whc = new Warehouse
@@ -14,11 +14,11 @@ my $check;
 
 SKIP: {
 
-    skip "something about 'perl -T' makes fetches hang", 6*64*2 if ${^TAINT};
+    skip "something about 'perl -T' makes fetches hang", 6*4*3 if ${^TAINT};
 
     my @size;
     my @hash;
-    for my $i (0..63)
+    for my $i (0..3)
     {
 	my $content = "abcdefghijklmnop";
 	for (6..19)
@@ -37,7 +37,8 @@ SKIP: {
     for (@hash)
     {
 	my $size = shift @size;
-	ok ($whc->fetch_block ($_), "fetch_${size}_${_}");
+	ok ($whc->fetch_block ($_."+".$size), "fetch_${size}_${_}+$size");
+	ok ($whc->fetch_block ($_          ), "fetch_${size}_${_}"      );
     }
 
     print STDERR ("\n" . $whc->iostats);
