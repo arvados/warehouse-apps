@@ -8,6 +8,8 @@ use Cache::Memcached;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 
+$memcached_max_data = 1048576;
+
 do '/etc/warehouse/warehouse-client.conf'
     or die "Failed to load /etc/warehouse/warehouse-client.conf";
 do '/etc/warehouse/memcached.conf.pl'
@@ -134,7 +136,7 @@ sub _init
     $self->{warehouse_servers} = $warehouse_servers
 	if !defined $self->{warehouse_servers};
 
-    $self->{memcached_size_threshold} = 1048576
+    $self->{memcached_size_threshold} = $memcached_max_data
 	if !defined $self->{memcached_size_threshold};
 
     $self->{memcached_servers} = $memcached_servers_arrayref
@@ -245,10 +247,7 @@ sub store_block
 
     if (length $$dataref <= $self->{memcached_size_threshold})
     {
-	$self->{stats_memwrote_attempts} ++;
-	$self->{stats_memwrote_blocks} ++;
-	$self->{stats_memwrote_bytes} += length $$dataref;
-	$self->{memc}->set ($hash, $$dataref);
+	$self->_store_block_memcached ($hash, $dataref);
     }
 
     if (length $$dataref >= $self->{mogilefs_size_threshold})
@@ -269,6 +268,27 @@ sub store_block
     }
 
     return $hash;
+}
+
+
+
+sub _store_block_memcached
+{
+    my $self = shift;
+    my $hash = shift;
+    my $dataref = shift;
+    for (my $chunk = 0;
+	 $chunk * $memcached_max_data < length $$dataref;
+	 $chunk ++)
+    {
+	$self->{stats_memwrote_attempts} ++;
+	$self->{stats_memwrote_blocks} ++;
+	$self->{memc}->set ($hash.".".$chunk,
+			    substr ($$dataref,
+				    $chunk * $memcached_max_data,
+				    $memcached_max_data));
+    }
+    $self->{stats_memwrote_bytes} += length $$dataref;
 }
 
 
@@ -440,8 +460,27 @@ sub fetch_block
     if ((defined $sizehint ? $sizehint : 1)
 	<= $self->{memcached_size_threshold})
     {
-	$self->{stats_memread_attempts} ++;
-	$data = $self->{memc}->get ($hash);
+	$data = "";
+	for (my $chunk = 0;
+	     $chunk * $memcached_max_data < (defined $sizehint
+					     ? $sizehint
+					     : $blocksize);
+	     $chunk ++)
+	{
+	    $self->{stats_memread_attempts} ++;
+	    if (defined (my $frag = $self->{memc}->get ($hash.".".$chunk)))
+	    {
+		$self->{stats_memread_blocks} ++;
+		$data .= $frag;
+		last if !defined $sizehint
+		    && $memcached_max_data > length $frag;
+	    }
+	    else
+	    {
+		last;
+	    }
+	}
+	$self->{stats_memread_bytes} += length $data;
     }
     if (defined $data)
     {
@@ -451,7 +490,14 @@ sub fetch_block
 	{
 	    return $data;
 	}
-	$self->{memc}->delete ($hash);
+	for (my $chunk = 0;
+	     $chunk * $memcached_max_data < (defined $sizehint
+					     ? $sizehint
+					     : $blocksize);
+	     $chunk ++)
+	{
+	    $self->{memc}->delete ($hash.".".$chunk);
+	}
 	warn "Memcached get($hash) failed verify; deleted"
 	    unless $nowarnflag;
     }
@@ -469,10 +515,7 @@ sub fetch_block
 
     if (length $$dataref <= $self->{memcached_size_threshold})
     {
-	$self->{stats_memwrote_attempts} ++;
-	$self->{stats_memwrote_blocks} ++;
-	$self->{stats_memwrote_bytes} += length $$dataref;
-	$self->{memc}->set ($hash, $$dataref);
+	$self->_store_block_memcached ($hash, $dataref);
     }
 
     return $$dataref;
