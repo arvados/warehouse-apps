@@ -10,7 +10,9 @@ use Warehouse::Stream;
 
 my $whc = new Warehouse
     ("mogilefs_trackers" => $ENV{KNOB_SOURCE_MOGILEFS_TRACKERS},
-     "warehouse_controllers" => $ENV{KNOB_SOURCE_WAREHOUSE_CONTROLLERS});
+     "warehouse_controllers" => $ENV{KNOB_SOURCE_WAREHOUSE_CONTROLLERS},
+     "memcached_size_threshold" => $ENV{KNOB_MEMCACHED_SIZE},
+     );
 
 my $nextlevel = $ENV{MR_LEVEL} + 1;
 my $key = $ENV{MR_INPUT};

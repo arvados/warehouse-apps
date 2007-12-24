@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
 
 ###MR_DESCRIPTION:stacks of [compressed] images -> stacks of raw segmented images
 ###MR_INPUT:manifest
@@ -23,7 +24,8 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   my $wantsubdir = $ENV{MR_INPUT};
-  my $whc = new Warehouse;
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
 
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);

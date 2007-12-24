@@ -20,7 +20,8 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   my $wantsubdir = $ENV{MR_INPUT};
-  my $whc = new Warehouse;
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
 
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);

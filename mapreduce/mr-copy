@@ -23,7 +23,8 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   my $wantsubdir = $ENV{MR_INPUT};
-  my $whc_dest = new Warehouse;
+  my $whc_dest = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
   my $whc_source
       = ($ENV{KNOB_SOURCE_MOGILEFS_TRACKERS} ||
 	 $ENV{KNOB_SOURCE_WAREHOUSE_CONTROLLERS})
