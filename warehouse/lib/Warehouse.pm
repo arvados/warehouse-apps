@@ -474,9 +474,13 @@ sub fetch_block
 		$data .= $frag;
 		last if !defined $sizehint
 		    && $memcached_max_data > length $frag;
+		warn "${hash}.${chunk} => ".(length $frag)."\n"
+		    if $self->{debug_memcached};
 	    }
 	    else
 	    {
+		warn "${hash}.${chunk} => undef\n"
+		    if $self->{debug_memcached};
 		last;
 	    }
 	}
