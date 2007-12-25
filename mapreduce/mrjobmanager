@@ -6,7 +6,7 @@
 # 1. Find lowest reduce task level for this job
 # 2. Run all reduce tasks with this lowest level
 #    (this may cause more tasks to be queued)
-# 3. Repeat from #3 until no tasks remain.
+# 3. Repeat from #1 until no tasks remain.
 
 use strict;
 use DBI;
@@ -49,18 +49,16 @@ $metastream->write_start ("log.txt");
 
 
 
-my $sth = $dbh->prepare ("select nprocs, revision, input0, knobs, mrfunction
-                          from mrjob where id=?");
+my $sth = $dbh->prepare ("select * from mrjob where id=?");
 $sth->execute ($job_id) or die $dbh->errstr;
-my ($job_nprocs, $job_revision, $input0, $job_knobs, $mrfunction)
-    = $sth->fetchrow or die $sth->errstr;
-
-Log (undef, "rev $job_revision function $mrfunction knobs $job_knobs");
+my $Job = $sth->fetchrow_hashref or die $sth->errstr;
+Log (undef,
+     "rev $$Job{revision} function $$Job{mrfunction} knobs $$Job{knobs}");
 
 
 
 Log (undef, "check slurm allocation");
-my @taskslot;
+my @slot;
 # Should use $ENV{SLURM_TASKS_PER_NODE} instead of sinfo? (eg. "4(x3),2,4(x2)")
 foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 {
@@ -102,8 +100,8 @@ foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
     Log (undef, "node $node - $ncpus slots");
     foreach my $cpu (1..$ncpus)
     {
-      push @taskslot, { node => $node,
-			cpu => $cpu };
+      push @slot, { node => $node,
+		    cpu => $cpu };
     }
   }
 }
@@ -155,6 +153,10 @@ my $tasks_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 
 
+my %jobstep;
+
+
+
 ONELEVEL:
 
 my $tasks_succeeded = 0;
@@ -184,10 +186,8 @@ update_progress_stats();
 
 Log (undef, "process jobsteps");
 
-my %proc_job;
-my %proc_slot;
-my %proc_time;
-my @freeslot = (0..$#taskslot);
+my %proc;
+my @freeslot = (0..$#slot);
 my %job_stderr;
 my %job_output;
 my %reader;
@@ -203,7 +203,7 @@ while (($id, $input, $attempts) = $sth->fetchrow)
   fcntl ($reader{$id}, F_SETFL, $flags | O_NONBLOCK) or croak ($!);
 
   my $childslot = $freeslot[0];
-  my $childnode = $taskslot[$childslot]->{node};
+  my $childnode = $slot[$childslot]->{node};
   my $childpid = fork();
   if ($childpid == 0)
   {
@@ -227,19 +227,19 @@ while (($id, $input, $attempts) = $sth->fetchrow)
     $ENV{"MR_ID"} = $id;
     $ENV{"MR_JOB_ID"} = $job_id;
     $ENV{"MR_INPUT"} = $input;
-    $ENV{"MR_KNOBS"} = $job_knobs;
-    $ENV{"MR_REVISION"} = $job_revision;
+    $ENV{"MR_KNOBS"} = $Job->{knobs};
+    $ENV{"MR_REVISION"} = $Job->{revision};
     $ENV{"MR_LEVEL"} = $level;
-    $ENV{"MR_FUNCTION"} = $mrfunction;
-    $ENV{"MR_INPUT0"} = $input0;
+    $ENV{"MR_FUNCTION"} = $Job->{mrfunction};
+    $ENV{"MR_INPUT0"} = $Job->{input0};
     $ENV{"MR_OUTPUTKEY"} = "mrjobstep/$job_id/$level/$id";
     $ENV{"INSTALL_REPOS"} = $main::svn_repos;
-    $ENV{"INSTALL_REVISION"} = $job_revision;
+    $ENV{"INSTALL_REVISION"} = $Job->{revision};
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
-    my $execstr = "srun --nodelist='$childnode' -n1 -c1 -N1 -D /tmp --job-name='mr$job_id.$id' sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$job_revision/src/mapreduce/mrtaskmanager'";
+    my $execstr = "srun --nodelist='$childnode' -n1 -c1 -N1 -D /tmp --job-name='mr$job_id.$id' sh -c '/usr/local/polony-tools/installrevision && /usr/local/polony-tools/$$Job{revision}/src/mapreduce/mrtaskmanager'";
     print STDERR ("$execstr\n") if $ENV{MR_DEBUG};
     exec($execstr);
     exit(1);
@@ -252,11 +252,12 @@ while (($id, $input, $attempts) = $sth->fetchrow)
     next;
   }
   shift @freeslot;
-  $proc_job{$childpid} = $id;
-  $proc_time{$childpid} = time;
-  $proc_slot{$childpid} = $childslot;
-  # assert (!exists $taskslot[$childslot]->{pid});
-  $taskslot[$childslot]->{pid} = $childpid;
+  $proc{$childpid} = { jobstep => $id,
+		       time => $time,
+		       slot => $childslot,
+		     };
+  die "assert failed" if exists $slot[$childslot]->{pid};
+  $slot[$childslot]->{pid} = $childpid;
 
   # XXX shouldn't have to reconnect here??? XXX
   $dbh = DBI->connect($main::mapreduce_dsn,
@@ -265,9 +266,9 @@ while (($id, $input, $attempts) = $sth->fetchrow)
   croak ($DBI::errstr) if !$dbh;
 
   Log ($id, "child $childpid started on "
-       .$taskslot[$childslot]->{node}
+       .$slot[$childslot]->{node}
        ."."
-       .$taskslot[$childslot]->{cpu});
+       .$slot[$childslot]->{cpu});
   my $start_sth = $dbh->prepare ("update mrjobstep set
                                   attempts=attempts+1,
                                   starttime=now(),
@@ -297,8 +298,8 @@ while (($id, $input, $attempts) = $sth->fetchrow)
   }
 }
 
-Log (undef, "wait for last ".(scalar keys %proc_job)." children to finish");
-while (%proc_job)
+Log (undef, "wait for last ".(scalar keys %proc)." children to finish");
+while (%proc)
 {
   my $gotsome
       = readfrompipes ()
@@ -311,21 +312,21 @@ while (%proc_job)
   else
   {
     # nothing better to do
-    if ($tasks_succeeded > keys %proc_job)
+    if ($tasks_succeeded > keys %proc)
     {
       # enough jobsteps have succeeded that $time_slowest_success might
       # be meaningful
-      if (@taskslot >= 2 * keys %proc_job)
+      if (@slot >= 2 * keys %proc)
       {
 	# at least half of our task slots (cpus) are idle
-	for (grep { $proc_time{$_} + $time_slowest_success * 2 < time }
-	    keys %proc_time)
+	for (grep { $proc{$_}->{time} + $time_slowest_success * 2 < time }
+	    keys %proc)
 	{
 	  # pid $_ has taken more than twice as long as the longest
 	  # successful job in this round.  It's probably hung.  Kill
 	  # it, and restart it in the next round.
 
-	  Log ($proc_job{$_}, "sending SIGINT x 2 to pid $_");
+	  Log ($proc{$_}->{jobstep}, "sending SIGINT x 2 to pid $_");
 	  kill 2, $_;
 	  select (undef, undef, undef, 0.1);
 	  kill 2, $_;
@@ -423,7 +424,7 @@ exit 0;
 
 sub update_progress_stats
 {
-  my $tasks_running = scalar @taskslot - scalar @freeslot;
+  my $tasks_running = scalar @slot - scalar @freeslot;
   $dbh->do
       ("update mrjob set steps_todo=?,steps_done=?,steps_running=? where id=?",
        undef,
@@ -439,10 +440,10 @@ sub reapchildren
   my $pid = waitpid (-1, WNOHANG);
   return 0 if $pid <= 0;
 
-  my $whatslot = ($taskslot[$proc_slot{$pid}]->{node}
+  my $whatslot = ($slot[$proc{$pid}->{slot}]->{node}
 		  . "."
-		  . $taskslot[$proc_slot{$pid}]->{cpu});
-  my $jobstepid = $proc_job{$pid};
+		  . $slot[$proc{$pid}->{slot}]->{cpu});
+  my $jobstepid = $proc{$pid}->{jobstep};
 
   my $exitcode = $?;
   my $exitinfo = "exit $exitcode";
@@ -463,7 +464,7 @@ sub reapchildren
   {
     ++$tasks_succeeded;
     ++$tasks_succeeded_total;
-    my $elapsed = time - $proc_time{$pid};
+    my $elapsed = time - $proc{$pid}->{time};
     $time_slowest_success = $elapsed
 	if $time_slowest_success < $elapsed;
   }
@@ -487,11 +488,9 @@ sub reapchildren
   delete $reader{$jobstepid};
   delete $job_output{$jobstepid};
   delete $job_stderr{$jobstepid};
-  delete $proc_job{$pid};
-  delete $proc_time{$pid};
-  delete $taskslot[$proc_slot{$pid}]->{pid};
-  push @freeslot, $proc_slot{$pid};
-  delete $proc_slot{$pid};
+  delete $slot[$proc{$pid}->{slot}]->{pid};
+  push @freeslot, $proc{$pid}->{slot};
+  delete $proc{$pid};
   1;
 }
 
