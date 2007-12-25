@@ -253,7 +253,7 @@ while (($id, $input, $attempts) = $sth->fetchrow)
   }
   shift @freeslot;
   $proc{$childpid} = { jobstep => $id,
-		       time => $time,
+		       time => time,
 		       slot => $childslot,
 		     };
   die "assert failed" if exists $slot[$childslot]->{pid};
