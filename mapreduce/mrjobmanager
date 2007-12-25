@@ -263,7 +263,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   splice @jobstep_todo, $todo_ptr, 1;
   --$todo_ptr;
 
-  update_progress_stats();
+  update_progress_stats() if !@freeslot;
 
   while (!@freeslot)
   {
@@ -287,15 +287,8 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 Log (undef, "wait for last ".(scalar keys %proc)." children to finish");
 while (%proc)
 {
-  my $gotsome
-      = readfrompipes ()
-      + reapchildren ();
-
-  if ($gotsome)
-  {
-    update_progress_stats();
-  }
-  else
+  readfrompipes ();
+  if (!reapchildren())
   {
     # nothing better to do
     if ($tasks_succeeded > keys %proc)
@@ -322,8 +315,6 @@ while (%proc)
     select (undef, undef, undef, 0.1);
   }
 }
-
-update_progress_stats();
 
 
 
@@ -468,6 +459,8 @@ sub reapchildren
   delete $slot[$proc{$pid}->{slot}]->{pid};
   push @freeslot, $proc{$pid}->{slot};
   delete $proc{$pid};
+
+  update_progress_stats();
   1;
 }
 
