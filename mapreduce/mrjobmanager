@@ -431,10 +431,12 @@ sub reapchildren
 		  . "."
 		  . $slot[$proc{$pid}->{slot}]->{cpu});
   my $jobstepid = $proc{$pid}->{jobstep};
+  my $elapsed = time - $proc{$pid}->{time};
+  my $Jobstep = $jobstep[$jobstepid];
 
   my $exitcode = $?;
   my $exitinfo = "exit $exitcode";
-  if (!exists $jobstep[$jobstepid]->{output})
+  if (!exists $Jobstep->{output})
   {
     $exitinfo .= " with no output key";
     $exitcode = -1 if $exitcode == 0 && $tasks_must_output_keys;
@@ -445,20 +447,21 @@ sub reapchildren
   {
     ++$tasks_failed;
     push @jobstep_todo, $jobstepid;
+    Log ($jobstepid, "failure in $elapsed seconds");
   }
   else
   {
     ++$tasks_succeeded;
-    my $elapsed = time - $proc{$pid}->{time};
     $time_slowest_success = $elapsed
 	if $time_slowest_success < $elapsed;
     push @jobstep_done, $jobstepid;
+    Log ($jobstepid, "success in $elapsed seconds");
   }
-  $jobstep[$jobstepid]->{exitcode} = $exitcode;
-  $jobstep[$jobstepid]->{finishtime} = time;
+  $Jobstep->{exitcode} = $exitcode;
+  $Jobstep->{finishtime} = time;
   map {
     Log ($jobstepid, "stderr $_");
-  } split ("\n", $jobstep[$jobstepid]->{stderr});
+  } split ("\n", $Jobstep->{stderr});
 
   close $reader{$jobstepid};
   delete $reader{$jobstepid};
