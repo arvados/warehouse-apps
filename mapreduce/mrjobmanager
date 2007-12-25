@@ -487,8 +487,7 @@ sub readfrompipes
 	push @jobstep, { input => $input,
 			 level => $level,
 			 attempts => 0 };
-	push @todo, $#jobstep;
-	++$tasks_todo;
+	push @jobstep_todo, $#jobstep;
       }
       while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
       {
