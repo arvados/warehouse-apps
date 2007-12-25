@@ -410,9 +410,9 @@ exit 0;
 
 sub update_progress_stats
 {
-  my $todo, $done, $running = (scalar @jobstep_todo,
-			       scalar @jobstep_done,
-			       scalar @slot - scalar @freeslot);
+  my ($todo, $done, $running) = (scalar @jobstep_todo,
+				 scalar @jobstep_done,
+				 scalar @slot - scalar @freeslot);
   $dbh->do
       ("update mrjob set steps_todo=?,steps_done=?,steps_running=? where id=?",
        undef,
