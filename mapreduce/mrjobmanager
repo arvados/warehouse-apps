@@ -144,16 +144,17 @@ $SIG{'INT'} = \&croak;
 $SIG{'QUIT'} = \&croak;
 $SIG{'TERM'} = \&croak;
 my $time_slowest_success = 60;	# always reasonable to allow this long
-
-
-
-my $tasks_succeeded_total = 0;
-my $tasks_failed_total = 0;
 my $tasks_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 
 
-my %jobstep;
+my @jobstep;
+push @jobstep, { input => $Job->{input0},
+		 level => 0,
+		 attempts => 0,
+	       };
+my @jobstep_todo = (0);
+my @jobstep_done = ();
 
 
 
@@ -162,42 +163,31 @@ ONELEVEL:
 my $tasks_succeeded = 0;
 my $tasks_failed = 0;
 
-Log (undef, "determine current jobstep level");
-$sth = $dbh->prepare ("select min(level) from mrjobstep
-                       where jobid=?
-                       and (finishtime is null or exitcode <> 0)");
-$sth->execute ($job_id) or croak ($dbh->errstr);
-my ($level) = $sth->fetchrow;
+@jobstep_todo = sort { $jobstep[$a]->{level} <=> $jobstep[$b]->{level}
+		       or $a <=> $b } @jobstep_todo;
+my $level = $jobstep[$jobstep_todo[0]]->{level};
 Log (undef, "start level $level");
-
-
-
-Log (undef, "ask db for jobstep list");
-
-$sth = $dbh->prepare ("select id, input, attempts from mrjobstep
-                       where jobid=? and level=?
-                       and (finishtime is null or exitcode <> 0)
-                       order by id");
-$sth->execute ($job_id, $level) or croak ($dbh->errstr);
-my $tasks_todo = $sth->rows;
 update_progress_stats();
 
 
 
-Log (undef, "process jobsteps");
-
 my %proc;
 my @freeslot = (0..$#slot);
-my %job_stderr;
-my %job_output;
 my %reader;
 my ($id, $input, $attempts);
-while (($id, $input, $attempts) = $sth->fetchrow)
+for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 {
-  if ($attempts > 4)
+  my $id = $jobstep_todo[$todo_ptr];
+  my $Jobstep = $jobstep[$id];
+  if ($Jobstep->{level} != $level)
   {
-    croak ("jobstep $id failed $attempts times -- giving up");
+    next;
   }
+  if ($Jobstep->{attempts} > 4)
+  {
+    croak ("jobstep $id failed $$Jobstep{attempts} times -- giving up");
+  }
+
   pipe $reader{$id}, "writer" or croak ($!);
   my $flags = fcntl ($reader{$id}, F_GETFL, 0) or croak ($!);
   fcntl ($reader{$id}, F_SETFL, $flags | O_NONBLOCK) or croak ($!);
@@ -226,7 +216,7 @@ while (($id, $input, $attempts) = $sth->fetchrow)
 
     $ENV{"MR_ID"} = $id;
     $ENV{"MR_JOB_ID"} = $job_id;
-    $ENV{"MR_INPUT"} = $input;
+    $ENV{"MR_INPUT"} = $Jobstep->{input};
     $ENV{"MR_KNOBS"} = $Job->{knobs};
     $ENV{"MR_REVISION"} = $Job->{revision};
     $ENV{"MR_LEVEL"} = $level;
@@ -259,24 +249,20 @@ while (($id, $input, $attempts) = $sth->fetchrow)
   die "assert failed" if exists $slot[$childslot]->{pid};
   $slot[$childslot]->{pid} = $childpid;
 
-  # XXX shouldn't have to reconnect here??? XXX
-  $dbh = DBI->connect($main::mapreduce_dsn,
-		      $main::mrcontrol_mysql_username,
-		      $main::mrcontrol_mysql_password);
-  croak ($DBI::errstr) if !$dbh;
-
   Log ($id, "child $childpid started on "
        .$slot[$childslot]->{node}
        ."."
        .$slot[$childslot]->{cpu});
-  my $start_sth = $dbh->prepare ("update mrjobstep set
-                                  attempts=attempts+1,
-                                  starttime=now(),
-                                  finishtime=null,
-                                  node=?
-                                  where id=? and jobid=?");
-  $start_sth->execute ($childnode, $id, $job_id);
-  --$tasks_todo;
+  $Jobstep->{attempts} ++;
+  $Jobstep->{starttime} = time;
+  $Jobstep->{node} = $childnode;
+  delete $Jobstep->{stderr};
+  delete $Jobstep->{output};
+  delete $Jobstep->{finishtime};
+
+  splice @jobstep_todo, $todo_ptr, 1;
+  --$todo_ptr;
+
   update_progress_stats();
 
   while (!@freeslot)
@@ -348,8 +334,7 @@ $time_slowest_success = $time_slowest_success * 2;
 
 if ($tasks_succeeded > 0 || ($tasks_failed > 0 && $tasks_failed < 5))
 {
-  Log (undef, "check for new tasks.");
-  goto ONELEVEL;
+  goto ONELEVEL if @todo;
 }
 elsif ($tasks_failed > 0)
 {
@@ -366,18 +351,10 @@ my $success = 1;
 
 Log (undef, "reduce");
 
-$sth = $dbh->prepare ("select max(level) from mrjobstep
-                       where jobid=?");
-$sth->execute ($job_id) or croak ($dbh->errstr);
-my ($maxlevel) = $sth->fetchrow;
-
 $whc->write_start (1);
-$sth = $dbh->prepare ("select output from mrjobstep
-                       where jobid=? and level=? and output is not null
-		       order by id");
-$sth->execute ($job_id, $maxlevel) or croak ($dbh->errstr);
-while (my ($output) = $sth->fetchrow)
+for (@jobstep)
 {
+  my $output = $_->{output} or next;
   if (defined (my $outblock = $whc->fetch_block ($output)))
   {
     $whc->write_data ($outblock);
@@ -389,13 +366,27 @@ while (my ($output) = $sth->fetchrow)
   }
 }
 my $key = $whc->write_finish;
+if ($key)
+{
+  Log (undef, "output key is $key");
+}
+else
+{
+    Log (undef, "no output key");
+}
+
+
+
+# XXX shouldn't have to reconnect here??? XXX
+$dbh = DBI->connect($main::mapreduce_dsn,
+		    $main::mrcontrol_mysql_username,
+		    $main::mrcontrol_mysql_password);
+croak ($DBI::errstr) if !$dbh;
 
 
 
 if ($key)
 {
-    Log (undef, "output key is $key");
-
     $dbh->do ("update mrjob set output=? where id=?", undef,
 	      $key, $job_id)
 	or croak ($dbh->errstr);
@@ -403,11 +394,6 @@ if ($key)
     $whc->store_manifest_by_name ($key, undef, "/job$job_id")
 	or croak ($whc->errstr);
 }
-else
-{
-    Log (undef, "no output key");
-}
-
 
 
 Log (undef, "finish");
@@ -424,13 +410,14 @@ exit 0;
 
 sub update_progress_stats
 {
-  my $tasks_running = scalar @slot - scalar @freeslot;
+  my $todo, $done, $running = (scalar @jobstep_todo,
+			       scalar @jobstep_done,
+			       scalar @slot - scalar @freeslot);
   $dbh->do
       ("update mrjob set steps_todo=?,steps_done=?,steps_running=? where id=?",
        undef,
-       $tasks_todo, $tasks_succeeded_total, $tasks_running, $job_id);
-  Log (undef,
-       "status $tasks_todo todo $tasks_succeeded_total done $tasks_running running");
+       $todo, $done, $running, $job_id);
+  Log (undef, "status: $done done, $running running, $todo todo");
 }
 
 
@@ -447,7 +434,7 @@ sub reapchildren
 
   my $exitcode = $?;
   my $exitinfo = "exit $exitcode";
-  if (!exists $job_output{$jobstepid})
+  if (!exists $jobstep[$jobstepid]->{output})
   {
     $exitinfo .= " with no output key";
     $exitcode = -1 if $exitcode == 0 && $tasks_must_output_keys;
@@ -456,38 +443,25 @@ sub reapchildren
 
   if ($exitcode != 0)
   {
-    ++$tasks_todo;
     ++$tasks_failed;
-    ++$tasks_failed_total;
+    push @jobstep_todo, $jobstepid;
   }
   else
   {
     ++$tasks_succeeded;
-    ++$tasks_succeeded_total;
     my $elapsed = time - $proc{$pid}->{time};
     $time_slowest_success = $elapsed
 	if $time_slowest_success < $elapsed;
+    push @jobstep_done, $jobstepid;
   }
-  my $finish_sth = $dbh->prepare
-      ("update mrjobstep set
-	finishtime=now(),
-	exitcode=?,
-	output=?,
-	stderr=?
-	where id=? and jobid=?");
-  $finish_sth->execute ($exitcode,
-			$job_output{$jobstepid},
-			$job_stderr{$jobstepid},
-			$jobstepid,
-			$job_id);
+  $jobstep[$jobstepid]->{exitcode} = $exitcode;
+  $jobstep[$jobstepid]->{finishtime} = time;
   map {
     Log ($jobstepid, "stderr $_");
-  } split ("\n", $job_stderr{$jobstepid});
+  } split ("\n", $jobstep[$jobstepid]->{stderr});
 
   close $reader{$jobstepid};
   delete $reader{$jobstepid};
-  delete $job_output{$jobstepid};
-  delete $job_stderr{$jobstepid};
   delete $slot[$proc{$pid}->{slot}]->{pid};
   push @freeslot, $proc{$pid}->{slot};
   delete $proc{$pid};
@@ -504,21 +478,21 @@ sub readfrompipes
     while (0 < sysread ($reader{$job}, $buf, 1024))
     {
       $gotsome = 1;
-      $job_stderr{$job} .= $buf;
+      $jobstep[$job]->{stderr} .= $buf;
       print STDERR $buf if $ENV{MR_DEBUG};
 
-      while ($job_stderr{$job} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
+      while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
       {
 	my ($level, $input) = ($1, $2);
-	my $newjobstep_sth = $dbh->prepare ("insert into mrjobstep
-          (jobid, level, input, submittime) values (?, ?, ?, now())");
-	$newjobstep_sth->execute ($job_id, $level, $input)
-	    or croak ($dbh->errstr);
+	push @jobstep, { input => $input,
+			 level => $level,
+			 attempts => 0 };
+	push @todo, $#jobstep;
 	++$tasks_todo;
       }
-      while ($job_stderr{$job} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
+      while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
       {
-	$job_output{$job} = $1;
+	$jobstep[$job]->{output} = $1;
 	$tasks_must_output_keys = 1;
       }
     }
@@ -574,7 +548,10 @@ sub cleanup
 sub cleanup_meta
 {
   $metastream->write_finish;
+  my $metakey = $metastream->as_key;
+  undef $metastream;
+  Log (undef, "meta key is $metakey");
   $dbh->do ("update mrjob set metakey=? where id=?",
 	    undef,
-	    $metastream->as_key, $job_id);
+	    $metakey, $job_id);
 }
