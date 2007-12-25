@@ -334,7 +334,7 @@ $time_slowest_success = $time_slowest_success * 2;
 
 if ($tasks_succeeded > 0 || ($tasks_failed > 0 && $tasks_failed < 5))
 {
-  goto ONELEVEL if @todo;
+  goto ONELEVEL if @jobstep_todo;
 }
 elsif ($tasks_failed > 0)
 {
