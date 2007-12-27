@@ -55,19 +55,19 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      or die $GunzipError;
 	}
 	my $image;
-	if ($filename =~ s/\.raw$/.jp2/i)
+	if ($filename =~ s/\.raw$//i)
 	{
 	  $image = Image::Magick->new
 	      (magick => 'gray',
 	       size => '1000x1000',
 	       endian => 'lsb');
 	}
-	elsif ($filename =~ s/\.tiff?$/.jp2/i)
+	elsif ($filename =~ s/\.tiff?$//i)
 	{
 	  $image = Image::Magick->new
 	      (magick => 'tif');
 	}
-	elsif ($filename =~ s/\.jpe?g$/.jp2/i)
+	elsif ($filename =~ s/\.jpe?g$//i)
 	{
 	  $image = Image::Magick->new
 	      (magick => 'jpg');
