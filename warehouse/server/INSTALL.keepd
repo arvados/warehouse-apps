@@ -1,0 +1,15 @@
+Create supervised service:
+
+ (
+ set -ex
+ sudo apt-get install runit
+ 
+ d=/var/service/keepd
+ sudo mkdir -p $d/log/main
+ sudo chmod +t $d
+ (echo '#!/bin/sh'; echo 'exec svlogd -tt main') \
+   | sudo bash -c "cat >$d/log/run"
+ (echo '#!/bin/sh'; echo 'exec keepd 2>&1') \
+   | sudo bash -c "cat >$d/run"
+ sudo chmod +x $d/run $d/log/run
+ )

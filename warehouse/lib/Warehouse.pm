@@ -226,6 +226,7 @@ sub _init
 }
 
 
+
 =head2 store_block
 
  my $hash = $whc->store_block ($data)
@@ -374,7 +375,7 @@ sub write_data
 	{
 	    return undef;
 	}
-	push @{$self->{hashes_written}}, "$hash-0";
+	push @{$self->{hashes_written}}, $hash."+".$blocksize;
 	substr ($self->{output_buffer}, 0, $blocksize) = "";
     }
     1;
@@ -404,9 +405,7 @@ sub write_finish
 	    return undef;
 	}
 	my $blocklength = length $self->{output_buffer};
-	push @{$self->{hashes_written}}, ($blocklength == $blocksize
-					  ? "$hash-0"
-					  : "$hash+$blocklength");
+	push @{$self->{hashes_written}}, $hash."+".$blocklength;
 	$self->{output_buffer} = "";
     }
     if (wantarray)
@@ -497,8 +496,6 @@ sub fetch_block
     }
     if (defined $data)
     {
-	$self->{stats_memread_bytes} += length $data;
-	$self->{stats_memread_blocks} ++;
 	if (!$verifyflag || $hash eq Digest::MD5::md5_hex ($data))
 	{
 	    return $data;
@@ -532,6 +529,152 @@ sub fetch_block
     }
 
     return $$dataref;
+}
+
+
+
+=head2 store_in_keep
+
+ my $data = "foo";
+ my ($hash_with_hints, $nnodes) = $whc->store_in_keep (dataref => \$data);
+ my ($hash_with_hints, $nnodes) = $whc->store_in_keep (hash => $hash);
+
+=cut
+
+
+sub store_in_keep
+{
+    my $self = shift;
+    my %arg = @_;
+    my $dataref = $arg{dataref};
+    my ($md5, @hints);
+    ($md5, @hints) = split (/[-\+]/, $arg{hash}) if exists $arg{hash};
+    if (!$md5)
+    {
+	$md5 = Digest::MD5::md5_hex ($$dataref);
+    }
+    $arg{nnodes} ||= 1;
+
+    my $reqtext = time . " " . $md5;
+    my $signedreq = $self->_sign ($reqtext);
+    $signedreq .= $$dataref if $dataref;
+
+    my $bits = 0;
+    my $nnodes = 0;
+    my ($keeps, @keep_id) = $self->_hash_keeps (undef, $md5);
+    foreach my $keep_id (@keep_id)
+    {
+	$self->{stats_keepwrote_attempts} ++;
+	my $keep_host_port = $keeps->[$keep_id];
+	my $url = "http://".$keep_host_port."/".$md5;
+	my $req = HTTP::Request->new (PUT => $url);
+	$req->header ('Content-Length' => length $signedreq);
+	$req->content ($signedreq);
+
+	my $r = $self->{ua}->request ($req);
+	if ($r->is_success)
+	{
+	    $self->{stats_keepwrote_blocks} ++;
+	    $self->{stats_keepwrote_bytes} += length $signedreq;
+	    vec ($bits, $keep_id, 1) = 1;
+	    ++ $nnodes;
+	    last if $nnodes == $arg{nnodes};
+	}
+	else
+	{
+	    $self->{errstr} = $r->status_line;
+	}
+    }
+    if (!$nnodes)
+    {
+	return undef;
+    }
+    my $hash = $md5;
+    map { $hash .= $_ unless /^K/ } @hints;
+    $hash .= "+K".unpack("H*", $bits)."\@".$warehouses[0]->{name};
+    return $hash if !wantarray;
+    return ($hash, $nnodes);
+}
+
+
+
+=head2 fetch_from_keep
+
+ my $dataref = $whc->fetch_from_keep ($hash);
+ die "could not fetch $hash from keep" if !defined $dataref;
+
+=cut
+
+
+sub fetch_from_keep
+{
+    my $self = shift;
+    my $hash = shift;
+    my ($md5, @hints);
+    ($md5, @hints) = split (/[-\+]/, $hash);
+    my $khint;
+    map { $khint = pack ("H*", $1) if /^K([\da-f]+)/ } @hints;
+    my ($keeps, @keep_id) = $self->_hash_keeps (undef, $md5);
+    if ($khint)
+    {
+	for (0..$#keep_id)
+	{
+	    unshift @keep_id, $_ if vec($khint, $_, 1);
+	}
+    }
+    foreach my $keep_id (@keep_id)
+    {
+	$self->{stats_keepread_attempts} ++;
+	my $keep_host_port = $keeps->[$keep_id];
+	my $url = "http://".$keep_host_port."/".$md5;
+	my $req = HTTP::Request->new (GET => $url);
+	my $r = $self->{ua}->request ($req);
+	if ($r->is_success)
+	{
+	    my $data = $r->content;
+	    if (Digest::MD5::md5_hex ($data) eq $md5)
+	    {
+		$self->{stats_keepread_blocks} ++;
+		$self->{stats_keepread_bytes} += length $data;
+		return \$data;
+	    }
+	    else
+	    {
+		my $b = length $data;
+		warn "Checksum failed fetching $keep_host_port/$md5 ($b)\n";
+	    }
+	}
+	else
+	{
+	    $self->{errstr} = $r->status_line;
+	}
+    }
+    return undef;
+}
+
+
+
+sub _hash_keeps
+{
+    my $self = shift;
+    my $warehouse_id = shift;
+    my $hash = shift;
+
+    my $keeps = $self->{keeps};
+    $warehouse_id = 0 if !defined $warehouse_id && !$keeps;
+    $keeps = $warehouses[$warehouse_id]->{keeps} if !$keeps;
+
+    my @ret = (0..$#$keeps);
+    my $rot = hex(substr($hash,24,8)) % (1 + $#ret);
+    push @ret, (splice @ret, 0, $rot);
+
+    for (1..$#ret)
+    {
+	my $rot = hex(substr($hash, $_ % 28, 4)) % (1 + $#ret - $_);
+	push @ret, (splice @ret, $_, $rot);
+    }
+
+    return ($keeps, @ret);
 }
 
 
@@ -797,7 +940,8 @@ sub _sign
 	. "Faked\n\n"
 	. $text
 	. "\n-----BEGIN PGP SIGNATURE-----\n"
-	. "Faked\n";
+	. "Faked\n"
+	. "-----END PGP SIGNATURE-----\n";
 }
 
 

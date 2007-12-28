@@ -1,3 +1,5 @@
+# -*- mode: perl; perl-indent-level: 4; -*-
+
 $Warehouse::blocksize = 64*1024*1024;
 
 $Warehouse::warehouse_servers
@@ -7,5 +9,27 @@ $Warehouse::mogilefs_trackers = "mogilefs.tracker.host.name:6001";
 $Warehouse::mogilefs_domain = "warehouse";
 $Warehouse::mogilefs_directory_class = "directory"; # recommend mindevcount=3
 $Warehouse::mogilefs_file_class = "file"; # recommend mindevcount=2
+
+$Warehouse::warehouses
+    = [
+       {
+	   name => "uncle",
+	   controllers => "uncle-controller.nrb.freelogy.org:24848",
+	   mogilefs_trackers => "uncle-controller.nrb.freelogy.org:6001",
+	   mogilefs_domain => "warehouse",
+	   mogilefs_directory_class => "directory",
+	   mogilefs_file_class => "file",
+       }
+       ,
+       {
+	   name => "templeton",
+	   controllers => "uncle-controller.nrb.freelogy.org:24848",
+	   mogilefs_trackers => "uncle-controller.nrb.freelogy.org:6001",
+	   mogilefs_domain => "warehouse",
+	   mogilefs_directory_class => "directory",
+	   mogilefs_file_class => "file",
+	   keeps => [ map { "templeton$_" } (2..48) ],
+       }
+       ];
 
 1;

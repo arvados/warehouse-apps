@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+use Warehouse::Keep;
+
+open STDERR, ">&STDOUT";
+
+my $dirs = [];
+map {
+    push @$dirs, "$1/keep"
+	if m/^\/dev\/\S+ on (\S+) /
+	&& -d "$1/keep"
+    } `mount`;
+
+my $keepd = Warehouse::Keep->new (Directories => $dirs);
+
+map { print "Using local directory $_\n" } @$dirs;
+print "Listening at " . $keepd->url . "\n";
+
+$keepd->run;

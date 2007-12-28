@@ -17,5 +17,6 @@ WriteMakefile
 		   'server/mogilefs-check.pl',
 		   'server/mogilefs-create-devices.pl',
 		   'server/warehoused',
+		   'server/keepd',
 		   ]
      );
