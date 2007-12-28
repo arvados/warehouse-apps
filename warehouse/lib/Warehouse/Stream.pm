@@ -176,6 +176,21 @@ sub clear
 
 
 
+=head2 write_hint
+
+ $stream->write_hint (keep => 1);
+
+=cut
+
+sub write_hint
+{
+  my $self = shift;
+  my %hint = @_;
+  map { $self->{"write_hint_$_"} = $hint{$_} } keys %hint;
+}
+
+
+
 =head2 write_start
 
  $stream->write_start ($filename);
@@ -245,11 +260,14 @@ sub _write_flush
       return undef;
     }
 
-    my $sizehint =
-	$Warehouse::blocksize == $writesize
-	? "-0"
-	: "+".$writesize;
-    push @{$self->{myhashes}}, $hash.$sizehint;
+    $hash .= "+".$writesize;
+    if ($self->{write_hint_keep})
+    {
+      my $keephash = $self->{whc}->store_in_keep (hash => $hash);
+      $hash = $keephash if $keephash;
+    }
+
+    push @{$self->{myhashes}}, $hash;
     substr $self->{write_buf}, 0, $writesize, "";
   }
   return 1;
@@ -316,7 +334,7 @@ sub rewind
 	push @hashes, shift @files;
 	push @hashes, shift @files;
       }
-      elsif ($files[0] =~ /^[0-9a-f]{32}([-\+]\d+)?$/)
+      elsif ($files[0] =~ /^[0-9a-f]{32}([-\+].*)?$/)
       {
 	push @hashes, shift @files;
       }
@@ -375,7 +393,7 @@ sub seek
 
     my $sizehint;
     while (@{$self->{nexthashes}} &&
-	   $self->{nexthashes}->[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)$/ &&
+	   $self->{nexthashes}->[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)/ &&
 	   $pos >= ($self->{bufpos}
 		    + ($sizehint = ($2 eq '-'
 				    ? $Warehouse::blocksize - $3

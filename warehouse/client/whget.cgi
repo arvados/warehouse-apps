@@ -112,7 +112,7 @@ while (length $manifestblock)
 	while (@subdir)
 	{
 	    if ($subdir[0] =~ /^-\d+$/) { splice @subdir, 0, 2; }
-	    elsif ($subdir[0] =~ /^[0-9a-f]{32}([-\+]\d+)?$/)
+	    elsif ($subdir[0] =~ /^[0-9a-f]{32}([-\+].*)?$/)
 	    {
 	      shift @subdir;
 	    }
@@ -138,7 +138,7 @@ while (length $manifestblock)
 	    {
 		push @hash, splice @subdir, 0, 2;
 	    }
-	    elsif ($subdir[0] =~ /^[0-9a-f]{32}([-\+]\d+)?$/)
+	    elsif ($subdir[0] =~ /^[0-9a-f]{32}([-\+].*)?$/)
 	    {
 		push @hash, shift @subdir;
 	    }

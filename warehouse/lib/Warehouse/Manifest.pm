@@ -223,22 +223,22 @@ sub errstr
  blocklist := block block block ...
 
  block := blockshortness <space> md5sum (deprecated)
-       or md5sum hint hint hint ...
+       or md5sum blockshortness hint hint ... (deprecated)
+       or md5sum plusblocklength hint hint ...
+       or md5sum hint hint ...
        or md5sum
-
-
- hint := blockshortness
-      or plusblocklength
-      or + K bitvector @ warehousename
 
  blockshortness := -0 (meaning the block is 2^26 bytes long)
 		or -N (meaning the block is 2^26 - N bytes long)
 
  plusblocklength := +N (meaning the block is N bytes long)
 
- bitvector := little-endian hex representation: if bit N is on, the
-              block is stored on the Nth "Keep" node of the warehouse
-              named "warehousename"
+ hint := + K keepbitvector @ warehousename
+      or + ... (other kinds of hints yet to be defined)
+
+ keepbitvector := little-endian hex representation: if bit N is on,
+                  the block is stored on the Nth "Keep" node of the
+                  warehouse named "warehousename"
 
  md5sum := [0-9a-f]{32}
 
