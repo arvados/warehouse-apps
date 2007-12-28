@@ -968,7 +968,9 @@ sub iostats
 	("Mem In: %d bytes in %d/%d ops. Out: %d bytes in %d/%d ops.\n"
 	 . "Mem In: %d Mbps. Out: %d Mbps. Total: %d Mbps.\n"
 	 . "Disk In: %d bytes in %d/%d ops. Out: %d bytes in %d/%d ops.\n"
-	 . "Disk In: %d Mbps. Out: %d Mbps. Total: %d Mbps.\n",
+	 . "Disk In: %d Mbps. Out: %d Mbps. Total: %d Mbps.\n"
+	 . "Keep In: %d bytes in %d/%d ops. Out: %d bytes in %d/%d ops.\n"
+	 . "Keep In: %d Mbps. Out: %d Mbps. Total: %d Mbps.\n",
 	 (map { $self->{$_} } qw(stats_memread_bytes
 				 stats_memread_blocks
 				 stats_memread_attempts
@@ -988,7 +990,17 @@ sub iostats
 	 $self->{stats_read_bytes} * 8 / $elapsed / 1000000,
 	 $self->{stats_wrote_bytes} * 8 / $elapsed / 1000000,
 	 ($self->{stats_read_bytes} +
-	  $self->{stats_wrote_bytes}) * 8 / $elapsed / 1000000);
+	  $self->{stats_wrote_bytes}) * 8 / $elapsed / 1000000,
+	 (map { $self->{$_} } qw(stats_keepread_bytes
+				 stats_keepread_blocks
+				 stats_keepread_attempts
+				 stats_keepwrote_bytes
+				 stats_keepwrote_blocks
+				 stats_keepwrote_attempts)),
+	 $self->{stats_keepread_bytes} * 8 / $elapsed / 1000000,
+	 $self->{stats_keepwrote_bytes} * 8 / $elapsed / 1000000,
+	 ($self->{stats_keepread_bytes} +
+	  $self->{stats_keepwrote_bytes}) * 8 / $elapsed / 1000000);
 }
 
 
