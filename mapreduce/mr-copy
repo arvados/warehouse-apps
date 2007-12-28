@@ -3,6 +3,7 @@
 
 ###MR_DESCRIPTION:write a new manifest of exactly the same data
 ###MR_INPUT:manifest
+###MR_KNOB:KEEP=0
 ###MR_KNOB:#SOURCE_MOGILEFS_TRACKERS=host:port
 ###MR_KNOB:#SOURCE_WAREHOUSE_CONTROLLERS=host:port
 
@@ -43,6 +44,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $outstream = new Warehouse::Stream (whc => $whc_dest);
       $outstream->name ($instream->name);
       $outstream->clear;
+      $outstream->write_hint (keep => 1) if $ENV{KNOB_KEEP};
 
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
