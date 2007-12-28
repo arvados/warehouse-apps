@@ -591,7 +591,7 @@ sub store_in_keep
     }
     my $hash = $md5;
     map { $hash .= $_ unless /^K/ } @hints;
-    $hash .= "+K".unpack("H*", $bits)."\@".$warehouses[0]->{name};
+    $hash .= "+K".unpack("H*", $bits)."\@".$warehouses->[0]->{name};
     return $hash if !wantarray;
     return ($hash, $nnodes);
 }
@@ -661,10 +661,12 @@ sub _hash_keeps
     my $hash = shift;
 
     my $keeps = $self->{keeps};
-    $warehouse_id = 0 if !defined $warehouse_id && !$keeps;
-    $keeps = $warehouses[$warehouse_id]->{keeps} if !$keeps;
+    $warehouse_id = 0 if !$keeps && !defined $warehouse_id;
+    $keeps = $warehouses->[$warehouse_id]->{keeps} if !$keeps;
 
     my @ret = (0..$#$keeps);
+    return ($keeps, @ret) if @ret < 2;
+
     my $rot = hex(substr($hash,24,8)) % (1 + $#ret);
     push @ret, (splice @ret, 0, $rot);
 
