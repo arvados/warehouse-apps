@@ -590,7 +590,7 @@ sub store_in_keep
 	return undef;
     }
     my $hash = $md5;
-    map { $hash .= $_ unless /^K/ } @hints;
+    map { $_=67108864 if $_ eq "0"; $hash .= "+$_" unless /^K/ } @hints;
     $hash .= "+K".unpack("H*", $bits)."\@".$warehouses->[0]->{name};
     return $hash if !wantarray;
     return ($hash, $nnodes);
