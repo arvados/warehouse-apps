@@ -559,7 +559,7 @@ sub store_in_keep
     my $signedreq = $self->_sign ($reqtext);
     $signedreq .= $$dataref if $dataref;
 
-    my $bits = 0;
+    my $bits = "";
     my $nnodes = 0;
     my ($keeps, @keep_id) = $self->_hash_keeps (undef, $md5);
     foreach my $keep_id (@keep_id)
