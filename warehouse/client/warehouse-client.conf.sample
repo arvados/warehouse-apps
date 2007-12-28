@@ -19,6 +19,7 @@ $Warehouse::warehouses
 	   mogilefs_domain => "warehouse",
 	   mogilefs_directory_class => "directory",
 	   mogilefs_file_class => "file",
+	   keeps => [ map { "templeton$_" } (2..48) ],
        }
        ,
        {
@@ -28,7 +29,6 @@ $Warehouse::warehouses
 	   mogilefs_domain => "warehouse",
 	   mogilefs_directory_class => "directory",
 	   mogilefs_file_class => "file",
-	   keeps => [ map { "templeton$_" } (2..48) ],
        }
        ];
 
