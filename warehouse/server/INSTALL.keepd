@@ -1,3 +1,8 @@
+Create a "keep" directory in each mount point where "keepd" should
+store data.
+
+ for d in `mount | grep /mogdata | cut -d" " -f3`; do mkdir $d/keep; done
+
 Create supervised service:
 
  (
