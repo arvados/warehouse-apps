@@ -236,9 +236,14 @@ sub errstr
  hint := + K keepbitvector @ warehousename
       or + ... (other kinds of hints yet to be defined)
 
- keepbitvector := little-endian hex representation: if bit N is on,
-                  the block is stored on the Nth "Keep" node of the
-                  warehouse named "warehousename"
+ keepbitvector := little-endian hex representation: if bit P is on,
+                  the block is stored on the warehouse named
+                  "warehousename", on the node which appears at
+                  position P in the probe order for md5sum (eg. if
+                  probe order is 6,34,1,9,12,22,21,44 and
+                  keepbitvector "03" signifies nodes 6 and 34;
+                  keepbitvector "06" signifies nodes 34 and 9;
+                  keepbitvector "81" signifies nodes 6 and 44)
 
  md5sum := [0-9a-f]{32}
 

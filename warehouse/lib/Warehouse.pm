@@ -561,9 +561,10 @@ sub store_in_keep
 
     my $bits = "";
     my $nnodes = 0;
-    my ($keeps, @keep_id) = $self->_hash_keeps (undef, $md5);
-    foreach my $keep_id (@keep_id)
+    my ($keeps, @bucket) = $self->_hash_keeps (undef, $md5);
+    foreach my $bucket (0..$#bucket)
     {
+	my $keep_id = $bucket[$bucket];
 	$self->{stats_keepwrote_attempts} ++;
 	my $keep_host_port = $keeps->[$keep_id];
 	my $url = "http://".$keep_host_port."/".$md5;
@@ -576,7 +577,7 @@ sub store_in_keep
 	{
 	    $self->{stats_keepwrote_blocks} ++;
 	    $self->{stats_keepwrote_bytes} += length $signedreq;
-	    vec ($bits, $keep_id, 1) = 1;
+	    vec ($bits, $bucket, 1) = 1;
 	    ++ $nnodes;
 	    last if $nnodes == $arg{nnodes};
 	}
@@ -612,17 +613,28 @@ sub fetch_from_keep
     my $hash = shift;
     my ($md5, @hints);
     ($md5, @hints) = split (/[-\+]/, $hash);
-    my $khint;
-    map { $khint = pack ("H*", $1) if /^K([\da-f]+)/ } @hints;
-    my ($keeps, @keep_id) = $self->_hash_keeps (undef, $md5);
-    if ($khint)
+    my $kbits, $kwhid;
+    foreach (@hints)
     {
-	for (0..$#keep_id)
+	if (/^K([0-9a-f]+)(?:\@(\w+))$/)
 	{
-	    unshift @keep_id, $_ if vec($khint, $_, 1);
+	    $kbits = pack ("H*", $1);
+	    map { $kwhid = $_ if $2 eq $warehouses->[$_]->{name} }
+		(0..$#$warehouses);
+	    last;
 	}
     }
-    foreach my $keep_id (@keep_id)
+    my ($keeps, @bucket) = $self->_hash_keeps ($kwhid, $md5);
+    if (defined $kbits)
+    {
+	my $inserthere = 0;
+	for (0..$#bucket)
+	{
+	    splice @bucket, $inserthere++, 0, (splice @bucket, $_, 1)
+		if vec($kbits, $_, 1);
+	}
+    }
+    foreach my $keep_id (@bucket)
     {
 	$self->{stats_keepread_attempts} ++;
 	my $keep_host_port = $keeps->[$keep_id];
@@ -653,6 +665,16 @@ sub fetch_from_keep
 }
 
 
+=head2 _hash_keeps
+
+ ($keeps_arrayref, @probeorder) = $self->_hash_keeps($warehouse_id, $hash);
+
+Return an array of all keepd servers ("host:port") in $keeps_arrayref,
+and a list of indexes into that array representing the order in which
+they should be attempted when storing $hash.
+
+=cut
+
 
 sub _hash_keeps
 {
@@ -666,19 +688,26 @@ sub _hash_keeps
 
     map { s/$/:25107/ unless /:/ } @$keeps;
 
-    my @ret = (0..$#$keeps);
-    return ($keeps, @ret) if @ret < 2;
+    return ($keeps, @$keeps) if $#$keeps < 1;
 
-    my $rot = hex(substr($hash,24,8)) % (1 + $#ret);
-    push @ret, (splice @ret, 0, $rot);
-
-    for (1..$#ret)
+    my @avail = (0..$#$keeps);
+    my @bucket;
+    for (0..7)
     {
-	my $rot = hex(substr($hash, $_ % 28, 4)) % (1 + $#ret - $_);
-	push @ret, (splice @ret, $_, $rot);
+	# $hash ----> 0000111122223333aaaabbbbccccdddd
+	# $md5bits -> 00001111 22223333 aaaabbbb ccccdddd
+	#             dddd0000 11112222 3333aaaa bbbbcccc
+	# $pick ----> 0x00001111 % N     1st bucket is ${pick}th node in @avail
+	#             0x22223333 % (N-1) 2nd bucket is ${pick}th of what's left
+	#             0xaaaabbbb % (N-2) 3rd ....
+	my $md5bits = $_ < 4
+	    ? substr($hash,$_*8,8)
+	    : substr($hash,($_*8-4)%32,4) . substr($hash,($_*8)%32,4);
+	my $pick = hex($md5bits) % (1 + $#avail);
+	push @bucket, splice @avail, $pick, 1;
     }
 
-    return ($keeps, @ret);
+    return ($keeps, @bucket);
 }
 
 
