@@ -103,9 +103,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      or die "gzip failed: $GzipError\n";
 	  $outblobref = \$compressed;
 	  undef $outblob;
+	  $filename .= ".gz";  
 	}
 
-	$outstream->write_start ($filename.".gz");
+	$outstream->write_start ($filename);
 	$outstream->write_data ($outblobref)
 	    or die "write failed: ".$outstream->errstr;
 	$outstream->write_finish;
