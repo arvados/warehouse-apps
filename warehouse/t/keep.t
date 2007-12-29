@@ -44,10 +44,10 @@ ok ($dataref = $whc->fetch_from_keep ($hash), "fetch-$hash")
     or diag ($whc->errstr);
 $dataref && ok ($$dataref eq $data, "fetch-$hash eq stored");
 
-my ($k, @probe) = $whc->_hash_keeps ($storehash);
+my ($k, @probe) = $whc->_hash_keeps (0, $storehash);
 diag ("probe order for $storehash is @probe");
 
-($k, @probe) = $whc->_hash_keeps ($hash);
+($k, @probe) = $whc->_hash_keeps (0, $hash);
 diag ("probe order for $hash is @probe");
 
 diag ($whc->iostats);
