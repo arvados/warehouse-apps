@@ -124,6 +124,15 @@ sub schedule_all_from_todo
 			    and todo.warehousename=job.warehousename
 			    where todo.warehousename=?");
   $sth->execute ($warehousename) or return -1;
+
+  `svn info $main::Repository` =~ /\nLast Changed Rev: (\d+)\n/;
+  my $latest_rev = $1;
+  if (!$latest_rev)
+  {
+    Log ("Failed to get latest revision from $main::Repository");
+    return;
+  }
+
   while (my $todo = $sth->fetchrow_hashref)
   {
     if (!defined $todo->{id_new})
@@ -135,7 +144,7 @@ sub schedule_all_from_todo
 	  or die DBI->errstr;
       my $id_new = $wh->{$warehousename}->{whc}->job_new
 	  (mrfunction => $todo->{mrfunction},
-	   revision => $todo->{revision},
+	   revision => $latest_rev,
 	   inputkey => $todo->{inputkey},
 	   knobs => $todo->{knobs},
 	   nodes => $todo->{wantredo_nnodes},
