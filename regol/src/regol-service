@@ -219,7 +219,6 @@ sub setup_tables
    submittime datetime,
    unique(warehousename,id_orig)
   );
-  alter table todo add submittime datetime after id;
 
   create table if not exists warehouse
   (
