@@ -21,7 +21,8 @@ foreach (keys %$wh)
   if ($wh->{$_}->{whc} = new Warehouse %{$wh->{$_}})
   {
     $dbh->do ("replace into warehouse (name, servers) values (?,?)", undef,
-	      $_, $wh->{$_}->{warehouse_servers});
+	      $_, $wh->{$_}->{warehouse_servers})
+	or die DBI->errstr;
   }
   else
   {
@@ -57,13 +58,15 @@ sub update_job_table
       or return undef;
 
   $dbh->do ("update warehouse set lastupdate=now() where name=?", undef,
-	    $warehousename);
+	    $warehousename)
+      or die DBI->errstr;
 
   foreach (@$arrayref)
   {
     $dbh->do ("insert ignore into job (warehousename, id) values (?,?)", undef,
 	      $warehousename,
-	      $_->{id});
+	      $_->{id})
+	or die DBI->errstr;
     $dbh->do ("update job set
 	       mrfunction=?, revision=?,
 	       starttime=?, finishtime=?, success=?, knobs=?,
@@ -80,7 +83,8 @@ sub update_job_table
 	      $_->{outputkey} || undef,
 	      $_->{metakey} || undef,
 	      $warehousename,
-	      $_->{id});
+	      $_->{id})
+	or die DBI->errstr;
   }
   $dbh->do ("update job set spec_md5=md5(concat(mrfunction,revision,inputkey,knobs))");
 }
@@ -92,11 +96,13 @@ sub purge_todo_table
   $dbh->do ("delete from todo
 	     where concat(id_new,warehousename) in
 	     (select concat(id,warehousename) from job
-	      where finishtime is not null)");
+	      where finishtime is not null)")
+      or die DBI->errstr;
 
   # give up on stale jobs (submitted long ago, never started)
   $dbh->do ("delete from todo
-	     where submittime<date_add(now(),interval -1 day)");
+	     where submittime<date_add(now(),interval -1 day)")
+      or die DBI->errstr;
 }
 
 
@@ -125,7 +131,8 @@ sub schedule_all_from_todo
       $dbh->do ("update todo set submittime=now()
 		 where warehousename=? and id_orig=?",
 		undef,
-		$todo->{warehousename}, $todo->{id_orig});
+		$todo->{warehousename}, $todo->{id_orig})
+	  or die DBI->errstr;
       my $id_new = $wh->{$warehousename}->{whc}->job_new
 	  (mrfunction => $todo->{mrfunction},
 	   revision => $todo->{revision},
@@ -145,7 +152,8 @@ sub schedule_all_from_todo
 	$dbh->do ("update todo set submittime=null
 		   where warehousename=? and id_orig=?",
 		  undef,
-		  $todo->{warehousename}, $todo->{id_orig});
+		  $todo->{warehousename}, $todo->{id_orig})
+	    or die DBI->errstr;
 	Log ($warehousename, $todo->{id_orig}, "enqueue fail:",
 	     $wh->{$warehousename}->{whc}->errstr);
       }
@@ -161,7 +169,8 @@ sub refill_todo
 	     select warehousename, id from job
 	     where warehousename=? and wantredo_nnodes>0",
 	    undef,
-	    $warehousename);
+	    $warehousename)
+      or die DBI->errstr;
 }
 
 
