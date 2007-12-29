@@ -694,7 +694,7 @@ sub _hash_keeps
 
     map { s/$/:25107/ unless /:/ } @$keeps;
 
-    return ($keeps, @$keeps) if $#$keeps < 1;
+    return ($keeps, 0) if $#$keeps < 1;
 
     my @avail = (0..$#$keeps);
     my @bucket;
