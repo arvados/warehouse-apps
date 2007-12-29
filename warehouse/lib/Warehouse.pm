@@ -184,6 +184,12 @@ sub _init
     $self->{stats_memwrote_bytes} = 0;
     $self->{stats_memwrote_blocks} = 0;
     $self->{stats_memwrote_attempts} = 0;
+    $self->{stats_keepread_bytes} = 0;
+    $self->{stats_keepread_blocks} = 0;
+    $self->{stats_keepread_attempts} = 0;
+    $self->{stats_keepwrote_bytes} = 0;
+    $self->{stats_keepwrote_blocks} = 0;
+    $self->{stats_keepwrote_attempts} = 0;
 
     $self->{ua} = LWP::UserAgent->new;
     $self->{ua}->timeout ($self->{timeout});
