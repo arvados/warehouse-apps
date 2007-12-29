@@ -613,7 +613,7 @@ sub fetch_from_keep
     my $hash = shift;
     my ($md5, @hints);
     ($md5, @hints) = split (/[-\+]/, $hash);
-    my $kbits, $kwhid;
+    my ($kbits, $kwhid);
     foreach (@hints)
     {
 	if (/^K([0-9a-f]+)(?:\@(\w+))$/)
