@@ -453,6 +453,7 @@ sub reapchildren
   map {
     Log ($jobstepid, "stderr $_");
   } split ("\n", $Jobstep->{stderr});
+  Log ($job, "output $$Jobstep{output}");
 
   close $reader{$jobstepid};
   delete $reader{$jobstepid};
