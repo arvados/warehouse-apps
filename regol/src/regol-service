@@ -13,6 +13,9 @@ my $dbh = DBI->connect(@$main::DatabaseDSN)
 $main::drain = 0;
 $SIG{TERM} = $SIG{HUP} = $SIG{INT} = sub { $main::drain = 1; };
 
+my %_unescapemap = ("n" => "\n",
+		    "\\" => "\\");
+
 setup_tables();
 
 my $wh = $main::Warehouses;
@@ -78,8 +81,8 @@ sub update_job_table
 	      $_->{starttime} || undef,
 	      $_->{finishtime} || undef,
 	      defined $_->{success} ? $_->{success} : undef,
-	      unescape ($_->{knobs}),
-	      unescape ($_->{inputkey}),
+	      _unescape ($_->{knobs}),
+	      _unescape ($_->{inputkey}),
 	      $_->{outputkey} || undef,
 	      $_->{metakey} || undef,
 	      $warehousename,
@@ -232,11 +235,10 @@ EOF
 }
 
 
-sub unescape
+sub _unescape
 {
   local $_ = shift;
-  s/\\n/\n/g;
-  s/\\\\/\\/g;
+  s/\\(.)/$_unescapemap{$1}/ge;
   $_;
 }
 
