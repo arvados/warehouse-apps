@@ -33,7 +33,9 @@ elsif ($ENV{MR_LEVEL} == 1)
   {
     if ($instream->name eq $wantsubdir)
     {
-      my ($name, @hash) = split (/ /, $instream->as_string);
+      my $subdir = $instream->as_string;
+      chop ($subdir);
+      my ($name, @hash) = split (/ /, $subdir);
       foreach (@hash)
       {
 	last if /^\d+:/;
@@ -42,7 +44,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    or die "store_in_keep ($_) failed: ".$whc->errstr;
 	$_ = $keephash;
       }
-      my $fragkey = $whc->store_block ("$name @hash")
+      my $fragkey = $whc->store_block ("$name @hash\n")
 	  or die "store_block failed: ".$whc->errstr;
       print STDERR "+++mrout ".$fragkey."+++\n";
       print STDERR $whc->iostats;
