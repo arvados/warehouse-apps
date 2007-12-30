@@ -316,7 +316,7 @@ sub run
 		foreach (split (/\n/, $plainmessage))
 		{
 		    my ($k, $v) = split (/=/, $_, 2);
-		    $jobspec{$k} = $v;
+		    $jobspec{$k} = _unquote($v);
 		}
 		my @fields = qw(mrfunction
 				revision
@@ -427,6 +427,16 @@ sub _callback_job_list
 	$self->{sth_finished} = 1;
 	return $self->{md5_ctx}->hexdigest . "\n";
     }
+}
+
+
+my %_unquotemap = ("n" => "\n",
+		   "\\" => "\\");
+sub _unquote
+{
+    local $_ = shift;
+    s/\\(.)/$_unquotemap{$1}/ge;
+    $_;
 }
 
 1;
