@@ -473,7 +473,7 @@ sub fetch_block
     }
     else
     {
-	my ($md5, @hints) = split ("+", $hash);
+	my ($md5, @hints) = split (/\+/, $hash);
 	foreach (@hints)
 	{
 	    $sizehint = $_ if /^\d+$/;
