@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:copy data to long term storage
+###MR_INPUT:manifest
+###MR_KNOBS:KEEP=2
+###MR_KNOBS:#SOURCE_MOGILEFS_TRACKERS=host:port
+###MR_KNOBS:#SOURCE_WAREHOUSE_CONTROLLERS=host:port
+
+use strict; 
+use Image::Magick;
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs" or die "mrtask-queuesubdirs failed: $! $@";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  my $whc = new Warehouse;
+
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    if ($instream->name eq $wantsubdir)
+    {
+      my ($name, @hash) = split (/ /, $instream->as_string);
+      foreach (@hash)
+      {
+	last if /^\d+:/;
+	my $keephash = $whc->store_in_keep (hash => $_,
+					    nnodes => $ENV{KNOB_KEEP})
+	    or die "store_in_keep ($_) failed: ".$whc->errstr;
+	$_ = $keephash;
+      }
+      my $fragkey = $whc->store_block ("$name @hash")
+	  or die "store_block failed: ".$whc->errstr;
+      print STDERR "+++mrout ".$fragkey."+++\n";
+      print STDERR $whc->iostats;
+      exit 0;
+    }
+  }
+  die "Subdir not found: $wantsubdir";
+}
