@@ -553,8 +553,8 @@ sub fetch_block
 =head2 store_in_keep
 
  my $data = "foo";
- my ($hash_with_hints, $nnodes) = $whc->store_in_keep (dataref => \$data);
- my ($hash_with_hints, $nnodes) = $whc->store_in_keep (hash => $hash);
+ my ($hash_with_hints, $nnodes) = $whc->store_in_keep (hash => $hash,
+						       nnodes => 2);
 
 =cut
 
