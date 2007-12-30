@@ -102,7 +102,7 @@ sub as_string
   my $self = shift;
   if ($self->{subdir})
   {
-    return $self->{subdir};
+    return $self->{subdir}."\n";
   }
 
   if (exists $self->{write_buf})
