@@ -316,7 +316,7 @@ sub run
 		foreach (split (/\n/, $plainmessage))
 		{
 		    my ($k, $v) = split (/=/, $_, 2);
-		    $jobspec{$k} = _unquote($v);
+		    $jobspec{$k} = _unescape($v);
 		}
 		my @fields = qw(mrfunction
 				revision
@@ -430,12 +430,12 @@ sub _callback_job_list
 }
 
 
-my %_unquotemap = ("n" => "\n",
-		   "\\" => "\\");
-sub _unquote
+my %_unescapemap = ("n" => "\n",
+		    "\\" => "\\");
+sub _unescape
 {
     local $_ = shift;
-    s/\\(.)/$_unquotemap{$1}/ge;
+    s/\\(.)/$_unescapemap{$1}/ge;
     $_;
 }
 
