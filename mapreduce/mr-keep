@@ -4,8 +4,6 @@
 ###MR_DESCRIPTION:copy data to long term storage
 ###MR_INPUT:manifest
 ###MR_KNOBS:KEEP=2
-###MR_KNOBS:#SOURCE_MOGILEFS_TRACKERS=host:port
-###MR_KNOBS:#SOURCE_WAREHOUSE_CONTROLLERS=host:port
 
 use strict; 
 use Image::Magick;
