@@ -456,18 +456,29 @@ sub fetch_block
 
     return "" if $hash eq "d41d8cd98f00b204e9800998ecf8427e";
 
+    if ($hash =~ /\+K/)
+    {
+	my $dataref = $self->fetch_from_keep ($hash);
+	return $$dataref if $dataref;
+    }
+
     my $sizehint;
     if ($hash =~ s/^(-(\d+) )//)
     {
 	$sizehint = $blocksize - $2;
     }
-    elsif ($hash =~ s/\+(\d+)$//)
-    {
-	$sizehint = $1;
-    }
     elsif ($hash =~ s/-(\d+)$//)
     {
 	$sizehint = $blocksize - $1;
+    }
+    else
+    {
+	my ($md5, @hints) = split ("+", $hash);
+	foreach (@hints)
+	{
+	    $sizehint = $_ if /^\d+$/;
+	}
+	$hash = $md5;
     }
 
     my $data;
