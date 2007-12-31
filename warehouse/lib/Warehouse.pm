@@ -485,7 +485,6 @@ sub fetch_block
     if ((defined $sizehint ? $sizehint : 1)
 	<= $self->{memcached_size_threshold})
     {
-	$data = "";
 	for (my $chunk = 0;
 	     $chunk * $memcached_max_data < (defined $sizehint
 					     ? $sizehint
@@ -496,7 +495,15 @@ sub fetch_block
 	    if (defined (my $frag = $self->{memc}->get ($hash.".".$chunk)))
 	    {
 		$self->{stats_memread_blocks} ++;
-		$data .= $frag;
+
+		if ($chunk == 0)
+		{
+		    data = $frag;
+		}
+		else
+		{
+		    $data .= $frag;
+		}
 		last if !defined $sizehint
 		    && $memcached_max_data > length $frag;
 		warn "get ${hash}.${chunk} => ".(length $frag)."\n"
