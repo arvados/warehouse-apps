@@ -498,7 +498,7 @@ sub fetch_block
 
 		if ($chunk == 0)
 		{
-		    data = $frag;
+		    $data = $frag;
 		}
 		else
 		{
