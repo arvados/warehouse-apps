@@ -256,6 +256,7 @@ sub run
 	$c->close;
 	last if $kill;
     }
+    warn "Stopping";
 }
 
 
