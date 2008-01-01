@@ -1,0 +1,116 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:sort benchmark: ascii-encode input, split into max 100-byte lines, then sort
+###MR_INPUT:manifest
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Digest::MD5;
+
+my $manifestkey = $ENV{MR_INPUT0};
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  my $key = $ENV{MR_INPUT};
+
+  if ($key !~ /^[0-9a-f]{32}(,[0-9a-f]{32})*$/)
+  {
+    $key = $whc->fetch_manifest_key_by_name ($key)
+	or die $whc->errstr;
+  }
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $key);
+  $manifest->rewind;
+  while (my $stream = $manifest->subdir_next)
+  {
+    for (split (/ /, $stream->as_string))
+    {
+      if (/^[0-9a-f]{32}/)
+      {
+	print STDERR "+++mrjobstep 1 sort $_+++\n";
+      }
+      elsif (/^\d+:/)
+      {
+	last;
+      }
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
+elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} =~ /^sort (.*)/)
+{
+  # sort one block
+
+  my $hash = $1;
+  my $data = $whc->fetch_block ($hash)
+      or die "fetch_block($hash) failed: ".$whc->errstr;
+
+  $data =~ tr/ -~/ -~ -~ -~/c;	# map nonprintable chars to printable
+
+  for (my $pos = 0; $pos < length $data; $pos += 100)
+  {
+    substr ($data, $pos, 1) = "\n"; # break into <100-byte lines
+  }
+  substr ($data, -1, 1) = "\n";
+  
+  my $hash = $whc->store_block (\$data);
+  print STDERR "+++mrjobstep/4 1 $hash+++\n";
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
+elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ /\n/)
+{
+  # merge one block == nop
+
+  print "+++mrout $ENV{MR_INPUT}+++\n";
+  exit 0;
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  # merge blocks
+
+  my @block = map { [split / /] } split (/\n/, $ENV{MR_INPUT});
+  my @data = map { "" } @block;
+  my @pos = map { 0 } @block;
+
+  $whc->write_start;
+  while (1)
+  {
+    my $first;
+    foreach (0..$#block)
+    {
+      if (@{$block[$_]} && length $data[$_] < $Warehouse::blocksize >> 1)
+      {
+	$data[$_] .= $whc->fetch_block (shift @{$block[$_]})
+	    or die "fetch_block failed: ".$whc->errstr;
+      }
+      next if $pos[$_] >= length ($data[$_]);
+      $first = $_ if (!defined $first
+		      || ((substr($data[$_], $pos[$_]) cmp
+			   substr($data[$first], $pos[$first])) < 0));
+    }
+    last if !defined $first;
+    my $nextpos = 1 + index $data[$first], "\n", $pos[$first];
+    $nextpos = length $data[$first] unless $nextpos > 0;
+    $whc->write_data (substr $data[$first], $pos[$first], $nextpos-$pos[$first]);
+    $pos[$first] = $nextpos;
+    if ($pos[$first] > $Warehouse::blocksize >> 2)
+    {
+      substr ($data[$first], 0, $pos[$first]) = "";
+      $pos[$first] = 0;
+    }
+  }
+  my @outhashes = $whc->write_finish;
+  print STDERR "+++mrjobstep/4 1 @outhashes+++\n";
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
