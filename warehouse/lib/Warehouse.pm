@@ -517,7 +517,7 @@ sub fetch_block
 		last;
 	    }
 	}
-	$self->{stats_memread_bytes} += length $data;
+	$self->{stats_memread_bytes} += length $data if defined $data;
     }
     if (defined $data)
     {
