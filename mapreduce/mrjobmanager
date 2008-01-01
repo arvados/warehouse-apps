@@ -155,6 +155,7 @@ push @jobstep, { input => $Job->{input0},
 	       };
 my @jobstep_todo = (0);
 my @jobstep_done = ();
+my @jobstep_tomerge = ();
 
 
 
@@ -314,6 +315,16 @@ while (%proc)
     }
     select (undef, undef, undef, 0.1);
   }
+}
+
+
+
+if (@jobstep_tomerge && !@jobstep_todo)
+{
+  push @jobstep, { input => join ("\n", splice @jobstep_tomerge, 0),
+		   level => $level,
+		   attempts => 0 };
+  push @jobstep_todo, $#jobstep;
 }
 
 
@@ -478,13 +489,33 @@ sub readfrompipes
       $jobstep[$job]->{stderr} .= $buf;
       print STDERR $buf if $ENV{MR_DEBUG};
 
-      while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrjobstep (\d+) (.*?)\+\+\+\n//)
+      while ($jobstep[$job]->{stderr} =~
+	     s/\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n//)
       {
-	my ($level, $input) = ($1, $2);
-	push @jobstep, { input => $input,
+	my ($merge, $level, $input) = ($1, $2, $3);
+	my $newjobref;
+	if ($merge)
+	{
+	  push @jobstep_tomerge, $input;
+	  if ($merge !~ /\D/ && @jobstep_tomerge >= $merge)
+	  {
+	    $newjobref = { input => join ("\n",
+					  splice @jobstep_tomerge, 0, $merge),
+			   level => $level,
+			   attempts => 0 };
+	  }
+	}
+	else
+	{
+	  $newjobref = { input => $input,
 			 level => $level,
 			 attempts => 0 };
-	push @jobstep_todo, $#jobstep;
+	}
+	if ($newjobref)
+	{
+	  push @jobstep, $newjobref;
+	  push @jobstep_todo, $#jobstep;
+	}
       }
       while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
       {
