@@ -260,7 +260,6 @@ sub _write_flush
       return undef;
     }
 
-    $hash .= "+".$writesize;
     if ($self->{write_hint_keep})
     {
       my $keephash = $self->{whc}->store_in_keep (hash => $hash);
