@@ -250,7 +250,7 @@ sub store_block
     my $dataref = ref $dataarg ? $dataarg : \$dataarg;
 
     my $mogilefs_class = shift || $self->{mogilefs_file_class};
-    my $hash = Digest::MD5::md5_hex ($$dataref);
+    my $hash = Digest::MD5::md5_hex ($$dataref)."+".length ($$dataref);
 
     my $alreadyhave = $self->fetch_block ($hash, 1, 1);
     if (defined $alreadyhave && $$dataref eq $alreadyhave)
@@ -290,6 +290,8 @@ sub _store_block_memcached
     my $self = shift;
     my $hash = shift;
     my $dataref = shift;
+
+    $hash =~ s/\+.*//;
     for (my $chunk = 0;
 	 $chunk * $memcached_max_data < length $$dataref;
 	 $chunk ++)
@@ -381,7 +383,7 @@ sub write_data
 	{
 	    return undef;
 	}
-	push @{$self->{hashes_written}}, $hash."+".$blocksize;
+	push @{$self->{hashes_written}}, $hash;
 	substr ($self->{output_buffer}, 0, $blocksize) = "";
     }
     1;
@@ -410,8 +412,7 @@ sub write_finish
 	{
 	    return undef;
 	}
-	my $blocklength = length $self->{output_buffer};
-	push @{$self->{hashes_written}}, $hash."+".$blocklength;
+	push @{$self->{hashes_written}}, $hash;
 	$self->{output_buffer} = "";
     }
     if (wantarray)

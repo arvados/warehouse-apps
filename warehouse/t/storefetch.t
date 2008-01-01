@@ -19,19 +19,19 @@ SKIP: {
     skip "something about 'perl -T' makes fetches hang", 8 if ${^TAINT};
 
     my $hash26 = $whc->store_block ($content26);
-    ok ($hash26 =~ /^[a-f0-9]{32}$/, "store-small");
+    ok ($hash26 =~ /^[a-f0-9]{32}/, "store-small");
 
     $check = $whc->fetch_block ($hash26);
     ok ($check eq $content26, "fetch-small");
 
     my $hash4M = $whc->store_block ($content4M);
-    ok ($hash4M =~ /^[a-f0-9]{32}$/, "store-4M");
+    ok ($hash4M =~ /^[a-f0-9]{32}/, "store-4M");
 
     $check = $whc->fetch_block ($hash4M);
     ok ($check eq $content4M, "fetch-4M");
 
     my $hash64M = $whc->store_block ($content64M);
-    ok ($hash64M =~ /^[a-f0-9]{32}$/, "store-64M");
+    ok ($hash64M =~ /^[a-f0-9]{32}/, "store-64M");
 
     $check = $whc->fetch_block ($hash64M);
     ok ($check eq $content64M, "fetch-64M");

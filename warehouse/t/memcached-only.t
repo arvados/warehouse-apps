@@ -27,7 +27,7 @@ SKIP: {
 
 	    push @size, (length($content)+length($i));
 	    push @hash, $whc->store_block ($content.$i);
-	    ok ($hash[-1] =~ /^[a-f0-9]{32}$/, "store_2e${e}_${i}");
+	    ok ($hash[-1] =~ /^[a-f0-9]{32}/, "store_2e${e}_${i}");
 	}
     }
 
