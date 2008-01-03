@@ -63,9 +63,8 @@ print q{</pre>
 <h2>available</h2>
 <pre>};
 
-$fmt = "%-15s %4s %-12.12s %4s %-33.33s %-33.33s %-20s %10s %s\n";
-printf ($fmt,
-	qw(warehouse job function rev input output starttime elapsed ...));
+$fmt = "%-15s %4s %-12.12s %4s %5s %-33.33s %-33.33s %-20s %10s %s\n";
+printf ($fmt, qw(warehouse job function rev nodes input output starttime elapsed ...));
 
 my $sth = $main::dbh->prepare ("select *,
  unix_timestamp(finishtime)-unix_timestamp(starttime) elapsed
@@ -89,11 +88,32 @@ while (my $job = $sth->fetchrow_hashref)
   {
     $addme = "todo";
   }
+  if ($job->{nodes} !~ /^\d+$/)
+  {
+    my $n = 0;
+    local $_ = $job->{nodes};
+    while (s/^[^\[,]+(\[[-,\d]+\])?[ ,]*//)
+    {
+      foreach (split (/,/, $1))
+      {
+	if (/-/)
+	{
+	  $n += $' - $` + 1;
+	}
+	else
+	{
+	  $n ++;
+	}
+      }
+    }
+    $job->{nodes} = $n;
+  }
   printf ($fmt,
 	  escapeHTML ($job->{warehousename}),
 	  $job->{id},
 	  $job->{mrfunction},
 	  $job->{revision},
+	  $job->{nodes},
 	  $job->{inputkey},
 	  $job->{outputkey},
 	  $job->{starttime},
