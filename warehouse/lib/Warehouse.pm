@@ -616,7 +616,11 @@ sub store_in_keep
 	return undef;
     }
     my $hash = $md5;
-    map { $_=67108864 if $_ eq "0"; $hash .= "+$_" unless /^K/ } @hints;
+    foreach (@hints)
+    {
+	$_ = 67108864 if $_ eq "0";
+	$hash .= "+$_" unless (/^K.*\@(.*)/ && $1 eq $warehouses->[0]->{name});
+    }
     $hash .= "+K".unpack("H*", $bits)."\@".$warehouses->[0]->{name};
     return $hash if !wantarray;
     return ($hash, $nnodes);
