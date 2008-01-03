@@ -71,13 +71,14 @@ sub update_job_table
 	      $_->{id})
 	or die DBI->errstr;
     $dbh->do ("update job set
-	       mrfunction=?, revision=?,
+	       mrfunction=?, revision=?, nodes=?,
 	       starttime=?, finishtime=?, success=?, knobs=?,
 	       inputkey=?, outputkey=?, metakey=?
 	       where warehousename=? and id=?",
 	      undef,
 	      $_->{mrfunction},
 	      $_->{revision},
+	      $_->{nodes},
 	      $_->{starttime} || undef,
 	      $_->{finishtime} || undef,
 	      defined $_->{success} ? $_->{success} : undef,
