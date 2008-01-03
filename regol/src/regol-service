@@ -196,6 +196,7 @@ sub setup_tables
    id bigint,
    mrfunction char(32),
    revision bigint,
+   nodes char(255),
    starttime datetime,
    finishtime datetime,
    success tinyint,
@@ -210,6 +211,7 @@ sub setup_tables
   );
   alter table job add mrfunction char(32) after id;
   alter table job add revision bigint after mrfunction;
+  alter table job add nodes char(255) after revision;
   alter table job add success tinyint after finishtime;
   alter table job add wantredo_photons int after wantredo_nnodes;
   alter table job add key spec_md5 (spec_md5);
