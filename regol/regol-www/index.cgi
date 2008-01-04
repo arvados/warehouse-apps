@@ -92,7 +92,7 @@ while (my $job = $sth->fetchrow_hashref)
   {
     my $n = 0;
     local $_ = $job->{nodes};
-    while (s/^[^\[,]+(\[[-,\d]+\])?[ ,]*//)
+    while (s/^[^\[,]+(?:\[([-,\d]+)\])?[ ,]*//)
     {
       foreach (split (/,/, $1))
       {
