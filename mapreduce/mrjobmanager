@@ -363,7 +363,8 @@ for (@jobstep)
   }
   else
   {
-    $whc->write_data ("XXX fetch_block($output) failed XXX\n");
+    my $errstr = $whc->errstr;
+    $whc->write_data ("XXX fetch_block($output) failed: $errstr XXX\n");
     $success = 0;
   }
 }
