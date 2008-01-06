@@ -1,0 +1,145 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:stacks of [compressed] images -> stacks of raw 2bit segmented images
+###MR_INPUT:manifest
+###MR_KNOBS:GZIP=yes
+
+use strict; 
+use Image::Magick;
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Compress::Gzip qw(gzip $GzipError);
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    if ($instream->name eq $wantsubdir)
+    {
+      my $outstream = new Warehouse::Stream (whc => $whc);
+      $outstream->name ($instream->name);
+      $outstream->clear;
+
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos;
+
+	my $inblob = "";
+	$instream->seek ($pos);
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $inblob .= $$dataref;
+	}
+
+	if ($filename =~ s/\.g?z$//i)
+	{
+	  my $zblob = $inblob;
+	  undef $inblob;
+	  gunzip \$zblob => \$inblob
+	      or die $GunzipError;
+	}
+
+	my $mask;
+	if ($filename =~ /\.raw$/i)
+	{
+	  $mask = Image::Magick->new
+	      (magick => 'gray',
+	       size => '1000x1000',
+	       endian => 'lsb');
+	}
+	elsif ($filename =~ s/\.tiff?$/.raw/i)
+	{
+	  $mask = Image::Magick->new
+	      (magick => 'tif');
+	}
+	elsif ($filename =~ s/\.jpe?g$/.raw/i)
+	{
+	  $mask = Image::Magick->new
+	      (magick => 'jpg');
+	}
+	elsif ($filename =~ s/\.jp2$/.raw/i)
+	{
+	  $mask = Image::Magick->new
+	      (magick => 'jp2');
+	}
+	else
+	{
+	  die "Unsupported image type: $filename";
+	}
+
+	die "Failed to create image" if !$mask;
+
+	$mask->BlobToImage($inblob); 
+	my $image = $mask->Clone();
+
+	$mask->Normalize();       
+	$mask->Segment();    
+	$mask->Normalize();
+
+	$image->Composite(image=>$mask, compose=>'Multiply');
+
+	$image->Quantize (colors=>'4'); 
+
+	my $outblob = $image->ImageToBlob
+	    (magick => 'gray',
+	     endian => 'lsb',
+	     depth => 16);
+	my $outblobref = \$outblob;
+
+	if ($ENV{KNOB_GZIP} =~ /1|y/i)
+	{
+	  my $compressed;
+	  my $z = new IO::Compress::Gzip \$compressed
+	      or die "gzip failed: $GzipError\n";
+	  print $z $image->ImageToBlob
+	      (magick => 'gray',
+	       endian => 'lsb',
+	       depth => 16);
+	  $z->close
+	      or die "gzip failed: $GzipError\n";
+	  $outblobref = \$compressed;
+	  undef $outblob;
+	}
+
+	$outstream->write_start ($filename.".gz");
+	$outstream->write_data ($outblobref)
+	    or die "write failed: ".$outstream->errstr;
+	$outstream->write_finish;
+      }
+      my $fragkey = $whc->store_block ($outstream->as_string)
+	  or die "store_block failed: ".$whc->errstr;
+      print STDERR "+++mrout ".$fragkey."+++\n";
+      print STDERR $whc->iostats;
+      exit 0;
+    }
+  }
+  die "Subdir not found: $wantsubdir";
+}
+
+sub chooseimagefilter
+{
+  local ($_) = @_;
+  if (/\.raw$/i) { return undef; }
+  if (/\.raw\.g?z$/i) { return "zcat" }
+  if (/\.tiff?$/i) { return "convert tif:- -endian lsb gray:-" }
+  if (/\.tiff?\.g?z$/i) { return "zcat | convert tif:- -endian lsb gray:-" }
+  die "I don't know how to convert $_ to a raw image";
+}
