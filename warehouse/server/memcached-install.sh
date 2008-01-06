@@ -13,18 +13,23 @@ size="$(($size/1024))"
 if [ "$size" -gt 11000 ]; then
 	INSTANCES=3
 	ISIZE=2600
-	echo '12GB of ram detected; want to instal 3 instances of memcached (2600MB each).'
+	echo `hostname` '12GB of ram detected; want to instal 3 instances of memcached (2600MB each).'
 #FIXME: how much ram do we *really* see on 8GB boxes?
 elif [ "$size" -gt 7000 ]; then
 	INSTANCES=2
 	ISIZE=2000
-	echo '8GB of ram detected; want to instal 2 instances of memcached (2000MB each).'
+	echo `hostname` '8GB of ram detected; want to instal 2 instances of memcached (2000MB each).'
 elif [ "$size" -gt 5000 ]; then
 	INSTANCES=1
 	ISIZE=2000
-	echo '6GB of ram detected; want to instal 1 instance of memcached (2000MB).'
+	echo `hostname` '6GB of ram detected; want to instal 1 instance of memcached (2000MB).'
 else
-	echo "4GB of ram detected; not installing memcached"
+	echo `hostname` "4GB of ram detected; memcached should not be running"
+	if [ -L /var/service/memcached ]; then
+		rm -f /var/service/memcached
+		rm -rf /etc/runit/memcached
+		apt-get remove memcached --purge
+	fi
 	exit
 fi
 
