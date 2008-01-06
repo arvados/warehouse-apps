@@ -19,16 +19,17 @@ $Warehouse::warehouses
 	   mogilefs_domain => "warehouse",
 	   mogilefs_directory_class => "directory",
 	   mogilefs_file_class => "file",
-	   keeps => [ map { "templeton$_" } (2..48) ],
+	   keeps => [ map { "uncle$_" } (3,4,6..13) ],
        }
        ,
        {
 	   name => "templeton",
-	   controllers => "uncle-controller.nrb.freelogy.org:24848",
-	   mogilefs_trackers => "uncle-controller.nrb.freelogy.org:6001",
+	   controllers => "tomc.oxf.freelogy.org:24848",
+	   mogilefs_trackers => "tomc.oxf.freelogy.org:6001",
 	   mogilefs_domain => "warehouse",
 	   mogilefs_directory_class => "directory",
 	   mogilefs_file_class => "file",
+	   keeps => [ map { "templeton$_" } (2..48) ],
        }
        ];
 
