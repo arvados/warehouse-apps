@@ -3,6 +3,8 @@
 # First see if we need to convert runit to run under upstart
 DISTRO=`cat /etc/lsb-release  |grep CODENAME| cut -c 18-`
 
+UPSTART=0
+
 if [ "x$DISTRO" = "xgutsy" ]; then
 	if [ ! -d /etc/event.d ]; then
 		echo "Your copy of gutsy does not have upstart installed. Please fix that first and then re-run this script."
@@ -34,9 +36,11 @@ EOF
 		sleep 5
 		initctl start runit
 		rm -f /etc/inittab
+		UPSTART=1
 	else
 		STATUS=`initctl status runit`
 		#echo $STATUS
+		UPSTART=1
 	fi
 fi
 
@@ -56,7 +60,14 @@ fi
 
 echo Need to move directories #{tobemoved[@]} from /var/service to /etc/runit
 
-initctl stop runit >> /dev/null
+if [ "$UPSTART" = "1" ]; then
+	initctl stop runit >> /dev/null
+else
+	cat /etc/inittab |sed -e 's/^SV:123456:respawn:\/usr\/sbin\/runsvdir-start/#SV:123456:respawn:\/usr\/sbin\/runsvdir-start/' > /etc/inittab.norunit
+	mv /etc/inittab /etc/inittab.orig
+	mv /etc/inittab.norunit /etc/inittab
+	init q
+fi
 killall runsv
 sleep 5
 
@@ -69,4 +80,12 @@ for s2 in ${tobemoved[@]}; do
 	ln -s /etc/runit/$s2 /var/service
 done
 
-initctl start runit >> /dev/null
+if [ "$UPSTART" = "1" ]; then
+	initctl start runit >> /dev/null
+else
+	if [ -f /etc/inittab.orig ]; then
+		rm /etc/inittab
+		mv /etc/inittab.orig /etc/inittab
+		init q
+	fi	
+fi
