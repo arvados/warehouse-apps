@@ -75,6 +75,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  $mask = Image::Magick->new
 	      (magick => 'jpg');
 	}
+	elsif ($filename =~ s/\.jp2$/.raw/i)
+	{
+	  $mask = Image::Magick->new
+	      (magick => 'jp2');
+	}
 	else
 	{
 	  die "Unsupported image type: $filename";
