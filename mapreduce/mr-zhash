@@ -1,8 +1,9 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:uncompress any *.gz and output an sha512.txt (sha512 filename) for each subdir
+###MR_DESCRIPTION:uncompress any *.gz and output a *.txt (filename based on hash function) for each subdir
 ###MR_INPUT:manifest
+###MR_KNOBS:HASH=yes
 
 use Warehouse;
 use Warehouse::Manifest;
@@ -23,6 +24,18 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $wantsubdir = $ENV{MR_INPUT};
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+	my @valid_functionss = ('sha1','sha224','sha256','sha384','sha512');
+	my $function = '';
+	my $function_ok = 0;
+	$function = $ENV{KNOB_HASH} if (defined($ENV{KNOB_HASH}));
+	foreach my $valid_function (@valid_functions) {
+		if ($valid_function eq $function) {
+			$function_ok = 1;
+			last;
+		}
+	}
+	# Default to md5
+	$function = 'md5' if (!$function_ok);
 
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
@@ -34,13 +47,18 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $outstream = new Warehouse::Stream (whc => $whc);
       $outstream->name ($instream->name);
       $outstream->clear;
-      $outstream->write_start ("sha512.txt");
+      $outstream->write_start ("$function.txt");
 
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
 	last if !defined $pos;
 
-	my $ctx = Digest::SHA->new('sha512');
+	my $ctx;
+	if ($function eq 'md5') {
+		$ctx = Digest::MD5->new;
+	} else {
+		$ctx = Digest::SHA->new($function);
+	}
 
 	$instream->seek ($pos);
 
