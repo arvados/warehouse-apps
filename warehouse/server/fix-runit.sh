@@ -1,0 +1,72 @@
+#!/bin/sh
+
+# First see if we need to convert runit to run under upstart
+DISTRO=`cat /etc/lsb-release  |grep CODENAME| cut -c 18-`
+
+if [ "x$DISTRO" = "xgutsy" ]; then
+	if [ ! -d /etc/event.d ]; then
+		echo "Your copy of gutsy does not have upstart installed. Please fix that first and then re-run this script."
+		exit;
+	fi
+
+	if [ ! -f "/etc/event.d/runit" ]; then
+		echo "Converting runit to upstart"
+		cat >/etc/event.d/runit <<EOF
+# runit
+#
+# Keep runit running
+
+start on runlevel 2
+start on runlevel 3
+start on runlevel 4
+start on runlevel 5
+
+stop on runlevel 0
+stop on runlevel 1
+stop on runlevel 6
+
+respawn
+exec /usr/sbin/runsvdir-start
+
+EOF
+		killall runsvdir
+		killall runsv
+		sleep 5
+		initctl start runit
+		rm -f /etc/inittab
+	else
+		STATUS=`initctl status runit`
+		#echo $STATUS
+	fi
+fi
+
+# Now make sure we only have symlinks under /var/service
+
+declare -a tobemoved
+for subject in `ls /var/service`; do 
+	if [ ! -L /var/service/$subject ]; then
+		tobemoved+=($subject)
+	fi
+done
+
+if [ "${#tobemoved[@]}" = "0" ]; then
+	# Nothing to do; all entries under /var/service are already symlinks
+	exit;
+fi
+
+echo Need to move directories #{tobemoved[@]} from /var/service to /etc/runit
+
+initctl stop runit >> /dev/null
+killall runsv
+sleep 5
+
+if [ ! -d /etc/runit ]; then
+	mkdir /etc/runit
+fi
+
+for s2 in ${tobemoved[@]}; do
+	mv /var/service/$s2 /etc/runit/
+	ln -s /etc/runit/$s2 /var/service
+done
+
+initctl start runit >> /dev/null
