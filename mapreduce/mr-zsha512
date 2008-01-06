@@ -40,7 +40,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	last if !defined $pos;
 
-	my $ctx = Digest::MD5->new;
+	my $ctx = Digest::SHA->new('sha512');
 
 	$instream->seek ($pos);
 
@@ -63,7 +63,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $ctx->add ($$dataref);
 	  }
 	}
-	$outstream->write_data ($ctx->sha512_hex . "  " . $filename . "\n");
+	$outstream->write_data ($ctx->hexdigest . "  " . $filename . "\n");
       }
 
       $outstream->write_finish;
