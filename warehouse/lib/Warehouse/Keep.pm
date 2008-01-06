@@ -85,11 +85,15 @@ sub _init
     $self->{ListenPort} = "25107"
 	if !defined $self->{ListenPort};
 
+    $self->{Reuse} = 1
+	if !defined $self->{Reuse};
+
     $self->{daemon} = new HTTP::Daemon
 	( LocalAddr => $self->{ListenAddress},
-	  LocalPort => $self->{ListenPort} );
+	  LocalPort => $self->{ListenPort},
+	  Reuse => $self->{Reuse} );
 
-    $self->{daemon} or die "HTTP::Daemon::new failed";
+    $self->{daemon} or die "HTTP::Daemon::new failed: $!";
 
     $self->{whc} = new Warehouse;
 
