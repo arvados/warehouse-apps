@@ -45,7 +45,7 @@ while (my $pid = readdir P)
 		print "# skip :$port because I can't find memory size (@ip)\n";
 		next;
 	    }
-	    my $weight = int(($mem/1000) * 2 / scalar @ip);
+	    my $weight = int(($mem/200) * 2 / scalar @ip);
 	    if ($weight < 1)
 	    {
 		print "# skip :$port because ${mem} MB has no weight (@ip)\n";
