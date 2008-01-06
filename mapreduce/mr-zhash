@@ -3,7 +3,7 @@
 
 ###MR_DESCRIPTION:uncompress any *.gz and output a *.txt (filename based on hash function) for each subdir
 ###MR_INPUT:manifest
-###MR_KNOBS:HASH=yes
+###MR_KNOBS:HASH=md5
 
 use Warehouse;
 use Warehouse::Manifest;
@@ -24,7 +24,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $wantsubdir = $ENV{MR_INPUT};
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
-	my @valid_functionss = ('sha1','sha224','sha256','sha384','sha512');
+	my @valid_functionss = ('md5','sha1','sha224','sha256','sha384','sha512');
 	my $function = '';
 	my $function_ok = 0;
 	$function = $ENV{KNOB_HASH} if (defined($ENV{KNOB_HASH}));
