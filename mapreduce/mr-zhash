@@ -10,6 +10,7 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA;
+use Digest::MD5;
 
 my $manifestkey = $ENV{MR_INPUT0};
 
@@ -24,10 +25,10 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $wantsubdir = $ENV{MR_INPUT};
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
-	my @valid_functionss = ('md5','sha1','sha224','sha256','sha384','sha512');
+	my @valid_functions = ('md5','sha1','sha224','sha256','sha384','sha512');
 	my $function = '';
 	my $function_ok = 0;
-	$function = $ENV{KNOB_HASH} if (defined($ENV{KNOB_HASH}));
+	$function = $ENV{KNOB_HASH} if ($ENV{KNOB_HASH});
 	foreach my $valid_function (@valid_functions) {
 		if ($valid_function eq $function) {
 			$function_ok = 1;
