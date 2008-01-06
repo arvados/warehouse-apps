@@ -250,7 +250,9 @@ sub store_block
     my $dataref = ref $dataarg ? $dataarg : \$dataarg;
 
     my $mogilefs_class = shift || $self->{mogilefs_file_class};
-    my $hash = Digest::MD5::md5_hex ($$dataref)."+".length ($$dataref);
+    my $md5 = Digest::MD5::md5_hex ($$dataref);
+    my $size = length $$dataref;
+    my $hash = "$md5+$size";
 
     my $alreadyhave = $self->fetch_block ($hash, 1, 1);
     if (defined $alreadyhave && $$dataref eq $alreadyhave)
@@ -258,20 +260,20 @@ sub store_block
 	return $hash;
     }
 
-    if (length $$dataref <= $self->{memcached_size_threshold})
+    if ($size <= $self->{memcached_size_threshold})
     {
 	$self->_store_block_memcached ($hash, $dataref);
     }
 
-    if (length $$dataref >= $self->{mogilefs_size_threshold})
+    if ($size >= $self->{mogilefs_size_threshold})
     {
 	eval
 	{
-	    $self->_mogilefs_write ($hash, $dataref, $mogilefs_class);
+	    $self->_mogilefs_write ($md5, $dataref, $mogilefs_class);
 	}
 	or eval
 	{
-	    $self->_mogilefs_write ($hash, $dataref, $mogilefs_class);
+	    $self->_mogilefs_write ($md5, $dataref, $mogilefs_class);
 	}
 	or do
 	{
@@ -288,10 +290,9 @@ sub store_block
 sub _store_block_memcached
 {
     my $self = shift;
-    my $hash = shift;
+    my $md5 = shift;
     my $dataref = shift;
 
-    $hash =~ s/\+.*//;
     for (my $chunk = 0;
 	 $chunk * $memcached_max_data < length $$dataref;
 	 $chunk ++)
@@ -301,7 +302,7 @@ sub _store_block_memcached
 	my $frag = substr ($$dataref,
 			   $chunk * $memcached_max_data,
 			   $memcached_max_data);
-	$self->{memc}->set ($hash.".".$chunk, $frag);
+	$self->{memc}->set ($md5.".".$chunk, $frag);
 
 	warn "set ${hash}.${chunk} => ".(length $frag)."\n"
 	    if $self->{debug_memcached};
@@ -314,11 +315,11 @@ sub _store_block_memcached
 sub _mogilefs_write
 {
     my $self = shift;
-    my $hash = shift;
+    my $md5 = shift;
     my $dataref = shift;
     my $class = shift;
     $self->{stats_wrote_attempts} ++;
-    my $mogfh = $self->{mogc}->new_file ($hash, $class);
+    my $mogfh = $self->{mogc}->new_file ($md5, $class);
     if (!print $mogfh $$dataref)
     {
 	close $mogfh;
@@ -474,13 +475,14 @@ sub fetch_block
     }
     else
     {
-	my ($md5, @hints) = split (/\+/, $hash);
+	my @hints;
+	($hash, @hints) = split (/\+/, $hash);
 	foreach (@hints)
 	{
 	    $sizehint = $_ if /^\d+$/;
 	}
-	$hash = $md5;
     }
+    my $md5 = $hash;
 
     my $data;
     if ((defined $sizehint ? $sizehint : 1)
@@ -493,7 +495,7 @@ sub fetch_block
 	     $chunk ++)
 	{
 	    $self->{stats_memread_attempts} ++;
-	    if (defined (my $frag = $self->{memc}->get ($hash.".".$chunk)))
+	    if (defined (my $frag = $self->{memc}->get ($md5.".".$chunk)))
 	    {
 		$self->{stats_memread_blocks} ++;
 
@@ -521,7 +523,7 @@ sub fetch_block
     }
     if (defined $data)
     {
-	if (!$verifyflag || $hash eq Digest::MD5::md5_hex ($data))
+	if (!$verifyflag || $md5 eq Digest::MD5::md5_hex ($data))
 	{
 	    return $data;
 	}
@@ -531,17 +533,17 @@ sub fetch_block
 					     : $blocksize);
 	     $chunk ++)
 	{
-	    $self->{memc}->delete ($hash.".".$chunk);
+	    $self->{memc}->delete ($md5.".".$chunk);
 	}
-	warn "Memcached get($hash) failed verify; deleted"
+	warn "Memcached get($md5) failed verify; deleted"
 	    unless $nowarnflag;
     }
 
     $self->{stats_read_attempts} ++;
-    my $dataref = $self->_get_file_data ($hash, $verifyflag);
+    my $dataref = $self->_get_file_data ($md5, $verifyflag);
     if (!defined $dataref)
     {
-	warn "_get_file_data ($hash) failed: ".$self->{errstr}
+	warn "_get_file_data ($md5) failed: ".$self->{errstr}
 	    unless $nowarnflag;
 	return undef;
     }
@@ -550,7 +552,7 @@ sub fetch_block
 
     if (length $$dataref <= $self->{memcached_size_threshold})
     {
-	$self->_store_block_memcached ($hash, $dataref);
+	$self->_store_block_memcached ($md5, $dataref);
     }
 
     return $$dataref;
