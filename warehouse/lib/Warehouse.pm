@@ -262,7 +262,7 @@ sub store_block
 
     if ($size <= $self->{memcached_size_threshold})
     {
-	$self->_store_block_memcached ($hash, $dataref);
+	$self->_store_block_memcached ($md5, $dataref);
     }
 
     if ($size >= $self->{mogilefs_size_threshold})
