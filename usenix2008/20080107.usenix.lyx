@@ -38,9 +38,9 @@
 \papercolumns 2
 \papersides 1
 \paperpagestyle default
-\tracking_changes false
+\tracking_changes true
 \output_changes false
-\author "" 
+\author "Alexander Wait Zaranek,,," 
 \author "" 
 \end_header
 
@@ -643,6 +643,16 @@ status open
 On each cluster, some machines host warehouse nodes, Freegols, and other
  virtual machines; some are "xenless" nodes which act as dedicated warehouse
  nodes.
+\change_inserted 0 1199741564
+
+\begin_inset LatexCommand label
+name "fig:uncle_templeton_diag"
+
+\end_inset
+
+
+\change_unchanged
+
 \end_layout
 
 \end_inset
@@ -660,17 +670,37 @@ On each cluster, some machines host warehouse nodes, Freegols, and other
 \end_layout
 
 \begin_layout Standard
-Physically, aeach cluster consists of 48 1U multi-processor nodes.   All
- newer nodes have four disk slots and the older nodes are diskless.  Each
- newer node has two gigabit ethernet ports, which are connected to two 48-port
- gigabit switches.  Two to four "headnodes" have a third ethernet port connected
- to the upstream switch, and optionally a fourth port connected to an out
- of band management network.  The headnodes act as gateways to the internet
- and as VPN endpoints.  Currently we reserve an entire physical machine for
- one of the headnodes (not shown above), and run the other on a virtualized
- node running Xen.  In the future we hope to run the firewall/VPN endpoint
- in a domU with a non-Xen kernel (for security reasons), which is possible
- with machines that support hardware virtualization.
+Physically, 
+\change_deleted 0 1199741599
+a
+\change_unchanged
+each cluster consists of 48 1U multi-processor nodes. 
+\change_inserted 0 1199741660
+ Our clusters are depicted in Figure\InsetSpace ~
+
+\begin_inset LatexCommand ref
+reference "fig:uncle_templeton_diag"
+
+\end_inset
+
+.
+\change_unchanged
+  All newer nodes have four disk slots and the older nodes are diskless. 
+ Each newer node has two gigabit ethernet ports, which are connected to
+ two 48-port gigabit switches.  Two to four "headnodes" have a third ethernet
+ port connected to the upstream switch, and optionally a fourth port connected
+ to an out of band management network.  The headnodes act as gateways to
+ the internet and as VPN endpoints.  Currently we reserve an entire physical
+ machine for one of the headnodes (not show
+\change_inserted 0 1199741594
+n
+\change_deleted 0 1199741593
+n above
+\change_unchanged
+), and run the other on a virtualized node running Xen.  In the future we
+ hope to run the firewall/VPN endpoint in a domU with a non-Xen kernel (for
+ security reasons), which is possible with machines that support hardware
+ virtualization.
 \end_layout
 
 \begin_layout Standard
