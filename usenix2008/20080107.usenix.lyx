@@ -97,8 +97,8 @@ This paper introduces the Free Factory, a platform for deploying data-intensive
  ultimately allows end users to pay for prioritized service.  On first implementa
 tion, our sample image processing applications exceed 600 megabytes per
  second of combined disk I/O on our two 48-node systems.  We believe commodity
- clusters with our design--costing $500,000 per year for staff, new hardware,
- and hosting--can achieve 4000-8000 megabytes per second of disk I/O per
+ clusters with our design -- costing $500,000 per year for staff, new hardware,
+ and hosting -- can achieve 4000-8000 megabytes per second of disk I/O per
  cluster, and serve hundreds of simultaneous requests on multi-hundred terabyte
  data sets.
  At this price, a 50% cumulative utilization rate over two years is required
@@ -171,18 +171,19 @@ The use of virtualization permits us to consider a model with the following
 
 \begin_layout Standard
 Others have explored the possibility of capturing market signals from users
- and we believe this might be an attractive way to allocate resources for
- our applications in the long term 
+ and we believe this is an attractive way to allocate resources for our
+ applications in the long term 
 \begin_inset LatexCommand cite
 key "Dash2003,Shneidman2005,Brunelle2006"
 
 \end_inset
 
 .
- Since we have exquisite control of our architecture from the hardware up,
- we hope that implementation and experimentation with such mechanisms will
- be relatively straightforward but we have not focused on implementation
- here as we have not yet had acute resource contention problems.
+ Since we have control of our architecture from the hardware up, we hope
+ that implementation and experimentation with such mechanisms will be relatively
+ straightforward.
+ We have not focused on implementation here because we have not yet had
+ acute resource contention problems.
 \end_layout
 
 \begin_layout Standard
@@ -329,7 +330,7 @@ This model requires that the processing and storage interfaces incorporate
  collecting and verifying signatures later when resources permit.  This is
  safe because the content-addressable storage system never needs to overwrite
  existing data.  The only operation which needs to be authenticated in real
- time is the delete operation, which is never performed by freegols directly.
+ time is the delete operation, which is never performed by Freegols directly.
 \end_layout
 
 \begin_layout Standard
@@ -370,8 +371,8 @@ status open
 
 \begin_layout Standard
 Each physical node has a warehouse node which offers cache and storage services,
- and performs computation on behalf of freegols as instructed by the controller. 
- These same nodes can also support a number of freegols and other virtual
+ and performs computation on behalf of Freegols as instructed by the controller. 
+ These same nodes can also support a number of Freegols and other virtual
  machines.
 \end_layout
 
@@ -639,7 +640,7 @@ status open
 \begin_inset Caption
 
 \begin_layout Standard
-On each cluster, some machines host warehouse nodes, freegols, and other
+On each cluster, some machines host warehouse nodes, Freegols, and other
  virtual machines; some are "xenless" nodes which act as dedicated warehouse
  nodes.
 \end_layout
@@ -751,7 +752,7 @@ status collapsed
 \begin_inset Caption
 
 \begin_layout Standard
-On each cluster, some machines host warehouse nodes, freegols, and other
+On each cluster, some machines host warehouse nodes, Freegols, and other
  virtual machines as illustrated above; other machines are "xenless" nodes
  which act as dedicated warehouse nodes.
 \begin_inset LatexCommand label
@@ -773,7 +774,7 @@ name "fig:xen node"
 \end_layout
 
 \begin_layout Standard
-System software and freegols' local filesystems use RAID-1.  Warehouse nodes
+System software and Freegols' local filesystems use RAID-1.  Warehouse nodes
  leave redundancy up to the API: additional copies of data blocks, if needed,
  are stored on other nodes and other clusters.  The long term storage server
  is able to control disk thrashing if it has exclusive use of each of its
@@ -1703,7 +1704,7 @@ status open
 \begin_inset Caption
 
 \begin_layout Standard
-Batch processing is initiated by freegols and supervised by mrjobmanager. 
+Batch processing is initiated by Freegols and supervised by mrjobmanager. 
  SLURM is used to allocate warehouse nodes; mrjobmanager assigns individual
  job steps to the allocated nodes and collates their output.  The MySQL database
  has progress statistics for current jobs, and an archive of previous job
