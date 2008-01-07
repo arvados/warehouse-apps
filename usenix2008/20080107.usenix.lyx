@@ -753,9 +753,8 @@ status collapsed
 \begin_inset Caption
 
 \begin_layout Standard
-On each cluster, some machines host warehouse nodes, Freegols, and other
- virtual machines as illustrated above; other machines are "xenless" nodes
- which act as dedicated warehouse nodes.
+On a virtualized node with RAID-1, up to two disks can be dedicated to the
+ warehouse's long-term storage system.
 \begin_inset LatexCommand label
 name "fig:xen node"
 
@@ -790,7 +789,6 @@ Administrators, and some of their users, have access to shell accounts on
  using an SSH private key.  The user is then automatically connected to the
  SSH server on her own Freegol by means of an "nc" command specified in
  her account's authorized_keys file.
- 
 \end_layout
 
 \begin_layout Standard
