@@ -108,6 +108,7 @@ while (my $job = $sth->fetchrow_hashref)
     }
     $job->{nodes} = $n;
   }
+  $job->{knobs} =~ s/\n/ /g;
   printf ($fmt,
 	  escapeHTML ($job->{warehousename}),
 	  $job->{id},
