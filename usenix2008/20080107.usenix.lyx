@@ -95,7 +95,7 @@ This paper introduces the Free Factory, a platform for deploying data-intensive
  The batch processing system uses a variation of the MapReduce model.  Resources
  are allocated using a credit system which encourages high utilization and
  ultimately allows end users to pay for prioritized service.  On first implementa
-tion, our sample image processing applications exceed 600 megabytes per
+tion, our sample image processing applications exceed 1000 megabytes per
  second of combined disk I/O on our two 48-node systems.  We believe commodity
  clusters with our design -- costing $500,000 per year for staff, new hardware,
  and hosting -- can achieve 4000-8000 megabytes per second of disk I/O per
@@ -1707,16 +1707,23 @@ Batch processing services
 \end_layout
 
 \begin_layout Standard
-Our batch processing system uses Slurm to reserve a set of nodes for each
- job, and to coordinate communication between compute nodes and the controller,
- but it manages the scheduling of individual job steps itself.  The "warehoused"
- server accepts signed job submissions from Freegols, and allows them to
- retrieve information about previously submitted jobs.  The "mapinit" daemon
- starts queued job when the compute nodes become available.  "Mrjobmanager"
- invokes the "mr-function" given in the job submission, which examines the
- input object (normally a manifest) and instructs the job manager to queue
- a number of job steps.  The specified version of the mr-function program
- itself is retrieved from a Subversion repository.
+Our batch processing system, see Figure\InsetSpace ~
+
+\begin_inset LatexCommand ref
+reference "fig:Batch-processing"
+
+\end_inset
+
+, uses Slurm to reserve a set of nodes for each job, and to coordinate communica
+tion between compute nodes and the controller, but it manages the scheduling
+ of individual job steps itself.  The "warehoused" server accepts signed
+ job submissions from Freegols, and allows them to retrieve information
+ about previously submitted jobs.  The "mapinit" daemon starts queued job
+ when the compute nodes become available.  "Mrjobmanager" invokes the "mr-functio
+n" given in the job submission, which examines the input object (normally
+ a manifest) and instructs the job manager to queue a number of job steps. 
+ The specified version of the mr-function program itself is retrieved from
+ a Subversion repository.
 \end_layout
 
 \begin_layout Standard
@@ -1873,6 +1880,14 @@ The mr-functions we have implemented are generally concerned with problems
  We intend to publish a detailed article on these applications in a subsequent
  publication.   Here we present some simpler applications that give a rudimentary
  illustration of the platform.
+ Timing results from a few of these can be found in Table\InsetSpace ~
+
+\begin_inset LatexCommand ref
+reference "tab:templeton timing"
+
+\end_inset
+
+.
 \end_layout
 
 \begin_layout Standard
@@ -1891,7 +1906,7 @@ The mr-functions we have implemented are generally concerned with problems
 \end_layout
 
 \begin_layout Standard
-"mr-zmd5" uncompresses its input (if compressed), computes md5sums for individua
+"mr-zhash" uncompresses its input (if compressed), computes hashes for individua
 l files, and outputs text files similar to the output of the Linux "md5sum"
  command line tool.  It is useful for determining whether two compressed
  data sets are equal when decompressed.
@@ -2206,7 +2221,7 @@ mr-segment
 \begin_inset Text
 
 \begin_layout Standard
-mr-zmd5
+mr-zhash (md5)
 \end_layout
 
 \end_inset
@@ -2356,7 +2371,7 @@ reference "fig:Two Concurrent Jobs"
 
 \end_inset
 
- the repeatability of two jobs, "mr-raw" and "mr-jp2", are illustrated.
+ the repeatability of two jobs, "mr-raw" and "mr-jp2", is illustrated.
  Most of the individual jobs were scheduled by "regol" but all jobs of this
  type, on the same input, are plotted.  These jobs are running simultaneously;
  they perform approximately one terabyte of input and output in each pair
@@ -2370,6 +2385,308 @@ reference "fig:Two Concurrent Jobs"
  a commit to the subversion repository.  If a string of failures begins at
  a vertical line and ends at another vertical line, it's most likely that
  the failures were caused by an update.
+ 
+\end_layout
+
+\begin_layout Standard
+To futher elaborate the aggregate IO and computational capacity of both
+ clusters we ran a combination of 
+\begin_inset Quotes eld
+\end_inset
+
+mr-hash
+\begin_inset Quotes erd
+\end_inset
+
+ cryptographic hash functions and the IO intensive 
+\begin_inset Quotes eld
+\end_inset
+
+mr-pivot
+\begin_inset Quotes erd
+\end_inset
+
+ -- both previously mentioned.
+ The results are summarized in Table\InsetSpace ~
+
+\begin_inset LatexCommand ref
+reference "tab:IO_compute_table"
+
+\end_inset
+
+.
+ The concurrent jobs ran on 42 nodes for 16 hours.
+ Mr-zhash input is compressed by a factor of over 100x, it computes an md5,
+ sha1, sha224, sha384 and sha512 hash on equal fractions of the data.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="4" columns="6">
+<features>
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="1" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Templeton
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="1" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Uncle
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" bottomline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+nodes
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+megabytes/sec
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+total terabytes
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+megabytes/sec
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+total terabytes
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+aggregate IO (mr-pivot)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1000
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+58
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+290
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+16
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+30
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+aggregate computation (mr-zhash)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1500
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+81*
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+380
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+21*
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+12
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\begin_inset Caption
+
+\begin_layout Standard
+Two concurrent jobs on both Templeton and Uncle.
+ *uncompressed totals are shown.
+\begin_inset LatexCommand label
+name "tab:IO_compute_table"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
