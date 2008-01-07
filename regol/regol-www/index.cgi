@@ -63,7 +63,7 @@ print q{</pre>
 <h2>available</h2>
 <pre>};
 
-$fmt = "%-15s ; %4s ; %-30.30s ; %-12.12s ; %4s ; %5s ; %-33.33s ; %-33.33s ; %-20s ; %10s ; %s\n";
+$fmt = "%-15s ; %4s ; %-12.12s ; %-30.30s ; %4s ; %5s ; %-33.33s ; %-33.33s ; %-20s ; %10s ; %s\n";
 printf ($fmt, qw(warehouse job function knobs rev nodes input output starttime elapsed ...));
 
 my $sth = $main::dbh->prepare ("select *,
