@@ -1642,14 +1642,9 @@ When a block has been written to Keep, the client API notes which of the
 \begin_layout Quote
 
 \family typewriter
-\size tiny
-"
 \series bold
+\size scriptsize
 acbd18db4cc2f85cedef654fccc4a4d8+3+K06@templeton
-\series default
-"
-\size footnotesize
-.  
 \end_layout
 
 \begin_layout Standard
