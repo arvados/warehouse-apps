@@ -217,16 +217,23 @@ When choosing hardware, we are interested in maximizing the usable disk,
  seem to best fit our needs.  Full-bandwidth 48-port switches are also available
  at low cost.  Therefore, the most affordable way to configure a large number
  of disks and CPUs is to build a network of 48-node clusters, interconnected
- by relatively slow network links or VPNs.  We call such a network a Free
- Factory.  Our approach is to squeeze as much performance as possible out
- of this type of network.
+ by relatively slow network links or VPNs.  We call such a network -- as
+ depicted in Figure\InsetSpace ~
+
+\begin_inset LatexCommand ref
+reference "fig:Network.2.1"
+
+\end_inset
+
+ -- a Free Factory .  Our approach is to squeeze as much performance as possible
+ out of this type of network.
 \end_layout
 
 \begin_layout Standard
 \begin_inset Float figure
 wide false
 sideways false
-status collapsed
+status open
 
 \begin_layout Standard
 \align center
@@ -245,6 +252,12 @@ status collapsed
 \begin_layout Standard
 Within each cluster, total network bandwidth is close to total disk bandwidth. 
  Bandwidth between clusters can be lower by several orders of magnitude.
+\begin_inset LatexCommand label
+name "fig:Network.2.1"
+
+\end_inset
+
+
 \end_layout
 
 \end_inset
@@ -311,10 +324,10 @@ There are a wide variety of languages, toolkits and methodologies for deploying
 \begin_layout Standard
 Virtualization encourages a model wherein a larger number of administrators
  have "root" privileges on their own virtual application servers, or Freegols. 
- Deputies--who manage the hypervisors and other shared services on the clusters-
--are the traditional system administrators who we consider to be the Free
- Factory's staff.  The RAM, virtual processors, and network bandwidth of
- Freegols are shared with the warehouse storage and processing services. 
+ Deputies -- who manage the hypervisors and other shared services on the
+ clusters -- are the traditional system administrators who we consider to
+ be the Free Factory's staff.  The RAM, virtual processors, and network bandwidth
+ of Freegols are shared with the warehouse storage and processing services. 
  If necessary, an administrator can ensure that a Freegol does not share
  these resources with other Freegols by getting an allocation for all of
  the available CPU and RAM.
@@ -361,7 +374,7 @@ reference "fig:freegol2.2"
 \end_inset
 
 .
- The system permits hardware to be shared for multiple purposes.
+ The system permits hardware to be shared, securely for multiple purposes.
  
 \end_layout
 
