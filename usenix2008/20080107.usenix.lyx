@@ -701,9 +701,10 @@ We try to run recent kernels from kernel.org on non-virtualized machines. 
 The latest machines that we purchased came pre-installed with LinuxBIOS. 
  LinuxBIOS is a free software BIOS that has a number of advantages over
  proprietary alternatives.  All source code is open and available under the
- GPL; boot time is much faster - LinuxBIOS takes only a few seconds to bring
- the machine into a state where it can start booting the OS; and serial
- console support is reliable.
+ GPL.
+ Serial console support is reliable.
+ Boot time is much faster -- LinuxBIOS takes only a few seconds to bring
+ the machine into a state where it can start booting the OS.
 \end_layout
 
 \begin_layout Standard
