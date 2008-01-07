@@ -353,6 +353,19 @@ It is often beneficial to implement services in virtual machines even though
 \end_layout
 
 \begin_layout Standard
+A user request to a Freegol and the subsequent cascade of events is shown
+ in Figure 
+\begin_inset LatexCommand ref
+reference "fig:freegol2.2"
+
+\end_inset
+
+.
+ The system permits hardware to be shared for multiple purposes.
+ 
+\end_layout
+
+\begin_layout Standard
 \begin_inset Float figure
 wide false
 sideways false
@@ -374,6 +387,14 @@ Each physical node has a warehouse node which offers cache and storage services,
  and performs computation on behalf of Freegols as instructed by the controller. 
  These same nodes can also support a number of Freegols and other virtual
  machines.
+ Four physical nodes are depicted by the squares.
+ 
+\begin_inset LatexCommand label
+name "fig:freegol2.2"
+
+\end_inset
+
+
 \end_layout
 
 \end_inset
