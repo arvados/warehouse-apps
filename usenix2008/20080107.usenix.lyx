@@ -96,7 +96,7 @@ This paper introduces the Free Factory, a platform for deploying data-intensive
  are allocated using a credit system which encourages high utilization and
  ultimately allows end users to pay for prioritized service.  On first implementa
 tion, our sample image processing applications exceed 1000 megabytes per
- second of combined disk I/O on our two 48-node systems.  We believe commodity
+ second of combined disk I/O on our two 48-node systems.  We estimate commodity
  clusters with our design -- costing $500,000 per year for staff, new hardware,
  and hosting -- can achieve 4000-8000 megabytes per second of disk I/O per
  cluster, and serve hundreds of simultaneous requests on multi-hundred terabyte
@@ -111,7 +111,7 @@ Introduction
 \end_layout
 
 \begin_layout Standard
-Data sets that seemed large ten or twenty years ago seem tiny today, and
+Data sets that seemed large ten or twenty years ago appear tiny today, and
  growth is expected to accelerate in the next twenty years 
 \begin_inset LatexCommand cite
 key "Bell2006,Szalay2006"
@@ -336,10 +336,10 @@ Virtualization encourages a model wherein a larger number of administrators
  Deputies -- who manage the hypervisors and other shared services on the
  clusters -- are the traditional system administrators who we consider to
  be the Free Factory's staff.  The RAM, virtual processors, and network bandwidth
- of Freegols are shared with the warehouse storage and processing services. 
- If necessary, an administrator can ensure that a Freegol does not share
- these resources with other Freegols by getting an allocation for all of
- the available CPU and RAM.
+ of Freegols are shared with the storage and processing services.  If necessary,
+ an administrator can ensure that a Freegol does not share these resources
+ with other Freegols by getting an allocation for all of the available CPU
+ and RAM.
 \end_layout
 
 \begin_layout Standard
