@@ -1910,8 +1910,9 @@ reference "tab:templeton timing"
 \end_layout
 
 \begin_layout Standard
-"mr-segment" reads images (TIFF or raw), applies a combination of  ImageMagick
- filters, and optionally compresses the resulting raw image using gzip.
+"mr-segment" reads images (TIFF, raw, JPEG2000), applies a combination of 
+ ImageMagick filters, and optionally compresses resulting raw image using
+ gzip.
 \end_layout
 
 \begin_layout Standard
