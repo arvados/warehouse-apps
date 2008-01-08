@@ -1736,8 +1736,8 @@ When a block has been written to Keep, the client API notes which of the
  corresponds to the first preferred storage position.
  In the above example, if the first write failed but the second and third
  writes were successful, the bitmap would be encoded as 06.
- This bitmap, the name of the warehouse, and the size of the block are appended
- to the MD5 checksum: 
+ This bitmap, the name of the warehouse, and the size of the block (3 bytes
+ in this case) are appended to the MD5 checksum: 
 \end_layout
 
 \begin_layout Quote
