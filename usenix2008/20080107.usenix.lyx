@@ -2153,7 +2153,7 @@ MR-FUNCTION
 \begin_inset Text
 
 \begin_layout Standard
-INPUT(GB)
+INPUT (GB)
 \end_layout
 
 \end_inset
@@ -2180,7 +2180,7 @@ NODES
 \begin_inset Text
 
 \begin_layout Standard
-BEST TIME(S)
+BEST TIME(s)
 \end_layout
 
 \end_inset
