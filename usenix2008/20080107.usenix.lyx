@@ -667,8 +667,9 @@ Once a manifest is stored in the warehouse, it can be retrieved, or used
  as the input to a batch job, by any Freegol that knows its key.
  Also, each warehouse has a central database of manifest names.
  A Freegol can send a cryptographically signed request to the warehouse
- controller specifying a manifest key, the desired name, and--to avoid race
- conditions--the manifest key which was previously associated with the name.
+ controller specifying a manifest key, the desired name, and -- to avoid
+ race conditions -- the manifest key which was previously associated with
+ the name.
  This atomic transaction has several effects.
 \end_layout
 
