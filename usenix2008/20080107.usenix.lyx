@@ -251,7 +251,7 @@ Design and architecture
 \end_layout
 
 \begin_layout Subsection
-Commodity hardware and free software
+Commodity hardware, free software
 \end_layout
 
 \begin_layout Standard
@@ -748,7 +748,7 @@ Implementation
 \end_layout
 
 \begin_layout Subsection
-Commodity hardware and free software 
+Commodity hardware, free software 
 \end_layout
 
 \begin_layout Standard
@@ -2003,9 +2003,15 @@ We have implemented a few sample applications which demonstrate the warehouse
 \end_layout
 
 \begin_layout Standard
-The Genomerator application is a storage/publication service for the PMAGE
- data set.
- It allows users to view and download images from a 300-gigabyte data set.
+The Genomerator application is a storage/publication service.
+ It currently allows users to browse and download images from a 300-gigabyte
+ PMAGE dataset 
+\begin_inset LatexCommand cite
+key "Kim2007"
+
+\end_inset
+
+.
  In interactive mode, it converts images from TIFF to JPEG format and applies
  an ImageMagick ``normalize'' operation to increase contrast.
 \end_layout
@@ -2515,11 +2521,11 @@ Performance and reliability
 \end_layout
 
 \begin_layout Standard
-\align center
+\align left
 \begin_inset Float figure
 wide false
 sideways false
-status open
+status collapsed
 
 \begin_layout Standard
 \align center
@@ -2550,10 +2556,6 @@ name "fig:Two Concurrent Jobs"
 
 \end_inset
 
- 
-\end_layout
-
-\begin_layout Standard
 In Figure\InsetSpace ~
 
 \begin_inset LatexCommand ref
@@ -2613,13 +2615,10 @@ reference "tab:IO_compute_table"
  is over 100 times the amount read from disk.
  We computed md5, sha1, sha224, sha384 and sha512 hashes on equal amounts
  of data.
-\end_layout
-
-\begin_layout Standard
 \begin_inset Float figure
 wide false
 sideways false
-status open
+status collapsed
 
 \begin_layout Standard
 \begin_inset Tabular
@@ -2683,13 +2682,10 @@ Computionally intensive jobs with RAM and disk cache versus jobs with disk
 \end_inset
 
 
-\end_layout
-
-\begin_layout Standard
 \begin_inset Float table
 wide true
 sideways false
-status open
+status collapsed
 
 \begin_layout Standard
 \begin_inset Tabular
@@ -2965,8 +2961,14 @@ We developed Free Factories to address the needs of the Personal Genome
 \begin_layout Standard
 The Archon X-prize requires the sequencing of one hundred full genomes in
  less than ten days.
- Using Polony sequencing, the PGx team will need to distill many petabytes
- of raw data to produce about one hundred gigabytes of output.
+ Using Polony sequencing 
+\begin_inset LatexCommand cite
+key "Shendure2005"
+
+\end_inset
+
+, the PGx team will need to distill many petabytes of raw data to produce
+ about one hundred gigabytes of output.
  The Free Factory platform brings us closer to this goal by minimizing the
  total cost of scalable computation and storage.
 \end_layout
@@ -2974,8 +2976,13 @@ The Archon X-prize requires the sequencing of one hundred full genomes in
 \begin_layout Standard
 The Personal Genome Project is creating an online personal genomics community
  for one hundred thousand volunteers.
- The community will be organized around a subset of the full genome, phenotype
- and medical records of volunteers.
+ The community will be organized around a subset of the full genome 
+\begin_inset LatexCommand cite
+key "Porreca2007"
+
+\end_inset
+
+, phenotype and medical records of volunteers.
  Leveraging the same Polony sequencing technology, the PGP will need to
  process tens of petabytes of raw data.
 \end_layout
