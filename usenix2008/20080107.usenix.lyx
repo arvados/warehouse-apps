@@ -2481,8 +2481,8 @@ reference "fig:Two Concurrent Jobs"
 \end_layout
 
 \begin_layout Standard
-To futher elaborate the aggregate IO and computational capacity of both
- clusters we ran a combination of 
+To futher explore the aggregate I/O and computational capacity of both clusters,
+ we ran a combination of 
 \begin_inset Quotes eld
 \end_inset
 
@@ -2490,7 +2490,7 @@ mr-hash
 \begin_inset Quotes erd
 \end_inset
 
- cryptographic hash functions and the IO intensive 
+ cryptographic hash functions and the I/O intensive 
 \begin_inset Quotes eld
 \end_inset
 
@@ -2507,10 +2507,11 @@ reference "tab:IO_compute_table"
 \end_inset
 
 .
- The concurrent jobs ran on 42 nodes for 16 hours.
- Mr-zhash input is compressed by a factor of over 100x, it computes an md5,
- sha1, sha224, sha384 and sha512 hash on equal fractions of the data.
- 
+ These jobs ran concurrently on 42 nodes for 16 hours.
+ The input to mr-zhash is compressed data; the amount of data processed
+ is over 100 times the amount read from disk.
+ We computed md5, sha1, sha224, sha384 and sha512 hashes on equal amounts
+ of data.
 \end_layout
 
 \begin_layout Standard
