@@ -1999,7 +1999,7 @@ Order of execution and output assembly is controlled by job step numbers
 \end_layout
 
 \begin_layout Standard
-Typically, an mr-function completes step 0 by reading its input manifest
+Typically, a mr-function completes step 0 by reading its input manifest
  and submitting one new job step for each stream in the manifest.
  Each of these job steps will read the input stream data, write output data
  in the form of a stream, store the stream description (one line of the
