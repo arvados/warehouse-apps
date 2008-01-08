@@ -47,7 +47,7 @@
 \begin_body
 
 \begin_layout Title
-Free Factories: Unified Infrastructure for Data Intensive Web Services 
+Free Factories: Unified Infrastructure for Data Intensive Web Services
 \end_layout
 
 \begin_layout Author
@@ -161,19 +161,65 @@ Using virtualization each cluster incorporates a number of application servers,
 \begin_layout Standard
 The use of virtualization permits us to consider a model with the following
  actors.
- "Users" are interested in a web service and interact with it via a web
- browser.
- "Freegols" are autonomous web service robots that provide web services
- by utilizing the resources of the clusters in the Free Factory.
-  "Administrators" are the application developers and scientists who maintain
- Freegols.
- "Deputies" maintain the Free Factory infrastructure.
- A "trustee" sets policy and obtains funds to pay for staff, hardware, and
- hosting for a number of clusters.
+ 
+\begin_inset Quotes eld
+\end_inset
+
+Users
+\begin_inset Quotes erd
+\end_inset
+
+ are interested in a web service and interact with it via a web browser.
+ 
+\begin_inset Quotes eld
+\end_inset
+
+Freegols
+\begin_inset Quotes erd
+\end_inset
+
+ are autonomous web service robots that provide web services by utilizing
+ the resources of the clusters in the Free Factory.
+ 
+\begin_inset Quotes eld
+\end_inset
+
+Administrators
+\begin_inset Quotes erd
+\end_inset
+
+ are the application developers and scientists who maintain Freegols.
+ 
+\begin_inset Quotes eld
+\end_inset
+
+Deputies
+\begin_inset Quotes erd
+\end_inset
+
+ maintain the Free Factory infrastructure.
+ A 
+\begin_inset Quotes eld
+\end_inset
+
+trustee
+\begin_inset Quotes erd
+\end_inset
+
+ sets policy and obtains funds to pay for staff, hardware, and hosting for
+ a number of clusters.
  Freegols are non-human actors but they participate in a credit system --
  a fledgling virtual currency -- that we hope will allow administrators,
  deputies and trustees to pass on real dollar costs to users.
- Any entity with an account balance in this virtual currency is a "participant".
+ Any entity with an account balance in this virtual currency is a 
+\begin_inset Quotes eld
+\end_inset
+
+participant
+\begin_inset Quotes erd
+\end_inset
+
+.
 \end_layout
 
 \begin_layout Standard
@@ -324,7 +370,15 @@ key "Bairavasundaram2007,Pinheiro2007,Elerath2007,Schroeder2007"
 \begin_layout Standard
 This deployment strategy makes it possible to compare costs with a service
  like Amazon EC2.
- Amazon offers a "large instance" with two 1TB disks for $0.80/hr.
+ Amazon offers a 
+\begin_inset Quotes eld
+\end_inset
+
+large instance
+\begin_inset Quotes erd
+\end_inset
+
+ with two 1TB disks for $0.80/hr.
   One of our 48-node clusters has a capacity roughly equivalent to 96 of
  these large instances at $672,768 per year.
  Renting 96 large instances in the first year and 192 in the second year
@@ -350,7 +404,15 @@ There are a wide variety of languages, toolkits and methodologies for deploying
 
 \begin_layout Standard
 Virtualization encourages a model wherein a larger number of administrators
- have "root" privileges on their own virtual application servers, or Freegols.
+ have 
+\begin_inset Quotes eld
+\end_inset
+
+root
+\begin_inset Quotes erd
+\end_inset
+
+ privileges on their own virtual application servers, or Freegols.
  Deputies -- who manage the hypervisors and other shared services on the
  clusters -- are the traditional system administrators who we consider to
  be the Free Factory's staff.
@@ -362,8 +424,16 @@ Virtualization encourages a model wherein a larger number of administrators
 \end_layout
 
 \begin_layout Standard
-We use the term "warehouse" to refer to the shared computation and storage
- facilities offered on a cluster.
+We use the term 
+\begin_inset Quotes eld
+\end_inset
+
+warehouse
+\begin_inset Quotes erd
+\end_inset
+
+ to refer to the shared computation and storage facilities offered on a
+ cluster.
  A cluster of physical machines is used as a warehouse as well as a hosting
  facility for Freegols.
 \end_layout
@@ -552,7 +622,11 @@ Efficient use of our storage system requires that Freegols store data in
  64-megabyte blocks.
  However, the underlying data is likely to be arranged in much smaller logical
  units.
- To address this, we introduce a "manifest" file format.
+ To address this, we introduce a 
+\begin_inset Quotes eld
+\end_inset
+
+manifest'' file format.
  In addition to increasing performance, the manifest format is a valuable
  tool for managing large data sets.
 \end_layout
@@ -650,8 +724,8 @@ key "Dean2004"
 \end_layout
 
 \begin_layout Standard
-The program that performs the work of a single job step is called a "mr-function
-".
+The program that performs the work of a single job step is called a ``mr-functio
+n''.
  Mr-functions are kept in a revision control system.
  Deputies and administrators can update existing mr-functions and create
  new ones, subject to access controls on the revision control repository.
@@ -702,7 +776,7 @@ We worked with Harvard University's Office of the General Counsel and Office
 \begin_layout Standard
 Our two clusters are located a few kilometers apart and connected by Harvard
  University's fiber optic network.
- "Uncle" is our experimental research cluster; "Templeton" is our production
+ ``Uncle'' is our experimental research cluster; ``Templeton'' is our production
  cluster.
  Our clusters are depicted in Figure\InsetSpace ~
 
@@ -737,7 +811,7 @@ status open
 
 \begin_layout Standard
 On each cluster, some machines host warehouse nodes, Freegols, and other
- virtual machines; some are "xenless" nodes w hich act as dedicated warehouse
+ virtual machines; some are ``xenless'' nodes w hich act as dedicated warehouse
  nodes.
 \begin_inset LatexCommand label
 name "fig:uncle_templeton_diag"
@@ -762,7 +836,7 @@ Physically, each cluster consists of 48 1U multi-processor nodes.
  All newer nodes have four disk slots and the older nodes are diskless.
  Each newer node has two gigabit ethernet ports, which are connected to
  two 48-port gigabit switches.
- Two to four "headnodes" have a third ethernet port connected to the upstream
+ Two to four ``headnodes'' have a third ethernet port connected to the upstream
  switch, and optionally a fourth port connected to an out of band management
  network.
  The headnodes act as gateways to the internet and as VPN endpoints.
@@ -785,10 +859,10 @@ Our VPN is a simple OpenVPN point-to-point setup, terminated on a headnode
 
 \begin_layout Standard
 Uncle currently runs the latest release of Ubuntu, while Templeton runs
- the latest "long term support" release of Ubuntu.
+ the latest ``long term support'' release of Ubuntu.
  We chose Ubuntu over Debian because of Ubuntu's 6 month release schedule,
  but we expect to build a Debian cluster in the future.
- Debian is philosophically closer to our "free software only" goal.
+ Debian is philosophically closer to our ``free software only'' goal.
  In any case we aim to be distribution-agnostic.
 \end_layout
 
@@ -892,10 +966,10 @@ Administrators, and some of their users, have access to shell accounts on
  their Freegols.
  Our security model is largely perimeter-based at this point, because our
  users are relatively trustworthy.
- Specifically, each user can log in to an account on a shared virtual "access"
+ Specifically, each user can log in to an account on a shared virtual ``access''
  node, located on a headnode, using an SSH private key.
  The user is then automatically connected to the SSH server on her own Freegol
- by means of an "nc" command specified in her account's authorized_keys
+ by means of an ``nc'' command specified in her account's authorized_keys
  file.
 \end_layout
 
@@ -923,8 +997,8 @@ The warehouse storage and processing services involve several databases
 \end_layout
 
 \begin_layout Standard
-Administrators frequently benefit from having separate "development" and
- "production" Freegols for a given application.
+Administrators frequently benefit from having separate ``development'' and
+ ``production'' Freegols for a given application.
  The virtualization approach makes it easy for us to deploy these quickly
  at minimal cost.
  
@@ -984,19 +1058,19 @@ Disk cache is implemented with MogileFS.
 
 \begin_layout Standard
 For long term storage, we implement a simple service called Keep.
- The Keep server accepts HTTP "GET" and "PUT" requests.
+ The Keep server accepts HTTP ``GET'' and ``PUT'' requests.
  The client API is responsible for replication, fault tolerance, and load
  balancing as described below.
  
 \end_layout
 
 \begin_layout Standard
-A "PUT" request is a signed request to copy data from cache to long term
+A ``PUT'' request is a signed request to copy data from cache to long term
  storage.
  The Keep server fetches the data itself from the local cache or from a
  remote warehouse, according to the hints that come with the request.
- When a "PUT" request results in a disk write, an accounting entry is also
- recorded, with the requestor's IP address and cryptographic signature.
+ When a ``PUT'' request results in a disk write, an accounting entry is
+ also recorded, with the requestor's IP address and cryptographic signature.
  Currently, the server does not verify the signature because this has not
  been necessary in our environment, but it does demand that each request
  arrive in the form of a PGP signed message.
@@ -1006,8 +1080,8 @@ A "PUT" request is a signed request to copy data from cache to long term
 \end_layout
 
 \begin_layout Standard
-A "GET" request is fulfilled by looking in one directory of each local disk
- for a file with the specified name.
+A ``GET'' request is fulfilled by looking in one directory of each local
+ disk for a file with the specified name.
 \end_layout
 
 \begin_layout Standard
@@ -1015,7 +1089,7 @@ The API uses MD5 checksums to distribute blocks evenly among the available
  Keep nodes.
  First, we specify that a given warehouse has a fixed number of Keep nodes.
  We then define eight preferred storage positions for each block, corresponding
- to substrings of its 128-bit MD5 checksum (see "bits" in Table 
+ to substrings of its 128-bit MD5 checksum (see ``bits'' in Table 
 \begin_inset LatexCommand ref
 reference "tab:Keep"
 
@@ -1749,19 +1823,19 @@ acbd18db4cc2f85cedef654fccc4a4d8+3+K06@templeton
 \end_layout
 
 \begin_layout Standard
-This resulting "hash", stored in a manifest, provides enough information
+This resulting ``hash'', stored in a manifest, provides enough information
  for a Freegol or a batch job to retrieve the block regardless of which
  cluster it is running on.
 \end_layout
 
 \begin_layout Standard
 The database of manifest names and keys is kept in a MySQL database, which
- is updated and queried through the "warehoused" server.
+ is updated and queried through the ``warehoused'' server.
  Any Freegol can retrieve the key currently associated with a given name,
  or the entire list of names and keys.
  A Freegol can also submit a signed request to update the database by changing
  the key for a given name, or adding a new name.
- Currently, the "warehoused" server does not verify signatures of these
+ Currently, the ``warehoused'' server does not verify signatures of these
  requests because this has not been necessary in our environment, but it
  does demand that each update request arrive in the form of a PGP signed
  message, and that the Freegol correctly specify the key currently associated
@@ -1791,21 +1865,23 @@ reference "fig:Batch-processing"
 , uses Slurm to reserve a set of nodes for each job, and to coordinate communica
 tion between compute nodes and the controller, but it manages the scheduling
  of individual job steps itself.
- The "warehoused" server accepts signed job submissions from Freegols, and
- allows them to retrieve information about previously submitted jobs.
- The "mapinit" daemon starts queued job when the compute nodes become available.
- "Mrjobmanager" invokes the "mr-function" given in the job submission, which
- examines the input object (normally a manifest) and instructs the job manager
- to queue a number of job steps.
+ The ``warehoused'' server accepts signed job submissions from Freegols,
+ and allows them to retrieve information about previously submitted jobs.
+ The ``mapinit'' daemon starts queued job when the compute nodes become
+ available.
+ ``Mrjobmanager'' invokes the ``mr-function'' given in the job submission,
+ which examines the input object (normally a manifest) and instructs the
+ job manager to queue a number of job steps.
  The specified version of the mr-function program itself is retrieved from
  a Subversion repository.
 \end_layout
 
 \begin_layout Standard
-The "warehoused" server accepts new job requests from Freegols and inserts
+The ``warehoused'' server accepts new job requests from Freegols and inserts
  the job specification into a MySQL database table.
- When the "mapinit" daemon notices that a new job has appeared in the database,
- it allocates nodes using Slurm's "salloc" command, and invokes mrjobmanager.
+ When the ``mapinit'' daemon notices that a new job has appeared in the
+ database, it allocates nodes using Slurm's ``salloc'' command, and invokes
+ mrjobmanager.
  Mrjobmanager allocates individual job steps to compute nodes, monitors
  their output and exit codes to detect failures, and re-queues them when
  they fail.
@@ -1871,7 +1947,7 @@ While a job is running, mrjobmanager keeps the job table updated with the
 \end_layout
 
 \begin_layout Standard
-Batch jobs are implemented as "mr-functions".
+Batch jobs are implemented as ``mr-functions''.
  As well as performing job step computations, each mr-function is responsible
  for submitting a list of job steps to mrjobmanager.
 \end_layout
@@ -1931,7 +2007,7 @@ The Genomerator application is a storage/publication service for the PMAGE
  data set.
  It allows users to view and download images from a 300-gigabyte data set.
  In interactive mode, it converts images from TIFF to JPEG format and applies
- an ImageMagick "normalize" operation to increase contrast.
+ an ImageMagick ``normalize'' operation to increase contrast.
 \end_layout
 
 \begin_layout Standard
@@ -1942,8 +2018,8 @@ The Regol application continuously re-schedules previously completed batch
 y.
  It is also a good source of information about performance characteristics
  of mr-functions, hardware configurations, and resource usage patterns.
- Regol is deployed on our "templeton" cluster and is able to view and submit
- jobs on both clusters.
+ Regol is deployed on our ``templeton'' cluster and is able to view and
+ submit jobs on both clusters.
 \end_layout
 
 \begin_layout Standard
@@ -1976,7 +2052,10 @@ reference "tab:templeton timing"
 \end_layout
 
 \begin_layout Standard
-"mr-pivot-images" reads a manifest with F images in each of C streams (one
+\begin_inset Quotes eld
+\end_inset
+
+mr-pivot-images'' reads a manifest with F images in each of C streams (one
  per imaging cycle) -- the way the images arrive from the acquisition system
  -- and outputs a manifest with C images in each of F streams (one per frame
  position on the slide).
@@ -1987,21 +2066,30 @@ reference "tab:templeton timing"
 \end_layout
 
 \begin_layout Standard
-"mr-segment" reads images (TIFF, raw, JPEG2000), applies a combination of
+\begin_inset Quotes eld
+\end_inset
+
+mr-segment'' reads images (TIFF, raw, JPEG2000), applies a combination of
  ImageMagick filters, and optionally compresses resulting raw image using
  gzip.
 \end_layout
 
 \begin_layout Standard
-"mr-zhash" uncompresses its input (if compressed), computes hashes for individua
-l files, and outputs text files similar to the output of the Linux "md5sum"
+\begin_inset Quotes eld
+\end_inset
+
+mr-zhash'' uncompresses its input (if compressed), computes hashes for individua
+l files, and outputs text files similar to the output of the Linux ``md5sum''
  command line tool.
  It is useful for determining whether two compressed data sets are equal
  when decompressed.
 \end_layout
 
 \begin_layout Standard
-"mr-copy" writes a copy of a data set read from a remote warehouse (to make
+\begin_inset Quotes eld
+\end_inset
+
+mr-copy'' writes a copy of a data set read from a remote warehouse (to make
  subsequent computation faster) or from the local warehouse (to verify that
  all data is readable and passes checksum verification).
 \end_layout
@@ -2395,16 +2483,27 @@ Storage tools
 \begin_layout Standard
 We use two command line tools to move data back and forth between the warehouse
  and a local filesystem.
-  "whput" copies a unix filesystem tree to the cache, stores the resulting
+  ``whput'' copies a unix filesystem tree to the cache, stores the resulting
  manifest in the cache, and optionally attaches a name to the manifest via
  the warehouse controller.
- "whget" fetches a manifest from the warehouse, downloads the blocks, computes
- the MD5 checksums of the individual files, and optionally writes the files
+ ``whget
+\begin_inset Quotes erd
+\end_inset
+
+ fetches a manifest from the warehouse, downloads the blocks, computes the
+ MD5 checksums of the individual files, and optionally writes the files
  to the local filesystem.
 \end_layout
 
 \begin_layout Standard
-"whget.cgi" provides a web interface to the contents of a manifest.
+\begin_inset Quotes eld
+\end_inset
+
+whget.cgi
+\begin_inset Quotes erd
+\end_inset
+
+ provides a web interface to the contents of a manifest.
  It allows users to view filenames and sizes, click individual files to
  download them, and download the manifest file itself.
  Along with Apache's mod_rewrite module, this makes it easy for an administrator
@@ -2460,14 +2559,14 @@ reference "fig:Two Concurrent Jobs"
 
 \end_inset
 
- the repeatability of two jobs, "mr-raw" and "mr-jp2", is illustrated.
- Most of the individual jobs were scheduled by "regol" but all jobs of this
- type, on the same input, are plotted.
+ the repeatability of two jobs, ``mr-raw'' and ``mr-jp2'', is illustrated.
+ Most of the individual jobs were scheduled by ``regol'' but all jobs of
+ this type, on the same input, are plotted.
  These jobs are running simultaneously; they perform approximately one terabyte
  of input and output in each pair of runs.
- The "jp2" job uses the lossless JPEG2000 format to compress the image data
- and is CPU intensive.
- The "raw" job is primarily limited by I/O.
+ The ``jp2'' job uses the lossless JPEG2000 format to compress the image
+ data and is CPU intensive.
+ The ``raw'' job is primarily limited by I/O.
  By inspection it's clear the cluster achieves in excess of 400 MB/sec of
  I/O: one terabyte in total, divided by 2500 seconds for the slower job.
  The solid shapes indicate successful jobs, as verified by the content hash
