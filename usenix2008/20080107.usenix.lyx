@@ -2572,8 +2572,8 @@ reference "fig:Two Concurrent Jobs"
  The solid shapes indicate successful jobs, as verified by the content hash
  of the output.
  The hollow shapes are jobs that failed for some reason.
- Vertical lines represents an update of the mr-function programs, that is,
- a commit to the subversion repository.
+ Each vertical line represents an update of the mr-function programs, that
+ is, a commit to the subversion repository.
  If a string of failures begins at a vertical line and ends at another vertical
  line, it's most likely that the failures were caused by an update.
  
