@@ -1023,112 +1023,11 @@ Administrators frequently benefit from having separate ``development'' and
  The virtualization approach makes it easy for us to deploy these quickly
  at minimal cost.
  
-\end_layout
-
-\begin_layout Subsection
-Data storage services
-\end_layout
-
-\begin_layout Standard
-The storage software consists of three backend storage systems for the three
- storage layers (RAM cache, disk cache, and long term storage), a manifest
- name server, and an API used by Freegols.
- 
-\end_layout
-
-\begin_layout Standard
-The warehouse API contains most of the intelligence.
- It helps applications split and combine data into 64 megabyte blocks; it
- chooses RAM or disk cache for different block sizes according to tunable
- settings; it constructs hashes when storing data; it avoids writing blocks
- to cache if they are already present; and it constructs and parses manifests.
- 
-\end_layout
-
-\begin_layout Standard
-The API is built on the assumption that all of the underlying storage services
- are unreliable.
- It verifies data integrity during retrieval operations.
- It attempts to retrieve blocks from alternate sources when data is corrupted
- or missing.
- 
-\end_layout
-
-\begin_layout Standard
-The function of the storage servers is simply to read and write blocks as
- quickly as possible.
- 
-\end_layout
-
-\begin_layout Standard
-RAM cache is implemented with Memcached.
- Memcached has a built-in limit of 1 megabyte for each data block, and our
- API uses this as the default maximum size for cached items; however, if
- the application specifies a larger limit, the API transparently splits
- larger blocks in 1 megabyte chunks when storing, and reassembles them when
- retrieving them.
- 
-\end_layout
-
-\begin_layout Standard
-Disk cache is implemented with MogileFS.
- The main bottleneck in MogileFS is looking up paths from the controller;
- our API uses Memcached to cache these paths.
- 
-\end_layout
-
-\begin_layout Standard
-For long term storage, we implement a simple service called Keep.
- The Keep server accepts HTTP ``GET'' and ``PUT'' requests.
- The client API is responsible for replication, fault tolerance, and load
- balancing as described below.
- 
-\end_layout
-
-\begin_layout Standard
-A ``PUT'' request is a signed request to copy data from cache to long term
- storage.
- The Keep server fetches the data itself from the local cache or from a
- remote warehouse, according to the hints that come with the request.
- When a ``PUT'' request results in a disk write, an accounting entry is
- also recorded, with the requestor's IP address and cryptographic signature.
- Currently, the server does not verify the signature because this has not
- been necessary in our environment, but it does demand that each request
- arrive in the form of a PGP signed message.
- It also records the requestor's IP address, the time of the request, and
- the full text of the request; and it requires that the message include
- a timestamp within 5 minutes of the server's system clock.
-\end_layout
-
-\begin_layout Standard
-A ``GET'' request is fulfilled by looking in one directory of each local
- disk for a file with the specified name.
-\end_layout
-
-\begin_layout Standard
-The API uses MD5 checksums to distribute blocks evenly among the available
- Keep nodes.
- First, we specify that a given warehouse has a fixed number of Keep nodes.
- We then define eight preferred storage positions for each block, corresponding
- to substrings of its 128-bit MD5 checksum (see ``bits'' in Table 
-\begin_inset LatexCommand ref
-reference "tab:Keep"
-
-\end_inset
-
-).
- These portions of the checksum, modulo the number of Keep nodes, determine
- the probe order for storing that block.
- After calculating a probe position, it is removed from the list of available
- Keep nodes for the next iteration.
- 
-\end_layout
-
-\begin_layout Standard
 \begin_inset Float table
+placement !t
 wide true
 sideways false
-status open
+status collapsed
 
 \begin_layout Standard
 \align center
@@ -1821,7 +1720,106 @@ name "tab:Keep"
 
 \end_inset
 
+ 
+\end_layout
 
+\begin_layout Subsection
+Data storage services
+\end_layout
+
+\begin_layout Standard
+The storage software consists of three backend storage systems for the three
+ storage layers (RAM cache, disk cache, and long term storage), a manifest
+ name server, and an API used by Freegols.
+ 
+\end_layout
+
+\begin_layout Standard
+The warehouse API contains most of the intelligence.
+ It helps applications split and combine data into 64 megabyte blocks; it
+ chooses RAM or disk cache for different block sizes according to tunable
+ settings; it constructs hashes when storing data; it avoids writing blocks
+ to cache if they are already present; and it constructs and parses manifests.
+ 
+\end_layout
+
+\begin_layout Standard
+The API is built on the assumption that all of the underlying storage services
+ are unreliable.
+ It verifies data integrity during retrieval operations.
+ It attempts to retrieve blocks from alternate sources when data is corrupted
+ or missing.
+ 
+\end_layout
+
+\begin_layout Standard
+The function of the storage servers is simply to read and write blocks as
+ quickly as possible.
+ 
+\end_layout
+
+\begin_layout Standard
+RAM cache is implemented with Memcached.
+ Memcached has a built-in limit of 1 megabyte for each data block, and our
+ API uses this as the default maximum size for cached items; however, if
+ the application specifies a larger limit, the API transparently splits
+ larger blocks in 1 megabyte chunks when storing, and reassembles them when
+ retrieving them.
+ 
+\end_layout
+
+\begin_layout Standard
+Disk cache is implemented with MogileFS.
+ The main bottleneck in MogileFS is looking up paths from the controller;
+ our API uses Memcached to cache these paths.
+ 
+\end_layout
+
+\begin_layout Standard
+For long term storage, we implement a simple service called Keep.
+ The Keep server accepts HTTP ``GET'' and ``PUT'' requests.
+ The client API is responsible for replication, fault tolerance, and load
+ balancing as described below.
+ 
+\end_layout
+
+\begin_layout Standard
+A ``PUT'' request is a signed request to copy data from cache to long term
+ storage.
+ The Keep server fetches the data itself from the local cache or from a
+ remote warehouse, according to the hints that come with the request.
+ When a ``PUT'' request results in a disk write, an accounting entry is
+ also recorded, with the requestor's IP address and cryptographic signature.
+ Currently, the server does not verify the signature because this has not
+ been necessary in our environment, but it does demand that each request
+ arrive in the form of a PGP signed message.
+ It also records the requestor's IP address, the time of the request, and
+ the full text of the request; and it requires that the message include
+ a timestamp within 5 minutes of the server's system clock.
+\end_layout
+
+\begin_layout Standard
+A ``GET'' request is fulfilled by looking in one directory of each local
+ disk for a file with the specified name.
+\end_layout
+
+\begin_layout Standard
+The API uses MD5 checksums to distribute blocks evenly among the available
+ Keep nodes.
+ First, we specify that a given warehouse has a fixed number of Keep nodes.
+ We then define eight preferred storage positions for each block, corresponding
+ to substrings of its 128-bit MD5 checksum (see ``bits'' in Table 
+\begin_inset LatexCommand ref
+reference "tab:Keep"
+
+\end_inset
+
+).
+ These portions of the checksum, modulo the number of Keep nodes, determine
+ the probe order for storing that block.
+ After calculating a probe position, it is removed from the list of available
+ Keep nodes for the next iteration.
+ 
 \end_layout
 
 \begin_layout Standard
@@ -1926,7 +1924,7 @@ status open
 \align center
 \begin_inset Graphics
 	filename /home/awz/Desktop/diagram2.eps
-	width 2.5in
+	width 2in
 
 \end_inset
 
@@ -2014,112 +2012,9 @@ Typically, a mr-function completes step 0 by reading its input manifest
 Applications and results
 \end_layout
 
-\begin_layout Subsection
-Freegols
-\end_layout
-
 \begin_layout Standard
-We have implemented a few sample applications which demonstrate the warehouse
- API and allow us to characterize performance.
-\end_layout
-
-\begin_layout Standard
-The Genomerator application is a storage/publication service.
- It currently allows users to browse and download images from a 300-gigabyte
- PMAGE dataset 
-\begin_inset LatexCommand cite
-key "Kim2007"
-
-\end_inset
-
-.
- In interactive mode, it converts images from TIFF to JPEG format and applies
- an ImageMagick ``normalize'' operation to increase contrast.
-\end_layout
-
-\begin_layout Standard
-The Regol application continuously re-schedules previously completed batch
- jobs, using the same inputs and parameters but substituting the current
- revision of the relevant mr-function.
- This helps us notice bugs as they are introduced into the source code repositor
-y.
- It is also a good source of information about performance characteristics
- of mr-functions, hardware configurations, and resource usage patterns.
- Regol is deployed on our ``templeton'' cluster and is able to view and
- submit jobs on both clusters.
-\end_layout
-
-\begin_layout Standard
-The Deputies web interface provides a generic job submission and monitoring
- interface.
- Users can select a mr-function and revision number, choose an input manifest
- from the list provided by the warehoused server, and specify tunable parameters
- specific to the mr-function.
- Each of our clusters has its own Deputies web interface.
-\end_layout
-
-\begin_layout Subsection
-Mr-functions 
-\end_layout
-
-\begin_layout Standard
-The mr-functions we have implemented are generally concerned with problems
- in bioinformatics, in particular, all aspects of low cost DNA sequencing.
- We intend to elaborate on these applications in a separate article.
- Here we present some simpler applications that give a rudimentary illustration
- of the platform.
- Timing results from a few of these can be found in Table\InsetSpace ~
-
-\begin_inset LatexCommand ref
-reference "tab:templeton timing"
-
-\end_inset
-
-.
-\end_layout
-
-\begin_layout Standard
-\begin_inset Quotes eld
-\end_inset
-
-mr-pivot-images'' reads a manifest with F images in each of C streams (one
- per imaging cycle) -- the way the images arrive from the acquisition system
- -- and outputs a manifest with C images in each of F streams (one per frame
- position on the slide).
- The resulting manifest is suitable for image alignment and analysis.
- This is a relatively inefficient operation because each of F job steps
- reads pieces from each of C streams.
- It performs 3275 gigabytes of I/O on our 300-gigabyte input data set.
-\end_layout
-
-\begin_layout Standard
-\begin_inset Quotes eld
-\end_inset
-
-mr-segment'' reads images (TIFF, raw, JPEG2000), applies a combination of
- ImageMagick filters, and optionally compresses resulting raw image using
- gzip.
-\end_layout
-
-\begin_layout Standard
-\begin_inset Quotes eld
-\end_inset
-
-mr-zhash'' uncompresses its input (if compressed), computes hashes for individua
-l files, and outputs text files similar to the output of the Linux ``md5sum''
- command line tool.
- It is useful for determining whether two compressed data sets are equal
- when decompressed.
-\end_layout
-
-\begin_layout Standard
-\begin_inset Quotes eld
-\end_inset
-
-mr-copy'' writes a copy of a data set read from a remote warehouse (to make
- subsequent computation faster) or from the local warehouse (to verify that
- all data is readable and passes checksum verification).
 \begin_inset Float table
+placement t
 wide true
 sideways false
 status collapsed
@@ -2500,6 +2395,113 @@ name "tab:templeton timing"
 \end_layout
 
 \begin_layout Subsection
+Freegols
+\end_layout
+
+\begin_layout Standard
+We have implemented a few sample applications which demonstrate the warehouse
+ API and allow us to characterize performance.
+\end_layout
+
+\begin_layout Standard
+The Genomerator application is a storage/publication service.
+ It currently allows users to browse and download images from a 300-gigabyte
+ PMAGE dataset 
+\begin_inset LatexCommand cite
+key "Kim2007"
+
+\end_inset
+
+.
+ In interactive mode, it converts images from TIFF to JPEG format and applies
+ an ImageMagick ``normalize'' operation to increase contrast.
+\end_layout
+
+\begin_layout Standard
+The Regol application continuously re-schedules previously completed batch
+ jobs, using the same inputs and parameters but substituting the current
+ revision of the relevant mr-function.
+ This helps us notice bugs as they are introduced into the source code repositor
+y.
+ It is also a good source of information about performance characteristics
+ of mr-functions, hardware configurations, and resource usage patterns.
+ Regol is deployed on our ``templeton'' cluster and is able to view and
+ submit jobs on both clusters.
+\end_layout
+
+\begin_layout Standard
+The Deputies web interface provides a generic job submission and monitoring
+ interface.
+ Users can select a mr-function and revision number, choose an input manifest
+ from the list provided by the warehoused server, and specify tunable parameters
+ specific to the mr-function.
+ Each of our clusters has its own Deputies web interface.
+\end_layout
+
+\begin_layout Subsection
+Mr-functions 
+\end_layout
+
+\begin_layout Standard
+The mr-functions we have implemented are generally concerned with problems
+ in bioinformatics, in particular, all aspects of low cost DNA sequencing.
+ We intend to elaborate on these applications in a separate article.
+ Here we present some simpler applications t hat give a rudimentary illustration
+ of the platform.
+ Timing results from a few of these can be found in Table\InsetSpace ~
+
+\begin_inset LatexCommand ref
+reference "tab:templeton timing"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Quotes eld
+\end_inset
+
+mr-pivot-images'' reads a manifest with F images in each of C streams (one
+ per imaging cycle) -- the way the images arrive from the acquisition system
+ -- and outputs a manifest with C images in each of F streams (one per frame
+ position on the slide).
+ The resulting manifest is suitable for image alignment and analysis.
+ This is a relatively inefficient operation because each of F job steps
+ reads pieces from each of C streams.
+ It performs 3275 gigabytes of I/O on our 300-gigabyte input data set.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Quotes eld
+\end_inset
+
+mr-segment'' reads images (TIFF, raw, JPEG2000), applies a combination of
+ ImageMagick filters, and optionally compresses resulting raw image using
+ gzip.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Quotes eld
+\end_inset
+
+mr-zhash'' uncompresses its input (if compressed), computes hashes for individua
+l files, and outputs text files similar to the output of the Linux ``md5sum''
+ command line tool.
+ It is useful for determining whether two compressed data sets are equal
+ when decompressed.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Quotes eld
+\end_inset
+
+mr-copy'' writes a copy of a data set read from a remote warehouse (to make
+ subsequent computation faster) or from the local warehouse (to verify that
+ all data is readable and passes checksum verification).
+\end_layout
+
+\begin_layout Subsection
 Storage tools
 \end_layout
 
@@ -2548,7 +2550,7 @@ status open
 \begin_inset Graphics
 	filename /home/awz/Desktop/final.eps
 	lyxscale 40
-	width 6in
+	width 4in
 
 \end_inset
 
@@ -2654,10 +2656,10 @@ mr-zhash
 
  in sets of twelve concurrent jobs -- for each of six hash functions, one
  job with the warehouse RAM cache enabled, and one without.
- The results are summarized in Table\InsetSpace ~
+ The results are summarized in Figure\InsetSpace ~
 
 \begin_inset LatexCommand ref
-reference "tab:IO_compute_table"
+reference "RAM versus no RAM"
 
 \end_inset
 
@@ -2665,7 +2667,7 @@ reference "tab:IO_compute_table"
 \begin_inset Float figure
 wide false
 sideways false
-status open
+status collapsed
 
 \begin_layout Standard
 \begin_inset Tabular
@@ -2719,6 +2721,12 @@ status open
 Computionally intensive jobs with RAM and disk cache versus jobs with disk
  cache only.
  
+\begin_inset LatexCommand label
+name "RAM versus no RAM"
+
+\end_inset
+
+
 \end_layout
 
 \end_inset
@@ -2737,7 +2745,13 @@ Future Directions
 
 \begin_layout Standard
 We developed Free Factories to address the needs of the Personal Genome
- Project, and to help the PGx team win the Archon Genomics X-prize.
+ Project
+\begin_inset LatexCommand cite
+key "Church2005"
+
+\end_inset
+
+, and to help the PGx team win the Archon Genomics X-prize.
 \end_layout
 
 \begin_layout Standard
