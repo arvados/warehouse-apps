@@ -922,7 +922,7 @@ Freegols and virtualization
 \end_layout
 
 \begin_layout Standard
-Some nodes are partitioned into virtual machines using Xen.
+Some nodes are partitioned into virtual machines using the Xen hypervisor.
  This is illustrated in Figure\InsetSpace ~
 
 \begin_inset LatexCommand ref
