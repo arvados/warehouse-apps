@@ -1887,10 +1887,10 @@ Mr-functions
 
 \begin_layout Standard
 The mr-functions we have implemented are generally concerned with problems
- in bioinformatics, in particular, all aspects of low cost DNA sequencing.  
- We intend to publish a detailed article on these applications in a subsequent
- publication.   Here we present some simpler applications that give a rudimentary
- illustration of the platform.
+ in bioinformatics, in particular, all aspects of low cost DNA sequencing.
+ We intend to elaborate on these applications in a separate article.
+ Here we present some simpler applications that give a rudimentary illustration
+ of the platform.
  Timing results from a few of these can be found in Table\InsetSpace ~
 
 \begin_inset LatexCommand ref
