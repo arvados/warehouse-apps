@@ -290,8 +290,8 @@ We believe excellent economies of scale can be achieved at a total annual
  cost of $500,000.  We allocate half of this cost to salaries for deputies. 
  The other half pays for annual hardware purchases and ongoing hosting costs. 
  Each year, deputies deploy a new 48-node cluster with inexpensive CPUs
- and 192 1TB disks.  Although our system tolerates failures manual intervention
- is expensive.
+ and 192 1TB disks.  Although our system tolerates failures -- especially
+ disk failures -- manual intervention is expensive.
  Since disks have high failure rates independent of size 
 \begin_inset LatexCommand cite
 key "Bairavasundaram2007,Pinheiro2007,Elerath2007,Schroeder2007"
@@ -660,9 +660,18 @@ We worked with Harvard University's Office of the General Counsel and Office
 \begin_layout Standard
 Our two clusters are located a few kilometers apart and connected by Harvard
  University's fiber optic network.  "Uncle" is our experimental research
- cluster; "Templeton" is our production cluster.  Uncle is largely made up
- of 32-bit Intel Xeon machines, many of which are four years old.  Templeton's
- hardware is more recent, and all machines have AMD Opteron 64-bit processors.
+ cluster; "Templeton" is our production cluster.  Our clusters are depicted
+ in Figure\InsetSpace ~
+
+\begin_inset LatexCommand ref
+reference "fig:uncle_templeton_diag"
+
+\end_inset
+
+.
+ Uncle is largely made up of 32-bit Intel Xeon machines, many of which are
+ four years old.  Templeton's hardware is more recent, and all machines have
+ AMD Opteron 64-bit processors.
 \end_layout
 
 \begin_layout Standard
@@ -684,7 +693,7 @@ status open
 
 \begin_layout Standard
 On each cluster, some machines host warehouse nodes, Freegols, and other
- virtual machines; some are "xenless" nodes which act as dedicated warehouse
+ virtual machines; some are "xenless" nodes w hich act as dedicated warehouse
  nodes.
 \begin_inset LatexCommand label
 name "fig:uncle_templeton_diag"
@@ -705,15 +714,8 @@ name "fig:uncle_templeton_diag"
 \end_layout
 
 \begin_layout Standard
-Physically, each cluster consists of 48 1U multi-processor nodes.  Our clusters
- are depicted in Figure\InsetSpace ~
-
-\begin_inset LatexCommand ref
-reference "fig:uncle_templeton_diag"
-
-\end_inset
-
-.  All newer nodes have four disk slots and the older nodes are diskless. 
+Physically, each cluster consists of 48 1U multi-processor nodes.
+ All newer nodes have four disk slots and the older nodes are diskless. 
  Each newer node has two gigabit ethernet ports, which are connected to
  two 48-port gigabit switches.  Two to four "headnodes" have a third ethernet
  port connected to the upstream switch, and optionally a fourth port connected
@@ -1960,7 +1962,7 @@ MR-FUNCTION
 \begin_inset Text
 
 \begin_layout Standard
-INPUT SIZE (GB)
+INPUT(GB)
 \end_layout
 
 \end_inset
@@ -1987,7 +1989,7 @@ NODES
 \begin_inset Text
 
 \begin_layout Standard
-BEST TIME (s)
+BEST TIME(S)
 \end_layout
 
 \end_inset
