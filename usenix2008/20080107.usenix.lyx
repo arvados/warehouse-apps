@@ -2627,7 +2627,28 @@ mr-pivot
  processed is over 100 times the amount read from the warehouse cache.
  This mixture of computation-intensive and I/O-intensive work was repeated
  over a 16 hour period, using 42 compute nodes on each cluster.
- We ran 
+ Over the 16 hour period, 
+\begin_inset Quotes eld
+\end_inset
+
+mr-zhash
+\begin_inset Quotes erd
+\end_inset
+
+ processed 102 TB of uncompressed data (1500 MB/s on templeton, 380 MB/s
+ on uncle) while 
+\begin_inset Quotes eld
+\end_inset
+
+mr-pivot-images
+\begin_inset Quotes erd
+\end_inset
+
+ performed 74 TB of I/O (1000 MB/s on templeton, 290 MB/s on uncle).
+\end_layout
+
+\begin_layout Standard
+In the above test, we ran 
 \begin_inset Quotes eld
 \end_inset
 
@@ -2636,7 +2657,7 @@ mr-zhash
 \end_inset
 
  in sets of twelve concurrent jobs -- for each of six hash functions, one
- job with the warehouse RAM cache enabled, one without.
+ job with the warehouse RAM cache enabled, and one without.
  The results are summarized in Table\InsetSpace ~
 
 \begin_inset LatexCommand ref
@@ -2645,18 +2666,6 @@ reference "tab:IO_compute_table"
 \end_inset
 
 .
-\end_layout
-
-\begin_layout Standard
-We kept both clusters busy for a 16 hour period.
- (2) We gave them a mix of high-computation low-disk work, and high-disk,
- low-computation work.
- (3) we also tested RAM cache vs.
- none.
- (4) the two clusters responded differently because blablabla.
- The total amount of I/O is X, ie XX/s.
- Total data processed is Y, ie.
- YY/s.
 \begin_inset Float figure
 wide false
 sideways false
