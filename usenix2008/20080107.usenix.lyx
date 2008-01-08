@@ -2052,7 +2052,7 @@ y.
 \begin_layout Standard
 The Deputies web interface provides a generic job submission and monitoring
  interface.
- Users can select an mr-function and revision number, choose an input manifest
+ Users can select a mr-function and revision number, choose an input manifest
  from the list provided by the warehoused server, and specify tunable parameters
  specific to the mr-function.
  Each of our clusters has its own Deputies web interface.
