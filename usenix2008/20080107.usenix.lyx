@@ -1002,7 +1002,7 @@ One virtual machine acts as a reverse HTTP proxy.
  anywhere in the cluster, and returns the response to the client.
  After some optimization, this virtual server with moderate resources (four
  shared Opteron 265 cores and 1GB RAM) can process 1000 simultaneous requests,
- each returning 4.4 kilobytes of data, with TCP keepalive disabled, and have
+ each returning 4.4 kilobytes of data, with keepalive disabled, and have
  plenty of CPU power to spare.
  Other virtual machines include DNS caches and servers, an SMTP server for
  routing incoming mail, and a local Ubuntu mirror site.
