@@ -463,9 +463,8 @@ This model requires that the processing and storage interfaces incorporate
 \begin_layout Standard
 It is often beneficial to implement services in virtual machines even though
  they may not need the warehouse services.
- Shared network services like web proxies, DNS caches, backup servers, and
- operating system mirror sites can be installed on virtual nodes which are
- maintained by deputies.
+ Shared network services like web proxies, DNS caches, and backup servers
+ can be installed on virtual nodes which are maintained by deputies.
  The central control software for the warehouse itself can be installed
  on one or more virtual machines, as we have done.
  Some administrators may obtain Freegols for applications which have no
