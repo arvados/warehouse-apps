@@ -2635,8 +2635,8 @@ mr-zhash
 \begin_inset Quotes erd
 \end_inset
 
- processed 102 TB of uncompressed data (1500 MB/s on templeton, 380 MB/s
- on uncle) while 
+ processed 102 TB of uncompressed data (1500 MB/s on 12 templeton nodes,
+ 380 MB/s on 12 uncle nodes) while 
 \begin_inset Quotes eld
 \end_inset
 
@@ -2644,7 +2644,8 @@ mr-pivot-images
 \begin_inset Quotes erd
 \end_inset
 
- performed 74 TB of I/O (1000 MB/s on templeton, 290 MB/s on uncle).
+ performed 74 TB of I/O (1000 MB/s on 30 templeton nodes, 290 MB/s on 30
+ uncle nodes).
 \end_layout
 
 \begin_layout Standard
