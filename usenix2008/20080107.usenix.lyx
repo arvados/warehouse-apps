@@ -2585,15 +2585,15 @@ reference "fig:Two Concurrent Jobs"
 
 \begin_layout Standard
 To futher explore the aggregate I/O and computational capacity of both clusters,
- we ran a combination of 
+ we ran a selection of 
 \begin_inset Quotes eld
 \end_inset
 
-mr-hash
+mr-zhash
 \begin_inset Quotes erd
 \end_inset
 
- cryptographic hash functions and the I/O intensive 
+ cryptographic hash functions concurrently with the 
 \begin_inset Quotes eld
 \end_inset
 
@@ -2601,7 +2601,21 @@ mr-pivot
 \begin_inset Quotes erd
 \end_inset
 
- -- both previously mentioned.
+ function described above.
+ The input to mr-zhash is compressed data; in each job, the amount of data
+ processed is over 100 times the amount read from the warehouse cache.
+ This mixture of computation-intensive and I/O-intensive work was repeated
+ over a 16 hour period, using 42 compute nodes on each cluster.
+ We ran 
+\begin_inset Quotes eld
+\end_inset
+
+mr-zhash
+\begin_inset Quotes erd
+\end_inset
+
+ in sets of twelve concurrent jobs -- for each of six hash functions, one
+ job with the warehouse RAM cache enabled, one without.
  The results are summarized in Table\InsetSpace ~
 
 \begin_inset LatexCommand ref
@@ -2610,11 +2624,18 @@ reference "tab:IO_compute_table"
 \end_inset
 
 .
- These jobs ran concurrently on 42 nodes for 16 hours.
- The input to mr-zhash is compressed data; the amount of data processed
- is over 100 times the amount read from disk.
- We computed md5, sha1, sha224, sha384 and sha512 hashes on equal amounts
- of data.
+\end_layout
+
+\begin_layout Standard
+We kept both clusters busy for a 16 hour period.
+ (2) We gave them a mix of high-computation low-disk work, and high-disk,
+ low-computation work.
+ (3) we also tested RAM cache vs.
+ none.
+ (4) the two clusters responded differently because blablabla.
+ The total amount of I/O is X, ie XX/s.
+ Total data processed is Y, ie.
+ YY/s.
 \begin_inset Float figure
 wide false
 sideways false
