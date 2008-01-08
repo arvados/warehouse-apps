@@ -87,20 +87,21 @@ await@genetics.med.harvard.edu
 
 \begin_layout Abstract
 This paper introduces the Free Factory, a platform for deploying data-intensive
- web services using commodity hardware and free software.  In a Free Factory,
- applications running on independently administered virtual machines, called
- Freegols, make use of shared batch processing and data storage facilities. 
+ web services using commodity hardware and free software.
+ In a Free Factory, applications running on independently administered virtual
+ machines, called Freegols, make use of shared batch processing and data
+ storage facilities.
  The storage system exploits idle RAM and disk for cache while reserving
  whole disks for high bandwidth aggregate storage.
- The batch processing system uses a variation of the MapReduce model.  Resources
- are allocated using a credit system which encourages high utilization and
- ultimately allows end users to pay for prioritized service.  On first implementa
-tion, our sample image processing applications exceed 1000 megabytes per
- second of combined disk I/O on our two 48-node systems.  We estimate commodity
- clusters with our design -- costing $500,000 per year for staff, new hardware,
- and hosting -- can achieve 4000-8000 megabytes per second of disk I/O per
- cluster, and serve hundreds of simultaneous requests on multi-hundred terabyte
- data sets.
+ The batch processing system uses a variation of the MapReduce model.
+ Resources are allocated using a credit system which encourages high utilization
+ and ultimately allows end users to pay for prioritized service.
+ On first implementation, our sample image processing applications exceed
+ 1000 megabytes per second of combined disk I/O on our two 48-node systems.
+ We estimate commodity clusters with our design -- costing $500,000 per
+ year for staff, new hardware, and hosting -- can achieve 4000-8000 megabytes
+ per second of disk I/O per cluster, and serve hundreds of simultaneous
+ requests on multi-hundred terabyte data sets.
  At this price, a 50% cumulative utilization rate over two years is required
  to break even with the popular Amazon EC2 service.
  
@@ -118,21 +119,23 @@ key "Bell2006,Szalay2006"
 
 \end_inset
 
-.  Low-cost hardware offers plentiful CPU cycles and terabytes of disk space,
+.
+ Low-cost hardware offers plentiful CPU cycles and terabytes of disk space,
  but efficient and fault-tolerant utilization of this hardware is non-trivial
  for small organizations.
 \end_layout
 
 \begin_layout Standard
 Real world performance depends on well-matched application, storage, batch
- processing, and hardware layers.  How well these layers work together depends
- on usage patterns as well as the intrinsic properties of the individual
- subsystems.  Our approach is to consider all of these factors together,
- in order to optimize total system performance.
+ processing, and hardware layers.
+ How well these layers work together depends on usage patterns as well as
+ the intrinsic properties of the individual subsystems.
+ Our approach is to consider all of these factors together, in order to
+ optimize total system performance.
 \end_layout
 
 \begin_layout Standard
-We also aim to make economies of scale more accessible to smaller organizations. 
+We also aim to make economies of scale more accessible to smaller organizations.
  We recognize the need for independent user communities to share a common
  infrastructure, and contribute to the costs in proportion to the demands
  they make of the resources.
@@ -140,33 +143,37 @@ We also aim to make economies of scale more accessible to smaller organizations.
 
 \begin_layout Standard
 We have concentrated our efforts on small clusters with big disks, inexpensive
- CPUs and single rack unit nodes that can be serviced by one person.  The
- aim is a balanced cluster in which the disk I/O bandwidth is matched by
- the network I/O bandwidth.  We scale this design by building a virtual private
- network of clusters, connected over the Internet.
+ CPUs and single rack unit nodes that can be serviced by one person.
+ The aim is a balanced cluster in which the disk I/O bandwidth is matched
+ by the network I/O bandwidth.
+ We scale this design by building a virtual private network of clusters,
+ connected over the Internet.
 \end_layout
 
 \begin_layout Standard
 Using virtualization each cluster incorporates a number of application servers,
  which we call Free Golems or Freegols, each having access to data storage
- and batch processing facilities on remote clusters as well as its own. 
+ and batch processing facilities on remote clusters as well as its own.
  As clusters are retired and replaced, Freegols can be migrated to new clusters
  with minimal downtime for application users.
 \end_layout
 
 \begin_layout Standard
 The use of virtualization permits us to consider a model with the following
- actors.  "Users" are interested in a web service and interact with it via
- a web browser.  "Freegols" are autonomous web service robots that provide
- web services by utilizing the resources of the clusters in the Free Factory.
-   "Administrators" are the application developers and scientists who maintain
- Freegols.  "Deputies" maintain the Free Factory infrastructure.  A "trustee"
- sets policy and obtains funds to pay for staff, hardware, and hosting for
- a number of clusters.  Freegols are non-human actors but they participate
- in a credit system -- a fledgling virtual currency -- that we hope will
- allow administrators, deputies and trustees to pass on real dollar costs
- to users.  Any entity with an account balance in this virtual currency is
- a "participant".
+ actors.
+ "Users" are interested in a web service and interact with it via a web
+ browser.
+ "Freegols" are autonomous web service robots that provide web services
+ by utilizing the resources of the clusters in the Free Factory.
+  "Administrators" are the application developers and scientists who maintain
+ Freegols.
+ "Deputies" maintain the Free Factory infrastructure.
+ A "trustee" sets policy and obtains funds to pay for staff, hardware, and
+ hosting for a number of clusters.
+ Freegols are non-human actors but they participate in a credit system --
+ a fledgling virtual currency -- that we hope will allow administrators,
+ deputies and trustees to pass on real dollar costs to users.
+ Any entity with an account balance in this virtual currency is a "participant".
 \end_layout
 
 \begin_layout Standard
@@ -188,7 +195,7 @@ key "Dash2003,Shneidman2005,Brunelle2006"
 
 \begin_layout Standard
 The contribution of this paper is a unified platform for data intensive
- web services which we encourage others to implement and develop further. 
+ web services which we encourage others to implement and develop further.
  It makes efficient use of low-cost hardware in an environment where a variety
  of users and applications share storage and computation resources.
 \end_layout
@@ -203,30 +210,32 @@ Commodity hardware and free software
 
 \begin_layout Standard
 When building an affordable, high-availability, data-intensive web service
- it is desirable to have control of the system's total cost of ownership. 
+ it is desirable to have control of the system's total cost of ownership.
  Part of our strategy is to avoid proprietary technologies in favour of
- free software, including the tools we develop ourselves.  This way, we can
- build on existing tools and have confidence that we can replace or modify
- them when necessary.
+ free software, including the tools we develop ourselves.
+ This way, we can build on existing tools and have confidence that we can
+ replace or modify them when necessary.
 \end_layout
 
 \begin_layout Standard
 When choosing hardware, we are interested in maximizing the usable disk,
- RAM, CPU, and network bandwidth per unit cost.  At present dual gigabit
- ethernet, 1000-gigabyte SATA disks, and dual-socket quad core motherboards
- seem to best fit our needs.  Full-bandwidth 48-port switches are also available
- at low cost.  Therefore, the most affordable way to configure a large number
- of disks and CPUs is to build a network of 48-node clusters, interconnected
- by relatively slow network links or VPNs.  We call such a network -- as
- depicted in Figure\InsetSpace ~
+ RAM, CPU, and network bandwidth per unit cost.
+ At present dual gigabit ethernet, 1000-gigabyte SATA disks, and dual-socket
+ quad core motherboards seem to best fit our needs.
+ Full-bandwidth 48-port switches are also available at low cost.
+ Therefore, the most affordable way to configure a large number of disks
+ and CPUs is to build a network of 48-node clusters, interconnected by relativel
+y slow network links or VPNs.
+ We call such a network -- as depicted in Figure\InsetSpace ~
 
 \begin_inset LatexCommand ref
 reference "fig:Network.2.1"
 
 \end_inset
 
- -- a Free Factory .  Our approach is to squeeze as much performance as possible
- out of this type of network.
+ -- a Free Factory .
+ Our approach is to squeeze as much performance as possible out of this
+ type of network.
 \end_layout
 
 \begin_layout Standard
@@ -250,7 +259,7 @@ status open
 \begin_inset Caption
 
 \begin_layout Standard
-Within each cluster, total network bandwidth is close to total disk bandwidth. 
+Within each cluster, total network bandwidth is close to total disk bandwidth.
  Bandwidth between clusters can be lower by several orders of magnitude.
 \begin_inset LatexCommand label
 name "fig:Network.2.1"
@@ -272,26 +281,31 @@ name "fig:Network.2.1"
 
 \begin_layout Standard
 Given the limited size of each cluster, effective communication between
- clusters is integral to the design.  This also comes with benefits.  We expose
- the network topology to the applications so that they can make good decisions
- about where and when to perform computation, and where to store data, depending
- on the varying scarcity of these resources on different clusters.  Each
- cluster is self-contained so there is no single point of failure in the
- entire network.  The network can be maintained by a small team of deputies. 
+ clusters is integral to the design.
+ This also comes with benefits.
+ We expose the network topology to the applications so that they can make
+ good decisions about where and when to perform computation, and where to
+ store data, depending on the varying scarcity of these resources on different
+ clusters.
+ Each cluster is self-contained so there is no single point of failure in
+ the entire network.
+ The network can be maintained by a small team of deputies.
  It is feasible to deploy entire clusters at once, rather than performing
- incremental upgrades to a large cluster.  Multiple clusters can be used
- to increase confidence in the repeatability of computational results, and
- to monitor the effects of different combinations of hardware, software,
- and usage patterns.
+ incremental upgrades to a large cluster.
+ Multiple clusters can be used to increase confidence in the repeatability
+ of computational results, and to monitor the effects of different combinations
+ of hardware, software, and usage patterns.
 \end_layout
 
 \begin_layout Standard
 We believe excellent economies of scale can be achieved at a total annual
- cost of $500,000.  We allocate half of this cost to salaries for deputies. 
- The other half pays for annual hardware purchases and ongoing hosting costs. 
+ cost of $500,000.
+ We allocate half of this cost to salaries for deputies.
+ The other half pays for annual hardware purchases and ongoing hosting costs.
  Each year, deputies deploy a new 48-node cluster with inexpensive CPUs
- and 192 1TB disks.  Although our system tolerates failures -- especially
- disk failures -- manual intervention is expensive.
+ and 192 1TB disks.
+ Although our system tolerates failures -- especially disk failures -- manual
+ intervention is expensive.
  Since disks have high failure rates independent of size 
 \begin_inset LatexCommand cite
 key "Bairavasundaram2007,Pinheiro2007,Elerath2007,Schroeder2007"
@@ -299,24 +313,27 @@ key "Bairavasundaram2007,Pinheiro2007,Elerath2007,Schroeder2007"
 \end_inset
 
 , we prefer larger disks.
- As the number of clusters grows, hosting costs increase.  When the annual
- hosting cost surpasses the per-cluster hardware cost, the deputies start
- retiring old clusters as new clusters are purchased, thus stabilizing hosting
- costs.  In the first few years, when hosting costs are low, the unused hosting
+ As the number of clusters grows, hosting costs increase.
+ When the annual hosting cost surpasses the per-cluster hardware cost, the
+ deputies start retiring old clusters as new clusters are purchased, thus
+ stabilizing hosting costs.
+ In the first few years, when hosting costs are low, the unused hosting
  budget can be set aside against future years.
 \end_layout
 
 \begin_layout Standard
 This deployment strategy makes it possible to compare costs with a service
- like Amazon EC2.  Amazon offers a "large instance" with two 1TB disks for
- $0.80/hr.
-   One of our 48-node clusters has  a capacity roughly equivalent to 96
- of these large instances at $672,768 per year.  Renting 96 large instances
- in the first year and 192 in the second year will cost  $2,018,304.  At
- 50% cumulative utilization, the Free Factory breaks even with the Amazon
- service in 2 years.  It is highly likely that the assembled team of deputies
- and hardware will provide the trustee with value beyond the second year,
- so this seems to be an economical solution.
+ like Amazon EC2.
+ Amazon offers a "large instance" with two 1TB disks for $0.80/hr.
+  One of our 48-node clusters has a capacity roughly equivalent to 96 of
+ these large instances at $672,768 per year.
+ Renting 96 large instances in the first year and 192 in the second year
+ will cost $2,018,304.
+ At 50% cumulative utilization, the Free Factory breaks even with the Amazon
+ service in 2 years.
+ It is highly likely that the assembled team of deputies and hardware will
+ provide the trustee with value beyond the second year, so this seems to
+ be an economical solution.
 \end_layout
 
 \begin_layout Subsection
@@ -325,53 +342,61 @@ Freegols and virtualization
 
 \begin_layout Standard
 There are a wide variety of languages, toolkits and methodologies for deploying
- scalable web services.  One factor that contributes to Amazon EC2's popularity
- is that it permits web service administrators to choose their own tools. 
+ scalable web services.
+ One factor that contributes to Amazon EC2's popularity is that it permits
+ web service administrators to choose their own tools.
  We found that giving users this freedom suited our environment.
 \end_layout
 
 \begin_layout Standard
 Virtualization encourages a model wherein a larger number of administrators
- have "root" privileges on their own virtual application servers, or Freegols. 
+ have "root" privileges on their own virtual application servers, or Freegols.
  Deputies -- who manage the hypervisors and other shared services on the
  clusters -- are the traditional system administrators who we consider to
- be the Free Factory's staff.  The RAM, virtual processors, and network bandwidth
- of Freegols are shared with the storage and processing services.  If necessary,
- an administrator can ensure that a Freegol does not share these resources
- with other Freegols by getting an allocation for all of the available CPU
- and RAM.
+ be the Free Factory's staff.
+ The RAM, virtual processors, and network bandwidth of Freegols are shared
+ with the storage and processing services.
+ If necessary, an administrator can ensure that a Freegol does not share
+ these resources with other Freegols by getting an allocation for all of
+ the available CPU and RAM.
 \end_layout
 
 \begin_layout Standard
 We use the term "warehouse" to refer to the shared computation and storage
- facilities offered on a cluster.  A cluster of physical machines is used
- as a warehouse as well as a hosting facility for Freegols.
+ facilities offered on a cluster.
+ A cluster of physical machines is used as a warehouse as well as a hosting
+ facility for Freegols.
 \end_layout
 
 \begin_layout Standard
 This model requires that the processing and storage interfaces incorporate
- authentication systems which view Freegols as responsible entities.  Each
- Freegol has a private key for signing requests which consume significant
- cluster resources.  For infrequent operations like scheduling new batch
- jobs, signatures are verified in real time.  For write operations in long
- term storage, we can avoid the latency penalty by honoring the write, then
- collecting and verifying signatures later when resources permit.  This is
- safe because the content-addressable storage system never needs to overwrite
- existing data.  The only operation which needs to be authenticated in real
- time is the delete operation, which is never performed by Freegols directly.
+ authentication systems which view Freegols as responsible entities.
+ Each Freegol has a private key for signing requests which consume significant
+ cluster resources.
+ For infrequent operations like scheduling new batch jobs, signatures are
+ verified in real time.
+ For write operations in long term storage, we can avoid the latency penalty
+ by honoring the write, then collecting and verifying signatures later when
+ resources permit.
+ This is safe because the content-addressable storage system never needs
+ to overwrite existing data.
+ The only operation which needs to be authenticated in real time is the
+ delete operation, which is never performed by Freegols directly.
 \end_layout
 
 \begin_layout Standard
 It is often beneficial to implement services in virtual machines even though
- they may not need the warehouse services.  Shared network services like
- web proxies, DNS caches, backup servers, and operating system mirror sites
- can be installed on virtual nodes which are maintained by deputies.  The
- central control software for the warehouse itself can be installed on one
- or more virtual machines, as we have done.  Some administrators may obtain
- Freegols for applications which have no use for the warehouse services
- but simply need a virtual node with root privileges.  Providing independent
- virtual machines for various purposes is an effective way to maximize value
- per dollar invested in hardware, hosting and staff.
+ they may not need the warehouse services.
+ Shared network services like web proxies, DNS caches, backup servers, and
+ operating system mirror sites can be installed on virtual nodes which are
+ maintained by deputies.
+ The central control software for the warehouse itself can be installed
+ on one or more virtual machines, as we have done.
+ Some administrators may obtain Freegols for applications which have no
+ use for the warehouse services but simply need a virtual node with root
+ privileges.
+ Providing independent virtual machines for various purposes is an effective
+ way to maximize value per dollar invested in hardware, hosting and staff.
 \end_layout
 
 \begin_layout Standard
@@ -406,7 +431,7 @@ status open
 
 \begin_layout Standard
 Each physical node has a warehouse node which offers cache and storage services,
- and performs computation on behalf of Freegols as instructed by the controller. 
+ and performs computation on behalf of Freegols as instructed by the controller.
  These same nodes can also support a number of Freegols and other virtual
  machines.
  Four physical nodes are depicted by the squares.
@@ -437,52 +462,57 @@ Storage services
 The objectives of our storage system are to: (1) minimize I/O bottlenecks
  in order to make the best use of available CPU cycles; (2) provide a low-latenc
 y cache with automatic garbage collection; (3) provide long term storage
- with high read and write throughput and provisions for usage accounting. 
+ with high read and write throughput and provisions for usage accounting.
  The storage services must yield good performance when used directly from
  the Freegol, as well as from batch jobs.
 \end_layout
 
 \begin_layout Standard
-We implement a three-level content addressable storage system.  We use Memcached
- as a low latency RAM cache.  This is well suited to small strings (under
- one million bytes) and does not require a central controller.  We use MogileFS
- to implement a disk cache.  This gives good performance for block sizes
- up to 64 megabytes.  For long term storage service we have developed our
- own server which minimizes the role of the central controller, while providing
- opportunities to charge users for priority service as well as disk space
- consumption.
+We implement a three-level content addressable storage system.
+ We use Memcached as a low latency RAM cache.
+ This is well suited to small strings (under one million bytes) and does
+ not require a central controller.
+ We use MogileFS to implement a disk cache.
+ This gives good performance for block sizes up to 64 megabytes.
+ For long term storage service we have developed our own server which minimizes
+ the role of the central controller, while providing opportunities to charge
+ users for priority service as well as disk space consumption.
 \end_layout
 
 \begin_layout Standard
-Aggregate I/O bandwidth is limited by several factors.  Our storage services
- are designed to minimize the effects of these factors.
+Aggregate I/O bandwidth is limited by several factors.
+ Our storage services are designed to minimize the effects of these factors.
 \end_layout
 
 \begin_layout Enumerate
-Disk seeks have a disastrous effect on aggregate disk read and write bandwidth. 
+Disk seeks have a disastrous effect on aggregate disk read and write bandwidth.
  We minimize thrashing by storing data in contiguous 64-megabyte chunks
- when possible.  Our long term storage service ensures that only one disk
- operation happens at a time on a given disk; this minimizes seeks and therefore
- improves throughput in busy times.
+ when possible.
+ Our long term storage service ensures that only one disk operation happens
+ at a time on a given disk; this minimizes seeks and therefore improves
+ throughput in busy times.
 \end_layout
 
 \begin_layout Enumerate
 A gigabit network interface can only handle 3-4 concurrent readers at full
- disk transfer rates.  Ideally, network traffic is distributed evenly among
- all nodes in a cluster.  We approximate this by using MD5 checksums to distribut
-e data blocks uniformly across all nodes in the cluster.
+ disk transfer rates.
+ Ideally, network traffic is distributed evenly among all nodes in a cluster.
+ We approximate this by using MD5 checksums to distribute data blocks uniformly
+ across all nodes in the cluster.
 \end_layout
 
 \begin_layout Enumerate
 Central controllers get bogged down when they try to handle too many concurrent
- clients.  Peformance is best when most operations are completed without
- contacting a central controller.  Our storage system can read and write
- blocks without involving the controller in real time.  Our disk cache is
- indexed in RAM, so most reads do not involve the controller.
+ clients.
+ Peformance is best when most operations are completed without contacting
+ a central controller.
+ Our storage system can read and write blocks without involving the controller
+ in real time.
+ Our disk cache is indexed in RAM, so most reads do not involve the controller.
 \end_layout
 
 \begin_layout Enumerate
-Writes are slow, especially when storing multiple copies of each block. 
+Writes are slow, especially when storing multiple copies of each block.
  When an identical copy of an output block already exists in the warehouse,
  our content-addressing approach allows the API to transparently skip unnecessar
 y write operations.
@@ -490,25 +520,26 @@ y write operations.
 
 \begin_layout Standard
 All three storage systems use an MD5 addressing approach: the name of each
- block of data is the MD5 checksum of the data.  This naming scheme provides
- several benefits.
+ block of data is the MD5 checksum of the data.
+ This naming scheme provides several benefits.
 \end_layout
 
 \begin_layout Enumerate
 The client API, when retrieving a block from any of the three storage systems,
  can compute the MD5 checksum of the data and compare it with the block
- name.  If the checksum does not match, the API can fetch the data from a
- different host, a different storage system, or a remote warehouse.  This
- verification process can be completely transparent to the application.
+ name.
+ If the checksum does not match, the API can fetch the data from a different
+ host, a different storage system, or a remote warehouse.
+ This verification process can be completely transparent to the application.
 \end_layout
 
 \begin_layout Enumerate
-Multiple jobs often produce the same output.  For example, a Freegol may
- re-run a job every time the job's source code is modified in the source
- repository, and every time an operating system upgrade is performed, to
- make sure the job still produces the same result.  If the output is identical
- to the previous run, no additional storage space is consumed by the new
- job. 
+Multiple jobs often produce the same output.
+ For example, a Freegol may re-run a job every time the job's source code
+ is modified in the source repository, and every time an operating system
+ upgrade is performed, to make sure the job still produces the same result.
+ If the output is identical to the previous run, no additional storage space
+ is consumed by the new job.
 \end_layout
 
 \begin_layout Enumerate
@@ -518,30 +549,33 @@ Freegols and concurrent batch jobs can share data without worrying about
 
 \begin_layout Standard
 Efficient use of our storage system requires that Freegols store data in
- 64-megabyte blocks.  However, the underlying data is likely to be arranged
- in much smaller logical units.  To address this, we introduce a "manifest"
- file format.  In addition to increasing performance, the manifest format
- is a valuable tool for managing large data sets.
+ 64-megabyte blocks.
+ However, the underlying data is likely to be arranged in much smaller logical
+ units.
+ To address this, we introduce a "manifest" file format.
+ In addition to increasing performance, the manifest format is a valuable
+ tool for managing large data sets.
 \end_layout
 
 \begin_layout Standard
-A manifest is a text file containing a set of filenames, arranged into streams. 
+A manifest is a text file containing a set of filenames, arranged into streams.
  Each stream has a name, a set of files, and a list of the blocks that make
- up the file data.  Each block is specified by its MD5 checksum, size, and
- concise information about the locations where the block is known to be
- stored.  A manifest may itself be split into 64 megabyte blocks and stored
- in the warehouse, in which case its unique key -- the list of MD5 checksums
- of those blocks -- can be used to retrieve it.
+ up the file data.
+ Each block is specified by its MD5 checksum, size, and concise information
+ about the locations where the block is known to be stored.
+ A manifest may itself be split into 64 megabyte blocks and stored in the
+ warehouse, in which case its unique key -- the list of MD5 checksums of
+ those blocks -- can be used to retrieve it.
 \end_layout
 
 \begin_layout Standard
 Once a manifest is stored in the warehouse, it can be retrieved, or used
- as the input to a batch job, by any Freegol that knows its key.  Also, each
- warehouse has a central database of manifest names.  A Freegol can send
- a cryptographically signed request to the warehouse controller specifying
- a manifest key, the desired name, and--to avoid race conditions--the manifest
- key which was previously associated with the name.  This atomic transaction
- has several effects.
+ as the input to a batch job, by any Freegol that knows its key.
+ Also, each warehouse has a central database of manifest names.
+ A Freegol can send a cryptographically signed request to the warehouse
+ controller specifying a manifest key, the desired name, and--to avoid race
+ conditions--the manifest key which was previously associated with the name.
+ This atomic transaction has several effects.
 \end_layout
 
 \begin_layout Enumerate
@@ -549,9 +583,9 @@ Any Freegol can look up the name to retrieve the manifest key.
 \end_layout
 
 \begin_layout Enumerate
-The manifest is considered to be valuable to the signer.   If the manifest
- contains hashes indicating blocks in long term storage,  the signer is
- willing to spend credits to protect those blocks from deletion.
+The manifest is considered to be valuable to the signer.
+ If the manifest contains hashes indicating blocks in long term storage,
+ the signer is willing to spend credits to protect those blocks from deletion.
 \end_layout
 
 \begin_layout Enumerate
@@ -579,54 +613,60 @@ e and failure rates.
 \end_layout
 
 \begin_layout Standard
-Batch processing is coordinated by a central controller.  The controller
- accepts signed requests from Freegols to schedule new jobs.  The controller
- decides when to start new jobs according to availability of resources and
- the number of credits offered by the requestor.  The controller can be expected
- to occasionally cancel and reschedule an already-running job, or reduce
- its resource allocation, if it is outbid by a new job submission.
+Batch processing is coordinated by a central controller.
+ The controller accepts signed requests from Freegols to schedule new jobs.
+ The controller decides when to start new jobs according to availability
+ of resources and the number of credits offered by the requestor.
+ The controller can be expected to occasionally cancel and reschedule an
+ already-running job, or reduce its resource allocation, if it is outbid
+ by a new job submission.
 \end_layout
 
 \begin_layout Standard
 Freegols can retrieve a list of current, pending, and previous jobs from
- the controller.  The controller provides specifications and statistics for
- each job, including inputs, outputs, start and finish times, and (for current
- jobs) how many more job steps remain in the queue.  Freegols can poll the
- controller to determine the status of their own jobs, get hints about how
- busy the warehouse is, and find out about jobs that other Freegols have
- submitted.
+ the controller.
+ The controller provides specifications and statistics for each job, including
+ inputs, outputs, start and finish times, and (for current jobs) how many
+ more job steps remain in the queue.
+ Freegols can poll the controller to determine the status of their own jobs,
+ get hints about how busy the warehouse is, and find out about jobs that
+ other Freegols have submitted.
 \end_layout
 
 \begin_layout Standard
 The execution of the individual steps in a batch job is handled by a job
- manager process.  The job manager supports a computation strategy similar
- to MapReduce 
+ manager process.
+ The job manager supports a computation strategy similar to MapReduce 
 \begin_inset LatexCommand cite
 key "Dean2004"
 
 \end_inset
 
-.  Each job stores some output in the warehouse, which gets assembled at
- the end of the job.  Additionally, each job step has the ability to enqueue
- more job steps, and specify which job steps may be run in parallel.
+.
+ Each job stores some output in the warehouse, which gets assembled at the
+ end of the job.
+ Additionally, each job step has the ability to enqueue more job steps,
+ and specify which job steps may be run in parallel.
 \end_layout
 
 \begin_layout Standard
 The program that performs the work of a single job step is called a "mr-function
-".  Mr-functions are kept in a revision control system.  Deputies and administrato
-rs can update existing mr-functions and create new ones, subject to access
- controls on the revision control repository.  Once it is committed to the
- repository, a mr-function can be used in a job submission by any Freegol.
+".
+ Mr-functions are kept in a revision control system.
+ Deputies and administrators can update existing mr-functions and create
+ new ones, subject to access controls on the revision control repository.
+ Once it is committed to the repository, a mr-function can be used in a
+ job submission by any Freegol.
 \end_layout
 
 \begin_layout Standard
 The most convenient way to construct an efficient batch job is to use a
  single manifest as input, and schedule one job step for each stream in
  the manifest.
-   Each job step reads one full stream from the input manifest from start
- to finish, and writes one full stream in the output manifest.  The warehouse
- API includes tools and examples to make it easy to write mr-functions that
- use this strategy.
+  Each job step reads one full stream from the input manifest from start
+ to finish, and writes one full stream in the output manifest.
+ The warehouse API includes tools and examples to make it easy to write
+ mr-functions that use this strategy.
 \end_layout
 
 \begin_layout Section
@@ -646,22 +686,25 @@ We are currently operating two clusters using a variety of off-the-shelf
 \begin_layout Standard
 We worked with Harvard University's Office of the General Counsel and Office
  of Technology Licensing to develop a suitable contract for our free software
- development work.   The salient points of this contract are: monthly payments,
- permission to work remotely, permission to set hours, copyright assignment
- of work to Harvard, and assurances of confidentiality and non-disclosure. 
+ development work.
+ The salient points of this contract are: monthly payments, permission to
+ work remotely, permission to set hours, copyright assignment of work to
+ Harvard, and assurances of confidentiality and non-disclosure.
  Furthermore, contracted work that is made public by Harvard University
- is released under the GNU General Public License (GNU GPL)  for software
- and the GNU Free Documentation License (GNU FDL) for other textual works. 
+ is released under the GNU General Public License (GNU GPL) for software
+ and the GNU Free Documentation License (GNU FDL) for other textual works.
  As the copyright holder, Harvard University is also free to release the
- works under any other license.   Our intent is to use similar contracts
- for occasional paid contributors and unpaid volunteers.
+ works under any other license.
+ Our intent is to use similar contracts for occasional paid contributors
+ and unpaid volunteers.
 \end_layout
 
 \begin_layout Standard
 Our two clusters are located a few kilometers apart and connected by Harvard
- University's fiber optic network.  "Uncle" is our experimental research
- cluster; "Templeton" is our production cluster.  Our clusters are depicted
- in Figure\InsetSpace ~
+ University's fiber optic network.
+ "Uncle" is our experimental research cluster; "Templeton" is our production
+ cluster.
+ Our clusters are depicted in Figure\InsetSpace ~
 
 \begin_inset LatexCommand ref
 reference "fig:uncle_templeton_diag"
@@ -670,8 +713,9 @@ reference "fig:uncle_templeton_diag"
 
 .
  Uncle is largely made up of 32-bit Intel Xeon machines, many of which are
- four years old.  Templeton's hardware is more recent, and all machines have
- AMD Opteron 64-bit processors.
+ four years old.
+ Templeton's hardware is more recent, and all machines have AMD Opteron
+ 64-bit processors.
 \end_layout
 
 \begin_layout Standard
@@ -715,47 +759,53 @@ name "fig:uncle_templeton_diag"
 
 \begin_layout Standard
 Physically, each cluster consists of 48 1U multi-processor nodes.
- All newer nodes have four disk slots and the older nodes are diskless. 
+ All newer nodes have four disk slots and the older nodes are diskless.
  Each newer node has two gigabit ethernet ports, which are connected to
- two 48-port gigabit switches.  Two to four "headnodes" have a third ethernet
- port connected to the upstream switch, and optionally a fourth port connected
- to an out of band management network.  The headnodes act as gateways to
- the internet and as VPN endpoints.  Currently we reserve an entire physical
- machine for one of the headnodes (not shown), and run the other on a virtualize
-d node running Xen.  In the future we hope to run the firewall/VPN endpoint
- in a domU with a non-Xen kernel (for security reasons), which is possible
- with machines that support hardware virtualization.
+ two 48-port gigabit switches.
+ Two to four "headnodes" have a third ethernet port connected to the upstream
+ switch, and optionally a fourth port connected to an out of band management
+ network.
+ The headnodes act as gateways to the internet and as VPN endpoints.
+ Currently we reserve an entire physical machine for one of the headnodes
+ (not shown), and run the other on a virtualized node running Xen.
+ In the future we hope to run the firewall/VPN endpoint in a domU with a
+ non-Xen kernel (for security reasons), which is possible with machines
+ that support hardware virtualization.
 \end_layout
 
 \begin_layout Standard
 Our VPN is a simple OpenVPN point-to-point setup, terminated on a headnode
- at each end.  The VPN data rate reaches about 200 megabits per second.  Throughpu
-t is limited by the processing speed of one endpoint which has one dual-core
- Opteron 265 CPU at 1.8GHz.  The other endpoint has 2 single-core Opteron
- 250 processors at 2.4GHz; CPU load is considerably lower there.
+ at each end.
+ The VPN data rate reaches about 200 megabits per second.
+ Throughput is limited by the processing speed of one endpoint which has
+ one dual-core Opteron 265 CPU at 1.8GHz.
+ The other endpoint has 2 single-core Opteron 250 processors at 2.4GHz; CPU
+ load is considerably lower there.
 \end_layout
 
 \begin_layout Standard
 Uncle currently runs the latest release of Ubuntu, while Templeton runs
- the latest "long term support" release of Ubuntu.  We chose Ubuntu over
- Debian because of Ubuntu's 6 month release schedule, but we expect to build
- a Debian cluster in the future.  Debian is philosophically closer to our
- "free software only" goal.  In any case we aim to be distribution-agnostic.
+ the latest "long term support" release of Ubuntu.
+ We chose Ubuntu over Debian because of Ubuntu's 6 month release schedule,
+ but we expect to build a Debian cluster in the future.
+ Debian is philosophically closer to our "free software only" goal.
+ In any case we aim to be distribution-agnostic.
 \end_layout
 
 \begin_layout Standard
-We try to run recent kernels from kernel.org on non-virtualized machines. 
+We try to run recent kernels from kernel.org on non-virtualized machines.
  This has led to some significant performance increases compared to the
- standard distribution kernel.  For instance, we have seen the performance
- of the tg3 network driver improve with the last few stable kernel releases
- (with the exception of the early 2.6.23 releases, due to a bug).
+ standard distribution kernel.
+ For instance, we have seen the performance of the tg3 network driver improve
+ with the last few stable kernel releases (with the exception of the early
+ 2.6.23 releases, due to a bug).
 \end_layout
 
 \begin_layout Standard
-The latest machines that we purchased came pre-installed with LinuxBIOS. 
+The latest machines that we purchased came pre-installed with LinuxBIOS.
  LinuxBIOS is a free software BIOS that has a number of advantages over
- proprietary alternatives.  All source code is open and available under the
- GPL.
+ proprietary alternatives.
+ All source code is open and available under the GPL.
  Serial console support is reliable.
  Boot time is much faster -- LinuxBIOS takes only a few seconds to bring
  the machine into a state where it can start booting the OS.
@@ -763,12 +813,13 @@ The latest machines that we purchased came pre-installed with LinuxBIOS. 
 
 \begin_layout Standard
 We use Opengear CM4148 console servers on each cluster for out-of-band access
- to the serial console of each server.  The Opengear console servers are
- embedded linux machines for which the entire source code is available for
- download at opengearweb.org.  The company provides instructions for modifying
- the firmware, and for building the firmware from source.  We also use networked
- PDUs to allow remote power cycling of any device in the cluster via our
- out-of-band management network.
+ to the serial console of each server.
+ The Opengear console servers are embedded linux machines for which the
+ entire source code is available for download at opengearweb.org.
+ The company provides instructions for modifying the firmware, and for building
+ the firmware from source.
+ We also use networked PDUs to allow remote power cycling of any device
+ in the cluster via our out-of-band management network.
 \end_layout
 
 \begin_layout Subsection
@@ -785,9 +836,10 @@ reference "fig:xen node"
 \end_inset
 
 .
-   Each virtualized node has one virtual machine set up as a combined compute/st
-orage node.  The remaining RAM and disk space is available for Freegols,
- and for virtual machines administered by deputies.
+  Each virtualized node has one virtual machine set up as a combined compute/sto
+rage node.
+ The remaining RAM and disk space is available for Freegols, and for virtual
+ machines administered by deputies.
  
 \begin_inset Float figure
 wide false
@@ -828,31 +880,35 @@ name "fig:xen node"
 \end_layout
 
 \begin_layout Standard
-System software and Freegols' local filesystems use RAID-1.  Warehouse nodes
- leave redundancy up to the API: additional copies of data blocks, if needed,
- are stored on other nodes and other clusters.  The long term storage server
- is able to control disk thrashing if it has exclusive use of each of its
- disks.
+System software and Freegols' local filesystems use RAID-1.
+ Warehouse nodes leave redundancy up to the API: additional copies of data
+ blocks, if needed, are stored on other nodes and other clusters.
+ The long term storage server is able to control disk thrashing if it has
+ exclusive use of each of its disks.
 \end_layout
 
 \begin_layout Standard
 Administrators, and some of their users, have access to shell accounts on
- their Freegols.  Our security model is largely perimeter-based at this point,
- because our users are relatively trustworthy.  Specifically, each user can
- log in to an account on a shared virtual "access" node, located on a headnode,
- using an SSH private key.  The user is then automatically connected to the
- SSH server on her own Freegol by means of an "nc" command specified in
- her account's authorized_keys file.
+ their Freegols.
+ Our security model is largely perimeter-based at this point, because our
+ users are relatively trustworthy.
+ Specifically, each user can log in to an account on a shared virtual "access"
+ node, located on a headnode, using an SSH private key.
+ The user is then automatically connected to the SSH server on her own Freegol
+ by means of an "nc" command specified in her account's authorized_keys
+ file.
 \end_layout
 
 \begin_layout Standard
-One virtual machine acts as a reverse HTTP proxy.  All HTTP and HTTPS traffic
- to the cluster is forwarded by the headnode to this server.  The proxy forwards
- the request to the appropriate Freegol, which can be anywhere in the cluster,
- and returns the response to the client.  After some optimization, this virtual
- server with moderate resources (four shared Opteron 265 cores and 1GB RAM)
- can process 1000 simultaneous requests, each returning 4.4 kilobytes of
- data, with TCP keepalive disabled, and have plenty of CPU power to spare. 
+One virtual machine acts as a reverse HTTP proxy.
+ All HTTP and HTTPS traffic to the cluster is forwarded by the headnode
+ to this server.
+ The proxy forwards the request to the appropriate Freegol, which can be
+ anywhere in the cluster, and returns the response to the client.
+ After some optimization, this virtual server with moderate resources (four
+ shared Opteron 265 cores and 1GB RAM) can process 1000 simultaneous requests,
+ each returning 4.4 kilobytes of data, with TCP keepalive disabled, and have
+ plenty of CPU power to spare.
  Other virtual machines include DNS caches and servers, an SMTP server for
  routing incoming mail, and a local Ubuntu mirror site.
  
@@ -860,16 +916,17 @@ One virtual machine acts as a reverse HTTP proxy.  All HTTP and HTTPS traffic
 
 \begin_layout Standard
 The warehouse storage and processing services involve several databases
- and controller processes, which we run on a single virtual machine.  It
- is also possible to distribute the services across several virtual machines;
+ and controller processes, which we run on a single virtual machine.
+ It is also possible to distribute the services across several virtual machines;
  we have not thoroughly explored the performance implications of this choice.
  
 \end_layout
 
 \begin_layout Standard
 Administrators frequently benefit from having separate "development" and
- "production" Freegols for a given application.  The virtualization approach
- makes it easy for us to deploy these quickly at minimal cost.
+ "production" Freegols for a given application.
+ The virtualization approach makes it easy for us to deploy these quickly
+ at minimal cost.
  
 \end_layout
 
@@ -885,17 +942,18 @@ The storage software consists of three backend storage systems for the three
 \end_layout
 
 \begin_layout Standard
-The warehouse API contains most of the intelligence.  It helps applications
- split and combine data into 64 megabyte blocks; it chooses RAM or disk
- cache for different block sizes according to tunable settings; it constructs
- hashes when storing data; it avoids writing blocks to cache if they are
- already present; and it constructs and parses manifests.
+The warehouse API contains most of the intelligence.
+ It helps applications split and combine data into 64 megabyte blocks; it
+ chooses RAM or disk cache for different block sizes according to tunable
+ settings; it constructs hashes when storing data; it avoids writing blocks
+ to cache if they are already present; and it constructs and parses manifests.
  
 \end_layout
 
 \begin_layout Standard
 The API is built on the assumption that all of the underlying storage services
- are unreliable.  It verifies data integrity during retrieval operations. 
+ are unreliable.
+ It verifies data integrity during retrieval operations.
  It attempts to retrieve blocks from alternate sources when data is corrupted
  or missing.
  
@@ -908,40 +966,43 @@ The function of the storage servers is simply to read and write blocks as
 \end_layout
 
 \begin_layout Standard
-RAM cache is implemented with Memcached.  Memcached has a built-in limit
- of 1 megabyte for each data block, and our API uses this as the default
- maximum size for cached items; however, if the application specifies a
- larger limit, the API transparently splits larger blocks in 1 megabyte
- chunks when storing, and reassembles them when retrieving them.
+RAM cache is implemented with Memcached.
+ Memcached has a built-in limit of 1 megabyte for each data block, and our
+ API uses this as the default maximum size for cached items; however, if
+ the application specifies a larger limit, the API transparently splits
+ larger blocks in 1 megabyte chunks when storing, and reassembles them when
+ retrieving them.
  
 \end_layout
 
 \begin_layout Standard
-Disk cache is implemented with MogileFS.  The main bottleneck in MogileFS
- is looking up paths from the controller; our API uses Memcached to cache
- these paths.
+Disk cache is implemented with MogileFS.
+ The main bottleneck in MogileFS is looking up paths from the controller;
+ our API uses Memcached to cache these paths.
  
 \end_layout
 
 \begin_layout Standard
-For long term storage, we implement a simple service called Keep.  The Keep
- server accepts HTTP "GET" and "PUT" requests.  The client API is responsible
- for replication, fault tolerance, and load balancing as described below.
+For long term storage, we implement a simple service called Keep.
+ The Keep server accepts HTTP "GET" and "PUT" requests.
+ The client API is responsible for replication, fault tolerance, and load
+ balancing as described below.
  
 \end_layout
 
 \begin_layout Standard
 A "PUT" request is a signed request to copy data from cache to long term
- storage.  The Keep server fetches the data itself from the local cache or
- from a remote warehouse, according to the hints that come with the request. 
+ storage.
+ The Keep server fetches the data itself from the local cache or from a
+ remote warehouse, according to the hints that come with the request.
  When a "PUT" request results in a disk write, an accounting entry is also
- recorded, with the requestor's IP address and cryptographic signature. 
+ recorded, with the requestor's IP address and cryptographic signature.
  Currently, the server does not verify the signature because this has not
  been necessary in our environment, but it does demand that each request
- arrive in the form of a PGP signed message.  It also records the requestor's
- IP address, the time of the request, and the full text of the request;
- and it requires that the message include a timestamp within 5 minutes of
- the server's system clock.
+ arrive in the form of a PGP signed message.
+ It also records the requestor's IP address, the time of the request, and
+ the full text of the request; and it requires that the message include
+ a timestamp within 5 minutes of the server's system clock.
 \end_layout
 
 \begin_layout Standard
@@ -951,13 +1012,14 @@ A "GET" request is fulfilled by looking in one directory of each local disk
 
 \begin_layout Standard
 The API uses MD5 checksums to distribute blocks evenly among the available
- Keep nodes.  First, we specify that a given warehouse has a fixed number
- of Keep nodes.  We then define eight preferred storage positions for each
- block, corresponding to substrings of its 128-bit MD5 checksum (see "bits"
- in the figure).  These portions of the checksum, modulo the number of Keep
- nodes, determine the probe order for storing that block.  After calculating
- a probe position, it is removed from the list of available Keep nodes for
- the next iteration.
+ Keep nodes.
+ First, we specify that a given warehouse has a fixed number of Keep nodes.
+ We then define eight preferred storage positions for each block, corresponding
+ to substrings of its 128-bit MD5 checksum (see "bits" in the figure).
+ These portions of the checksum, modulo the number of Keep nodes, determine
+ the probe order for storing that block.
+ After calculating a probe position, it is removed from the list of available
+ Keep nodes for the next iteration.
  This process is illustrated in Table\InsetSpace ~
 
 \begin_inset LatexCommand ref
@@ -1648,8 +1710,9 @@ f85cedef
 \begin_inset Caption
 
 \begin_layout Standard
-The MD5 checksum of a block dictates a sequence of Keep nodes.  This allows
- the API to read and write blocks without ever contacting a central controller.
+The MD5 checksum of a block dictates a sequence of Keep nodes.
+ This allows the API to read and write blocks without ever contacting a
+ central controller.
 \begin_inset LatexCommand label
 name "tab:Keep"
 
@@ -1672,10 +1735,11 @@ name "tab:Keep"
 When a block has been written to Keep, the client API notes which of the
  eight preferred Keep nodes were used, and encodes this information as a
  hexadecimal representation of a bitmap, where the least significant bit
- corresponds to the first preferred storage position.  In the above example,
- if the first write failed but the second and third writes were successful,
- the bitmap would be encoded as 06.  This bitmap, the name of the warehouse,
- and the size of the block are appended to the MD5 checksum: 
+ corresponds to the first preferred storage position.
+ In the above example, if the first write failed but the second and third
+ writes were successful, the bitmap would be encoded as 06.
+ This bitmap, the name of the warehouse, and the size of the block are appended
+ to the MD5 checksum: 
 \end_layout
 
 \begin_layout Quote
@@ -1694,10 +1758,11 @@ This resulting "hash", stored in a manifest, provides enough information
 
 \begin_layout Standard
 The database of manifest names and keys is kept in a MySQL database, which
- is updated and queried through the "warehoused" server.  Any Freegol can
- retrieve the key currently associated with a given name, or the entire
- list of names and keys.  A Freegol can also submit a signed request to update
- the database by changing the key for a given name, or adding a new name. 
+ is updated and queried through the "warehoused" server.
+ Any Freegol can retrieve the key currently associated with a given name,
+ or the entire list of names and keys.
+ A Freegol can also submit a signed request to update the database by changing
+ the key for a given name, or adding a new name.
  Currently, the "warehoused" server does not verify signatures of these
  requests because this has not been necessary in our environment, but it
  does demand that each update request arrive in the form of a PGP signed
@@ -1707,10 +1772,10 @@ The database of manifest names and keys is kept in a MySQL database, which
 
 \begin_layout Standard
 The Freegol API includes functions for reading and writing blocks to the
- three storage systems.  The API also provides convenient functions for construct
-ing manifests while storing data, reading streams and individual files from
- an existing manifest, looking up manifest keys by name, and updating the
- name database.
+ three storage systems.
+ The API also provides convenient functions for constructing manifests while
+ storing data, reading streams and individual files from an existing manifest,
+ looking up manifest keys by name, and updating the name database.
 \end_layout
 
 \begin_layout Subsection
@@ -1727,30 +1792,33 @@ reference "fig:Batch-processing"
 
 , uses Slurm to reserve a set of nodes for each job, and to coordinate communica
 tion between compute nodes and the controller, but it manages the scheduling
- of individual job steps itself.  The "warehoused" server accepts signed
- job submissions from Freegols, and allows them to retrieve information
- about previously submitted jobs.  The "mapinit" daemon starts queued job
- when the compute nodes become available.  "Mrjobmanager" invokes the "mr-functio
-n" given in the job submission, which examines the input object (normally
- a manifest) and instructs the job manager to queue a number of job steps. 
+ of individual job steps itself.
+ The "warehoused" server accepts signed job submissions from Freegols, and
+ allows them to retrieve information about previously submitted jobs.
+ The "mapinit" daemon starts queued job when the compute nodes become available.
+ "Mrjobmanager" invokes the "mr-function" given in the job submission, which
+ examines the input object (normally a manifest) and instructs the job manager
+ to queue a number of job steps.
  The specified version of the mr-function program itself is retrieved from
  a Subversion repository.
 \end_layout
 
 \begin_layout Standard
 The "warehoused" server accepts new job requests from Freegols and inserts
- the job specification into a MySQL database table.  When the "mapinit" daemon
- notices that a new job has appeared in the database, it allocates nodes
- using Slurm's "salloc" command, and invokes mrjobmanager.  Mrjobmanager
- allocates individual job steps to compute nodes, monitors their output
- and exit codes to detect failures, and re-queues them when they fail.  Each
- job is expected to store output in the warehouse and send the blocks' names
- to mrjobmanager by printing it to its standard error file descriptor.  When
- all job steps have completed, mrjobmanager reads these blocks and assembles
- them into a final output stream.  This final output stream is expected to
- be a manifest, although this is not enforced.  Finally, the database table
- is updated to reflect the output key (ie., a list of output blocks) and
- the time when the job finished.
+ the job specification into a MySQL database table.
+ When the "mapinit" daemon notices that a new job has appeared in the database,
+ it allocates nodes using Slurm's "salloc" command, and invokes mrjobmanager.
+ Mrjobmanager allocates individual job steps to compute nodes, monitors
+ their output and exit codes to detect failures, and re-queues them when
+ they fail.
+ Each job is expected to store output in the warehouse and send the blocks'
+ names to mrjobmanager by printing it to its standard error file descriptor.
+ When all job steps have completed, mrjobmanager reads these blocks and
+ assembles them into a final output stream.
+ This final output stream is expected to be a manifest, although this is
+ not enforced.
+ Finally, the database table is updated to reflect the output key (ie., a
+ list of output blocks) and the time when the job finished.
 \end_layout
 
 \begin_layout Standard
@@ -1774,11 +1842,11 @@ status open
 \begin_inset Caption
 
 \begin_layout Standard
-Batch processing is initiated by Freegols and supervised by mrjobmanager. 
+Batch processing is initiated by Freegols and supervised by mrjobmanager.
  SLURM is used to allocate warehouse nodes; mrjobmanager assigns individual
- job steps to the allocated nodes and collates their output.  The MySQL database
- has progress statistics for current jobs, and an archive of previous job
- submissions and results.
+ job steps to the allocated nodes and collates their output.
+ The MySQL database has progress statistics for current jobs, and an archive
+ of previous job submissions and results.
 \begin_inset LatexCommand label
 name "fig:Batch-processing"
 
@@ -1799,33 +1867,36 @@ name "fig:Batch-processing"
 
 \begin_layout Standard
 While a job is running, mrjobmanager keeps the job table updated with the
- number of job steps in progress, finished, and remaining.  These figures
- can be retrieved by any Freegol via the warehoused server, and displayed
- to users as a progress indicator.
+ number of job steps in progress, finished, and remaining.
+ These figures can be retrieved by any Freegol via the warehoused server,
+ and displayed to users as a progress indicator.
 \end_layout
 
 \begin_layout Standard
-Batch jobs are implemented as "mr-functions".  As well as performing job
- step computations, each mr-function is responsible for submitting a list
- of job steps to mrjobmanager.
+Batch jobs are implemented as "mr-functions".
+ As well as performing job step computations, each mr-function is responsible
+ for submitting a list of job steps to mrjobmanager.
 \end_layout
 
 \begin_layout Standard
 Before a job is submitted, the code for the relevant mr-function must be
- stored in a Subversion repository on the cluster.  The job submission includes
- the name of the mr-function as well as the desired revision number.  Mrjobmanage
-r takes care of installing the requested revision on each node before starting
- a job step on it.
+ stored in a Subversion repository on the cluster.
+ The job submission includes the name of the mr-function as well as the
+ desired revision number.
+ Mrjobmanager takes care of installing the requested revision on each node
+ before starting a job step on it.
 \end_layout
 
 \begin_layout Standard
 Order of execution and output assembly is controlled by job step numbers
- and level numbers.  Step numbers begin at zero and are assigned sequentially
- by mrjobmanager; in the final stage of mrjobmanager the step numbers determine
- the order in which the job steps' output fragments are assembled into the
- final output stream.  Level numbers can be used by mr-functions to control
- the order in which job steps are scheduled: a job step with level L will
- never begin until all job steps with level less than L have completed. 
+ and level numbers.
+ Step numbers begin at zero and are assigned sequentially by mrjobmanager;
+ in the final stage of mrjobmanager the step numbers determine the order
+ in which the job steps' output fragments are assembled into the final output
+ stream.
+ Level numbers can be used by mr-functions to control the order in which
+ job steps are scheduled: a job step with level L will never begin until
+ all job steps with level less than L have completed.
  Each job step can also be given a short input string; this can be used
  by the mr-function to keep track of which portion of the job each step
  is expected to compute, in case the job step number itself is not convenient
@@ -1834,13 +1905,14 @@ Order of execution and output assembly is controlled by job step numbers
 
 \begin_layout Standard
 Typically, an mr-function completes step 0 by reading its input manifest
- and submitting one new job step for each stream in the manifest.  Each of
- these job steps will read the input stream data, write output data in the
- form of a stream, store the stream description (one line of the manifest)
- as a short block in the cache, and report the hash of this short block
- to the job manager.  When all job steps have finished, mrjobmanager looks
- up all of the individual job step hashes and assembles them, ordered by
- job step number, into one final output manifest.
+ and submitting one new job step for each stream in the manifest.
+ Each of these job steps will read the input stream data, write output data
+ in the form of a stream, store the stream description (one line of the
+ manifest) as a short block in the cache, and report the hash of this short
+ block to the job manager.
+ When all job steps have finished, mrjobmanager looks up all of the individual
+ job step hashes and assembles them, ordered by job step number, into one
+ final output manifest.
 \end_layout
 
 \begin_layout Section
@@ -1858,27 +1930,31 @@ We have implemented a few sample applications which demonstrate the warehouse
 
 \begin_layout Standard
 The Genomerator application is a storage/publication service for the PMAGE
- data set.  It allows users to view and download images from a 300-gigabyte
- data set.  In interactive mode, it converts images from TIFF to JPEG format
- and applies an ImageMagick "normalize" operation to increase contrast.
+ data set.
+ It allows users to view and download images from a 300-gigabyte data set.
+ In interactive mode, it converts images from TIFF to JPEG format and applies
+ an ImageMagick "normalize" operation to increase contrast.
 \end_layout
 
 \begin_layout Standard
 The Regol application continuously re-schedules previously completed batch
  jobs, using the same inputs and parameters but substituting the current
- revision of the relevant mr-function.  This helps us notice bugs as they
- are introduced into the source code repository.  It is also a good source
- of information about performance characteristics of mr-functions, hardware
- configurations, and resource usage patterns.  Regol is deployed on our "templeto
-n" cluster and is able to view and submit jobs on both clusters.
+ revision of the relevant mr-function.
+ This helps us notice bugs as they are introduced into the source code repositor
+y.
+ It is also a good source of information about performance characteristics
+ of mr-functions, hardware configurations, and resource usage patterns.
+ Regol is deployed on our "templeton" cluster and is able to view and submit
+ jobs on both clusters.
 \end_layout
 
 \begin_layout Standard
 The Deputies web interface provides a generic job submission and monitoring
- interface.  Users can select an mr-function and revision number, choose
- an input manifest from the list provided by the warehoused server, and
- specify tunable parameters specific to the mr-function.  Each of our clusters
- has its own Deputies web interface.
+ interface.
+ Users can select an mr-function and revision number, choose an input manifest
+ from the list provided by the warehoused server, and specify tunable parameters
+ specific to the mr-function.
+ Each of our clusters has its own Deputies web interface.
 \end_layout
 
 \begin_layout Subsection
@@ -1905,14 +1981,15 @@ reference "tab:templeton timing"
 "mr-pivot-images" reads a manifest with F images in each of C streams (one
  per imaging cycle) -- the way the images arrive from the acquisition system
  -- and outputs a manifest with C images in each of F streams (one per frame
- position on the slide).  The resulting manifest is suitable for image alignment
- and analysis.  This is a relatively inefficient operation because each of
- F job steps reads pieces from each of C streams.  It performs 3275 gigabytes
- of I/O on our 300-gigabyte input data set.
+ position on the slide).
+ The resulting manifest is suitable for image alignment and analysis.
+ This is a relatively inefficient operation because each of F job steps
+ reads pieces from each of C streams.
+ It performs 3275 gigabytes of I/O on our 300-gigabyte input data set.
 \end_layout
 
 \begin_layout Standard
-"mr-segment" reads images (TIFF, raw, JPEG2000), applies a combination of 
+"mr-segment" reads images (TIFF, raw, JPEG2000), applies a combination of
  ImageMagick filters, and optionally compresses resulting raw image using
  gzip.
 \end_layout
@@ -1920,8 +1997,9 @@ reference "tab:templeton timing"
 \begin_layout Standard
 "mr-zhash" uncompresses its input (if compressed), computes hashes for individua
 l files, and outputs text files similar to the output of the Linux "md5sum"
- command line tool.  It is useful for determining whether two compressed
- data sets are equal when decompressed.
+ command line tool.
+ It is useful for determining whether two compressed data sets are equal
+ when decompressed.
 \end_layout
 
 \begin_layout Standard
@@ -2319,19 +2397,20 @@ Storage tools
 \begin_layout Standard
 We use two command line tools to move data back and forth between the warehouse
  and a local filesystem.
-   "whput" copies a unix filesystem tree to the cache, stores the resulting
+  "whput" copies a unix filesystem tree to the cache, stores the resulting
  manifest in the cache, and optionally attaches a name to the manifest via
- the warehouse controller.  "whget" fetches a manifest from the warehouse,
- downloads the blocks, computes the MD5 checksums of the individual files,
- and optionally writes the files to the local filesystem.
+ the warehouse controller.
+ "whget" fetches a manifest from the warehouse, downloads the blocks, computes
+ the MD5 checksums of the individual files, and optionally writes the files
+ to the local filesystem.
 \end_layout
 
 \begin_layout Standard
-"whget.cgi" provides a web interface to the contents of a manifest.  It allows
- users to view filenames and sizes, click individual files to download them,
- and download the manifest file itself.  Along with Apache's mod_rewrite
- module, this makes it easy for an administrator to selectively publish
- individual data sets.
+"whget.cgi" provides a web interface to the contents of a manifest.
+ It allows users to view filenames and sizes, click individual files to
+ download them, and download the manifest file itself.
+ Along with Apache's mod_rewrite module, this makes it easy for an administrator
+ to selectively publish individual data sets.
 \end_layout
 
 \begin_layout Subsection
@@ -2385,18 +2464,21 @@ reference "fig:Two Concurrent Jobs"
 
  the repeatability of two jobs, "mr-raw" and "mr-jp2", is illustrated.
  Most of the individual jobs were scheduled by "regol" but all jobs of this
- type, on the same input, are plotted.  These jobs are running simultaneously;
- they perform approximately one terabyte of input and output in each pair
- of runs.  The  "jp2" job uses the lossless JPEG2000 format to compress the
- image data and is CPU intensive.  The "raw" job is primarily limited by
- I/O.  By inspection it's clear the cluster achieves in excess of 400 MB/sec
- of I/O: one terabyte in total, divided by 2500 seconds for the slower job. 
+ type, on the same input, are plotted.
+ These jobs are running simultaneously; they perform approximately one terabyte
+ of input and output in each pair of runs.
+ The "jp2" job uses the lossless JPEG2000 format to compress the image data
+ and is CPU intensive.
+ The "raw" job is primarily limited by I/O.
+ By inspection it's clear the cluster achieves in excess of 400 MB/sec of
+ I/O: one terabyte in total, divided by 2500 seconds for the slower job.
  The solid shapes indicate successful jobs, as verified by the content hash
- of the output.  The hollow shapes are jobs that failed for some reason. 
+ of the output.
+ The hollow shapes are jobs that failed for some reason.
  Vertical lines represents an update of the mr-function programs, that is,
- a commit to the subversion repository.  If a string of failures begins at
- a vertical line and ends at another vertical line, it's most likely that
- the failures were caused by an update.
+ a commit to the subversion repository.
+ If a string of failures begins at a vertical line and ends at another vertical
+ line, it's most likely that the failures were caused by an update.
  
 \end_layout
 
@@ -2712,41 +2794,45 @@ We developed Free Factories to address the needs of the Personal Genome
 
 \begin_layout Standard
 The Archon X-prize requires the sequencing of one hundred full genomes in
- less than ten days.  Using Polony sequencing, the PGx team will need to
- distill many petabytes of raw data to produce about one hundred gigabytes
- of output.  The Free Factory platform brings us closer to this goal by minimizin
-g the total cost of scalable computation and storage.
+ less than ten days.
+ Using Polony sequencing, the PGx team will need to distill many petabytes
+ of raw data to produce about one hundred gigabytes of output.
+ The Free Factory platform brings us closer to this goal by minimizing the
+ total cost of scalable computation and storage.
 \end_layout
 
 \begin_layout Standard
 The Personal Genome Project is creating an online personal genomics community
- for one hundred thousand volunteers.   The community will be organized around
- a subset of the full genome, phenotype and medical records of volunteers. 
+ for one hundred thousand volunteers.
+ The community will be organized around a subset of the full genome, phenotype
+ and medical records of volunteers.
  Leveraging the same Polony sequencing technology, the PGP will need to
  process tens of petabytes of raw data.
 \end_layout
 
 \begin_layout Standard
 The Free Factory platform allows us to rapidly repurpose computational and
- storage capacity where it has the most value.  At first, it makes sense
- to store multi-terabyte raw image data sets because storage is underutilized
- and it is worthwhile to tune the distillation process by which we obtain
- DNA sequences from images.  As processed data accumulates and displaces
- raw data, we focus our computations on the processed data.  DNA itself is
- an excellent archival medium and we expect new technologies will continue
- to dramatically reduce the cost of DNA sequencing, so the incentive to
- keep the raw data diminishes.
+ storage capacity where it has the most value.
+ At first, it makes sense to store multi-terabyte raw image data sets because
+ storage is underutilized and it is worthwhile to tune the distillation
+ process by which we obtain DNA sequences from images.
+ As processed data accumulates and displaces raw data, we focus our computations
+ on the processed data.
+ DNA itself is an excellent archival medium and we expect new technologies
+ will continue to dramatically reduce the cost of DNA sequencing, so the
+ incentive to keep the raw data diminishes.
 \end_layout
 
 \begin_layout Standard
 For our projects -- and we believe this is true for others too -- it is
- difficult to budget for computation and storage needs.  How much we want
- depends on how much it costs.  A platform for universal personalized medicine
- should permit individuals to form small communities that suit their own
- needs, while retaining much of the economy of scale available to much larger
- communities.  We believe that this can be achieved by building a highly
- decentralized global network of Free Factories which allocate underutilized
- resources through market mechanisms.  
+ difficult to budget for computation and storage needs.
+ How much we want depends on how much it costs.
+ A platform for universal personalized medicine should permit individuals
+ to form small communities that suit their own needs, while retaining much
+ of the economy of scale available to much larger communities.
+ We believe that this can be achieved by building a highly decentralized
+ global network of Free Factories which allocate underutilized resources
+ through market mechanisms.
 \end_layout
 
 \begin_layout Standard
