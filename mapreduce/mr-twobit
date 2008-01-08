@@ -107,7 +107,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	if ($ENV{KNOB_GZIP} =~ /1|y/i)
 	{
 	  my $compressed;
-	  my $z = new IO::Compress::Gzip(\$compressed,[Minimal=>1])
+	  my $z = new IO::Compress::Gzip \$compressed, Minimal=>1
 	      or die "gzip failed: $GzipError\n";
 	  print $z $image->ImageToBlob
 	      (magick => 'gray',
