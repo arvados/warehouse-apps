@@ -369,7 +369,13 @@ key "Bairavasundaram2007,Pinheiro2007,Elerath2007,Schroeder2007"
 
 \begin_layout Standard
 This deployment strategy makes it possible to compare costs with a service
- like Amazon EC2.
+ like Amazon EC2 
+\begin_inset LatexCommand cite
+key "amazon2008"
+
+\end_inset
+
+.
  Amazon offers a 
 \begin_inset Quotes eld
 \end_inset
@@ -535,6 +541,21 @@ y cache with automatic garbage collection; (3) provide long term storage
  with high read and write throughput and provisions for usage accounting.
  The storage services must yield good performance when used directly from
  the Freegol, as well as from batch jobs.
+ Inspired by the Google File System
+\begin_inset LatexCommand cite
+key "Ghemawat2003"
+
+\end_inset
+
+, Bigtable
+\begin_inset LatexCommand cite
+key "Chang2006"
+
+\end_inset
+
+ and the plethora of raw materials made possible by free and open source
+ software, we felt we could build a system that suited our needs perfectly.
+ 
 \end_layout
 
 \begin_layout Standard
