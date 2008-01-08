@@ -2119,14 +2119,10 @@ l files, and outputs text files similar to the output of the Linux ``md5sum''
 mr-copy'' writes a copy of a data set read from a remote warehouse (to make
  subsequent computation faster) or from the local warehouse (to verify that
  all data is readable and passes checksum verification).
-\end_layout
-
-\begin_layout Standard
-\align center
 \begin_inset Float table
 wide true
 sideways false
-status open
+status collapsed
 
 \begin_layout Standard
 \align center
@@ -2543,7 +2539,7 @@ Performance and reliability
 
 \begin_layout Standard
 \begin_inset Float figure
-wide false
+wide true
 sideways false
 status open
 
@@ -2552,7 +2548,7 @@ status open
 \begin_inset Graphics
 	filename /home/awz/Desktop/final.eps
 	lyxscale 40
-	width 3in
+	width 6in
 
 \end_inset
 
