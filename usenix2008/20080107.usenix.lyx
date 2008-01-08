@@ -923,7 +923,7 @@ status open
 \begin_layout Standard
 \align center
 \begin_inset Graphics
-	filename /home/awz/Desktop/fig4.png
+	filename /home/awz/Desktop/diag disk partitions from jer.eps
 	lyxscale 40
 	width 3in
 
@@ -2515,14 +2515,16 @@ Performance and reliability
 \end_layout
 
 \begin_layout Standard
+\align center
 \begin_inset Float figure
 wide false
 sideways false
 status open
 
 \begin_layout Standard
+\align center
 \begin_inset Graphics
-	filename /home/awz/finaltemp2.png
+	filename /home/awz/Desktop/final.eps
 	lyxscale 40
 	width 3in
 
@@ -2611,6 +2613,76 @@ reference "tab:IO_compute_table"
  is over 100 times the amount read from disk.
  We computed md5, sha1, sha224, sha384 and sha512 hashes on equal amounts
  of data.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="2" columns="1">
+<features>
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename /home/awz/Desktop/uncle.eps
+	lyxscale 40
+	width 3in
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename /home/awz/Desktop/temp.eps
+	lyxscale 40
+	width 3in
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\begin_inset Caption
+
+\begin_layout Standard
+Computionally intensive jobs with RAM and disk cache versus jobs with disk
+ cache only.
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
