@@ -1015,19 +1015,17 @@ The API uses MD5 checksums to distribute blocks evenly among the available
  Keep nodes.
  First, we specify that a given warehouse has a fixed number of Keep nodes.
  We then define eight preferred storage positions for each block, corresponding
- to substrings of its 128-bit MD5 checksum (see "bits" in the figure).
- These portions of the checksum, modulo the number of Keep nodes, determine
- the probe order for storing that block.
- After calculating a probe position, it is removed from the list of available
- Keep nodes for the next iteration.
- This process is illustrated in Table\InsetSpace ~
-
+ to substrings of its 128-bit MD5 checksum (see "bits" in Table 
 \begin_inset LatexCommand ref
 reference "tab:Keep"
 
 \end_inset
 
-.
+).
+ These portions of the checksum, modulo the number of Keep nodes, determine
+ the probe order for storing that block.
+ After calculating a probe position, it is removed from the list of available
+ Keep nodes for the next iteration.
  
 \end_layout
 
