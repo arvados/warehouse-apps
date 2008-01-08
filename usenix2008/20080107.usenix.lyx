@@ -343,6 +343,12 @@ Virtualization encourages a model wherein a larger number of administrators
 \end_layout
 
 \begin_layout Standard
+We use the term "warehouse" to refer to the shared computation and storage
+ facilities offered on a cluster.  A cluster of physical machines is used
+ as a warehouse as well as a hosting facility for Freegols.
+\end_layout
+
+\begin_layout Standard
 This model requires that the processing and storage interfaces incorporate
  authentication systems which view Freegols as responsible entities.  Each
  Freegol has a private key for signing requests which consume significant
@@ -353,12 +359,6 @@ This model requires that the processing and storage interfaces incorporate
  safe because the content-addressable storage system never needs to overwrite
  existing data.  The only operation which needs to be authenticated in real
  time is the delete operation, which is never performed by Freegols directly.
-\end_layout
-
-\begin_layout Standard
-We use the term "warehouse" to refer to the shared computation and storage
- facilities offered on a cluster.  A cluster of physical machines is used
- as a warehouse as well as a hosting facility for Freegols.
 \end_layout
 
 \begin_layout Standard
