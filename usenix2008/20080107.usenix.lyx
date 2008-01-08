@@ -784,7 +784,7 @@ We worked with Harvard University's Office of the General Counsel and Office
  development work.
  The salient points of this contract are: monthly payments, permission to
  work remotely, permission to set hours, copyright assignment of work to
- Harvard, and assurances of confidentiality and non-disclosure.
+ Harvard, and assurances of confidentiality.
  Furthermore, contracted work that is made public by Harvard University
  is released under the GNU General Public License (GNU GPL) for software
  and the GNU Free Documentation License (GNU FDL) for other textual works.
@@ -832,7 +832,7 @@ status open
 
 \begin_layout Standard
 On each cluster, some machines host warehouse nodes, Freegols, and other
- virtual machines; some are ``xenless'' nodes w hich act as dedicated warehouse
+ virtual machines; some are ``xenless'' nodes which act as dedicated warehouse
  nodes.
 \begin_inset LatexCommand label
 name "fig:uncle_templeton_diag"
