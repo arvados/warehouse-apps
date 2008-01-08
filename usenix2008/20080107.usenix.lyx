@@ -1926,7 +1926,7 @@ status open
 \align center
 \begin_inset Graphics
 	filename /home/awz/Desktop/diagram2.eps
-	width 3in
+	width 2.5in
 
 \end_inset
 
@@ -2665,7 +2665,7 @@ reference "tab:IO_compute_table"
 \begin_inset Float figure
 wide false
 sideways false
-status collapsed
+status open
 
 \begin_layout Standard
 \begin_inset Tabular
