@@ -289,11 +289,20 @@ Given the limited size of each cluster, effective communication between
 We believe excellent economies of scale can be achieved at a total annual
  cost of $500,000.  We allocate half of this cost to salaries for deputies. 
  The other half pays for annual hardware purchases and ongoing hosting costs. 
- Each year, deputies deploy a new 48-node cluster with 192 1TB disks.  As
- the number of clusters grows, hosting costs increase.  When the annual hosting
- cost surpasses the per-cluster hardware cost, the deputies start retiring
- old clusters as new clusters are purchased, thus stabilizing hosting costs. 
- In the first few years, when hosting costs are low, the unused hosting
+ Each year, deputies deploy a new 48-node cluster with inexpensive CPUs
+ and 192 1TB disks.  Although our system tolerates failures manual intervention
+ is expensive.
+ Since disks have high failure rates independent of size 
+\begin_inset LatexCommand cite
+key "Bairavasundaram2007,Pinheiro2007,Elerath2007,Schroeder2007"
+
+\end_inset
+
+, we prefer larger disks.
+ As the number of clusters grows, hosting costs increase.  When the annual
+ hosting cost surpasses the per-cluster hardware cost, the deputies start
+ retiring old clusters as new clusters are purchased, thus stabilizing hosting
+ costs.  In the first few years, when hosting costs are low, the unused hosting
  budget can be set aside against future years.
 \end_layout
 
@@ -374,7 +383,7 @@ reference "fig:freegol2.2"
 \end_inset
 
 .
- The system permits hardware to be shared, securely for multiple purposes.
+ The system permits hardware to be securely shared for multiple purposes.
  
 \end_layout
 
@@ -2423,7 +2432,7 @@ reference "tab:IO_compute_table"
 
 \begin_layout Standard
 \begin_inset Float table
-wide false
+wide true
 sideways false
 status open
 
@@ -2438,7 +2447,7 @@ status open
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
 <row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+<cell multicolumn="1" alignment="center" valignment="top" usebox="none">
 \begin_inset Text
 
 \begin_layout Standard
