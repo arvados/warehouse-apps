@@ -945,7 +945,7 @@ status open
 \align center
 \begin_inset Graphics
 	filename /home/awz/Desktop/diag disk partitions from jer.eps
-	lyxscale 40
+	lyxscale 80
 	width 3in
 
 \end_inset
@@ -2546,7 +2546,7 @@ Performance and reliability
 \begin_inset Float figure
 wide false
 sideways false
-status collapsed
+status open
 
 \begin_layout Standard
 \align center
