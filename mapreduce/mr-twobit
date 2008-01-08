@@ -107,7 +107,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	if ($ENV{KNOB_GZIP} =~ /1|y/i)
 	{
 	  my $compressed;
-	  my $z = new IO::Compress::Gzip \$compressed
+	  my $z = new IO::Compress::Gzip \$compressed [,Minimal=>1]
 	      or die "gzip failed: $GzipError\n";
 	  print $z $image->ImageToBlob
 	      (magick => 'gray',
@@ -134,12 +134,3 @@ elsif ($ENV{MR_LEVEL} == 1)
   die "Subdir not found: $wantsubdir";
 }
 
-sub chooseimagefilter
-{
-  local ($_) = @_;
-  if (/\.raw$/i) { return undef; }
-  if (/\.raw\.g?z$/i) { return "zcat" }
-  if (/\.tiff?$/i) { return "convert tif:- -endian lsb gray:-" }
-  if (/\.tiff?\.g?z$/i) { return "zcat | convert tif:- -endian lsb gray:-" }
-  die "I don't know how to convert $_ to a raw image";
-}
