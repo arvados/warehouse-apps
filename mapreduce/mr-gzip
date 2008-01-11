@@ -50,7 +50,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	else
 	{
 	  my $compressed;
-	  my $z = new IO::Compress::Gzip \$compressed
+	  my $z = new IO::Compress::Gzip \$compressed, Minimal=>1
 	      or die "gzip failed: $GzipError\n";
 	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
