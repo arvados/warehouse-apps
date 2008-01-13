@@ -16,14 +16,14 @@ my @manifesthash= split (",", $manifestkey);
 my $manifest = $whc->fetch_block (shift @manifesthash)
     or die "fetch_block failed";
 
-@lines = split /^/m, $manifest;
+my @lines = split /^/m, $manifest;
 
 my @blocks;
 my @files; 
 my $totalfiles = 0;
 my $totalblocks = 0; 
 
-foreach $x (@lines) { 
+foreach my $x (@lines) { 
   if ($x =~ m/^[0-9a-f]{32}\+([0-9]+)/) {
     push @blocks, $x; 
     $totalblocks+=$1} 
@@ -31,8 +31,8 @@ foreach $x (@lines) {
     push @files, "$totalfiles:$1:$2";
     $totalfiles+=$1}}; 
 }
-if ($totalblocks ne $totalfiles) 
-  {die "error!\n"}; 
+if ($totalblocks ne $totalfiles) {
+  die "error!\n"}; 
   
 foreach $rep (1 .. 10) {
   $new_manifest .= "$rep @blocks @files\n"}
