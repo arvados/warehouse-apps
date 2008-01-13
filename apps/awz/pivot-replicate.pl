@@ -41,7 +41,7 @@ if ($totalblocks ne $totalfiles) {
 my $new_manifest = ""; 
   
 foreach my $rep (1 .. 10) {
-  $new_manifest .= "$rep @blocks @files\n";
+  $new_manifest .= "./$rep @blocks @files\n";
 }
    
     
