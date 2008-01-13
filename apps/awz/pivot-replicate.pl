@@ -26,16 +26,21 @@ my $totalblocks = 0;
 foreach my $x (@lines) { 
   if ($x =~ m/^[0-9a-f]{32}\+([0-9]+)/) {
     push @blocks, $x; 
-    $totalblocks+=$1} 
+    $totalblocks+=$1;
+  } 
   elsif ($x =~ m/^[0-9]+:([0-9]+):(.+)/) {
     push @files, "$totalfiles:$1:$2";
-    $totalfiles+=$1}}; 
+    $totalfiles+=$1;
+  }
 }
+    
 if ($totalblocks ne $totalfiles) {
-  die "error!\n"}; 
+  die "error!\n";
+}
   
 foreach $rep (1 .. 10) {
-  $new_manifest .= "$rep @blocks @files\n"}
+  $new_manifest .= "$rep @blocks @files\n";
+}
    
     
 $whc->write_start;
