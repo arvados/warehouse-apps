@@ -37,8 +37,10 @@ foreach my $x (@lines) {
 if ($totalblocks ne $totalfiles) {
   die "error!\n";
 }
+
+my $new_manifest = ""; 
   
-foreach $rep (1 .. 10) {
+foreach my $rep (1 .. 10) {
   $new_manifest .= "$rep @blocks @files\n";
 }
    
