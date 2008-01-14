@@ -9,6 +9,8 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 
+my $manifestkey = $ENV{MR_INPUT0}
+
 if ($ENV{MR_LEVEL} == 0)
 {
     $ENV{MR_INPUT} = $manifestkey;
@@ -54,6 +56,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  }
 	  $outstream->write_finish
 	}
+      }
     }
   }
   die "Subdir not found: $wantsubdir";
