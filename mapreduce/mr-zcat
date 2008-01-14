@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-###MR_DESCRIPTION:(frame ID, cycles) -> gzipped stack of raw images
-###MR_INPUT:frames
+###MR_DESCRIPTION:gunzip all subdirs 
+###MR_INPUT:manifest
 
 use strict; 
 use Compress::Zlib; 
