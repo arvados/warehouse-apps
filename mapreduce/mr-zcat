@@ -37,7 +37,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
 	last if !defined $pos;
-	if ($filename =~ /\.g?z$/i) # should uncompress (not simply rename!) 
+	if ($filename =~ s/\.g?z$//i) # should uncompress (not simply rename!) 
 	{
 	  $outstream->write_start ($filename);
 	  $instream->seek ($pos);
