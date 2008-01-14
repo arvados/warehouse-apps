@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
 
 ###MR_DESCRIPTION:gunzip all subdirs 
 ###MR_INPUT:manifest
@@ -13,15 +14,15 @@ my $manifestkey = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0)
 {
-    $ENV{MR_INPUT} = $manifestkey;
-    do "mrtask-queuesubdirs"; 
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs"; 
 }
 elsif ($ENV{MR_LEVEL} == 1)
 {
   my $wantsubdir = $ENV{MR_INPUT};
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
-
+  
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
   $manifest->rewind;
