@@ -9,7 +9,7 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 
-my $manifestkey = $ENV{MR_INPUT0}
+my $manifestkey = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0)
 {
