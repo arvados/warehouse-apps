@@ -1,49 +1,76 @@
 #!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:(frame ID, cycles) -> gzipped stack of raw images
-###MR_INPUT:frames
+###MR_DESCRIPTION:gzip all subdirs
+###MR_INPUT:manifest
 
-use strict; 
-use Compress::Zlib; 
-use Image::Magick;
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Compress::Gzip qw($GzipError);
+
+my $manifestkey = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  # init
-  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
-  open STDIN, "mrtask-framelist |" or die "Input pipe failed: $!";
-  while (defined ($_ = <STDIN>))
-  {
-    chomp;
-    print STDERR "+++mrjobstep 1 $_+++\n";
-  }
-  close STDIN or die "Input stream exited $?";
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs";
 }
 
 elsif ($ENV{MR_LEVEL} == 1)
 {
-  # map
+  my $wantsubdir = $ENV{MR_INPUT};
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
 
-  #this should be in (numerical) frame order (!?!)
-  open (STDIN, "mrtask-framekeys | mrtask-streaminput --raw-images |")
-      or die "Input pipe failed: $!";
-  my $gz = gzopen (\*STDOUT, "wb") 
-      or die "Cannot open stdout: $gzerrno\n"; 
-  
-  my $bytesread = 0; 
-  while (2000000 == read (STDIN, $_, 2000000))
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
   {
-    $bytesread += 2000000; 
-    $gz->gzwrite ($_) or die "error writing: $gzerrno\n";
+    if ($instream->name eq $wantsubdir)
+    {
+      my $outstream = new Warehouse::Stream (whc => $whc);
+      $outstream->name ($instream->name);
+      $outstream->clear;
+
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos;
+	if ($filename =~ /\.g?z$/i) # already compressed, just copy
+	{
+	  $outstream->write_start ($filename);
+	  $instream->seek ($pos);
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $outstream->write_data ($dataref);
+	  }
+	  $outstream->write_finish;
+	}
+	else
+	{
+	  my $compressed;
+	  my $z = new IO::Compress::Gzip \$compressed, Minimal=>1
+	      or die "gzip failed: $GzipError\n";
+	  $instream->seek ($pos);
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    print $z $$dataref;
+	  }
+	  $z->close
+	      or die "gzip failed: $GzipError\n";
+	  $outstream->write_start ($filename.".gz");
+	  $outstream->write_data (\$compressed)
+	      or die "write failed: ".$outstream->errstr;
+	  $outstream->write_finish;
+	}
+      }
+      my $fragkey = $whc->store_block ($outstream->as_string)
+	  or die "store_block failed: ".$whc->errstr;
+      print STDERR "+++mrout ".$fragkey."+++\n";
+      print STDERR $whc->iostats;
+      exit 0;
+    }
   }
-  if ($bytesread) { 
-  	warn "read $bytesread bytes\n"; 
-  }
-  else {
-  	die "read 0 bytes\n"; 
-  } 
-  close STDIN or die "Input stream exited $?";
-  $gz->gzclose();		# or die "gzclose() failed: $gzerrno";
-				# (gzclose() is supposed to return 1 on
-				# success, but doesn't...?)
+  die "Subdir not found: $wantsubdir";
 }

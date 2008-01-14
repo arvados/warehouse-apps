@@ -1,34 +1,58 @@
 #!/usr/bin/perl
 
-###MR_DESCRIPTION:gzipped data -> decompressed 
-###MR_INPUT:jobs
+###MR_DESCRIPTION:(frame ID, cycles) -> gzipped stack of raw images
+###MR_INPUT:frames
 
-use Safepipe; 
+use strict; 
+use Compress::Zlib; 
+use Image::Magick;
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  # init
-  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
-  open STDIN, "mrtask-streaminputkeys |" or die "Input pipe failed: $!";
-  while (defined ($_ = <STDIN>))
-  {
-    chomp;
-    print STDERR "+++mrjobstep 1 $_+++\n";
-  }
-  close STDIN or die "Input stream exited $?";
+    $ENV{MR_INPUT} = $manifestkey;
+    do "mrtask-queuesubdirs"; 
 }
-
 elsif ($ENV{MR_LEVEL} == 1)
 {
-  # map
-  Safepipe::readfrom (STDIN, "mrtask-streaminputkeys ",
-	"mrtask-streaminput ",
-	"zcat ")
-      or die "Input pipe failed: $!";  
+  my $wantsubdir = $ENV{MR_INPUT};
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
 
-  while (defined ($_ = <STDIN>))
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
   {
-    print "$_";
+    if ($instream->name eq $wantsubdir)
+    {
+      my $outstream = new Warehouse::Stream (whc => $whc);
+      $outstream->name ($instream->name);
+      $outstream->clear;
+
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos;
+	if ($filename =~ s/\.g?z$//i) # should uncompress (not simply rename!) 
+	{
+	  $outstream->write_start ($filename);
+	  $instream->seek ($pos);
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $outstream->write_data ($dataref);
+	  }
+	  $outstream->write_finish;
+	}
+	else
+	{
+	  $outstream->write_start ($filename);
+	  $instream->seek ($pos);
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $outstream->write_data ($dataref);
+	  }
+	  $outstream->write_finish
+	}
+    }
   }
-  close STDIN or die "Input stream exited $?";
+  die "Subdir not found: $wantsubdir";
 }
