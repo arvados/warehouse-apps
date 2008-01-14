@@ -4,8 +4,10 @@
 ###MR_INPUT:manifest
 
 use strict; 
-use Compress::Zlib; 
-use Image::Magick;
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 
 if ($ENV{MR_LEVEL} == 0)
 {
