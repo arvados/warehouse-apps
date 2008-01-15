@@ -1,0 +1,8 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:uncompress any *.gz and output a *.txt (filename based on hash function) for each subdir
+###MR_INPUT:manifest
+
+$ENV{"KNOB_HASH"} = "md5";
+exec "mr-zhash" or die "exec mr-zhash: $!";

@@ -1,0 +1,7 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:gunzip all subdirs 
+###MR_INPUT:manifest
+
+exec "mr-gunzip" or die "exec mr-gunzip: $!";
