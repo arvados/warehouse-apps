@@ -39,18 +39,20 @@ elsif ($ENV{MR_LEVEL} == 1)
 	last if !defined $pos;
 	if ($filename =~ s/\.g?z$//i) # should uncompress (not simply rename!) 
 	{
-	  print STDERR "AWZ debug: $filename\n"; 
 	  $outstream->write_start ($filename);
 	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
-	    $outstream->write_data ($dataref);
+	    $zblob .= $$dataref; 
 	  }
+	  my $inblob; 
+	  gunzip \$zblob => \$inblob or die $GunzipError; 
+	  $outstream->write_data ($inblob)
+	      or die "write failed: ".$outstream->errstr;   #Is this needed? 
 	  $outstream->write_finish;
 	}
 	else
 	{
-	  print STDERR "AWZ debug: $filename\n"; 
 	  $outstream->write_start ($filename);       
 	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
