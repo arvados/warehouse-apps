@@ -39,6 +39,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	last if !defined $pos;
 	if ($filename =~ s/\.g?z$//i) # should uncompress (not simply rename!) 
 	{
+	  print STDERR "AWZ debug: $filename\n"; 
 	  $outstream->write_start ($filename);
 	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
@@ -49,7 +50,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 	else
 	{
-	  $outstream->write_start ($filename);
+	  print STDERR "AWZ debug: $filename\n"; 
+	  $outstream->write_start ($filename);       
 	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
