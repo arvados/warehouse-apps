@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:gunzip all subdirs 
+###MR_DESCRIPTION:visit all subdirectories and report stats for files ending in .fa (gunzip first for .fa.gz)   
 ###MR_INPUT:manifest
 
 use strict; 
@@ -57,7 +57,13 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  }
 	}
 	#need enough RAM for whole files 
-	$outstream->write_data (length($inblob) . " ". $filename . "\n");
+
+	my %hash; 
+	my $k = 1; 
+	for (my $i = 0; $i < (length ($inblob) - $k + 1); $i++) {
+	  $hash{substr($inblob, $i, $k)}++;  	  
+	}
+	$outstream->write_data ({[ %hash ]} . " ". $filename . "\n");
       }
       $outstream->write_finish; 
      
