@@ -33,13 +33,14 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $outstream = new Warehouse::Stream (whc => $whc);
       $outstream->name ($instream->name);
       $outstream->clear;
+      $outstream->write_start ("count.txt"); 
 
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
 	last if !defined $pos;
+	my $count = 0; 
 	if ($filename =~ s/\.g?z$//i) 
 	{
-	  $outstream->write_start ($filename);
 	  $instream->seek ($pos);
 	  my $zblob = ""; 
 	  while (my $dataref = $instream->read_until ($pos + $size))
@@ -47,10 +48,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $zblob .= $$dataref; 
 	  }
 	  my $inblob; 
-	  gunzip \$zblob => \$inblob or die $GunzipError; 
-	  $outstream->write_data ($inblob)
-	      or die "write failed: ".$outstream->errstr; #Is this needed? 
-	  $outstream->write_finish;
+	  gunzip \$zblob => \$inblob or die $GunzipError;
+	  $count = length ($inblob);
 	}
 	else
 	{
@@ -58,12 +57,13 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
-	    $outstream->write_data ($dataref) 
-		or die "write failed: ".$outstream->errstr; #Is this needed? 
+	    $count += length ($$dataref); 
 	  }
-	  $outstream->write_finish
 	}
+	$outstream->write_data ($count . " ". $filename . "\n"); 	
       }
+      $outstream->write_finish; 
+     
       my $fragkey = $whc->store_block ($outstream->as_string)
 	  or die "store_block failed: ".$whc->errstr;
       print STDERR "+++mrout ".$fragkey."+++\n";
