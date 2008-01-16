@@ -37,9 +37,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
-	last if !defined $pos;
-	my $count = 0; 
+	last if !defined $pos; 
 	$instream->seek ($pos); 
+	my $inblob; 
 	if ($filename =~ s/\.g?z$//i) 
 	{
 	  my $zblob = ""; 
@@ -47,18 +47,17 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  {
 	    $zblob .= $$dataref; 
 	  }
-	  my $inblob; 
 	  gunzip \$zblob => \$inblob or die $GunzipError;
-	  $count = length ($inblob);
 	}
 	else
 	{
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
-	    $count += length ($$dataref); 
+	    $inblob .= $$dataref; 
 	  }
 	}
-	$outstream->write_data ($count . " ". $filename . "\n"); 	
+	#need enough RAM for whole files 
+	$outstream->write_data (length($inblob) . " ". $filename . "\n");
       }
       $outstream->write_finish; 
      
