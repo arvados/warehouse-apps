@@ -67,7 +67,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 	$inblob =~ s/G/01/ig;
 	$inblob =~ s/T/11/ig;
 	$inblob =~ s/\n//g; 
-
+	
+	$inblob =~ s/([01]{2})([^01]+)/$1 x (1 + length($2))/ge;
+	$inblob =~ s/^([^01]+)([01]{2})/$2 x (1 + length($1))/e;
+	
 	$outstream->write_data ($inblob);
       }
       $outstream->write_finish; 
