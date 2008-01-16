@@ -59,7 +59,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	#need enough RAM for whole files 
 
 	my %hash; 
-	my $k = 1; 
+	my $k = 2; 
 	for (my $i = 0; $i < (length ($inblob) - $k + 1); $i++) {
 	  $hash{substr($inblob, $i, $k)}++;  	  
 	}
