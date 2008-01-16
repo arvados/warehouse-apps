@@ -63,7 +63,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	for (my $i = 0; $i < (length ($inblob) - $k + 1); $i++) {
 	  $hash{substr($inblob, $i, $k)}++;  	  
 	}
-	$outstream->write_data (@{[ %hash ]} . " ". $filename . "\n");
+	my $frequencies; 
+	foreach $k (sort keys %hash) {
+	   $frequencies .= "$k => $hash{$k}; ";
+	}
+	$outstream->write_data ($frequencies . " ". $filename . "\n");
       }
       $outstream->write_finish; 
      
