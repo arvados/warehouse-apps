@@ -40,8 +40,6 @@ elsif ($ENV{MR_LEVEL} == 1)
 	last if !defined $pos; 
 	$instream->seek ($pos); 
 	my $inblob; 
-
-
 	if ($filename =~ s/\.g?z$//i) 
 	{
 	  my $zblob = ""; 
@@ -58,9 +56,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $inblob .= $$dataref; 
 	  }
 	}
-	#need enough RAM for whole files
-	
- 
+	#need enough RAM for whole files 
 	$outstream->write_data (length($inblob) . " ". $filename . "\n");
       }
       $outstream->write_finish; 
