@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:visit all subdirectories and report stats for files ending in .fa (gunzip first for .fa.gz)   
+###MR_DESCRIPTION:visit all subdirectories and convert .fa (gunzip first for .fa.gz) into one big string    
 ###MR_INPUT:manifest
 
 use strict; 
@@ -61,17 +61,14 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  next; 
 	}
 
-	#do some work  
-	my %hash; 
-	my $k = 2; 
-	for (my $i = 0; $i < (length ($inblob) - $k + 1); $i++) {
-	  $hash{substr($inblob, $i, $k)}++;  	  
-	}
-	my $frequencies; 
-	foreach $k (sort keys %hash) {
-	   $frequencies .= "$k => $hash{$k}; ";
-	}
-	$outstream->write_data ($frequencies . " ". $filename . "\n");
+	$inblob =~ s/^>.*\n//;
+	$inblob =~ s/A/00/g; 
+	$inblob =~ s/C/10/g; 
+	$inblob =~ s/G/01/g;
+	$inblob =~ s/T/11/g;
+	$inblob =~ s/\n//g; 
+
+	$outstream->write_data ($inblob);
       }
       $outstream->write_finish; 
      
