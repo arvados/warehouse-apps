@@ -62,10 +62,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 
 	$inblob =~ s/^>.*\n//;
-	$inblob =~ s/A/00/g; 
-	$inblob =~ s/C/10/g; 
-	$inblob =~ s/G/01/g;
-	$inblob =~ s/T/11/g;
+	$inblob =~ s/A/00/ig; 
+	$inblob =~ s/C/10/ig; 
+	$inblob =~ s/G/01/ig;
+	$inblob =~ s/T/11/ig;
 	$inblob =~ s/\n//g; 
 
 	$outstream->write_data ($inblob);
