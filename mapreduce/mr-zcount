@@ -39,9 +39,9 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	last if !defined $pos;
 	my $count = 0; 
+	$instream->seek ($pos); 
 	if ($filename =~ s/\.g?z$//i) 
 	{
-	  $instream->seek ($pos);
 	  my $zblob = ""; 
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
@@ -53,8 +53,6 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 	else
 	{
-	  $outstream->write_start ($filename);       
-	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
 	    $count += length ($$dataref); 
