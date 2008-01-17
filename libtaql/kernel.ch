@@ -799,6 +799,19 @@ taql__open_infile (const char * file,
     {
       stream = -1;
     }
+  else if (outfile_spec[0] == '@' &&
+	   isnumber (outfile_spec[1]) &&
+	   outfile_spec[2] == '\0')
+    {
+      stream = atoi (&outfile_spec[1]);
+      if (0 > dup2 (stream, stream))
+	{
+	  fputs ("could not open input file (");
+	  fputs (&outfile_spec[1]);
+	  fputs ("): invalid file descriptor\n");
+	  exit (2);
+	}
+    }
   else
     {
       stream = open (outfile_spec, O_RDONLY, 0);
