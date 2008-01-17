@@ -44,7 +44,7 @@ include $(BUILD)/ROOTPATHS
 ###
 
 24mers.dat: 26mers.txt
-	time sh $(srcroot)/billy/26mers-to-24mers-dat.sh < $< | complement-mers -m mer0 -M mer1 -n 12 > $@
+	time perl $(srcroot)/billy/26mers-to-24mers-dat.pl < $< | complement-mers -m mer0 -M mer1 -n 12 > $@
 24mers.mer0.bitmap: 24mers.dat
 	time hash-mers -m mer0 -n 12 < $< > $@
 24mers.mer1.bitmap: 24mers.dat
@@ -77,7 +77,7 @@ snp-report.txt: $(shell ls -1 *.fa | sed -e s,.fa,.placed,)
 ###
 
 nfa-samples.dat: 26mers.txt
-	time sh $(srcroot)/billy/26mers-to-24mers-dat.sh < $< > $@
+	time perl $(srcroot)/billy/26mers-to-24mers-dat.pl < $< > $@
 %.2ips.dat: %.dat
 	complement-mers -m mer0 -M mer1 -n 12 < $< > $@
 %.nfa-placed.dat: %.dat nfa-samples.2ips.dat
