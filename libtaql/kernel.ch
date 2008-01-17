@@ -806,9 +806,9 @@ taql__open_infile (const char * file,
       stream = atoi (&outfile_spec[1]);
       if (0 > dup2 (stream, stream))
 	{
-	  fputs ("could not open input file (");
-	  fputs (&outfile_spec[1]);
-	  fputs ("): invalid file descriptor\n");
+	  fputs ("could not open input file (", stderr);
+	  fputs (&outfile_spec[1], stderr);
+	  fputs ("): invalid file descriptor\n", stderr);
 	  exit (2);
 	}
     }
