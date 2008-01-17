@@ -800,7 +800,7 @@ taql__open_infile (const char * file,
       stream = -1;
     }
   else if (outfile_spec[0] == '@' &&
-	   isnumber (outfile_spec[1]) &&
+	   isdigit (outfile_spec[1]) &&
 	   outfile_spec[2] == '\0')
     {
       stream = atoi (&outfile_spec[1]);
