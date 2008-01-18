@@ -28,22 +28,24 @@ elsif ($ENV{MR_LEVEL} == 1)
   $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/align-call";
 
 
-  my $pid = open (STDOUT, '|-');
+  my $pid = open (ALIGNEDIMAGES, '|-'); # parent->child
   die "pipe to raw_to_reads.pl: $!" if !defined $pid;
   if (!$pid)
   {
+    # child
 
     # read aligned/registered/translated image stack from stdin,
     # generate reads using raw_to_reads.pl, write reads to warehouse,
     # write subdir to stdout
 
-    my $pid = open (STDOUT, '|-'); # child reads from parent
+    my $pid = open (RAWTOREADS, '|-'); # parent->child
     die "pipe from raw-to-reads.pl: open: $!" if !defined $pid;
     if ($pid)
     {
       # parent
+      open (STDOUT, ">&RAWTOREADS") or die "dup2: $!";
       exec 'perl -S raw_to_reads.pl';
-      exit 1;
+      die "exec raw_to_reads.pl: $!";
     }
     # child
     my $whc = new Warehouse
@@ -67,6 +69,9 @@ elsif ($ENV{MR_LEVEL} == 1)
     exit 0;
   }
 
+  # parent
+
+  open (STDOUT, ">&ALIGNEDIMAGES") or die "dup2: $!";
 
   # get images from warehouse, align/register/translate them, write
   # them to stdout
