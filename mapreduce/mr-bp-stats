@@ -51,7 +51,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
 	#do some work  
 	my @hash; 
-	my $k = ENV{KNOB_KMER}; 
+	my $k = $ENV{KNOB_KMER}; 
 	for (my $i = 0; $i < (length ($bp) - $k + 1); $i++) { 
 	    my $newbp = vec($bp, $i, 2);  	
 	    $hash[$newbp]++; 
