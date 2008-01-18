@@ -138,6 +138,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       close RRT;
       close (STDOUT)
 	  or die "pipe to raw_to_reads.pl: close: $!";
+      wait;
       exit 0;
     }
   }
