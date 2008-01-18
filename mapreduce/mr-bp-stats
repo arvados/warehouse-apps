@@ -43,7 +43,6 @@ elsif ($ENV{MR_LEVEL} == 1)
 	my $dataref = $instream->read_until ($pos+4); 
 	my $numbp = unpack ("L", $$dataref);
 	my $bp; 
-	print STDERR "AWZ: $numbbp\n"; 
 	$$dataref = ""; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
