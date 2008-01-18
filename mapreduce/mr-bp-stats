@@ -1,8 +1,9 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:visit all subdirectories and report stats for bp encoded with mr-zfasta-twobit   
+###MR_DESCRIPTION:visit all subdirectories and report k-mer frequencies for bp encoded with mr-zfasta-twobit   
 ###MR_INPUT:manifest
+###MR_KNOBS:KMER=2
 
 use strict; 
 use Warehouse;
@@ -51,7 +52,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
 	#do some work  
 	my @hash; 
-	my $k = 2; 
+	my $k = ENV{KNOB_KMER}; 
 	for (my $i = 0; $i < (length ($bp) - $k + 1); $i++) {
 	  $hash[vec($bp, $i, $k)]++;  	  
 	}
