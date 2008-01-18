@@ -1,0 +1,183 @@
+#!/usr/bin/perl
+-*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:(optionally gzipped) stacks of images -> reads
+###MR_INPUT:manifest
+###MR_KNOBS:FOCUSPIXELS=20000
+###MR_KNOBS:ALIGNWINDOW=15
+###MR_KNOBS:OBJECTTHRESHOLD=7000
+# # # ###MR_KNOBS:GZIP=no
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Image::Magick;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/align-call";
+
+
+  my $pid = open (STDOUT, '|-');
+  die "pipe to raw_to_reads.pl: $!" if !defined $pid;
+  if (!$pid)
+  {
+
+    # read aligned/registered/translated image stack from stdin,
+    # generate reads using raw_to_reads.pl, write reads to warehouse,
+    # write subdir to stdout
+
+    my $whc = new Warehouse
+	(memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+    open (STDIN, 'perl -S raw_to_reads.pl |')
+	or die "pipe from raw_to_reads.pl: open: $!";
+    my $outstream = new Warehouse::Stream (whc => $whc);
+    $outstream->name ($wantsubdir);
+    $outstream->clear;
+    $outstream->write_start ("reads.txt");
+    while (defined ($_ = <STDIN>))
+    {
+      $outstream->write_data (\$_);
+    }
+    $outstream->write_finish;
+    close (STDIN)
+	or die "pipe from raw_to_reads.pl: close: $_";
+
+    my $fragkey = $whc->store_block ($outstream->as_string)
+	or die "store_block failed: ".$whc->errstr;
+    print STDERR "+++mrout ".$fragkey."+++\n";
+    print STDERR $whc->iostats;
+    exit 0;
+  }
+
+
+  # get images from warehouse, align/register/translate them, write
+  # them to stdout
+
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+
+  my $brightmaskref;
+  my $pipe_is_open = 0;
+
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    if ($instream->name eq $wantsubdir)
+    {
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos;
+	my $this_is_brightmask = 0;
+
+	if ($filename =~ /^(\d\d\d),/)
+	{
+	  if ($1 eq '999')
+	  {
+	    $this_is_brightmask = 1;
+	  }
+	  else
+	  {
+	    next;		# XXX should actually use this hyb. cycle
+	  }
+	}
+
+	my $imageblob = "";
+	$instream->seek ($pos);
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $imageblob .= $$dataref;
+	}
+
+	convert_to_raw (\$imageblob, \$filename);
+	if ($this_is_brightmask)
+	{
+	  $brightmaskref = \$imageblob;
+	}
+	elsif (!defined ($brightmaskref))
+	{
+	  die "Can't process $filename because I have no bright mask yet";
+	}
+	else
+	{
+	  if ($pipe_is_open)
+	  {
+	    close (RRT)
+		or die "pipe to register_raw_translate: close: $!";
+	  }
+	  open (RRT, "| register_raw_translate 1000 1000 $ENV{KNOB_FOCUSPIXELS} $ENV{KNOB_OBJECTTHRESHOLD} 1 $ENV{KNOB_ALIGNWINDOW}")
+	      or die "pipe to register_raw_translate: open: $!";
+	  print RRT $$brightmaskref;
+	  print RRT $imageblob;
+	  $pipe_is_open = 1;
+	}
+      }
+      if ($pipe_is_open)
+      {
+	close (RRT)
+	    or die "pipe to register_raw_translate: close: $!";
+      }
+      close (STDOUT)
+	  or die "pipe to raw_to_reads.pl: close: $!";
+      exit 0;
+    }
+  }
+  die "Subdir not found: $wantsubdir";
+}
+
+sub convert_to_raw
+{
+  my $imageblobref = shift;
+  my $filenameref = shift;
+
+  if ($$filenameref =~ s/\.g?z$//i)
+  {
+    my $zblob = $$imageblobref;
+    $$imageblobref = undef;
+    gunzip \$zblob => $imageblobref
+	or die "Gunzip: $GunzipError";
+  }
+
+  if ($$filenameref =~ /\.raw$/i)
+  {
+    return;
+  }
+
+  my $image;
+  if ($$filenameref =~ s/\.tiff?$/.raw/i)
+  {
+    $image = Image::Magick->new
+	(magick => 'tif');
+  }
+  elsif ($$filenameref =~ s/\.jpe?g$/.raw/i)
+  {
+    $image = Image::Magick->new
+	(magick => 'jpg');
+  }
+  elsif ($$filenameref =~ s/\.jp2$/.raw/i)
+  {
+    $image = Image::Magick->new
+	(magick => 'jp2');
+  }
+  else
+  {
+    die "Unsupported image type: $$filenameref";
+  }
+  $image->BlobToImage($$imageblobref);
+  $$imageblobref = $image->ImageToBlob
+      (magick => 'gray',
+       endian => 'lsb',
+       depth => 16);
+}
