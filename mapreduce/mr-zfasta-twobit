@@ -33,7 +33,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $outstream = new Warehouse::Stream (whc => $whc);
       $outstream->name ($instream->name);
       $outstream->clear;
-      $outstream->write_start ("count.txt"); 
+      $outstream->write_start ("fasta.bin"); 
 
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
@@ -70,8 +70,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	
 	$inblob =~ s/([01]{2})([^01]+)/$1 x (1 + length($2))/ge;
 	$inblob =~ s/^([^01]+)([01]{2})/$2 x (1 + length($1))/e;
-	
-	$outstream->write_data ($inblob);
+
+		
+	$outstream->write_data (pack "Lb*", length($inblob)/2, $inblob);
       }
       $outstream->write_finish; 
      
