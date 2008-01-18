@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:visit all subdirectories and report stats for bp encoded with mr-zfasta-twobit   
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs"; 
+}
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    if ($instream->name eq $wantsubdir)
+    {
+      my $outstream = new Warehouse::Stream (whc => $whc);
+      $outstream->name ($instream->name);
+      $outstream->clear;
+      $outstream->write_start ("count.txt"); 
+
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos; 
+	$instream->seek ($pos); 
+	my $dataref = $instream->read_until ($pos+4); 
+	my $numbp = unpack ("L", $$dataref);
+	my $bp; 
+	print STDERR "AWZ: $numbbp\n"; 
+	$$dataref = ""; 
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $bp .= $$dataref; 
+	}		
+
+	#do some work  
+	my @hash; 
+	my $k = 2; 
+	for (my $i = 0; $i < (length ($bp) - $k + 1); $i++) {
+	  $hash[vec($bp, $i, $k)]++;  	  
+	}
+	my $frequencies; 
+	for (my $i = 0; $i < 2**$k; $i++ ){ 
+	   $frequencies .= "$i => $hash[$i] ";
+	}
+	$outstream->write_data 
+	    ($frequencies." ".$numbp." ".$filename ."\n");
+      }
+      $outstream->write_finish; 
+     
+      my $fragkey = $whc->store_block ($outstream->as_string)
+	  or die "store_block failed: ".$whc->errstr;
+      print STDERR "+++mrout ".$fragkey."+++\n";
+      print STDERR $whc->iostats;
+      exit 0;
+    }
+  }
+  die "Subdir not found: $wantsubdir";
+}
