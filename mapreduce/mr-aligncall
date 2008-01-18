@@ -1,5 +1,5 @@
 #!/usr/bin/perl
--*- mode: perl; perl-indent-level: 2; -*-
+# -*- mode: perl; perl-indent-level: 2; -*-
 
 ###MR_DESCRIPTION:(optionally gzipped) stacks of images -> reads
 ###MR_INPUT:manifest
