@@ -53,12 +53,12 @@ elsif ($ENV{MR_LEVEL} == 1)
 	#do some work  
 	my @hash; 
 	my $k = $ENV{KNOB_KMER}; 
-	for (my $i = 16; $i < (length ($bp) - $k + 1); $i++) { 
+	for (my $i = 16; $i < (16 + $numbp); $i++) { 
 	    my $newbp = vec($bp, $i, 2);  	
 	    $hash[$newbp]++; 
 	}
 	my $frequencies; 
-	for (my $i = 0; $i < 2**$k; $i++ ){ 
+	for (my $i = 0; $i < 4; $i++ ){ 
 	   $frequencies .= "$i => $hash[$i] ";
 	}
 	$outstream->write_data 
