@@ -40,19 +40,20 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	last if !defined $pos; 
 	$instream->seek ($pos); 
-	my $dataref = $instream->read_until ($pos+4); 
-	my $numbp = unpack ("L", $$dataref);
+	#my $dataref = $instream->read_until ($pos+4); 
+	#my $numbp = unpack ("L", $$dataref);
 	my $bp; 
-	$$dataref = ""; 
+	#$$dataref = ""; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
 	  $bp .= $$dataref; 
 	}		
+	my $numbp = unpack ("L", $bp); 
 
 	#do some work  
 	my @hash; 
 	my $k = $ENV{KNOB_KMER}; 
-	for (my $i = 0; $i < (length ($bp) - $k + 1); $i++) { 
+	for (my $i = 16; $i < (length ($bp) - $k + 1); $i++) { 
 	    my $newbp = vec($bp, $i, 2);  	
 	    $hash[$newbp]++; 
 	}
