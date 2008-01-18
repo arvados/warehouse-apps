@@ -127,7 +127,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	else
 	{
 	  die "Pipe should be open by now" unless $pipe_is_open;
-	  close (RRT); # or die "pipe to register-raw-translate: close: $!";
+	  close RRT;
 	  open (RRT, "| register-raw-translate 1000 1000 $ENV{KNOB_FOCUSPIXELS} $ENV{KNOB_OBJECTTHRESHOLD} 1 $ENV{KNOB_ALIGNWINDOW}")
 	      or die "pipe to register-raw-translate: open: $!";
 	  print RRT $$brightmaskref;
@@ -135,8 +135,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
       }
       die "Pipe should be open by now" unless $pipe_is_open;
-      close (RRT)
-	  or die "pipe to register-raw-translate: close: $!";
+      close RRT;
       close (STDOUT)
 	  or die "pipe to raw_to_reads.pl: close: $!";
       exit 0;
