@@ -38,15 +38,15 @@ elsif ($ENV{MR_LEVEL} == 1)
     # generate reads using raw_to_reads.pl, write reads to warehouse,
     # write subdir to stdout
 
-    my $pid = open (STDOUT, '|-'); # parent->child
+    my $pid = open (STDIN, '-|'); # child->parent
     die "pipe from raw-to-reads.pl: open: $!" if !defined $pid;
-    if ($pid)
+    if (!$pid)
     {
-      # parent
+      # child
       exec 'perl -S raw_to_reads.pl';
       die "exec raw_to_reads.pl: $!";
     }
-    # child
+    # parent
     close (STDOUT);
     my $whc = new Warehouse
 	(memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
