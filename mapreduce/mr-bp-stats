@@ -58,7 +58,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	for (my $i = 16; $i < (16 + $k); $i++) {
 	   $key = ($key << 2) | vec($bp, $i, 2); 	   
 	}
-	for (my $i = 16; $i  < (16 + $numbp - $k); $i--) { 
+	for (my $i = 16; $i  < (16 + $numbp - $k + 1); $i++) { 
 	    $key = (($key << 2) | vec($bp, $i, 2)) & $mask; 
 	    $hash[$key]++; 
 	}
