@@ -62,9 +62,14 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $key = (($key << 2) | vec($bp, $i, 2)) & $mask; 
 	    $hash[$key]++; 
 	}
-	my $frequencies; 
+	my $frequencies;
+	my $sum;
 	for (my $i = 0; $i < 4**$k; $i++ ){ 
+	  $sum += $hash[$i];
 	   $frequencies .= "$i => $hash[$i] ";
+	}
+	if ($sum ne $numbp) {
+	  warn "AWZ: $sum $numbp\n";
 	}
 	$outstream->write_data 
 	    ($frequencies." ".$numbp." ".$filename ."\n");
