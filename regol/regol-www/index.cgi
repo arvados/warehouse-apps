@@ -42,7 +42,7 @@ while (my $job = $sth->fetchrow_hashref)
 }
 
 print q{</pre>
-<h2>todo</h2>
+<h2>running</h2>
 <pre>};
 
 my $fmt = "%-15s %6s %6s %-20s\n";
