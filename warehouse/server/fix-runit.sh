@@ -53,39 +53,112 @@ for subject in `ls /var/service`; do
 	fi
 done
 
-if [ "${#tobemoved[@]}" = "0" ]; then
-	# Nothing to do; all entries under /var/service are already symlinks
-	exit;
+if [ "${#tobemoved[@]}" != "0" ]; then
+	# Some entries under /var/service are not symlinks
+	echo Need to move directories #{tobemoved[@]} from /var/service to /etc/runit
+
+	if [ "$UPSTART" = "1" ]; then
+		initctl stop runit >> /dev/null
+	else
+		cat /etc/inittab |sed -e 's/^SV:123456:respawn:\/usr\/sbin\/runsvdir-start/#SV:123456:respawn:\/usr\/sbin\/runsvdir-start/' > /etc/inittab.norunit
+		mv /etc/inittab /etc/inittab.orig
+		mv /etc/inittab.norunit /etc/inittab
+		init q
+	fi
+	killall runsv
+	sleep 5
+
+	if [ ! -d /etc/runit ]; then
+		mkdir /etc/runit
+	fi
+	
+	for s2 in ${tobemoved[@]}; do
+		mv /var/service/$s2 /etc/runit/
+		ln -s /etc/runit/$s2 /var/service
+	done
+	
+	if [ "$UPSTART" = "1" ]; then
+		initctl start runit >> /dev/null
+	else
+		if [ -f /etc/inittab.orig ]; then
+			rm /etc/inittab
+			mv /etc/inittab.orig /etc/inittab
+			init q
+		fi	
+	fi
 fi
 
-echo Need to move directories #{tobemoved[@]} from /var/service to /etc/runit
-
-if [ "$UPSTART" = "1" ]; then
-	initctl stop runit >> /dev/null
-else
-	cat /etc/inittab |sed -e 's/^SV:123456:respawn:\/usr\/sbin\/runsvdir-start/#SV:123456:respawn:\/usr\/sbin\/runsvdir-start/' > /etc/inittab.norunit
-	mv /etc/inittab /etc/inittab.orig
-	mv /etc/inittab.norunit /etc/inittab
-	init q
+# Make sure munged and slurmd are run from /var/service/
+for subject in munged slurmd; do
+	if [ ! -L /var/service/$subject ]; then
+		echo "$HOSTNAME converting $subject to runit"
+		mkdir -p /etc/runit/$subject/log/main
+		if [ "x$subject" == "xslurmd" ]; then
+			cat >/etc/runit/$subject/run <<EOF
+#!/bin/sh
+exec slurmd -D 2>&1
+EOF
+			/bin/sed -i 's_^slurmd__' /etc/rc.local
+		else
+			cat >/etc/runit/$subject/run <<EOF
+#!/bin/sh
+if [ ! -d /var/run/munge ]; then
+	mkdir -p /var/run/munge
 fi
-killall runsv
-sleep 5
-
-if [ ! -d /etc/runit ]; then
-	mkdir /etc/runit
-fi
-
-for s2 in ${tobemoved[@]}; do
-	mv /var/service/$s2 /etc/runit/
-	ln -s /etc/runit/$s2 /var/service
+chown daemon /var/run/munge
+exec su daemon -c "munged -F" 2>&1
+EOF
+			/bin/sed -i 's_^mkdir -p /var/run/munge__' /etc/rc.local
+			/bin/sed -i 's_^chown daemon /var/run/munge__' /etc/rc.local
+			/bin/sed -i 's_^sudo -u daemon munged__' /etc/rc.local
+		fi
+		chmod +x /etc/runit/$subject/run
+	  cat >/etc/runit/$subject/log/run <<EOF
+#!/bin/sh
+exec svlogd -tt main
+EOF
+	  chmod +x /etc/runit/$subject/log/run
+		killall $subject
+		sleep 1
+	  ln -s /etc/runit/$subject /var/service
+	fi
 done
 
-if [ "$UPSTART" = "1" ]; then
-	initctl start runit >> /dev/null
-else
-	if [ -f /etc/inittab.orig ]; then
-		rm /etc/inittab
-		mv /etc/inittab.orig /etc/inittab
-		init q
-	fi	
+# Now do the same for keepd/mogstored, but ONLY if this node is not diskless!
+
+DISKLESS=`df|grep -q nfs;echo $?`
+if [ "x$DISKLESS" != "x0" ]; then
+	# We found local disk - this node is not diskless
+	# Make sure mogstored and keepd are run from /var/service/
+	for subject in mogstored keepd; do
+		if [ ! -L /var/service/$subject ]; then
+			echo "$HOSTNAME converting $subject to runit"
+			mkdir -p /etc/runit/$subject/log/main
+			if [ "x$subject" == "xkeepd" ]; then
+				cat >/etc/runit/$subject/run <<EOF
+#!/bin/sh
+exec keepd 2>&1
+EOF
+				/bin/sed -i 's_^keepd__' /etc/rc.local
+			else
+				cat >/etc/runit/$subject/run <<EOF
+#!/bin/sh
+exec mogstored
+EOF
+				/bin/sed -i 's_^/usr/local/bin/mogstored &__' /etc/rc.local
+				/bin/sed -i 's_^mogstored &__' /etc/rc.local
+			fi
+			chmod +x /etc/runit/$subject/run
+		  cat >/etc/runit/$subject/log/run <<EOF
+#!/bin/sh
+exec svlogd -tt main
+EOF
+		  chmod +x /etc/runit/$subject/log/run
+			killall $subject
+			sleep 1
+		  ln -s /etc/runit/$subject /var/service
+		fi
+	done
 fi
+
+
