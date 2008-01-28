@@ -121,6 +121,10 @@ EOF
 		killall $subject
 		sleep 1
 	  ln -s /etc/runit/$subject /var/service
+		if [ "$subject" == "munged" ]; then
+			# give munged some time to wake up
+			sleep 3 
+		fi
 	fi
 done
 
