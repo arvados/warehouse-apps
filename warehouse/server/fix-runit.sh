@@ -119,7 +119,7 @@ exec svlogd -tt main
 EOF
 	  chmod +x /etc/runit/$subject/log/run
 		killall $subject
-		sleep 1
+		sleep 3
 	  ln -s /etc/runit/$subject /var/service
 		if [ "$subject" == "munged" ]; then
 			# give munged some time to wake up
