@@ -28,7 +28,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 					  key => $manifestkey);
 					  
   my $seed = sha512("123456"); #use "SEED" knob and job ID here 
-  my $rand_blocks = 2**18; #implies 2^21 reads
+  my $rand_blocks = 2**17; #implies 2^20 reads
   my $rand_bits = 512 * $rand_blocks; # implies 8 x 64 bit reads
   my $good_random_data = $seed;
 
