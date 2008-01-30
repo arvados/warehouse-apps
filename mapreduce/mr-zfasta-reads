@@ -1,0 +1,115 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:visit all subdirectories and report stats for files ending in .fa (gunzip first for .fa.gz)   
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Digest::SHA qw(sha512);
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs"; 
+}
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+					  
+  my $seed = sha512("123456");
+  my $rand_blocks = 2**18; #implies 2^21 reads
+  my $rand_bits = 512 * $rand_blocks; # implies 8 x 64 bit reads
+  my $good_random_data = $seed;
+
+  for (my $i = 1; $i < $rand_blocks; $i++) {
+     $seed = sha512($seed);
+     $good_random_data .= $seed;
+  }
+  my @reads = unpack ("Q*", $good_random_data);
+  undef $good_random_data;
+    
+  for (my $i=0; $i < @reads; $i++ ) {
+    $reads[$i] = ((($reads [$i] % 6000000000) << 28) | $i);
+  }
+  @reads = sort {$a <=> $b} (@reads);
+  
+  my $first_read = sprintf"%X", $reads[0]; 
+  my $last_read = sprintf"%X", $reads[@reads-1];
+      					      
+  warn "generated randomness for " .@reads 
+    ." reads (first read:$first_read) (last read:$last_read)\n";
+					  
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    if ($instream->name eq $wantsubdir)
+    {
+      my $outstream = new Warehouse::Stream (whc => $whc);
+      $outstream->name ($instream->name);
+      $outstream->clear;
+      $outstream->write_start ("reads.txt"); 
+
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos; 
+	$instream->seek ($pos); 
+	my $inblob; #bytes of (decompressed) file (if correct extension)
+	if ($filename =~ m/hap|rand/) {
+	  warn "AWZ: $filename"; 
+	  next; 
+	}
+     	if ($filename =~ s/\.fa\.g?z$/\.fa/i) 
+	{
+	  my $zblob = ""; 
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $zblob .= $$dataref; 
+	  }
+	  gunzip \$zblob => \$inblob or die $GunzipError;
+	}
+	elsif ($filename =~ m/\.fa$/i) 
+	{
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $inblob .= $$dataref; 
+	  }
+	}
+	else 
+	{
+	  next; 
+	}
+
+	#do some work  
+	my %hash; 
+	my $k = 2; 
+	for (my $i = 0; $i < (length ($inblob) - $k + 1); $i++) {
+	  $hash{substr($inblob, $i, $k)}++;  	  
+	}
+	my $frequencies; 
+	foreach $k (sort keys %hash) {
+	   $frequencies .= "$k => $hash{$k}; ";
+	}
+	$outstream->write_data ($frequencies . " ". $filename . "\n");
+      }
+      $outstream->write_finish; 
+     
+      my $fragkey = $whc->store_block ($outstream->as_string)
+	  or die "store_block failed: ".$whc->errstr;
+      print STDERR "+++mrout ".$fragkey."+++\n";
+      print STDERR $whc->iostats;
+      exit 0;
+    }
+  }
+  die "Subdir not found: $wantsubdir";
+}
