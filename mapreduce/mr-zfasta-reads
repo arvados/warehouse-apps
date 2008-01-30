@@ -27,7 +27,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
 					  
-  my $seed = sha512("123456");
+  my $seed = sha512("123456"); #use "SEED" knob and job ID here 
   my $rand_blocks = 2**18; #implies 2^21 reads
   my $rand_bits = 512 * $rand_blocks; # implies 8 x 64 bit reads
   my $good_random_data = $seed;
@@ -91,16 +91,16 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 
 	#do some work  
-	my %hash; 
-	my $k = 2; 
-	for (my $i = 0; $i < (length ($inblob) - $k + 1); $i++) {
-	  $hash{substr($inblob, $i, $k)}++;  	  
-	}
-	my $frequencies; 
-	foreach $k (sort keys %hash) {
-	   $frequencies .= "$k => $hash{$k}; ";
-	}
-	$outstream->write_data ($frequencies . " ". $filename . "\n");
+	#my %hash; 
+	#my $k = 2; 
+	#for (my $i = 0; $i < (length ($inblob) - $k + 1); $i++) {
+	#  $hash{substr($inblob, $i, $k)}++;  	  
+	#}
+	#my $frequencies; 
+	#foreach $k (sort keys %hash) {
+	#   $frequencies .= "$k => $hash{$k}; ";
+	#}
+	#$outstream->write_data ($frequencies . " ". $filename . "\n");
       }
       $outstream->write_finish; 
      
