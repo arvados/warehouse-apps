@@ -49,7 +49,9 @@ elsif ($ENV{MR_LEVEL} == 1)
       					      
   warn "generated randomness for " .@reads 
     ." reads (first read:$first_read) (last read:$last_read)\n";
-					  
+		
+  my $bp = 0; 
+			  
   $manifest->rewind;
   while (my $instream = $manifest->subdir_next)
   {
@@ -91,16 +93,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 
 	#do some work  
-	#my %hash; 
-	#my $k = 2; 
-	#for (my $i = 0; $i < (length ($inblob) - $k + 1); $i++) {
-	#  $hash{substr($inblob, $i, $k)}++;  	  
-	#}
-	#my $frequencies; 
-	#foreach $k (sort keys %hash) {
-	#   $frequencies .= "$k => $hash{$k}; ";
-	#}
-	#$outstream->write_data ($frequencies . " ". $filename . "\n");
+	$bp += length ($inblob); 
+	$outstream->write_data ($bp . " ". $filename . "\n");
       }
       $outstream->write_finish; 
      
