@@ -40,7 +40,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   undef $good_random_data;
     
   for (my $i=0; $i < @reads; $i++ ) {
-    $reads[$i] = ((($reads [$i] % 6000000000) << 28) | $i);
+    $reads[$i] = ((($reads [$i] % (2*3142044949)) << 28) | $i);
   }
   @reads = sort {$a <=> $b} (@reads);
   
