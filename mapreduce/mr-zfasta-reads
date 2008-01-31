@@ -56,7 +56,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		
   my $bp = 0; 
   my $current_read = 0; 
-			  
+
   $manifest->rewind;
   while (my $instream = $manifest->subdir_next)
   {
@@ -97,11 +97,15 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  next; 
 	}	
 	#do some work
-	$bp += length ($inblob); 
+	$bp += length ($reference); 
 
 	my $rand_bits = 0; 
 	my $count = 0; 
 	my $bit; 
+
+	my $current_position; 
+	my $read;
+	my $valid_read; 
 
 	do {
 	  if ($rand_bits < 12 ) {
@@ -112,7 +116,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  my $small_gap2 = vec ($seed, 512 - $rand_bits--, 1);
 	  my $orient = vec ($seed, 512 - $rand_bits--, 1);
 	  my $big_gap = 0;
-	  for (my i=0; $i < 9; $i++) {
+	  for (my $i=0; $i < 9; $i++) {
 	    $big_gap = $big_gap<<1 | vec ($seed, 512 - $rand_bits--, 1);
 	  }
 	  
