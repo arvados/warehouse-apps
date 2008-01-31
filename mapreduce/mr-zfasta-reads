@@ -125,10 +125,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  $current_read++; 
 	  
 	  if ( ($current_position+$big_gap+18) < $bp){
-	    $answer_key = sprintf ("%X %X %X %X %X %X", 
-				   $reads[$current_read] & $read_mask,  
-				   $current_position, $orient, 
-				   $small_gap1, $big_gap, $small_gap2); 
+	    my $answer_key = sprintf 
+		("%X %X %X %X %X %X", 
+		 $reads[$current_read] & $read_mask,  
+		 $current_position, $orient, 
+		 $small_gap1, $big_gap, $small_gap2); 
 	    $outstream->write(
 	      substr($reference,
 		     $current_position-$bp_start,7).
