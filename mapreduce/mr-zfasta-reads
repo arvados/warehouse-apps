@@ -65,7 +65,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   $manifest->rewind;
 
   my $outstream = new Warehouse::Stream (whc => $whc);
-  my $name = "/".$ENV{MR_ID};
+  my $name = "./".$ENV{MR_ID};
   warn "$name\n"; 
   $outstream->name ($name);
   $outstream->clear;
