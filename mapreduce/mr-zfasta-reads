@@ -130,7 +130,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		 $reads[$current_read] & $read_mask,  
 		 $current_position, $orient, 
 		 $small_gap1, $big_gap, $small_gap2); 
-	    $outstream->write(
+	    $outstream->write_data (
 	      substr($reference,
 		     $current_position-$bp_start,7).
 	      substr($reference,
