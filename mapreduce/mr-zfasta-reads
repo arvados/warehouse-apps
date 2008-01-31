@@ -65,7 +65,9 @@ elsif ($ENV{MR_LEVEL} == 1)
   $manifest->rewind;
 
   my $outstream = new Warehouse::Stream (whc => $whc);
-  $outstream->name ("/".$ENV{MR_ID});
+  my $name = "/".$ENV{MR_ID};
+  warn "$name\n"; 
+  $outstream->name ($name);
   $outstream->clear;
   $outstream->write_start ("reads.txt"); 
 
