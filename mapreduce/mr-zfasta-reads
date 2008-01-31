@@ -17,7 +17,7 @@ my $manifestkey = $ENV{MR_INPUT0};
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey; 
-  for(1..$ENV{KNOB_N}) 
+  for(0..$ENV{KNOB_N}-1) 
   { 
     print STDERR "+++mrjobstep 1 $_+++\n"; 
   }
@@ -65,7 +65,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   $manifest->rewind;
 
   my $outstream = new Warehouse::Stream (whc => $whc);
-  my $name = "./".$ENV{MR_ID};
+  my $name = "./".$ENV{MR_INPUT};
   warn "$name\n"; 
   $outstream->name ($name);
   $outstream->clear;
