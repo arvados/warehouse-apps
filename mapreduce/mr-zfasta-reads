@@ -31,6 +31,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $rand_blocks = 2**18; #implies 2^21 reads
   my $rand_bits = 512 * $rand_blocks; # implies 8 x 64 bit reads
   my $good_random_data = $seed;
+  my $read_mask = 2**21-1; 
 
   for (my $i = 1; $i < $rand_blocks; $i++) {
      $seed = sha512($seed);
@@ -44,13 +45,17 @@ elsif ($ENV{MR_LEVEL} == 1)
   }
   @reads = sort {$a <=> $b} (@reads);
   
-  my $first_read = sprintf"%X", $reads[0]; 
-  my $last_read = sprintf"%X", $reads[@reads-1];
+  my $first_pos = $reads[0]>>28;
+  my $first_read = $reads[0] & $read_mask; 
+  my $last_pos = $reads[@reads-1]>>28;
+  my $last_read = $reads[@reads-1] & $read_mask;
       					      
-  warn "generated randomness for " .@reads 
-    ." reads (first read:$first_read) (last read:$last_read)\n";
+  warn "generated randomness for ".@reads." reads " 
+    ."first position is $first_pos (read $first_read) "
+    ."last position is $last_pos (read $last_read)\n";
 		
   my $bp = 0; 
+  my $current_read = 0; 
 			  
   $manifest->rewind;
   while (my $instream = $manifest->subdir_next)
@@ -66,9 +71,9 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	last if !defined $pos; 
 	$instream->seek ($pos); 
-	my $inblob; #bytes of (decompressed) file (if correct extension)
+	my $reference; #(decompressed) reference data (if correct extension)
 	if ($filename =~ m/hap|rand/) {
-	  warn "AWZ: $filename"; 
+	  warn "ignoring $filename"; 
 	  next; 
 	}
      	if ($filename =~ s/\.fa\.g?z$/\.fa/i) 
@@ -78,23 +83,50 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  {
 	    $zblob .= $$dataref; 
 	  }
-	  gunzip \$zblob => \$inblob or die $GunzipError;
+	  gunzip \$zblob => \$reference or die $GunzipError;
 	}
 	elsif ($filename =~ m/\.fa$/i) 
 	{
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
-	    $inblob .= $$dataref; 
+	    $reference .= $$dataref; 
 	  }
 	}
 	else 
 	{
 	  next; 
-	}
-
-	#do some work  
+	}	
+	#do some work
 	$bp += length ($inblob); 
-	$outstream->write_data ($bp . " ". $filename . "\n");
+
+	my $rand_bits = 0; 
+	my $count = 0; 
+	my $bit; 
+
+	do {
+	  if ($rand_bits < 12 ) {
+	    $seed = sha512($seed); #generate some more randomness 
+	    $rand_bits = 512;
+	  }
+	  my $small_gap1 = vec ($seed, 512 - $rand_bits--, 1); 
+	  my $small_gap2 = vec ($seed, 512 - $rand_bits--, 1);
+	  my $orient = vec ($seed, 512 - $rand_bits--, 1);
+	  my $big_gap = 0;
+	  for (my i=0; $i < 9; $i++) {
+	    $big_gap = $big_gap<<1 | vec ($seed, 512 - $rand_bits--, 1);
+	  }
+	  
+	  $current_position = $reads[$current_read] >> 28; 
+	  $current_read++; 
+	  
+	  if ( ($current_position+$big_gap+18) < $bp){
+	    $valid_read++; 
+	  }
+	  $read++; 
+	}
+	while ($current_position <  $bp) {
+
+	$outstream->write_data ($valid_read."/".$read." in ".$filename."\n");
       }
       $outstream->write_finish; 
      
