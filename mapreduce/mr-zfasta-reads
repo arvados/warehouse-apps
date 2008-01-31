@@ -97,7 +97,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  next; 
 	}	
 	$reference =~ s/^>.*\n//;
-	$reference =~ s/\n//g
+	$reference =~ s/\n//g;
 
 	#do some work
 	my $bp_start = $bp;
