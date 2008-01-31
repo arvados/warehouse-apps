@@ -129,7 +129,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  
 	  if ( ($current_position+$big_gap+18) < $bp){
 	    my $answer_key = sprintf 
-		("%X %X %X %X %X %X", 
+		(" %X %X %X %X %X %X", 
 		 $reads[$current_read] & $read_mask,  
 		 $current_position, $orient, 
 		 $small_gap1, $big_gap, $small_gap2); 
