@@ -63,12 +63,14 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $current_read = 0; 
 
   $manifest->rewind;
+
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  $outstream->name ($ENV{MR_ID});
+  $outstream->clear;
+  $outstream->write_start ("reads.txt"); 
+
   while (my $instream = $manifest->subdir_next)
   {
-    my $outstream = new Warehouse::Stream (whc => $whc);
-    $outstream->name ($instream->name);
-    $outstream->clear;
-    $outstream->write_start ("reads.txt"); 
     
     while (my ($pos, $size, $filename) = $instream->file_next)
     {
