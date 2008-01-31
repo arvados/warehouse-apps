@@ -96,6 +96,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	{
 	  next; 
 	}	
+	$reference =~ s/^>.*\n//;
+	$reference =~ s/\n//g
+
 	#do some work
 	my $bp_start = $bp;
 	$bp += length ($reference); 
@@ -146,7 +149,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 	while ($current_position <  $bp); 
 
-	warn ($valid_read."/".$read." in ".$filename."\n");
+	warn ($valid_read."/".$read." in ".$filename." (".$bp.")\n");
       }
       $outstream->write_finish; 
      
