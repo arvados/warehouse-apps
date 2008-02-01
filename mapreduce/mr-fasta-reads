@@ -1,0 +1,158 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:visit all subdirectories and report stats for files ending in .fa (gunzip first for .fa.gz)   
+###MR_INPUT:manifest
+###MR_KNOBS:N=4
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Digest::SHA qw(sha512);
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey; 
+  for(0..$ENV{KNOB_N}-1) 
+  { 
+    print STDERR "+++mrjobstep 1 $_+++\n"; 
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+					  
+  my $seed = sha512("123456"); #use "SEED" knob and job ID here 
+  my $rand_blocks = 2**18; #implies 2^21 reads
+  my $rand_bits = 512 * $rand_blocks; # implies 8 x 64 bit reads
+  my $good_random_data = $seed;
+  my $read_mask = 2**21-1; 
+
+  for (my $i = 1; $i < $rand_blocks; $i++) {
+     $seed = sha512($seed);
+     $good_random_data .= $seed;
+  }
+  my @reads = unpack ("Q*", $good_random_data);
+  undef $good_random_data;
+    
+  for (my $i=0; $i < @reads; $i++ ) {
+    $reads[$i] = ((($reads [$i] % (2*3142044949)) << 28) | $i);
+  }
+  @reads = sort {$a <=> $b} (@reads);
+  
+  my $first_pos = $reads[0]>>28;
+  my $first_read = $reads[0] & $read_mask; 
+  my $last_pos = $reads[@reads-1]>>28;
+  my $last_read = $reads[@reads-1] & $read_mask;
+      					      
+  warn "generated randomness for ".@reads." reads " 
+    ."first position is $first_pos (read $first_read) "
+    ."last position is $last_pos (read $last_read)\n";
+		
+  my $bp = 0; 
+  my $current_read = 0; 
+
+  $manifest->rewind;
+
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  my $name = "./".$ENV{MR_INPUT};
+  warn "$name\n"; 
+  $outstream->name ($name);
+  $outstream->clear;
+  $outstream->write_start ("reads.txt"); 
+
+  while (my $instream = $manifest->subdir_next)
+  {
+    
+    while (my ($pos, $size, $filename) = $instream->file_next)
+    {
+      last if !defined $pos; 
+      $instream->seek ($pos); 
+      my $reference; #(decompressed) reference data (if correct extension)
+      if ($filename =~ m/hap|rand/) {
+	warn "ignoring $filename"; 
+	next; 
+      }
+      elsif ($filename =~ m/\.fa$/i) 
+      {
+	my $read;
+	my $valid_read; 
+	
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $reference = $$dataref; 
+	  $reference =~ s/^>.*\n//;
+	  $reference =~ s/\n//g;
+      
+	  #do some work
+	  my $bp_start = $bp;
+	  $bp += length ($reference); 
+	  
+	  my $rand_bits = 0; 
+	  my $count = 0; 
+	  my $bit; 
+	  
+	  my $current_position; 
+      
+	  do {
+	    if ($rand_bits < 12 ) {
+	      $seed = sha512($seed); #generate some more randomness 
+	      $rand_bits = 512;
+	    }
+	    my $small_gap1 = vec ($seed, 512 - $rand_bits--, 1); 
+	    my $small_gap2 = vec ($seed, 512 - $rand_bits--, 1);
+	    my $orient = vec ($seed, 512 - $rand_bits--, 1);
+	    my $big_gap = 0;
+	    for (my $i=0; $i < 9; $i++) {
+	      $big_gap = $big_gap<<1 | vec ($seed, 512 - $rand_bits--, 1);
+	    }
+	    
+	    $current_position = $reads[$current_read] >> 28; 
+	    $current_read++; 
+	    
+	    if ( ($current_position+$big_gap+18) < $bp){
+	      my $answer_key = sprintf 
+		  (" %X %X %X %X %X %X", 
+		   $reads[$current_read] & $read_mask,  
+		   $current_position, $orient, 
+		   $small_gap1, $big_gap, $small_gap2); 
+	      $outstream->write_data (
+		substr($reference,
+		       $current_position-$bp_start,7).
+		substr($reference,
+		       $current_position-$bp_start+10+$small_gap1,7).
+		substr($reference,
+		       $current_position-$bp_start+250+$big_gap,7).
+		substr($reference,
+		       $current_position-$bp_start+260+$big_gap+$small_gap2,7).
+		$answer_key."\n");
+	      $valid_read++; 
+	    }
+	    $read++; 
+	  }
+	  while ($current_position <  $bp); 	  
+	}
+	warn ($valid_read."/".$read." in ".$filename." (".$bp.")\n");	
+      }
+ 	
+
+    }
+  }
+  $outstream->write_finish; 
+  
+  my $fragkey = $whc->store_block ($outstream->as_string)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout ".$fragkey."+++\n";
+  print STDERR $whc->iostats;
+  exit 0;  
+}
