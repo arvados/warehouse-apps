@@ -147,7 +147,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 
 	  my $overflow = $bp-$current_position; 
 	  $bp -= $overflow; 
- 	  $overflow_ref = substr($reference,$current_position,$overflow); 
+ 	  $overflow_ref = substr
+	      ($reference, $current_position-$bp_start, $overflow); 
 	}
 	warn ($valid_read."/".$read." in ".$filename." (".$bp.")\n");	
       }
