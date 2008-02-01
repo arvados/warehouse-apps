@@ -87,10 +87,10 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	my $read;
 	my $valid_read; 
-	
+	my $overflow_ref; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
-	  $reference = $$dataref; 
+	  $reference = $overflow_ref.$$dataref; 
 	  $reference =~ s/^>.*\n//;
 	  $reference =~ s/\n//g;
       
@@ -137,10 +137,17 @@ elsif ($ENV{MR_LEVEL} == 1)
 		       $current_position-$bp_start+260+$big_gap+$small_gap2,7).
 		$answer_key."\n");
 	      $valid_read++; 
+	      $read++; 
 	    }
-	    $read++; 
+	    else {
+	      last; 
+	    }
 	  }
-	  while ($current_position <  $bp); 	  
+	  while ($current_position <  $bp);
+
+	  my $overflow = $bp-$current_position; 
+	  $bp -= $overflow; 
+ 	  $overflow_ref = substr($reference,$current_position,$overflow); 
 	}
 	warn ($valid_read."/".$read." in ".$filename." (".$bp.")\n");	
       }
