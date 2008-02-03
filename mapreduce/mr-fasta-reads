@@ -78,7 +78,7 @@ elsif ($ENV{MR_LEVEL} == 1)
     {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      my $reference; #(decompressed) reference data (if correct extension)
+      my $reference; 
       if ($filename =~ m/hap|rand/) {
 	warn "ignoring $filename"; 
 	next; 
@@ -90,7 +90,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	my $overflow_ref; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
-	  $reference = $overflow_ref.$$dataref; 
+	  $reference = $$dataref; 
 	  $reference =~ s/^>.*\n//;
 	  $reference =~ s/\n//g;
       
@@ -102,9 +102,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  my $count = 0; 
 	  my $bit; 
 	  
-	  my $current_position; 
+	  my $current_position = 0; 
       
-	  do {
+	  while (1) {
 	    if ($rand_bits < 12 ) {
 	      $seed = sha512($seed); #generate some more randomness 
 	      $rand_bits = 512;
@@ -120,7 +120,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $current_position = $reads[$current_read] >> 28; 
 	    $current_read++; 
 	    
-	    if ( ($current_position+$big_gap+18) < $bp){
+	    if ( ($current_position$+$big_gap+275) < $bp){
 	      my $answer_key = sprintf 
 		  (" %X %X %X %X %X %X", 
 		   $reads[$current_read] & $read_mask,  
@@ -143,12 +143,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      last; 
 	    }
 	  }
-	  while ($current_position <  $bp);
-
-	  my $overflow = $bp-$current_position; 
-	  $bp -= $overflow; 
- 	  $overflow_ref = substr
-	      ($reference, $current_position-$bp_start, $overflow); 
+#	  my $overflow = $bp-$current_position; 
+#	  $bp -= $overflow; 
+# 	  $overflow_ref = substr
+#	      ($reference, $current_position-$bp_start, $overflow); 
 	}
 	warn ($valid_read."/".$read." in ".$filename." (".$bp.")\n");	
       }
