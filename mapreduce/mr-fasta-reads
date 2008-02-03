@@ -120,7 +120,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $current_position = $reads[$current_read] >> 28; 
 	    $current_read++; 
 	    
-	    if ( ($current_position$+$big_gap+275) < $bp){
+	    if ( ($current_position+$big_gap+275) < $bp){
 	      my $answer_key = sprintf 
 		  (" %X %X %X %X %X %X", 
 		   $reads[$current_read] & $read_mask,  
