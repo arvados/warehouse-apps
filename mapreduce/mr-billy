@@ -50,7 +50,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   my $s_fileno = fileno("SAMPLES");
   my $r_fileno = fileno("REFERENCE");
-  Safepipe::readfrom ("PLACED",
+  Safepipe::readfrom ("main::PLACED",
 		      ["main::REFERENCE", "all-mers -m mer0 -n 12 <&$r_fileno"],
 		      ["main::SAMPLES", "mer-nfa --snps --all --m0 12 --gmin0 0 --gmax0 20 --m1 12 -r - -s \@$s_fileno -o -"],
 		      "mrs-store './$ENV{MR_INPUT}' mer-nfa-placed.dat")
@@ -60,6 +60,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   my @out = <PLACED>;
   close "PLACED";
+
+  print "mr-billy: @out\n" if $ENV{KNOB_DEBUG};
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
 

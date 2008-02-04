@@ -40,4 +40,6 @@ while (read STDIN, $buf, 2**20)
   $stream->write_data (\$buf);
 }
 $stream->write_finish;
+print STDERR ("mrs-store: ".$stream->as_string."\n")
+    if $opt{"debug"} || $ENV{"KNOB_DEBUG"};
 print $stream->as_string;
