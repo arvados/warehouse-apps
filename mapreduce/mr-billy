@@ -38,13 +38,13 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $pid;
 
   Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch '$manifestkey' . 26mers.txt",
+		      "mrs-fetch -h '$manifestkey' . 26mers.txt",
 		      "perl $src/billy/26mers-to-24mers-dat.pl",
 		      "complement-mers -m mer0 -M mer1 -n 12")
       or die "samples pipe failed: $!";
 
   Safepipe::readfrom ("main::REFERENCE",
-		      "mrs-fetch '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
 		      "perl $src/madeleine/chr-to-dat.pl -n 12")
       or die "reference pipe failed: $!";
 
