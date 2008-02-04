@@ -59,7 +59,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   close "REFERENCE";
 
   my @out = <PLACED>;
-  close "PLACED" or die "mer-nfa pipe failed: $!";
+  close "PLACED";
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
 
