@@ -61,7 +61,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my @out = <PLACED>;
   close "PLACED";
 
-  print "mr-billy: @out\n" if $ENV{KNOB_DEBUG};
+  print STDERR "mr-billy: @out\n" if $ENV{KNOB_DEBUG};
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
 
