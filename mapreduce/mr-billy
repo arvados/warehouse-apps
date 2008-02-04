@@ -60,7 +60,6 @@ elsif ($ENV{MR_LEVEL} == 1)
       or die "reportreference pipe failed: $!";
 
 
-
   my $s_fileno = fileno("SAMPLES");
   my $r_fileno = fileno("REFERENCE");
   my $rr_fileno = fileno("REPORTREFERENCE");
@@ -74,6 +73,8 @@ elsif ($ENV{MR_LEVEL} == 1)
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES";
   close "REFERENCE";
+  close "REPORTREFERENCE";
+  close "REPORTSAMPLES";
 
   my @out = <PLACED>;
   close "PLACED";
