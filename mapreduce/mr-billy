@@ -51,8 +51,8 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $s_fileno = fileno("SAMPLES");
   my $r_fileno = fileno("REFERENCE");
   Safepipe::readfrom ("PLACED",
-		      "all-mers -m mer0 -n 12 <&$r_fileno",
-		      "mer-nfa --snps --all --m0 12 --gmin0 0 --gmax0 20 --m1 12 -r - -s \@$s_fileno -o -",
+		      ["main::REFERENCE", "all-mers -m mer0 -n 12 <&$r_fileno"],
+		      ["main::SAMPLES", "mer-nfa --snps --all --m0 12 --gmin0 0 --gmax0 20 --m1 12 -r - -s \@$s_fileno -o -"],
 		      "mrs-store '/$ENV{MR_INPUT}' mer-nfa-placed.dat")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES";

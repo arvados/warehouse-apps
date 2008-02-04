@@ -30,6 +30,20 @@ sub readfrom
 		close STDIN;
 	    }
 	    open STDOUT, ">&write$n" or die "$!";
+
+	    if (ref $command eq "ARRAY")
+	    {
+		while (@$command > 1)
+		{
+		    my $fh = shift @$command;
+		    open "STAYOPEN", "<&", $fh;
+		    $^F = 99999;
+		    open $fh, "<&", "STAYOPEN";
+		    $^F = 2;
+		}
+		$command = $command->[0];
+	    }
+
 	    exec $command;
 	    die "@caller: $!";
 	}
