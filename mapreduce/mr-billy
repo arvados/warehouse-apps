@@ -12,8 +12,7 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use Safepipe;
 
-$ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/billy";
-$ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/madeleine";
+my $src .= "/usr/local/polony-tools/$ENV{MR_REVISION}/src";
 
 # level 0:
 #  read sample and reference manifests
@@ -40,13 +39,13 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   Safepipe::readfrom ("SAMPLES",
 		      "mrs-fetch '$manifestkey' .",
-		      "perl -S 26mers-to-24mers-dat.pl",
+		      "perl $src/billy/26mers-to-24mers-dat.pl",
 		      "complement-mers -m mer0 -M mer1 -n 12")
       or die "samples pipe failed: $!";
 
   Safepipe::readfrom ("REFERENCE",
 		      "mrs-fetch '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
-		      "perl -S chr-to-dat.pl -n 12")
+		      "perl $src/madeleine/chr-to-dat.pl -n 12")
       or die "reference pipe failed: $!";
 
   my $s_fileno = fileno("SAMPLES");
