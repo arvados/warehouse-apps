@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my %opt;
+while ($ARGV[0] =~ /^-/)
+{
+  local $_ = shift @ARGV;
+  if (/^--([^=]+)(=(.*))?$/)
+  {
+    $opt{$1} = $3;
+  }
+  elsif (/^-([^-=]+)$/)
+  {
+    foreach (split ("", $1))
+    {
+      $opt{$_} = 1;
+    }
+  }
+}
+
+die "usage: mrs-fetch [options] manifestkey subdir [filename]\n"
+    if @ARGV < 2 || @ARGV > 3;
+
+my $manifestkey = shift @ARGV;
+my $subdir = shift @ARGV;
+my $wantfilename = shift @ARGV;
+
+my $whc = new Warehouse;
+my $manifest = new Manifest (whc => $whc,
+			     key => $manifestkey);
+$manifest->rewind;
+while (my $stream = $manifest->subdir_next)
+{
+  if ($stream->name eq $subdir)
+  {
+    if (defined $wantfilename)
+    {
+      while (my ($pos, $size, $filename) = $stream->file_next)
+      {
+	last if !defined $pos;
+	if ($filename eq $wantfilename)
+	{
+	  print "$subdir - $pos:$size:$filename\n";
+	  $stream->seek ($pos);
+	  while (my $dataref = $stream->read_until ($pos + $size))
+	  {
+	    print $$dataref;
+	  }
+	  exit 0;
+	}
+      }
+      die "$wantfilename in $subdir: file not found";
+    }
+    else
+    {
+      my @block;
+      my @s = split (" ", $stream->as_string);
+      my @s2 = @s;
+      for (1..$#s)
+      {
+	last if $s[$_] !~ /^[0-9a-z]{32}/;
+	push @block, $s[$_];
+	if ($_ == 1) { $s2[1] = "-"; }
+	else { splice @s2, 1, 1; }
+      }
+      print "@s2\n";
+      foreach (@block)
+      {
+	my $data = $whc->fetch_block ($ARGV[0])
+	    or die "fetch_block: ".$whc->errstr;
+	print $data;
+      }
+      exit 0;
+    }
+  }
+}
+die "subdir $subdir not found in manifest $manifestkey";

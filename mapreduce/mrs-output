@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my %opt;
+while ($ARGV[0] =~ /^-/)
+{
+  local $_ = shift @ARGV;
+  if (/^--([^=]+)(=(.*))?$/)
+  {
+    $opt{$1} = $3;
+  }
+  elsif (/^-([^-=]+)$/)
+  {
+    foreach (split ("", $1))
+    {
+      $opt{$_} = 1;
+    }
+  }
+}
+
+die "usage: mrs-output\n"
+    if @ARGV != 0;
+
+my $stream = <>;
+my $whc = new Warehouse;
+my $hash = $whc->store_block (\$stream);
+print STDERR "+++mrout $hash+++\n";

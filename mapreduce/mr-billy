@@ -1,0 +1,71 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:place 12+12bp reads on human genome
+###MR_INPUT:manifest
+###MR_KNOBS:REFERENCE=88f0fab736bdf704a559ae48ade5a423
+###MR_KNOBS:STEPSPERNODE=1
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+# level 0:
+#  read sample and reference manifests
+#  queue jobstep(s) for each chromosome:
+#   input = {sample range, chromosome}
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  for (1..22, 'X', 'Y', 'M')
+  {
+    print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+
+  my $pid;
+
+  my @samples_pipe;
+  pipe @samples_pipe or die "pipe failed: $!";
+
+  Safepipe::readfrom (SAMPLES,
+		      "mrs-fetch '$manifestkey' .",
+		      "../billy/26mers-to-24mers-dat.pl",
+		      "complement-mers -m mer0 -M mer1 -n 12")
+      or die "samples pipe failed: $!";
+
+  Safepipe::readfrom (REFERENCE,
+		      "mrs-fetch '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
+		      "perl ../madeleine/chr-to-dat.pl -n 12")
+      or die "reference pipe failed: $!";
+
+  my $s_fileno = fileno(SAMPLES);
+  my $r_fileno = fileno(REFERENCE);
+  Safepipe::readfrom (PLACED,
+		      "all-mers -m mer0 -n 12",
+		      "mer-nfa --snps --all --m0 12 --gmin0 0 --gmax0 20 --m1 12 -r - -s \@$s_fileno -o -",
+		      "mrs-store '/$ENV{MR_INPUT}' mer-nfa-placed.dat")
+      or die "mer-nfa pipe failed: $!";
+  close SAMPLES;
+  close REFERENCE;
+
+  my @out = <PLACED>;
+  close PLACED or die "mer-nfa pipe failed: $!";
+
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+
+  open OUT "|mrs-output" or die "mrs-output: $!";
+  print OUT @out;
+  close OUT or die "mrs-output: $!";
+  exit 0;
+}

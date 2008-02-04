@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my %opt;
+while ($ARGV[0] =~ /^-/)
+{
+  local $_ = shift @ARGV;
+  if (/^--([^=]+)(=(.*))?$/)
+  {
+    $opt{$1} = $3;
+  }
+  elsif (/^-([^-=]+)$/)
+  {
+    foreach (split ("", $1))
+    {
+      $opt{$_} = 1;
+    }
+  }
+}
+
+die "usage: mrs-store subdir filename\n"
+    if @ARGV != 2;
+
+my $subdir = shift @ARGV;
+my $filename = shift @ARGV;
+
+my $whc = new Warehouse;
+my $stream = new Warehouse::Stream (whc => $whc);
+$stream->clear;
+$stream->name ($subdir);
+$stream->write_start ($filename);
+my $buf;
+while (read STDIN, $buf, 2**20)
+{
+  $stream->write_data (\$buf);
+}
+$stream->write_finish;
+print $stream->as_string;
