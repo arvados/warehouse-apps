@@ -12,7 +12,7 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use Safepipe;
 
-my $src .= "/usr/local/polony-tools/$ENV{MR_REVISION}/src";
+my $src = "/usr/local/polony-tools/$ENV{MR_REVISION}/src";
 
 # level 0:
 #  read sample and reference manifests
