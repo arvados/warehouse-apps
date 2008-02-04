@@ -57,12 +57,19 @@ Log (undef,
 
 
 
+my $max_ncpus;
+map { $max_ncpus = $' if /^STEPSPERNODE=/ } split ("\n", $$Job{knobs});
+
+
+
 Log (undef, "check slurm allocation");
 my @slot;
 # Should use $ENV{SLURM_TASKS_PER_NODE} instead of sinfo? (eg. "4(x3),2,4(x2)")
 foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 {
   my ($ncpus, $slurm_nodelist) = split;
+  $ncpus = $max_ncpus if defined ($max_ncpus) && $ncpus > $max_ncpus && $max_ncpus > 0;
+
   my @nodelist;
   while ($slurm_nodelist =~ s/^([^\[,]+?(\[.*?\])?)(,|$)//)
   {
