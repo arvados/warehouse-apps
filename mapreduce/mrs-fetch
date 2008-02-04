@@ -31,8 +31,8 @@ my $subdir = shift @ARGV;
 my $wantfilename = shift @ARGV;
 
 my $whc = new Warehouse;
-my $manifest = new Manifest (whc => $whc,
-			     key => $manifestkey);
+my $manifest = new Warehouse::Manifest (whc => $whc,
+					key => $manifestkey);
 $manifest->rewind;
 while (my $stream = $manifest->subdir_next)
 {
