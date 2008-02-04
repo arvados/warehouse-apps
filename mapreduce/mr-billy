@@ -38,7 +38,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $pid;
 
   Safepipe::readfrom ("SAMPLES",
-		      "mrs-fetch '$manifestkey' .",
+		      "mrs-fetch '$manifestkey' . 26mers.txt",
 		      "perl $src/billy/26mers-to-24mers-dat.pl",
 		      "complement-mers -m mer0 -M mer1 -n 12")
       or die "samples pipe failed: $!";
@@ -51,7 +51,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $s_fileno = fileno("SAMPLES");
   my $r_fileno = fileno("REFERENCE");
   Safepipe::readfrom ("PLACED",
-		      "all-mers -m mer0 -n 12",
+		      "all-mers -m mer0 -n 12 <&$r_fileno",
 		      "mer-nfa --snps --all --m0 12 --gmin0 0 --gmax0 20 --m1 12 -r - -s \@$s_fileno -o -",
 		      "mrs-store '/$ENV{MR_INPUT}' mer-nfa-placed.dat")
       or die "mer-nfa pipe failed: $!";
