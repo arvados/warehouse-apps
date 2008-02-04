@@ -38,33 +38,33 @@ elsif ($ENV{MR_LEVEL} == 1)
   my @samples_pipe;
   pipe @samples_pipe or die "pipe failed: $!";
 
-  Safepipe::readfrom (SAMPLES,
+  Safepipe::readfrom ("SAMPLES",
 		      "mrs-fetch '$manifestkey' .",
 		      "../billy/26mers-to-24mers-dat.pl",
 		      "complement-mers -m mer0 -M mer1 -n 12")
       or die "samples pipe failed: $!";
 
-  Safepipe::readfrom (REFERENCE,
+  Safepipe::readfrom ("REFERENCE",
 		      "mrs-fetch '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
 		      "perl ../madeleine/chr-to-dat.pl -n 12")
       or die "reference pipe failed: $!";
 
-  my $s_fileno = fileno(SAMPLES);
-  my $r_fileno = fileno(REFERENCE);
-  Safepipe::readfrom (PLACED,
+  my $s_fileno = fileno("SAMPLES");
+  my $r_fileno = fileno("REFERENCE");
+  Safepipe::readfrom ("PLACED",
 		      "all-mers -m mer0 -n 12",
 		      "mer-nfa --snps --all --m0 12 --gmin0 0 --gmax0 20 --m1 12 -r - -s \@$s_fileno -o -",
 		      "mrs-store '/$ENV{MR_INPUT}' mer-nfa-placed.dat")
       or die "mer-nfa pipe failed: $!";
-  close SAMPLES;
-  close REFERENCE;
+  close "SAMPLES";
+  close "REFERENCE";
 
   my @out = <PLACED>;
-  close PLACED or die "mer-nfa pipe failed: $!";
+  close "PLACED" or die "mer-nfa pipe failed: $!";
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
 
-  open OUT "|mrs-output" or die "mrs-output: $!";
+  open OUT, "|mrs-output" or die "mrs-output: $!";
   print OUT @out;
   close OUT or die "mrs-output: $!";
   exit 0;
