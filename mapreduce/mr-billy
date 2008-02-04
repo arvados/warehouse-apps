@@ -43,16 +43,33 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      "complement-mers -m mer0 -M mer1 -n 12")
       or die "samples pipe failed: $!";
 
+  Safepipe::readfrom ("main::REPORTSAMPLES",
+		      "mrs-fetch -h '$manifestkey' . 26mers.txt",
+		      "perl $src/billy/26mers-to-24mers-dat.pl",
+		      "complement-mers -m mer0 -M mer1 -n 12")
+      or die "reportsamples pipe failed: $!";
+
   Safepipe::readfrom ("main::REFERENCE",
 		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
 		      "perl $src/madeleine/chr-to-dat.pl -n 12")
       or die "reference pipe failed: $!";
 
+  Safepipe::readfrom ("main::REPORTREFERENCE",
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
+		      "perl $src/madeleine/chr-to-dat.pl -n 12")
+      or die "reportreference pipe failed: $!";
+
+
+
   my $s_fileno = fileno("SAMPLES");
   my $r_fileno = fileno("REFERENCE");
+  my $rr_fileno = fileno("REPORTREFERENCE");
+  my $rs_fileno = fileno("REPORTSAMPLES");
   Safepipe::readfrom ("main::PLACED",
 		      ["main::REFERENCE", "all-mers -m mer0 -n 12 <&$r_fileno"],
 		      ["main::SAMPLES", "mer-nfa --snps --all --m0 12 --gmin0 0 --gmax0 20 --m1 12 -r - -s \@$s_fileno -o -"],
+		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --two-inrecs-per-sample -n 12 -r \@$rr_fileno -s \@$rs_fileno -p -"],
+		      "billy-grep",
 		      "mrs-store './$ENV{MR_INPUT}' mer-nfa-placed.dat")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES";
