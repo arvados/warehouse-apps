@@ -35,9 +35,6 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   my $pid;
 
-  my @samples_pipe;
-  pipe @samples_pipe or die "pipe failed: $!";
-
   Safepipe::readfrom ("SAMPLES",
 		      "mrs-fetch '$manifestkey' .",
 		      "../billy/26mers-to-24mers-dat.pl",
