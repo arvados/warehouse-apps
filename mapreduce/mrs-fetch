@@ -45,7 +45,7 @@ while (my $stream = $manifest->subdir_next)
 	last if !defined $pos;
 	if ($filename eq $wantfilename)
 	{
-	  print "$subdir - $pos:$size:$filename\n";
+	  print "$subdir - $pos:$size:$filename\n" unless $opt{"h"};
 	  $stream->seek ($pos);
 	  while (my $dataref = $stream->read_until ($pos + $size))
 	  {
@@ -68,10 +68,10 @@ while (my $stream = $manifest->subdir_next)
 	if ($_ == 1) { $s2[1] = "-"; }
 	else { splice @s2, 1, 1; }
       }
-      print "@s2\n";
+      print "@s2\n" unless $opt{"h"};
       foreach (@block)
       {
-	my $data = $whc->fetch_block ($ARGV[0])
+	my $data = $whc->fetch_block ($_)
 	    or die "fetch_block: ".$whc->errstr;
 	print $data;
       }
