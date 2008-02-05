@@ -37,11 +37,14 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   my $pid;
 
+  open REPORTREFERENCE, "/tmp/reference.dat", O_RDWR|O_CREAT|O_TRUNC;
+  open REPORTSAMPLES, "/tmp/samples.dat", O_RDWR|O_CREAT|O_TRUNC;
+
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' . 26mers.txt",
 		      "perl $src/billy/26mers-to-24mers-dat.pl",
 		      "complement-mers -m mer0 -M mer1 -n 12",
-		      "tee /tmp/samples.dat")
+		      "tee -a /tmp/samples.dat")
       or die "samples pipe failed: $!";
 
 #   Safepipe::readfrom ("main::REPORTSAMPLES",
@@ -59,8 +62,6 @@ elsif ($ENV{MR_LEVEL} == 1)
 # 		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
 # 		      "perl $src/madeleine/chr-to-dat.pl -n 12")
 #       or die "reportreference pipe failed: $!";
-  open REPORTREFERENCE, "</tmp/reference.dat";
-  open REPORTSAMPLES, "</tmp/samples.dat";
 
   my $s_fileno = fileno("SAMPLES");
   my $r_fileno = fileno("REFERENCE");
