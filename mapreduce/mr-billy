@@ -69,7 +69,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      ["main::SAMPLES", "mer-nfa --snps --all --m0 12 --gmin0 0 --gmax0 20 --m1 12 -r - -s \@$s_fileno -o -"],
 		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --two-inrecs-per-sample -n 12 -r \@$rr_fileno -s \@$rs_fileno -p -"],
 		      "billy-grep",
-		      "mrs-store './$ENV{MR_INPUT}' mer-nfa-placed.dat")
+		      "mrs-store './$ENV{MR_INPUT}' mer-nfa-report.dat")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES";
   close "REFERENCE";
