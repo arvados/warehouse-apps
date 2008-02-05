@@ -202,6 +202,9 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 
   my $childslot = $freeslot[0];
   my $childnode = $slot[$childslot]->{node};
+  my $childslotname = join (".",
+			    $slot[$childslot]->{node},
+			    $slot[$childslot]->{cpu});
   my $childpid = fork();
   if ($childpid == 0)
   {
@@ -231,6 +234,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MR_FUNCTION"} = $Job->{mrfunction};
     $ENV{"MR_INPUT0"} = $Job->{input0};
     $ENV{"MR_OUTPUTKEY"} = "mrjobstep/$job_id/$level/$id";
+    $ENV{"MR_SLOT"} = $childslotname;
     $ENV{"INSTALL_REPOS"} = $main::svn_repos;
     $ENV{"INSTALL_REVISION"} = $Job->{revision};
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
@@ -257,10 +261,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   die "assert failed" if exists $slot[$childslot]->{pid};
   $slot[$childslot]->{pid} = $childpid;
 
-  Log ($id, "child $childpid started on "
-       .$slot[$childslot]->{node}
-       ."."
-       .$slot[$childslot]->{cpu});
+  Log ($id, "child $childpid started on $childslotname");
   $Jobstep->{attempts} ++;
   $Jobstep->{starttime} = time;
   $Jobstep->{node} = $childnode;
