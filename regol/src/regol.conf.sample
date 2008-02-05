@@ -8,8 +8,8 @@ $main::DatabaseDSN
 $main::Warehouses = {
   "templeton" =>
   {
-    "warehouse_servers" => "tomc.oxf.freelogy.org:24848",
-    "mogilefs_trackers" => "tomc.oxf.freelogy.org:6001",
+    "warehouse_servers" => "templeton-controller.oxf.freelogy.org:24848",
+    "mogilefs_trackers" => "templeton-controller.oxf.freelogy.org:6001",
   },
   "uncle" =>
   {

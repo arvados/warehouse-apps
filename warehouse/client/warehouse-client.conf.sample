@@ -24,8 +24,8 @@ $Warehouse::warehouses
        ,
        {
 	   name => "templeton",
-	   controllers => "tomc.oxf.freelogy.org:24848",
-	   mogilefs_trackers => "tomc.oxf.freelogy.org:6001",
+	   controllers => "templeton-controller.oxf.freelogy.org:24848",
+	   mogilefs_trackers => "templeton-controller.oxf.freelogy.org:6001",
 	   mogilefs_domain => "warehouse",
 	   mogilefs_directory_class => "directory",
 	   mogilefs_file_class => "file",
