@@ -227,12 +227,12 @@ begin (int argc, const char * argv[])
   placement_pos1_col = Field_pos (placement_file, Sym ("pos1"));
 
   reference_file = Infile (reference_file_name);
-  File_fix (reference_file, 1<<28, 1<<28);
+  File_fix (reference_file, 0, 0);
   reference_mer_col = Field_pos (reference_file, Sym ("mer0"));
   reference_file_rows = N_ahead (reference_file);
 
   sample_file = Infile (sample_file_name);
-  File_fix (sample_file, 1<<28, 1<<28);
+  File_fix (sample_file, 0, 0);
   sample_mer0_col = Field_pos (sample_file, Sym (sample_mer0_col_name));
   sample_mer1_col = Field_pos (sample_file, Sym (sample_mer1_col_name));
 
