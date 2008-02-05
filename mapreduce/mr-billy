@@ -43,8 +43,8 @@ elsif ($ENV{MR_LEVEL} == 1)
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' . 26mers.txt",
 		      "perl $src/billy/26mers-to-24mers-dat.pl",
-		      "complement-mers -m mer0 -M mer1 -n 12",
-		      "tee -a /tmp/samples.dat")
+		      "tee -a /tmp/samples.dat",
+		      "complement-mers -m mer0 -M mer1 -n 12")
       or die "samples pipe failed: $!";
 
 #   Safepipe::readfrom ("main::REPORTSAMPLES",
