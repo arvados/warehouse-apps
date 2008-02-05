@@ -40,25 +40,27 @@ elsif ($ENV{MR_LEVEL} == 1)
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' . 26mers.txt",
 		      "perl $src/billy/26mers-to-24mers-dat.pl",
-		      "complement-mers -m mer0 -M mer1 -n 12")
+		      "complement-mers -m mer0 -M mer1 -n 12",
+		      "tee /tmp/samples.dat")
       or die "samples pipe failed: $!";
 
-  Safepipe::readfrom ("main::REPORTSAMPLES",
-		      "mrs-fetch -h '$manifestkey' . 26mers.txt",
-		      "perl $src/billy/26mers-to-24mers-dat.pl",
-		      "complement-mers -m mer0 -M mer1 -n 12")
-      or die "reportsamples pipe failed: $!";
+#   Safepipe::readfrom ("main::REPORTSAMPLES",
+# 		      "mrs-fetch -h '$manifestkey' . 26mers.txt",
+# 		      "perl $src/billy/26mers-to-24mers-dat.pl",
+# 		      "complement-mers -m mer0 -M mer1 -n 12")
+#       or die "reportsamples pipe failed: $!";
 
   Safepipe::readfrom ("main::REFERENCE",
 		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
-		      "perl $src/madeleine/chr-to-dat.pl -n 12")
+		      "perl $src/madeleine/chr-to-dat.pl -n 12 >/tmp/reference.dat; cat /tmp/reference.dat")
       or die "reference pipe failed: $!";
 
-  Safepipe::readfrom ("main::REPORTREFERENCE",
-		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
-		      "perl $src/madeleine/chr-to-dat.pl -n 12")
-      or die "reportreference pipe failed: $!";
-
+#   Safepipe::readfrom ("main::REPORTREFERENCE",
+# 		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
+# 		      "perl $src/madeleine/chr-to-dat.pl -n 12")
+#       or die "reportreference pipe failed: $!";
+  open REPORTREFERENCE, "</tmp/reference.dat";
+  open REPORTSAMPLES, "</tmp/samples.dat";
 
   my $s_fileno = fileno("SAMPLES");
   my $r_fileno = fileno("REFERENCE");
