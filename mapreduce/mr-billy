@@ -37,8 +37,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   my $pid;
 
-  open REPORTREFERENCE, "/tmp/reference.dat", O_RDWR|O_CREAT|O_TRUNC;
-  open REPORTSAMPLES, "/tmp/samples.dat", O_RDWR|O_CREAT|O_TRUNC;
+  open REPORTREFERENCE, "+>", "/tmp/reference.dat";
+  open REPORTSAMPLES, "+>", "/tmp/samples.dat";
 
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' . 26mers.txt",
