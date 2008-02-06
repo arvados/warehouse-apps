@@ -1,0 +1,96 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:place 12+12bp reads on human genome
+###MR_INPUT:manifest
+###MR_KNOBS:REFERENCE=88f0fab736bdf704a559ae48ade5a423
+###MR_KNOBS:MERS_AND_GAPS=7,3-4,7,750-1250,7,3-4,7
+###MR_KNOBS:STEPSPERNODE=1
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+my $src = "/usr/local/polony-tools/$ENV{MR_REVISION}/src";
+
+# level 0:
+#  read sample and reference manifests
+#  queue jobstep(s) for each chromosome:
+#   input = {sample range, chromosome}
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  for (1..22, 'X', 'Y', 'M')
+  {
+    print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+
+  my $pid;
+
+  open REPORTREFERENCE, "+>", "/tmp/reference.dat";
+  open REPORTSAMPLES, "+>", "/tmp/samples.dat";
+
+  Safepipe::readfrom ("main::SAMPLES",
+		      "mrs-fetch -h '$manifestkey' .",
+		      "perl $src/apps/tomc/simreads-to-mers-dat.pl",
+		      "tee -a /tmp/samples.dat",
+		      "complement-mers -m mer0 -M mer1 -n 12")
+      or die "samples pipe failed: $!";
+
+  Safepipe::readfrom ("main::REFERENCE",
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
+		      "perl $src/madeleine/chr-to-dat.pl -n 12 >/tmp/reference.dat; cat /tmp/reference.dat")
+      or die "reference pipe failed: $!";
+
+  my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
+  my @mersize = shift @mers_and_gaps;
+  my $mer_nfa_opts = "--m0 $mersize[0]";
+  while (@mers_and_gaps >= 2)
+  {
+    my (@gaps) = split ("-", $mers_and_gaps[0]);
+    if (@gaps < 2) { $gaps[1] = $gaps[0]; }
+    $mer_nfa_opts .= " --gmin$#mersize $gaps[0] --gmax$#mersize $gaps[1]";
+    push @mersize, $mers_and_gaps[1];
+    $mer_nfa_opts .= " --m$#mersize $mersize[-1]";
+    splice @mers_and_gaps, 0, 2;
+  }
+
+  my $s_fileno = fileno("SAMPLES");
+  my $r_fileno = fileno("REFERENCE");
+  my $rr_fileno = fileno("REPORTREFERENCE");
+  my $rs_fileno = fileno("REPORTSAMPLES");
+  Safepipe::readfrom ("main::PLACED",
+		      ["main::REFERENCE", "all-mers -m mer0 -n 12 <&$r_fileno"],
+		      ["main::SAMPLES", "mer-nfa --snps --all $mer_nfa_opts -r - -s \@$s_fileno -o -"],
+		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --two-inrecs-per-sample -n 12 -r \@$rr_fileno -s \@$rs_fileno -p -"],
+		      "gprint",
+		      "egrep -v '^#'",
+		      "sort -n",
+		      "mrs-store './$ENV{MR_INPUT}' mer-nfa-report.txt")
+      or die "mer-nfa pipe failed: $!";
+  close "SAMPLES";
+  close "REFERENCE";
+  close "REPORTREFERENCE";
+  close "REPORTSAMPLES";
+
+  my @out = <PLACED>;
+  close "PLACED";
+
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+
+  open OUT, "|mrs-output" or die "mrs-output: $!";
+  print OUT @out;
+  close OUT or die "mrs-output: $!";
+  exit 0;
+}
