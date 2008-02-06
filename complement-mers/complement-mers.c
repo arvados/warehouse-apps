@@ -61,62 +61,80 @@
 #include "libcmd/opts.h"
 #include "taql/mers/mer-utils.ch"
 
+#define MAXMERCOUNT 4
+
 void
 begin (int argc, const char * argv[])
 {
   int argx;
-  const char * mer0_col_name = "mer0";
-  size_t mer0_col;
-  const char * mer1_col_name = 0;
-  size_t mer1_col;
-  int mer1_flag = 0;
-  const char * n_mers_spec = "16";
-  int n_mers;
+  const char * mer_col_name[MAXMERCOUNT] = { "mer0", 0, 0, 0, 0, 0 };
+  size_t mer_col[MAXMERCOUNT];
+  int *complement_from_col;
+
+  const char * n_mers_spec_unused = "16";
+  int mercount;
+  int did;
   int only_rc_flag = 0;
   struct opts opts[] = 
     {
       { OPTS_FLAG, "-o", "--only-rc", &only_rc_flag, 0 },
-      { OPTS_ARG, "-m", "--mer0-col", 0, &mer0_col_name },
-      { OPTS_ARG, "-M", "--mer1-col", 0, &mer1_col_name },
-      { OPTS_ARG, "-n", "--n-mers", 0, &n_mers_spec },
+      { OPTS_ARG, "-m", "--mer0-col", 0, &mer_col_name[0] },
+      { OPTS_ARG, "-M", "--mer1-col", 0, &mer_col_name[1] },
+      { OPTS_ARG, 0, "--mer2-col", 0, &mer_col_name[2] },
+      { OPTS_ARG, 0, "--mer3-col", 0, &mer_col_name[3] },
+      { OPTS_ARG, 0, "--mer3-col", 0, &mer_col_name[4] },
+      { OPTS_ARG, 0, "--mer3-col", 0, &mer_col_name[5] },
+      { OPTS_ARG, "-n", "--n-mers", 0, &n_mers_spec_unused },
     };
   
   size_t infile;
   size_t outfile;
   size_t c;
+  size_t m;
 
   opts_parse (&argx, opts, argc, argv,
-              "complement-mers [-o] [-m col] [-M col] [-n n-mers] < infile > outfile");
+              "complement-mers [-o] [--mer0-col col] ... [--mer5-col col] < infile > outfile");
 
   if ((argc - argx) != 0)
-    Fatal ("usage: complement-mers [-o] [-m col] [-M col] [-n n-mers] < infile > outfile");
-
-  n_mers = atoi (n_mers_spec);
-  if ((n_mers <= 0) || (n_mers > 16))
-    Fatal ("bogus mer size");
+    Fatal ("usage: complement-mers [-o] [--mer0-col col] ... [--mer5-col col] < infile > outfile");
 
   infile = Infile ("-");
   File_fix (infile, 1, 0);
-  mer0_col = Field_pos (infile, Sym (mer0_col_name));
 
   outfile = Outfile ("-");
+
+  complement_from_col = (int *)malloc (N_fields (infile) * sizeof(int));
+  for (m = 0; m < MAXMERCOUNT && mer_col_name[m]; ++m)
+    {
+      mer_col[m] = -1;
+      mercount = m + 1;
+    }
+
   for (c = 0; c < N_fields (infile); ++c)
     {
+      complement_from_col[c] = -1;
       Add_field (outfile,
 		 Field_type (infile, c),
 		 Field_name (infile, c));
-      if (mer1_col_name)
+      for (m = 0; m < mercount; ++m)
 	{
-	  if (Eq (Field_name (infile,c), Sym (mer1_col_name)))
+	  if (Eq (Field_name (infile, c), Sym (mer_col_name[m])))
 	    {
-	      mer1_col = c;
-	      mer1_flag = 1;
+	      mer_col[m] = c;
+	      break;
 	    }
 	}
     }
-  if (mer1_col_name && !mer1_flag)
+  for (m = 0; m < mercount; ++m)
     {
-      Fatal ("field specified by -M is not present in input.");
+      if (mer_col[m] < 0)
+	{
+	  Fatal ("specified field is not present in input.");
+	}
+      else
+	{
+	  complement_from_col[mer_col[m]] = mer_col[mercount-m-1];
+	}
     }
 
   File_fix (outfile, 1, 0);
@@ -134,17 +152,12 @@ begin (int argc, const char * argv[])
 
       for (c = 0; c < N_fields (infile); ++c)
 	{
-	  if ((!mer1_flag && c == mer0_col)
-	      ||
-	      (mer1_flag && c == mer1_col))
+	  if (complement_from_col[c] >= 0)
 	    {
 	      Poke (outfile, 0, c,
-		    uInt64 (reverse_complement_mer (as_uInt64 (Peek (infile, 0, mer0_col)))));
-	    }
-	  else if (c == mer0_col)
-	    {
-	      Poke (outfile, 0, c,
-		    uInt64 (reverse_complement_mer (as_uInt64 (Peek (infile, 0, mer1_col)))));
+		    uInt64 (reverse_complement_mer
+			    (as_uInt64 (Peek (infile, 0,
+					      complement_from_col[c])))));
 	    }
 	  else
 	    {
