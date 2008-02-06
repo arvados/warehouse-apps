@@ -24,11 +24,8 @@
 
 open (STDOUT, "|gread") or die "$!";
 
-my @mersizes;
-while ($ARGV[0] =~ /^\d+$/)
-{
-    push @mersizes, shift @ARGV;
-}
+my @mersizes = @ARGV;
+@ARGV = ();
 
 print q{#: taql-0.1/text};
 for (0..$#mersizes)
