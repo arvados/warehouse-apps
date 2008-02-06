@@ -51,7 +51,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   open REPORTSAMPLES, "+>", "/tmp/samples.dat";
 
   Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch -h '$manifestkey' ./0",
+		      "mrs-fetch -h '$manifestkey' ./0 reads.txt",
 		      "head -n 100000",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
 		      "tee -a /tmp/samples.dat",
