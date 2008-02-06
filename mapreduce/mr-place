@@ -42,7 +42,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   open REPORTSAMPLES, "+>", "/tmp/samples.dat";
 
   Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch -h '$manifestkey' .",
+		      "mrs-fetch -h '$manifestkey' ./0",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl",
 		      "tee -a /tmp/samples.dat",
 		      "complement-mers -m mer0 -M mer1 -n 12")
