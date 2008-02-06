@@ -59,5 +59,3 @@ while(<>)
     }
     print "@in\n";
 }
-
-close STDOUT or die "close STDOUT: $!";
