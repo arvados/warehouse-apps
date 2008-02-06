@@ -40,7 +40,8 @@ print q{
 # field "gap0" "uint32"
 # field "gap1" "uint32"
 # field "gap2" "uint32"
-#.};
+#.
+};
 
 pop @mersizes;
 while(<>)
