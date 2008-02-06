@@ -73,6 +73,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --two-inrecs-per-sample -n 12 -r \@$rr_fileno -s \@$rs_fileno -p -"],
 		      "billy-grep",
 		      "gprint",
+		      "egrep -v '^#'",
 		      "sort -n",
 		      "mrs-store './$ENV{MR_INPUT}' mer-nfa-report.txt")
       or die "mer-nfa pipe failed: $!";
