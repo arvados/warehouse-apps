@@ -46,6 +46,11 @@ elsif ($ENV{MR_LEVEL} == 1)
     $mer_nfa_opts .= " --m$#mersize $mersize[-1]";
     splice @mers_and_gaps, 0, 2;
   }
+  my $complement_mers_args = "";
+  for (0..$#mersize)
+  {
+    $complement_mers_args .= " --mer$_-col mer$_";
+  }
 
   open REPORTREFERENCE, "+>", "/tmp/reference.dat";
   open REPORTSAMPLES, "+>", "/tmp/samples.dat";
@@ -55,7 +60,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      "perl -ne 'print if \$. <= 100000'",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
 		      "tee -a /tmp/samples.dat",
-		      "complement-mers -m mer0 -M mer1 -n 12")
+		      "complement-mers $complement_mers_args")
       or die "samples pipe failed: $!";
 
   Safepipe::readfrom ("main::REFERENCE",
