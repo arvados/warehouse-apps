@@ -34,25 +34,6 @@ if ($ENV{MR_LEVEL} == 0)
 
 elsif ($ENV{MR_LEVEL} == 1)
 {
-  my $wantsubdir = $ENV{MR_INPUT};
-
-  my $pid;
-
-  open REPORTREFERENCE, "+>", "/tmp/reference.dat";
-  open REPORTSAMPLES, "+>", "/tmp/samples.dat";
-
-  Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch -h '$manifestkey' ./0",
-		      "perl $src/apps/tomc/simreads-to-mers-dat.pl",
-		      "tee -a /tmp/samples.dat",
-		      "complement-mers -m mer0 -M mer1 -n 12")
-      or die "samples pipe failed: $!";
-
-  Safepipe::readfrom ("main::REFERENCE",
-		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
-		      "perl $src/madeleine/chr-to-dat.pl -n 12 >/tmp/reference.dat; cat /tmp/reference.dat")
-      or die "reference pipe failed: $!";
-
   my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
   my @mersize = shift @mers_and_gaps;
   my $mer_nfa_opts = "--m0 $mersize[0]";
@@ -65,6 +46,21 @@ elsif ($ENV{MR_LEVEL} == 1)
     $mer_nfa_opts .= " --m$#mersize $mersize[-1]";
     splice @mers_and_gaps, 0, 2;
   }
+
+  open REPORTREFERENCE, "+>", "/tmp/reference.dat";
+  open REPORTSAMPLES, "+>", "/tmp/samples.dat";
+
+  Safepipe::readfrom ("main::SAMPLES",
+		      "mrs-fetch -h '$manifestkey' ./0",
+		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
+		      "tee -a /tmp/samples.dat",
+		      "complement-mers -m mer0 -M mer1 -n 12")
+      or die "samples pipe failed: $!";
+
+  Safepipe::readfrom ("main::REFERENCE",
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
+		      "perl $src/madeleine/chr-to-dat.pl -n 12 >/tmp/reference.dat; cat /tmp/reference.dat")
+      or die "reference pipe failed: $!";
 
   my $s_fileno = fileno("SAMPLES");
   my $r_fileno = fileno("REFERENCE");
