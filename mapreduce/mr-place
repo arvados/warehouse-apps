@@ -65,7 +65,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   Safepipe::readfrom ("main::REFERENCE",
 		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
-		      "perl $src/madeleine/chr-to-dat.pl -n 12 >/tmp/reference.dat; cat /tmp/reference.dat")
+		      "perl $src/madeleine/chr-to-dat.pl -n $mersize[0] >/tmp/reference.dat; cat /tmp/reference.dat")
       or die "reference pipe failed: $!";
 
   my $s_fileno = fileno("SAMPLES");
@@ -73,9 +73,9 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $rr_fileno = fileno("REPORTREFERENCE");
   my $rs_fileno = fileno("REPORTSAMPLES");
   Safepipe::readfrom ("main::PLACED",
-		      ["main::REFERENCE", "all-mers -m mer0 -n 12 <&$r_fileno"],
+		      ["main::REFERENCE", "all-mers -m mer0 -n $mersize[0] <&$r_fileno"],
 		      ["main::SAMPLES", "mer-nfa --snps --all $mer_nfa_opts -r - -s \@$s_fileno -o -"],
-		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --two-inrecs-per-sample -n 12 -r \@$rr_fileno -s \@$rs_fileno -p -"],
+		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --two-inrecs-per-sample -n $mersize[0] -r \@$rr_fileno -s \@$rs_fileno -p -"],
 		      "gprint",
 		      "egrep -v '^#'",
 		      "sort -n",
