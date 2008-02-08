@@ -613,7 +613,7 @@ build_hash_table (void)
 
   sample_hash_table_size = round_up_to_power_of_2 (2 * max_hash_entries_per_table);
   if (sample_hash_table_size < 2048)
-    sample_hash_table_size += 4096;
+    sample_hash_table_size = 4096;
   hash_sizeof = sample_hash_table_size * sizeof (struct sample_hash_table);
 
   for (x = 0; x < n_mer_positions; ++x)
