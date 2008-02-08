@@ -7,6 +7,7 @@
 ###MR_KNOBS:MERS_AND_GAPS=7,3-4,7,750-1250,7,3-4,7
 ###MR_KNOBS:SNPS=0
 ###MR_KNOBS:ALL=0
+###MR_KNOBS:NREADS=10000
 ###MR_KNOBS:STEPSPERNODE=1
 
 use strict; 
@@ -62,7 +63,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' ./0 reads.txt",
-		      "perl -ne 'print if \$. <= 10000'",
+		      "perl -ne 'print if \$. <= $ENV{KNOB_NREADS}'",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
 		      "tee -a /tmp/samples.dat",
 		      "complement-mers $complement_mers_args")
