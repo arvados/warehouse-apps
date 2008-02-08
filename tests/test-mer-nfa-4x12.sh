@@ -47,6 +47,20 @@ EOF
 
 all-mers -m mer0 -n 12 < $ME.genome.dat | mer-nfa --snps --all \
   --m0 12 \
+  --gmin0 0 --gmax0 1 --m1 12 \
+  --gmin1 0 --gmax1 20 --m2 12 \
+  --gmin2 0 --gmax2 1 --m3 12 \
+  -r - -s $ME.samples.dat -o - \
+  | gprint \
+  | egrep -v '^#' \
+  | cut -d\  -f1,3- \
+  > $ME.noflags.4b
+diff -u - $ME.noflags.4b <<EOF
+0 0 13 26 39
+EOF
+
+all-mers -m mer0 -n 12 < $ME.genome.dat | mer-nfa --snps --all \
+  --m0 12 \
   --gmin0 1 --gmax0 1 --m1 12 \
   --gmin1 1 --gmax1 1 --m2 12 \
   -r - -s $ME.samples.dat -o - \
