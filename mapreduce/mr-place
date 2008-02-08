@@ -38,6 +38,7 @@ if ($ENV{MR_LEVEL} == 0)
 
 elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
 {
+  my $n_samples = 0;
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' ./0 reads.txt")
       or die "pipe failed: $!";
