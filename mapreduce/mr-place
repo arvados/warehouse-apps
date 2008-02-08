@@ -58,7 +58,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' ./0 reads.txt",
-		      "perl -ne 'print if \$. <= 100000'",
+		      "perl -ne 'print if \$. <= 10000'",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
 		      "tee -a /tmp/samples.dat",
 		      "complement-mers $complement_mers_args")
@@ -75,7 +75,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $rs_fileno = fileno("REPORTSAMPLES");
   Safepipe::readfrom ("main::PLACED",
 		      ["main::REFERENCE", "all-mers -m mer0 -n $mersize[0] <&$r_fileno"],
-		      ["main::SAMPLES", "mer-nfa --snps --all $mer_nfa_opts -r - -s \@$s_fileno -o -"],
+		      ["main::SAMPLES", "mer-nfa --snps $mer_nfa_opts -r - -s \@$s_fileno -o -"],
 		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] -r \@$rr_fileno -s \@$rs_fileno -p -"],
 		      "gprint",
 		      "egrep -v '^#'",
