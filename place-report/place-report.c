@@ -20,16 +20,18 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-/* placement ("-p") input has fields inrec, pos0, pos1.
+/* a number of mers ("-N") have been placed.
+ * placement ("-p") input has fields inrec, pos0, pos1, ..., posM
  * reference ("-r") input has field mer0.
- * sample ("-s") input has fields mer0, mer1.
+ * sample ("-s") input has fields mer0, mer1, ..., merM
  *
- * n_mers ("-n") is the length of mers mer0 and mer1.
+ * n_mers ("-n") is the length of the mers.
  *
- * output ("-o") has fields inrec, pos0, pos1, gapmer0, gapmer1.
+ * output ("-o") has fields inrec, pos0, pos1, ..., posM, gapmer0, gapmer1.
  *
- * gapmer0 == first part of gap (0..16 symbols long)
- * gapmer1 == next part of gap (0..16 symbols long)
+ * if desired ("--output-gap0"), some gap contents are output as well:
+ * gapmer0 == first part of first gap (0..16 symbols long)
+ * gapmer1 == next part of first gap (0..16 symbols long)
  *
  * The "gap" is the reference data between positions {pos0+n_mers} and
  * {pos1}
@@ -41,7 +43,7 @@
 #include "libcmd/opts.h"
 #include "taql/mers/mer-utils.ch"
 
-#define MAX_N_MER_POSITIONS	(4)
+#define MERCOUNT_MAX	(4)
 
 
 static const char * placement_file_name = "-";
@@ -54,6 +56,8 @@ static size_t sample_file = 0;
 static const char * output_file_name = "-";
 static size_t output_file = 0;
 
+static const char * mercount_spec = "2";
+static int mercount;
 static const char * n_mers_spec = "16";
 static int n_mers;
 static const char * gap_min_spec = "0";
@@ -63,38 +67,36 @@ static size_t gap_max;
 static const char * gap_pos_spec = "0";
 static size_t gap_pos;
 static t_taql_uint64 placepos_per_refpos;
-static int n_mer_positions = 2;
 
 static const char * placement_inrec_col_name = "sample";
 static size_t placement_inrec_col;
-static size_t placement_pos0_col;
-static size_t placement_pos1_col;
+static const char * placement_pos_col_name[MERCOUNT_MAX] = { "pos0", "pos1", "pos2", "pos3" };
+static size_t placement_pos_col[MERCOUNT_MAX];
 static int two_inrecs_per_sample = 0;
 
 static size_t reference_mer_col;
 
-static const char * sample_mer0_col_name = "mer0";
-static size_t sample_mer0_col;
-static const char * sample_mer1_col_name = "mer1";
-static size_t sample_mer1_col;
+static const char * sample_mer_col_name[MERCOUNT_MAX] =
+  { "mer0", "mer1", "mer2", "mer3" };
+static size_t sample_mer_col[MERCOUNT_MAX];
 
 static size_t output_inrec_col;
-static size_t output_pos0_col;
-static size_t output_pos1_col;
+static size_t output_pos_col[MERCOUNT_MAX];
 static size_t output_gapmer0_col;
 static size_t output_gapmer1_col;
 static size_t output_premer0_col;
 static size_t output_refmer_col;
-static size_t output_samplemer0_col = -1;
-static size_t output_samplemer1_col = -1;
+static size_t output_samplemer_col[MERCOUNT_MAX] = { -1, -1, -1, -1 };
 static size_t output_side_col;
-static size_t output_snppos0_col;
-static size_t output_snppos1_col;
+static const char * output_snppos_col_name[MERCOUNT_MAX] = { "snppos0", "snppos1", "snppos2", "snppos3" };
+static size_t output_snppos_col[MERCOUNT_MAX];
 
 static const char * bp_after_match_spec = "8";
 static size_t bp_after_match;
 static size_t mers_after_match;
 static int all_sample_fields = 0;
+static int output_gap_contents = 0;
+static int output_prefix_contents = 0;
 static size_t output_sample_fields_col;
 
 t_taql_uint64
@@ -168,6 +170,7 @@ begin (int argc, const char * argv[])
   size_t c;
   char mer_col_name[8];
   size_t x;
+  size_t m;
 
   struct opts opts[] = 
     {
@@ -176,15 +179,20 @@ begin (int argc, const char * argv[])
       { OPTS_ARG, "-s", "--samples INPUT", 0, &sample_file_name },
       { OPTS_ARG, "-o", "--output OUTPUT", 0, &output_file_name },
       { OPTS_ARG, "-i", "--inrec-col", 0, &placement_inrec_col_name },
-      { OPTS_ARG, "-m", "--mer0-col", 0, &sample_mer0_col_name },
-      { OPTS_ARG, "-M", "--mer1-col", 0, &sample_mer1_col_name },
+      { OPTS_ARG, 0, "--mer0-col", 0, &sample_mer_col_name[0] },
+      { OPTS_ARG, 0, "--mer1-col", 0, &sample_mer_col_name[1] },
+      { OPTS_ARG, 0, "--mer2-col", 0, &sample_mer_col_name[2] },
+      { OPTS_ARG, 0, "--mer3-col", 0, &sample_mer_col_name[3] },
       { OPTS_ARG, "-n", "--n-mers", 0, &n_mers_spec },
+      { OPTS_ARG, "-N", "--mercount", 0, &mercount_spec },
       { OPTS_ARG, 0, "--gap-min", 0, &gap_min_spec },
       { OPTS_ARG, 0, "--gap-max", 0, &gap_max_spec },
       { OPTS_ARG, 0, "--gap-pos", 0, &gap_pos_spec },
       { OPTS_FLAG, 0, "--two-inrecs-per-sample", &two_inrecs_per_sample, 0 },
       { OPTS_ARG, 0, "--bp-after-match", 0, &bp_after_match_spec },
       { OPTS_FLAG, 0, "--all-sample-fields", &all_sample_fields, 0 },
+      { OPTS_FLAG, 0, "--output-gap0", &output_gap_contents, 0 },
+      { OPTS_FLAG, 0, "--output-prefix", &output_prefix_contents, 0 },
       { OPTS_END, }
     };
   
@@ -197,6 +205,10 @@ begin (int argc, const char * argv[])
   n_mers = atoi (n_mers_spec);
   if ((n_mers <= 0) || (n_mers > 16))
     Fatal ("bogus mer size");
+
+  mercount = atoi (mercount_spec);
+  if ((mercount <= 0) || (mercount > MERCOUNT_MAX))
+    Fatal ("bogus mercount");
 
   gap_min = atoi (gap_min_spec);
   if (gap_min < 0)
@@ -223,8 +235,10 @@ begin (int argc, const char * argv[])
   placement_file = Infile (placement_file_name);
   File_fix (placement_file, 1, 0);
   placement_inrec_col = Field_pos (placement_file, Sym (placement_inrec_col_name));
-  placement_pos0_col = Field_pos (placement_file, Sym ("pos0"));
-  placement_pos1_col = Field_pos (placement_file, Sym ("pos1"));
+  for (m = 0; m < mercount; ++m)
+    {
+      placement_pos_col[m] = Field_pos (placement_file, Sym (placement_pos_col_name[m]));
+    }
 
   reference_file = Infile (reference_file_name);
   File_fix (reference_file, 0, 0);
@@ -233,8 +247,10 @@ begin (int argc, const char * argv[])
 
   sample_file = Infile (sample_file_name);
   File_fix (sample_file, 0, 0);
-  sample_mer0_col = Field_pos (sample_file, Sym (sample_mer0_col_name));
-  sample_mer1_col = Field_pos (sample_file, Sym (sample_mer1_col_name));
+  for (m = 0; m < mercount; ++m)
+    {
+      sample_mer_col[m] = Field_pos (sample_file, Sym (sample_mer_col_name[m]));
+    }
 
   output_file = Outfile (output_file_name);
   for (c = 0; c < N_fields (placement_file); ++c)
@@ -244,17 +260,25 @@ begin (int argc, const char * argv[])
 		 Field_name (placement_file, c));
     }
   output_inrec_col = placement_inrec_col;
-  output_pos0_col = placement_pos0_col;
-  output_pos1_col = placement_pos1_col;
-  Add_field (output_file, Sym ("uint64"), Sym ("mer0gap"));
-  Add_field (output_file, Sym ("uint64"), Sym ("mer1gap"));
-  Add_field (output_file, Sym ("uint64"), Sym ("mer0pre"));
-  output_gapmer0_col = c++;
-  output_gapmer1_col = c++;
-  output_premer0_col = c++;
+  for (m = 0; m < mercount; ++m)
+    {
+      output_pos_col[m] = placement_pos_col[m];
+    }
+  if (output_gap_contents)
+    {
+      Add_field (output_file, Sym ("uint64"), Sym ("mer0gap"));
+      Add_field (output_file, Sym ("uint64"), Sym ("mer1gap"));
+      output_gapmer0_col = c++;
+      output_gapmer1_col = c++;
+    }
+  if (output_prefix_contents)
+    {
+      Add_field (output_file, Sym ("uint64"), Sym ("mer0pre"));
+      output_premer0_col = c++;
+    }
 
   output_refmer_col = c;
-  for (x = 0; x < n_mer_positions + mers_after_match; ++x)
+  for (x = 0; x < mercount + mers_after_match; ++x)
     {
       snprintf (mer_col_name, sizeof(mer_col_name), "mer%dref", x);
       Add_field (output_file, Sym ("uint64"), Sym (mer_col_name));
@@ -270,67 +294,72 @@ begin (int argc, const char * argv[])
 		     Field_type (sample_file, x),
 		     Field_name (sample_file, x));
 
-	  if (Eq (Field_name (sample_file, x),
-		  Sym (sample_mer0_col_name)))
-	    output_samplemer0_col = c;
-
-	  if (Eq (Field_name (sample_file, x),
-		  Sym (sample_mer1_col_name)))
-	    output_samplemer1_col = c;
+	  for (m = 0; m < mercount; ++m)
+	    {
+	      if (Eq (Field_name (sample_file, x),
+		      Sym (sample_mer_col_name[m])))
+		output_samplemer_col[m] = c;
+	    }
 	}
     }
   else
     {
-      Add_field (output_file, Sym ("uint64"), Sym (sample_mer0_col_name));
-      Add_field (output_file, Sym ("uint64"), Sym (sample_mer1_col_name));
-      output_samplemer0_col = c++;
-      output_samplemer1_col = c++;
+      for (m = 0; m < mercount; ++m)
+	{
+	  Add_field (output_file, Sym ("uint64"), Sym (sample_mer_col_name[m]));
+	  output_samplemer_col[m] = c++;
+	}
     }
   Add_field (output_file, Sym ("int8"), Sym ("side"));
-  Add_field (output_file, Sym ("int8"), Sym ("snppos0"));
-  Add_field (output_file, Sym ("int8"), Sym ("snppos1"));
   output_side_col = c++;
-  output_snppos0_col = c++;
-  output_snppos1_col = c++;
+  for (m = 0; m < mercount; ++m)
+    {
+      Add_field (output_file, Sym ("int8"), Sym (output_snppos_col_name[m]));
+      output_snppos_col[m] = c++;
+    }
 
   File_fix (output_file, 1, 0);
   
   while (N_ahead (placement_file) >= 1)
     {
-      t_taql_uint64 samplemer0;
-      t_taql_uint64 samplemer1;
-      t_taql_uint64 refmer0;
-      t_taql_uint64 refmer1;
+      t_taql_uint64 samplemer[MERCOUNT_MAX];
+      t_taql_uint64 refmer[MERCOUNT_MAX];
       t_taql_uint64 gapmer0;
       t_taql_uint64 gapmer1;
-      t_taql_uint64 placepos0 = as_uInt64 (Peek (placement_file, 0, placement_pos0_col));
-      t_taql_uint64 placepos1 = as_uInt64 (Peek (placement_file, 0, placement_pos1_col));
-      t_taql_uint64 pos0 = placepos0 / placepos_per_refpos;
-      t_taql_uint64 pos1 = placepos1 / placepos_per_refpos;
-      t_taql_uint64 smallgap0size = gap_min + (placepos0 % placepos_per_refpos);
-      t_taql_uint64 smallgap1size = gap_min + (placepos1 % placepos_per_refpos);
-      t_taql_uint64 prepos;
+      t_taql_uint64 placepos[MERCOUNT_MAX];
+      t_taql_uint64 pos[MERCOUNT_MAX];
+      t_taql_uint64 smallgapsize[MERCOUNT_MAX];
       t_taql_uint64 inrec = as_uInt64 (Peek (placement_file, 0, placement_inrec_col));
       t_taql_uint64 sample_row = two_inrecs_per_sample ? (inrec >> 1) : inrec;
       size_t refbps, refmers;
-      int snppos0;
-      int snppos1;
+      int snppos[MERCOUNT_MAX];
       int side;
 
-      if (gap_max > 0)
+      for (m = 0; m < mercount; ++m)
+	{
+	  placepos[m] = as_uInt64 (Peek (placement_file, 0, placement_pos_col[m]));
+	  pos[m] = placepos[m] / placepos_per_refpos;
+	  smallgapsize[m] = gap_min + (placepos[m] % placepos_per_refpos);
+	}
+
+      if (!output_gap_contents)
+	{
+	  ;
+	}
+      else if (gap_max > 0)
 	{
 	  /* gapmer0 and gapmer1 are the reference data in the small gap (in the middle of mer0 and mer1) */
-	  Poke (output_file, 0, output_gapmer0_col, uInt64 (peek_reference (pos0+gap_pos, smallgap0size, 0, 0)));
-	  Poke (output_file, 0, output_gapmer1_col, uInt64 (peek_reference (pos1+gap_pos, smallgap1size, 0, 0)));
+	  Poke (output_file, 0, output_gapmer0_col, uInt64 (peek_reference (pos[0]+gap_pos, smallgapsize[0], 0, 0)));
+	  Poke (output_file, 0, output_gapmer1_col, uInt64 (peek_reference (pos[1]+gap_pos, smallgapsize[1], 0, 0)));
 	}
       else
 	{
 	  /* gapmer0 and gapmer1 are the first 32 nucleotides between refmer0 and refmer1 */
-	  t_taql_uint64 gappos0 = pos0 + n_mers + smallgap0size;
-	  t_taql_uint64 gappos1 = pos0 + n_mers + smallgap0size + 16;
+	  t_taql_uint64 gappos0 = pos[0] + n_mers + smallgapsize[0];
+	  t_taql_uint64 gappos1 = pos[0] + n_mers + smallgapsize[0] + 16;
 	  size_t gapsize0;
 	  size_t gapsize1 = 0;
-	  gapsize0 = pos1 - pos0 - n_mers;
+	  gapsize0 = pos[1] - pos[0] - n_mers;
 	  if (gapsize0 > 16)
 	    {
 	      gapsize1 = gapsize0 - 16;
@@ -350,14 +379,12 @@ begin (int argc, const char * argv[])
 	{
 	  Poke (output_file, 0, c, Peek (placement_file, 0, c));
 	}
-      Poke (output_file, 0, placement_pos0_col, uInt64 (pos0));
-      Poke (output_file, 0, placement_pos1_col, uInt64 (pos1));
-
-      refmer0 = peek_reference (pos0, n_mers, gap_pos, smallgap0size);
-      refmer1 = peek_reference (pos1, n_mers, gap_pos, smallgap1size);
-
-      samplemer0 = as_uInt64 (Peek (sample_file, sample_row, sample_mer0_col));
-      samplemer1 = as_uInt64 (Peek (sample_file, sample_row, sample_mer1_col));
+      for (m = 0; m < mercount; ++m)
+	{
+	  Poke (output_file, 0, placement_pos_col[m], uInt64 (pos[m]));
+	  refmer[m] = peek_reference (pos[m], n_mers, gap_pos, smallgapsize[m]);
+	  samplemer[m] = as_uInt64 (Peek (sample_file, sample_row, sample_mer_col[m]));
+	}
 
       side = -2;
       if (two_inrecs_per_sample)
@@ -365,35 +392,59 @@ begin (int argc, const char * argv[])
 	  side = inrec & 1;
 	  Poke (output_file, 0, output_inrec_col, uInt64 (sample_row));
 	}
-
-      if (side != 1 &&
-	  1 >= count_snps (samplemer0, refmer0, &snppos0) &&
-	  1 >= count_snps (samplemer1, refmer1, &snppos1))
+      if (side < 0)
 	{
-	  side = 0;
-	}
-      else if (side != 0 &&
-	       1 >= count_snps (samplemer0, mer_reverse_complement (refmer1, n_mers), &snppos0) &&
-	       1 >= count_snps (samplemer1, mer_reverse_complement (refmer0, n_mers), &snppos1))
-	{
-	  side = 1;
+	  for (m = 0; m < mercount; ++m)
+	    {
+	      if (1 < count_snps (samplemer[m], refmer[m], &snppos[m]))
+		{
+		  side = -2;
+		  break;
+		}
+	    }
+	  if (m == mercount)
+	    {
+	      side = 0;
+	    }
+	  else
+	    {
+	      for (m = 0; m < mercount; ++m)
+		{
+		  if (1 < count_snps (samplemer[m], mer_reverse_complement (refmer[mercount-m], n_mers), &snppos[m]))
+		    {
+		      side = -2;
+		      break;
+		    }
+		}
+	      if (m == mercount)
+		{
+		  side = 1;
+		}
+	    }
 	}
       if (side < 0)
 	{
-	  snppos0 = -2;
-	  snppos1 = -2;
+	  for (m = 0; m < mercount; ++m)
+	    {
+	      snppos[m] = -2;
+	    }
 	}
 
-      prepos = (pos0<8)?0:(pos0-8);
-      Poke (output_file, 0, output_premer0_col, uInt64 (peek_reference (prepos, pos0-prepos, 0, 0)));
-      Poke (output_file, 0, output_refmer_col, uInt64 (refmer0));
-      Poke (output_file, 0, output_refmer_col+1, uInt64 (refmer1));
+      if (output_prefix_contents)
+	{
+	  t_taql_uint64 prepos = (pos[0]<8)?0:(pos[0]-8);
+	  Poke (output_file, 0, output_premer0_col, uInt64 (peek_reference (prepos, pos[0]-prepos, 0, 0)));
+	}
+      for (m = 0; m < mercount; ++m)
+	{
+	  Poke (output_file, 0, output_refmer_col+m, uInt64 (refmer[m]));
+	}
       for (refmers = 0, refbps = bp_after_match;
 	   refmers < mers_after_match;
 	   ++refmers, refbps -= 16)
 	{
-	  Poke (output_file, 0, output_refmer_col + refmers + n_mer_positions,
-		uInt64 (peek_reference (pos1 + n_mers + smallgap1size + (refmers * 16), (refbps>16)?16:refbps, 0, 0)));
+	  Poke (output_file, 0, output_refmer_col + refmers + mercount,
+		uInt64 (peek_reference (pos[mercount] + n_mers + smallgapsize[mercount] + (refmers * 16), (refbps>16)?16:refbps, 0, 0)));
 	}
       if (all_sample_fields)
 	{
@@ -402,11 +453,15 @@ begin (int argc, const char * argv[])
 	      Poke (output_file, 0, c + output_sample_fields_col, Peek (sample_file, sample_row, c));
 	    }
 	}
-      Poke (output_file, 0, output_samplemer0_col, uInt64 (samplemer0));
-      Poke (output_file, 0, output_samplemer1_col, uInt64 (samplemer1));
+      for (m = 0; m < mercount; m++)
+	{
+	  Poke (output_file, 0, output_samplemer_col[m], uInt64 (samplemer[m]));
+	}
       Poke (output_file, 0, output_side_col, Int8 (side));
-      Poke (output_file, 0, output_snppos0_col, Int8 (snppos0));
-      Poke (output_file, 0, output_snppos1_col, Int8 (snppos1));
+      for (m = 0; m < mercount; m++)
+	{
+	  Poke (output_file, 0, output_snppos_col[m], Int8 (snppos[m]));
+	}
 
       Advance (output_file, 1);
       Advance (placement_file, 1);
