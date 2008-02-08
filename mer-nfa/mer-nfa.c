@@ -1236,11 +1236,12 @@ report_transition (struct output_record * outrec,
   
   if (mer_pos == (n_mer_positions - 1))
     {
+      int x;
+
       if (pos < earliest_start_bp_pos || pos >= end_start_bp_pos)
 	{
 	  return 0;
 	}
-      int x;
 
       outrec->positions[mer_pos] = pos;
 
