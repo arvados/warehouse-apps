@@ -637,7 +637,7 @@ build_hash_table (void)
            * need that many hash bucket entries for each of 
            * n_samples:
            */
-          list_table_size = n_samples * (1 + 4 * mer_size[x]);
+          list_table_size = n_samples * (1 + 3 * mer_size[x]);
         }
       
       list_sizeof = list_table_size * sizeof (struct sample_list);
