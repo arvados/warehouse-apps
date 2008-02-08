@@ -590,6 +590,18 @@ read_samples_building_nfa (void)
               nfa[n_samples].mer[x] = as_uInt64 (Peek (sample_file, offset, sample_mer_in_col[x]));
               nfa[n_samples].state[0].flags[x] = 0;
               nfa[n_samples].state[1].flags[x] = 0;
+	      if (0 <= find_non_bp (nfa[n_samples].mer[x], mer_size[x]))
+		{
+		  /* put NNNN in all mer positions to ensure that this sample is always skipped */
+		  int xx;
+		  for (xx = 0; xx < n_mer_positions; ++xx)
+		    {
+		      nfa[n_samples].mer[xx] = 0;
+		      nfa[n_samples].state[0].flags[xx] = 0;
+		      nfa[n_samples].state[1].flags[xx] = 0;
+		    }
+		  continue;
+		}
             }
           ++n_samples;
           ++offset;
@@ -637,7 +649,7 @@ build_hash_table (void)
            * need that many hash bucket entries for each of 
            * n_samples:
            */
-          list_table_size = n_samples * (1 + 3 * mer_size[x]);
+          list_table_size = n_samples * (1 + 4 * mer_size[x]);
         }
       
       list_sizeof = list_table_size * sizeof (struct sample_list);
@@ -657,7 +669,10 @@ build_hash_table (void)
       for (s = 0; s < n_samples; ++s)
         {
           t_taql_uint64 sample_mer = nfa[s].mer[x];
-          
+
+	  if (0 <= find_non_bp (sample_mer, mer_size[x]))
+	    continue;
+
           add_to_hash_table (x, sample_mer, s, -1, 0); /* -1 means "no SNP here" */
 
           if (permit_snps)
