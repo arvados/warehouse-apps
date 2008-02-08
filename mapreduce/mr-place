@@ -7,8 +7,8 @@
 ###MR_KNOBS:MERS_AND_GAPS=7,3-4,7,750-1250,7,3-4,7
 ###MR_KNOBS:SNPS=0
 ###MR_KNOBS:ALL=0
-###MR_KNOBS:NREADS=10000
-###MR_KNOBS:STEPSPERNODE=1
+###MR_KNOBS:BATCHSIZE=10000
+###MR_KNOBS:STEPSPERNODE=4
 
 use strict; 
 use Warehouse;
@@ -24,6 +24,7 @@ my $src = "/usr/local/polony-tools/$ENV{MR_REVISION}/src";
 #   input = {sample range, chromosome}
 
 my $manifestkey = $ENV{MR_INPUT0};
+$ENV{KNOB_BATCHSIZE} += 0;
 
 if ($ENV{MR_LEVEL} == 0)
 {
@@ -35,8 +36,28 @@ if ($ENV{MR_LEVEL} == 0)
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
 }
 
+elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
+{
+  Safepipe::readfrom ("main::SAMPLES",
+		      "mrs-fetch -h '$manifestkey' ./0 reads.txt")
+      or die "pipe failed: $!";
+  while (defined ($_ = <SAMPLES>))
+  {
+    if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
+    {
+      print STDERR "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n";
+    }
+    ++$n_samples;
+  }
+  close SAMPLES;
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
 elsif ($ENV{MR_LEVEL} == 1)
 {
+  my ($subdir_name, $start_at) = split (/ /, $ENV{MR_INPUT});
+  $start_at += 0;
+
   my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
   my @mersize = shift @mers_and_gaps;
   my $mer_nfa_opts = "--m0 $mersize[0]";
@@ -58,20 +79,23 @@ elsif ($ENV{MR_LEVEL} == 1)
   }
   my $mercount = $#mersize + 1;
 
-  open REPORTREFERENCE, "+>", "/tmp/reference.dat";
-  open REPORTSAMPLES, "+>", "/tmp/samples.dat";
+  my $ref_tempfile = "/tmp/$ENV{MR_SLOT}-reference.dat";
+  my $samples_tempfile = "/tmp/$ENV{MR_SLOT}-samples.dat";
+
+  open REPORTREFERENCE, "+>", $ref_tempfile;
+  open REPORTSAMPLES, "+>", $samples_tempfile;
 
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' ./0 reads.txt",
-		      "perl -ne 'print if \$. <= $ENV{KNOB_NREADS}'",
+		      "perl -ne 'print if \$. >= $start_at && \$. < $start_at + $ENV{KNOB_BATCHSIZE}'",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
-		      "tee -a /tmp/samples.dat",
+		      "tee -a $samples_tempfile",
 		      "complement-mers $complement_mers_args")
       or die "samples pipe failed: $!";
 
   Safepipe::readfrom ("main::REFERENCE",
-		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$ENV{MR_INPUT}'",
-		      "perl $src/madeleine/chr-to-dat.pl -n $mersize[0] >/tmp/reference.dat; cat /tmp/reference.dat")
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$subdir_name'",
+		      "perl $src/madeleine/chr-to-dat.pl -n $mersize[0] >$ref_tempfile; cat $ref_tempfile")
       or die "reference pipe failed: $!";
 
   my $s_fileno = fileno("SAMPLES");
