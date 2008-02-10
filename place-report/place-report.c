@@ -395,7 +395,7 @@ begin (int argc, const char * argv[])
 	    {
 	      if (1 < count_snps (samplemer[m],
 				  side
-				  ? mer_reverse_complement (refmer[mercount-m], n_mers)
+				  ? mer_reverse_complement (refmer[mercount-m-1], n_mers)
 				  : refmer[m],
 				  &snppos[m]))
 		{
@@ -422,7 +422,7 @@ begin (int argc, const char * argv[])
 	      for (m = 0; m < mercount; ++m)
 		{
 		  if (1 < count_snps (samplemer[m],
-				      mer_reverse_complement (refmer[mercount-m], n_mers),
+				      mer_reverse_complement (refmer[mercount-m-1], n_mers),
 				      &snppos[m]))
 		    {
 		      side = -2;
@@ -457,7 +457,7 @@ begin (int argc, const char * argv[])
 	   ++refmers, refbps -= 16)
 	{
 	  Poke (output_file, 0, output_refmer_col + refmers + mercount,
-		uInt64 (peek_reference (pos[mercount] + n_mers + smallgapsize[mercount] + (refmers * 16), (refbps>16)?16:refbps, 0, 0)));
+		uInt64 (peek_reference (pos[mercount] + n_mers + smallgapsize[mercount-1] + (refmers * 16), (refbps>16)?16:refbps, 0, 0)));
 	}
       if (all_sample_fields)
 	{
