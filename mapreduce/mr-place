@@ -62,7 +62,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my ($subdir_name, $start_at) = split (/ /, $ENV{MR_INPUT});
   $start_at += 0;
 
-  my $posperref = $ENV{KNOB_SMALLGAPMAX} - $ENV{KNOB_SMALLGAPMIN};
+  my $posperref = 1 + $ENV{KNOB_SMALLGAPMAX} - $ENV{KNOB_SMALLGAPMIN};
 
   my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
   my @mersize = shift @mers_and_gaps;
