@@ -395,7 +395,7 @@ begin (int argc, const char * argv[])
 	    {
 	      if (1 < count_snps (samplemer[m],
 				  side
-				  ? mer_reverse_complement (refmer[mercount-m])
+				  ? mer_reverse_complement (refmer[mercount-m], n_mers)
 				  : refmer[m],
 				  &snppos[m]))
 		{
