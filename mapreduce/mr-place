@@ -114,7 +114,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      "gprint",
 		      "egrep -v '^#'",
 		      "sort -n",
-		      "mrs-store './$ENV{MR_INPUT}' mer-nfa-report.txt")
+		      "mrs-store './$subdir_name-$start_at' mer-nfa-report.txt")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES";
   close "REFERENCE";
