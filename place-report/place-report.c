@@ -391,8 +391,19 @@ begin (int argc, const char * argv[])
 	{
 	  side = inrec & 1;
 	  Poke (output_file, 0, output_inrec_col, uInt64 (sample_row));
+	  for (m = 0; m < mercount; ++m)
+	    {
+	      if (1 < count_snps (samplemer[m],
+				  side
+				  ? mer_reverse_complement (refmer[mercount-m])
+				  : refmer[m],
+				  &snppos[m]))
+		{
+		  side = -2;
+		}
+	    }
 	}
-      if (side < 0)
+      else if (side < 0)
 	{
 	  for (m = 0; m < mercount; ++m)
 	    {
@@ -410,7 +421,9 @@ begin (int argc, const char * argv[])
 	    {
 	      for (m = 0; m < mercount; ++m)
 		{
-		  if (1 < count_snps (samplemer[m], mer_reverse_complement (refmer[mercount-m], n_mers), &snppos[m]))
+		  if (1 < count_snps (samplemer[m],
+				      mer_reverse_complement (refmer[mercount-m], n_mers),
+				      &snppos[m]))
 		    {
 		      side = -2;
 		      break;
