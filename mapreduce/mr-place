@@ -116,13 +116,13 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      "sort -n",
 		      "mrs-store './$subdir_name-$start_at' mer-nfa-report.txt")
       or die "mer-nfa pipe failed: $!";
-  close "SAMPLES";
-  close "REFERENCE";
-  close "REPORTREFERENCE";
-  close "REPORTSAMPLES";
+  close "SAMPLES" or die "close SAMPLES: $!";
+  close "REFERENCE" or die "close REFERENCE: $!";
+  close "REPORTREFERENCE" or die "close REPORTREFERENCE: $!";
+  close "REPORTSAMPLES" or die "close REPORTSAMPLES: $!";
 
   my @out = <PLACED>;
-  close "PLACED";
+  close "PLACED" or die "close PLACED: $!";
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
 
