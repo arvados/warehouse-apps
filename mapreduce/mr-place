@@ -4,9 +4,12 @@
 ###MR_DESCRIPTION:place 12+12bp reads on human genome
 ###MR_INPUT:manifest
 ###MR_KNOBS:REFERENCE=88f0fab736bdf704a559ae48ade5a423
-###MR_KNOBS:MERS_AND_GAPS=7,3-4,7,750-1250,7,3-4,7
+###MR_KNOBS:MERS_AND_GAPS=14,750-1250,14
 ###MR_KNOBS:SNPS=0
 ###MR_KNOBS:ALL=0
+###MR_KNOBS:SMALLGAPMIN=3
+###MR_KNOBS:SMALLGAPMAX=4
+###MR_KNOBS:SMALLGAPMAX=7
 ###MR_KNOBS:BATCHSIZE=10000
 ###MR_KNOBS:STEPSPERNODE=4
 
@@ -105,8 +108,9 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $rs_fileno = fileno("REPORTSAMPLES");
   Safepipe::readfrom ("main::PLACED",
 		      ["main::REFERENCE", "all-mers -m mer0 -n $mersize[0] <&$r_fileno"],
+		      "all-mers-gap -n $mersize[0] --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}",
 		      ["main::SAMPLES", "mer-nfa $mer_nfa_opts -r - -s \@$s_fileno -o -"],
-		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] -r \@$rr_fileno -s \@$rs_fileno -p -"],
+		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS} -r \@$rr_fileno -s \@$rs_fileno -p -"],
 		      "gprint",
 		      "egrep -v '^#'",
 		      "sort -n",
