@@ -62,6 +62,8 @@ elsif ($ENV{MR_LEVEL} == 1)
   my ($subdir_name, $start_at) = split (/ /, $ENV{MR_INPUT});
   $start_at += 0;
 
+  my $posperref = $ENV{KNOB_SMALLGAPMAX} - $ENV{KNOB_SMALLGAPMIN};
+
   my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
   my @mersize = shift @mers_and_gaps;
   my $mer_nfa_opts = "--m0 $mersize[0]";
@@ -69,6 +71,18 @@ elsif ($ENV{MR_LEVEL} == 1)
   {
     my (@gaps) = split ("-", $mers_and_gaps[0]);
     if (@gaps < 2) { $gaps[1] = $gaps[0]; }
+    if ($posperref > 1)
+    {
+      $gap[0] = (($gap[0] + $ENV{KNOB_SMALLGAPMIN} + $mersize[-1])
+		 * $posperref
+		 - $mersize[-1]
+		 - 1);
+      $gap[0] = 0 if $gap[0] < 0;
+      $gap[1] = (($gap[1] + $ENV{KNOB_SMALLGAPMAX} + $mersize[-1])
+		 * $posperref
+		 - $mersize[-1]
+		 + 1);
+    }
     $mer_nfa_opts .= " --gmin$#mersize $gaps[0] --gmax$#mersize $gaps[1]";
     push @mersize, $mers_and_gaps[1];
     $mer_nfa_opts .= " --m$#mersize $mersize[-1]";
