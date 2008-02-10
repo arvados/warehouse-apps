@@ -106,7 +106,7 @@ begin (int argc, const char * argv[])
   Add_field (outfile, Sym ("uint64"), Sym (in_col_name));
   Add_field (outfile, Sym ("uint32"), Sym (in_pos_col_name));
   Add_field (outfile, Sym ("uint8"), Sym ("gapsize"));
-  File_fix (outfile, n_mers, 0);
+  File_fix (outfile, 1, 0);
 
   mer0_mask = 0;
   mer1_mask = 0;
