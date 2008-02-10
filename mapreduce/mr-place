@@ -73,15 +73,15 @@ elsif ($ENV{MR_LEVEL} == 1)
     if (@gaps < 2) { $gaps[1] = $gaps[0]; }
     if ($posperref > 1)
     {
-      $gap[0] = (($gap[0] + $ENV{KNOB_SMALLGAPMIN} + $mersize[-1])
-		 * $posperref
-		 - $mersize[-1]
-		 - 1);
-      $gap[0] = 0 if $gap[0] < 0;
-      $gap[1] = (($gap[1] + $ENV{KNOB_SMALLGAPMAX} + $mersize[-1])
-		 * $posperref
-		 - $mersize[-1]
-		 + 1);
+      $gaps[0] = (($gaps[0] + $ENV{KNOB_SMALLGAPMIN} + $mersize[-1])
+		  * $posperref
+		  - $mersize[-1]
+		  - 1);
+      $gaps[0] = 0 if $gaps[0] < 0;
+      $gaps[1] = (($gaps[1] + $ENV{KNOB_SMALLGAPMAX} + $mersize[-1])
+		  * $posperref
+		  - $mersize[-1]
+		  + 1);
     }
     $mer_nfa_opts .= " --gmin$#mersize $gaps[0] --gmax$#mersize $gaps[1]";
     push @mersize, $mers_and_gaps[1];
