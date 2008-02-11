@@ -54,10 +54,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 	{
 	  my $buf = $suffix . $$dataref;
 	  my $cur_reads = int(length ($buf)/60); 
-	  $suffix = substr ($cur_reads*60+1, $buf); 
+	  $suffix = substr ($buf, $cur_reads*60+1); 
 	  for (my $i = 0; $i < $cur_reads; $i+=60) 
 	  {  
-	    $outstream->write_data (substr($i, $buf, 28)."\n");  
+	    $outstream->write_data (substr($buf, $i, 28)."\n");  
           }
 	}
       }
