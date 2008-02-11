@@ -58,7 +58,7 @@ if ($ENV{MR_LEVEL} == 1)
 	    my @r = split (/ /, $1);
 	    $r[0] += $sample_base;
 	    splice @r, 1, 0, $chr;
-	    print "$r";
+	    print "@r";
 	  }
 	}
       }
