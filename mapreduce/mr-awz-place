@@ -53,7 +53,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
 	  $buf .= $$dataref;
-          while ($buf =~ s,^([^n]*\n),,)
+          while ($buf =~ s,^([^\n]*\n),,)
           {
             my @r = split (/ /, $1);
 	    $outstream->write_data ("$r[0]");  
