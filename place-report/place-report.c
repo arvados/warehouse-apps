@@ -67,6 +67,7 @@ static size_t gap_max;
 static const char * gap_pos_spec = "0";
 static size_t gap_pos;
 static const char * ref_label_spec = 0;
+static t_taql_boxed ref_label_boxed;
 static size_t ref_label_col = -1;
 static const char * add_sample_id_spec = "0";
 static size_t add_sample_id;
@@ -273,6 +274,7 @@ begin (int argc, const char * argv[])
       Add_field (output_file,
 		 Sym ("sym"),
 		 Sym ("ref"));
+      ref_label_boxed = taql_box_sym (Sym (ref_label_spec));
       ref_label_col = ++c;
     }
   for (m = 0; m < mercount; ++m)
@@ -396,7 +398,7 @@ begin (int argc, const char * argv[])
 	}
       if (ref_label_col >= 0)
 	{
-	  Poke (output_file, 0, ref_label_col, Sym (ref_label_spec));
+	  Poke (output_file, 0, ref_label_col, ref_label_boxed);
 	}
       Poke (output_file, 0, output_inrec_col, uInt64 (sample_row + add_sample_id));
 
