@@ -154,7 +154,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  for (my $i=0; $i < 28; $i++) {
 	    my $bp = substr ($read_ref, $i, 1); 	    	
 	    my $munge = 1; 
-	    for (my $j=0; $i < 7; $j++) {
+	    for (my $j=0; $j < 7; $j++) {
 	      if (vec ($seed, 512 - $rand_bits--, 1)){
 		$munge = 0;
 	        last; 
