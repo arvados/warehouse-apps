@@ -34,7 +34,7 @@ if ($ENV{MR_LEVEL} == 1)
   my $whc = new Warehouse;
   my $outstream = new Warehouse::Stream (whc => $whc);
   $outstream->clear;
-  $outstream->name ($ENV{KNOB_ONE_FILE_PER_CHR} ? $ENV{MR_INPUT} : ".");
+  $outstream->name ($ENV{KNOB_ONE_FILE_PER_CHR} ? "./$ENV{MR_INPUT}" : ".");
   $outstream->write_start ("mer-nfa-report.txt");
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
