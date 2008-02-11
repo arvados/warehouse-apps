@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:collate output of mr-place, fix sample IDs
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  for (1..22, 'X', 'Y', 'M')
+  {
+    print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $whc = new Warehouse;
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  $outstream->clear;
+  $outstream->write_start ("mer-nfa-report.txt");
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    if ($instream->name =~ m,^./(.+)-(\d+)$,
+	&& $1 eq $ENV{MR_INPUT})
+    {
+      my $sample_base = $2;
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos;
+	$instream->seek ($pos);
+	my $buf = "";
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $buf .= $$dataref;
+	  while ($buf =~ s,^([^n]*\n),,)
+	  {
+	    my @r = split (/ /, $1);
+	    $r[0] += $sample_base;
+	    splice @r, 1, 0, $ENV{MR_INPUT};
+	    print "$r";
+	  }
+	}
+      }
+    }
+  }
+  $outstream->write_finish;
+  my $fragkey = $whc->store_block ($outstream->as_string)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout ".$fragkey."+++\n";
+  exit 0;
+}
