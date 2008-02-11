@@ -183,6 +183,7 @@ my %proc;
 my @freeslot = (0..$#slot);
 my %reader;
 my ($id, $input, $attempts);
+THISROUND:
 for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 {
   my $id = $jobstep_todo[$todo_ptr];
@@ -274,22 +275,24 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 
   update_progress_stats() if !@freeslot;
 
-  while (!@freeslot)
+  while (!@freeslot
+	 ||
+	 (@slot > @freeslot && $todo_ptr+1 > $#jobstep_todo))
   {
     my $gotsome
 	= readfrompipes ()
 	+ reapchildren ();
     select (undef, undef, undef, 0.1) if !$gotsome;
-  }
 
-  if (($tasks_failed >= 8 && $tasks_succeeded == 0) ||
-      ($tasks_failed >= 16 && $tasks_failed > $tasks_succeeded))
-  {
-    my $message = "Failure rate too high ($tasks_failed/"
-	.($tasks_failed+$tasks_succeeded)
-	.") -- giving up on this round";
-    Log (undef, $message);
-    last;
+    if (($tasks_failed >= 8 && $tasks_succeeded == 0) ||
+	($tasks_failed >= 16 && $tasks_failed > $tasks_succeeded))
+    {
+      my $message = "Failure rate too high ($tasks_failed/"
+	  .($tasks_failed+$tasks_succeeded)
+	  .") -- giving up on this round";
+      Log (undef, $message);
+      last THISROUND;
+    }
   }
 }
 
