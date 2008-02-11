@@ -15,41 +15,6 @@ foreach (split ("\n", $ENV{MR_KNOBS}))
   $ENV{"KNOB_$k"} = $v;
 }
 
-open (STDIN, "mr-$ENV{MR_FUNCTION} |") or die "mr-$ENV{MR_FUNCTION}: $!";
-
-my $fh;
-my $mogc;
-my $buf;
-while (read STDIN, $buf, 65536)
-{
-  if (!defined $fh)
-  {
-    my $attempts = 0;
-    while (!defined ($fh) && ++$attempts < 5)
-    {
-      $mogc = eval {
-	MogileFS::Client->new
-	    (domain => $ENV{MOGILEFS_DOMAIN},
-	     hosts => [split(",", $ENV{MOGILEFS_TRACKERS})]);
-	};
-      $fh = eval {
-          $mogc->new_file ($ENV{MR_OUTPUTKEY}, $ENV{MOGILEFS_CLASS});
-      };
-      last if $fh;
-      sleep 1;
-    }
-    die "MogileFS create failure" if !$fh;
-  }
-  print $fh $buf;
-}
-if ($fh)
-{
-  if (!close $fh)
-  {
-    die "MogileFS write failed: $!";
-  }
-}
-if (!close STDIN) 
-{ 
-    die "mr-$ENV{MR_FUNCTION} failed: $!"; 
-} 
+open STDOUT, ">/dev/null";
+exec "mr-$ENV{MR_FUNCTION}";
+die "mr-$ENV{MR_FUNCTION}: $!";
