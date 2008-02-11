@@ -119,10 +119,10 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $valid_read; 
       
       do {
-	if ($rand_bits < 12 ) {
+	if ($rand_bits < 256 ) {
 	  $seed = sha512($seed); #generate some more randomness 
 	  $rand_bits = 512;
-	  }
+	}
 	my $small_gap1 = vec ($seed, 512 - $rand_bits--, 1); 
 	my $small_gap2 = vec ($seed, 512 - $rand_bits--, 1);
 	my $orient = vec ($seed, 512 - $rand_bits--, 1);
@@ -140,16 +140,34 @@ elsif ($ENV{MR_LEVEL} == 1)
 	       $reads[$current_read] & $read_mask,  
 	       $current_position, $orient, 
 	       $small_gap1, $big_gap, $small_gap2); 
-	  $outstream->write_data (
-	    substr($reference,
-		   $current_position-$bp_start,7).
-	    substr($reference,
-		   $current_position-$bp_start+10+$small_gap1,7).
-	    substr($reference,
-		   $current_position-$bp_start+750+$big_gap, 7).
-	    substr($reference,
-		   $current_position-$bp_start+760+$big_gap+$small_gap2,7).
-	      $answer_key."\n");
+	  
+	  my $read_ref = substr($reference,$current_position-$bp_start,7).
+	      substr($reference,
+		     $current_position-$bp_start+10+$small_gap1,7).
+	      substr($reference,
+		     $current_position-$bp_start+750+$big_gap, 7).
+	      substr($reference,
+		$current_position-$bp_start+760+$big_gap+$small_gap2,7);
+
+	  for (my $i=0; $i < 28; $i++) {
+	    my $bp = substr ($read_ref, $i, 1); 	    	
+	    my $munge = 1; 
+	    for (my $j=0; $i < 7; $j++) {
+	      if (vec ($seed, 512 - $rand_bits--, 1)){
+		$munge = 0;
+	        last; 
+	      }
+	    }
+	    if ($munge) {
+	      $substr ($munge_ref, $i, 1) = "A";      
+	    }
+	    else {
+	      $substr ($munge_ref, $i, 1) = "C"; 
+	    }
+	  }
+
+	  $outstream->write_data 
+	      ($munge_ref." ".$read_ref.$answer_key."\n");
 	  $valid_read++; 
 	}
 	$read++; 
