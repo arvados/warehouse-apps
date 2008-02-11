@@ -34,13 +34,14 @@ if ($ENV{MR_LEVEL} == 1)
   my $whc = new Warehouse;
   my $outstream = new Warehouse::Stream (whc => $whc);
   $outstream->clear;
+  $outstream->name ($ENV{KNOB_ONE_FILE_PER_CHR} ? $ENV{MR_INPUT} : "/");
   $outstream->write_start ("mer-nfa-report.txt");
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
   $manifest->rewind;
   while (my $instream = $manifest->subdir_next)
   {
-    if ($instream->name =~ m,^./(.+)-(\d+)$,
+    if ($instream->name =~ m,^\./(.+)-(\d+)$,
 	&& (!$ENV{KNOB_ONE_FILE_PER_CHR} || $1 eq $ENV{MR_INPUT}))
     {
       my $chr = $1;
