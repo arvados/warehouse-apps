@@ -3,6 +3,7 @@
 
 ###MR_DESCRIPTION:collate output of mr-place, fix sample IDs
 ###MR_INPUT:manifest
+###MR_KNOBS:ONE_FILE_PER_CHR=1
 
 use strict; 
 use Warehouse;
@@ -14,14 +15,21 @@ my $manifestkey = $ENV{MR_INPUT0};
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey;
-  for (1..22, 'X', 'Y', 'M')
+  if ($ENV{KNOB_ONE_FILE_PER_CHR})
   {
-    print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
+    for (1..22, 'X', 'Y', 'M')
+    {
+      print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
+    }
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   }
-  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  else
+  {
+    $ENV{MR_LEVEL} = 1;
+  }
 }
 
-elsif ($ENV{MR_LEVEL} == 1)
+if ($ENV{MR_LEVEL} == 1)
 {
   my $whc = new Warehouse;
   my $outstream = new Warehouse::Stream (whc => $whc);
@@ -33,8 +41,9 @@ elsif ($ENV{MR_LEVEL} == 1)
   while (my $instream = $manifest->subdir_next)
   {
     if ($instream->name =~ m,^./(.+)-(\d+)$,
-	&& $1 eq $ENV{MR_INPUT})
+	&& (!$ENV{KNOB_ONE_FILE_PER_CHR} || $1 eq $ENV{MR_INPUT}))
     {
+      my $chr = $1;
       my $sample_base = $2;
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
@@ -48,7 +57,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  {
 	    my @r = split (/ /, $1);
 	    $r[0] += $sample_base;
-	    splice @r, 1, 0, $ENV{MR_INPUT};
+	    splice @r, 1, 0, $chr;
 	    print "$r";
 	  }
 	}
