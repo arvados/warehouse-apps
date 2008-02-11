@@ -11,6 +11,7 @@ sub readfrom
     my $haveoutput = 0;
     my $n = 0;
     my $lastreadpipe;
+    my %command;
     while (@_)
     {
 	$n++;
@@ -50,7 +51,8 @@ sub readfrom
 	close "write$n" or die "$!";
 	$lastreadpipe = "read$n";
 
-	push @children, $child;
+	push @children, 1;
+	$command{$child} = ref $command ? $command->[-1] : $command;
     }
     if (defined $lastreadpipe)
     {
@@ -64,8 +66,9 @@ sub readfrom
     while (@children)
     {
 	my $pid = wait;
-	die "@caller: $pid exited $?" if $? != 0;
+	die "@caller: $pid exited $?, command was ".$command{$pid} if $? != 0;
 	pop @children;
+	delete $command{$pid};
     }
     close STDIN or die "@caller: $!";
     exit 0;
