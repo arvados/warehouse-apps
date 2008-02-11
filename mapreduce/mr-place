@@ -124,9 +124,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      ["main::REFERENCE", "all-mers -m mer0 -n $mersize[0] <&$r_fileno"],
 		      "all-mers-gap -n $mersize[0] --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}",
 		      ["main::SAMPLES", "mer-nfa $mer_nfa_opts -r - -s \@$s_fileno -o -"],
-		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS} -r \@$rr_fileno -s \@$rs_fileno -p -"],
+		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS} --ref-label '$subdir_name' --add-sample-id '$start_at' -r \@$rr_fileno -s \@$rs_fileno -p -"],
 		      "gprint",
-		      "perl -ne 'print unless /^#/'",
 		      "sort -n",
 		      "mrs-store './$subdir_name-$start_at' mer-nfa-report.txt")
       or die "mer-nfa pipe failed: $!";

@@ -53,22 +53,7 @@ if ($ENV{MR_LEVEL} == 1)
 	my $buf = "";
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
-	  substr $$dataref, 0, 0, $buf;
-	  my $cursor = 0;
-	  while (1)
-	  {
-	    my $newline = index $$dataref, "\n", $cursor;
-	    if ($newline < 0)
-	    {
-	      $buf = substr ($$dataref, $cursor);
-	      last;
-	    }
-	    my @r = split (/ /, substr ($$dataref, $cursor, $newline-$cursor), 2);
-	    $r[0] += $sample_base;
-	    splice @r, 1, 0, $chr;
-	    $outstream->write_data ("@r\n");
-	    $cursor = $newline + 1;
-	  }
+	  $outstream->write_data ($dataref);
 	}
       }
     }

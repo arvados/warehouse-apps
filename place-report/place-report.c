@@ -66,6 +66,10 @@ static const char * gap_max_spec = "0";
 static size_t gap_max;
 static const char * gap_pos_spec = "0";
 static size_t gap_pos;
+static const char * ref_label_spec = 0;
+static size_t ref_label_col = -1;
+static const char * add_sample_id_spec = "0";
+static size_t add_sample_id;
 static t_taql_uint64 placepos_per_refpos;
 
 static const char * placement_inrec_col_name = "sample";
@@ -188,6 +192,8 @@ begin (int argc, const char * argv[])
       { OPTS_ARG, 0, "--gap-min", 0, &gap_min_spec },
       { OPTS_ARG, 0, "--gap-max", 0, &gap_max_spec },
       { OPTS_ARG, 0, "--gap-pos", 0, &gap_pos_spec },
+      { OPTS_ARG, 0, "--ref-label", 0, &ref_label_spec },
+      { OPTS_ARG, 0, "--add-sample-id", 0, &add_sample_id_spec },
       { OPTS_FLAG, 0, "--two-inrecs-per-sample", &two_inrecs_per_sample, 0 },
       { OPTS_ARG, 0, "--bp-after-match", 0, &bp_after_match_spec },
       { OPTS_FLAG, 0, "--all-sample-fields", &all_sample_fields, 0 },
@@ -221,6 +227,8 @@ begin (int argc, const char * argv[])
   gap_pos = atoi (gap_pos_spec);
   if (gap_pos < 0 || gap_pos >= n_mers)
     Fatal ("bogus gap_pos");
+
+  add_sample_id = atoi (add_sample_id_spec);
 
   bp_after_match = atoi (bp_after_match_spec);
   if (bp_after_match < 0)
@@ -260,6 +268,13 @@ begin (int argc, const char * argv[])
 		 Field_name (placement_file, c));
     }
   output_inrec_col = placement_inrec_col;
+  if (ref_label_spec)
+    {
+      Add_field (output_file,
+		 Sym ("sym"),
+		 Sym ("ref"));
+      ref_label_col = ++c;
+    }
   for (m = 0; m < mercount; ++m)
     {
       output_pos_col[m] = placement_pos_col[m];
@@ -379,6 +394,12 @@ begin (int argc, const char * argv[])
 	{
 	  Poke (output_file, 0, c, Peek (placement_file, 0, c));
 	}
+      if (ref_label_col >= 0)
+	{
+	  Poke (output_file, 0, ref_label_col, Sym (ref_label_spec));
+	}
+      Poke (output_file, 0, output_inrec_col, uInt64 (sample_row + add_sample_id));
+
       for (m = 0; m < mercount; ++m)
 	{
 	  Poke (output_file, 0, placement_pos_col[m], uInt64 (pos[m]));
@@ -390,7 +411,6 @@ begin (int argc, const char * argv[])
       if (two_inrecs_per_sample)
 	{
 	  side = inrec & 1;
-	  Poke (output_file, 0, output_inrec_col, uInt64 (sample_row));
 	  for (m = 0; m < mercount; ++m)
 	    {
 	      if (1 < count_snps (samplemer[m],
