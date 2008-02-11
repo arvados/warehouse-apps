@@ -12,6 +12,9 @@ use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA qw(sha512);
 
+my @conversion_table={'A','C','G','T'}; 
+
+
 my $manifestkey = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0)
@@ -152,7 +155,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  my $munge_ref="C"x28; 
 
 	  for (my $i=0; $i < 28; $i++) {
-	    my $bp = substr ($read_ref, $i, 1); 	    	
+	    my $bp = substr ($read_ref, $i, 1);
 	    my $munge = 1; 
 	    for (my $j=0; $j < 7; $j++) {
 	      if (vec ($seed, 512 - $rand_bits--, 1)){
@@ -161,11 +164,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      }
 	    }
 	    if ($munge) {
-	      substr ($munge_ref, $i, 1) = "A";      
+	      $bp = $conversion_table
+		  [vec($seed,512-$rand_bits--,1)<<1|
+		   vec($seed,512-$rand_bits--,1)];  
 	    }
-	    else {
-	      #substr ($munge_ref, $i, 1) = "C"; 
-	    }
+	    substr ($munge_ref $i, 1) = $bp; 
 	  }
 
 	  $outstream->write_data 
