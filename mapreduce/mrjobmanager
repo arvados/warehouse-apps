@@ -282,8 +282,11 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     my $gotsome
 	= readfrompipes ()
 	+ reapchildren ();
-    select (undef, undef, undef, 0.1) if !$gotsome;
-
+    if (!$gotsome)
+    {
+      try_getting_impatient();
+      select (undef, undef, undef, 0.1);
+    }
     if (($tasks_failed >= 8 && $tasks_succeeded == 0) ||
 	($tasks_failed >= 16 && $tasks_failed > $tasks_succeeded))
     {
@@ -303,27 +306,7 @@ while (%proc)
   if (!reapchildren())
   {
     # nothing better to do
-    if ($tasks_succeeded > keys %proc)
-    {
-      # enough jobsteps have succeeded that $time_slowest_success might
-      # be meaningful
-      if (@slot >= 2 * keys %proc)
-      {
-	# at least half of our task slots (cpus) are idle
-	for (grep { $proc{$_}->{time} + $time_slowest_success * 2 < time }
-	    keys %proc)
-	{
-	  # pid $_ has taken more than twice as long as the longest
-	  # successful job in this round.  It's probably hung.  Kill
-	  # it, and restart it in the next round.
-
-	  Log ($proc{$_}->{jobstep}, "sending SIGINT x 2 to pid $_");
-	  kill 2, $_;
-	  select (undef, undef, undef, 0.1);
-	  kill 2, $_;
-	}
-      }
-    }
+    try_getting_impatient();
     select (undef, undef, undef, 0.1);
   }
 }
@@ -537,6 +520,48 @@ sub readfrompipes
     }
   }
   return $gotsome;
+}
+
+
+sub try_getting_impatient
+{
+  if ($tasks_succeeded > keys %proc)
+  {
+    # enough jobsteps have succeeded that $time_slowest_success might
+    # be meaningful
+    if (@slot >= 2 * keys %proc)
+    {
+      # at least half of our task slots (cpus) are idle
+      for (grep { $proc{$_}->{time} + $time_slowest_success * 2 < time }
+	   keys %proc)
+      {
+	# pid $_ has taken more than twice as long as the longest
+	# successful job in this round.  It's probably hung.  Kill
+	# it, and restart it in the next round.
+
+	my $sig = 2;		# SIGINT first
+	if (time - $proc{$_}->{sent_$sig} > 4)
+	{
+	  $sig = 15;		# SIGTERM if SIGINT doesn't work
+	}
+	if (time - $proc{$_}->{sent_$sig} > 4)
+	{
+	  $sig = 9;		# SIGKILL if SIGTERM doesn't work
+	}
+	if (!exists $proc{$_}->{sent_$sig})
+	{
+	  Log ($proc{$_}->{jobstep}, "sending 2x signal $sig to pid $_");
+	  kill $sig, $_;
+	  select (undef, undef, undef, 0.1);
+	  if ($sig == 2)
+	  {
+	    kill $sig, $_;	# srun wants two SIGINT to really interrupt
+	  }
+	  $proc{$_}->{sent_$sig} = time;
+	}
+      }
+    }
+  }
 }
 
 
