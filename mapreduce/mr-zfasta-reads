@@ -159,10 +159,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      }
 	    }
 	    if ($munge) {
-	      $substr ($munge_ref, $i, 1) = "A";      
+	      substr ($munge_ref, $i, 1) = "A";      
 	    }
 	    else {
-	      $substr ($munge_ref, $i, 1) = "C"; 
+	      substr ($munge_ref, $i, 1) = "C"; 
 	    }
 	  }
 
