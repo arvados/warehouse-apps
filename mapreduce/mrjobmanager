@@ -540,15 +540,15 @@ sub try_getting_impatient
 	# it, and restart it in the next round.
 
 	my $sig = 2;		# SIGINT first
-	if (time - $proc{$_}->{sent_$sig} > 4)
+	if (time - $proc{$_}->{"sent_$sig"} > 4)
 	{
 	  $sig = 15;		# SIGTERM if SIGINT doesn't work
 	}
-	if (time - $proc{$_}->{sent_$sig} > 4)
+	if (time - $proc{$_}->{"sent_$sig"} > 4)
 	{
 	  $sig = 9;		# SIGKILL if SIGTERM doesn't work
 	}
-	if (!exists $proc{$_}->{sent_$sig})
+	if (!exists $proc{$_}->{"sent_$sig"})
 	{
 	  Log ($proc{$_}->{jobstep}, "sending 2x signal $sig to pid $_");
 	  kill $sig, $_;
@@ -557,7 +557,7 @@ sub try_getting_impatient
 	  {
 	    kill $sig, $_;	# srun wants two SIGINT to really interrupt
 	  }
-	  $proc{$_}->{sent_$sig} = time;
+	  $proc{$_}->{"sent_$sig"} = time;
 	}
       }
     }
