@@ -1,0 +1,73 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:visit all subdirectories and print reads   
+###MR_INPUT:manifest
+###MR_KNOBS:K=7
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey; 
+  for(0..(2**(2*$ENV{KNOB_K}))-1) 
+  { 
+    print STDERR "+++mrjobstep 1 $_+++\n"; 
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+					  
+  $manifest->rewind;
+
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  my $name = "./".$ENV{MR_INPUT};
+  warn "$name\n"; 
+  $outstream->name ($name);
+  $outstream->clear;
+  $outstream->write_start ("placed-reads.txt"); 
+
+  while (my $instream = $manifest->subdir_next)
+  {
+    
+    while (my ($pos, $size, $filename) = $instream->file_next)
+    {
+      last if !defined $pos; 
+      $instream->seek ($pos); 
+      my $reference; 
+      if ($filename =~ m/reads.txt$/i) 
+      {
+	my $buf = ""; 
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $buf .= $$dataref;
+          while ($buf =~ s,^([^n]*\n),,)
+          {
+            my @r = split (/ /, $1);
+	    
+	    print "@r";
+          }
+	}
+      }
+    }
+  }
+  $outstream->write_finish; 
+  
+  my $fragkey = $whc->store_block ($outstream->as_string)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout ".$fragkey."+++\n";
+  print STDERR $whc->iostats;
+  exit 0;  
+}
