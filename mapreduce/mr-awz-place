@@ -56,7 +56,7 @@ elsif ($ENV{MR_LEVEL} == 1)
           while ($buf =~ s,^([^n]*\n),,)
           {
             my @r = split (/ /, $1);
-	    outstream->write_data ("$r[0]");  
+	    $outstream->write_data ("$r[0]");  
           }
 	}
       }
