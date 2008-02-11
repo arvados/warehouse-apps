@@ -3,7 +3,7 @@
 
 ###MR_DESCRIPTION:visit all subdirectories and print reads   
 ###MR_INPUT:manifest
-###MR_KNOBS:K=7
+###MR_KNOBS:K=1
 
 use strict; 
 use Warehouse;
