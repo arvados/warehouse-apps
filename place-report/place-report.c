@@ -395,11 +395,12 @@ begin (int argc, const char * argv[])
 	    {
 	      if (1 < count_snps (samplemer[m],
 				  side
-				  ? mer_reverse_complement (refmer[mercount-m-1], n_mers)
+				  ? reverse_complement_mer (refmer[mercount-m-1])
 				  : refmer[m],
 				  &snppos[m]))
 		{
 		  side = -2;
+		  break;
 		}
 	    }
 	}
@@ -422,7 +423,7 @@ begin (int argc, const char * argv[])
 	      for (m = 0; m < mercount; ++m)
 		{
 		  if (1 < count_snps (samplemer[m],
-				      mer_reverse_complement (refmer[mercount-m-1], n_mers),
+				      reverse_complement_mer (refmer[mercount-m-1]),
 				      &snppos[m]))
 		    {
 		      side = -2;
