@@ -49,14 +49,15 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $reference; 
       if ($filename =~ m/reads.txt$/i) 
       {
-	my $buf = ""; 
+	my $suffix = ""; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
-	  $buf .= $$dataref;
-          while ($buf =~ s,^([^\n]*\n),,)
-          {
-            my @r = split (/ /, $1);
-	    $outstream->write_data ("$r[0]\n");  
+	  my $buf = $suffix . $$dataref;
+	  my $cur_reads = int(length ($buf)/60); 
+	  $suffix = substr ($cur_reads*60+1, $buf); 
+	  for (my $i = 0; $i < $cur_reads; $i+=60) 
+	  {  
+	    $outstream->write_data (substr($i, $buf, 28)."\n");  
           }
 	}
       }
