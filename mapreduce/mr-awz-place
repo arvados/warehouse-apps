@@ -45,8 +45,7 @@ elsif ($ENV{MR_LEVEL} == 1)
     while (my ($pos, $size, $filename) = $instream->file_next)
     {
       last if !defined $pos; 
-      $instream->seek ($pos); 
-      my $reference; 
+      $instream->seek ($pos);  
       if ($filename =~ m/reads.txt$/i) 
       {
 	my $suffix = ""; 
@@ -55,9 +54,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  my $buf = $suffix . $$dataref;
 	  my $cur_reads = int(length ($buf)/60); 
 	  $suffix = substr ($buf, $cur_reads*60+1); 
-	  for (my $i = 0; $i < $cur_reads; $i+=60) 
+	  for (my $i = 0; $i < $cur_reads; $i++) 
 	  {  
-	    $outstream->write_data (substr($buf, $i, 28)."\n");  
+	    $outstream->write_data (substr($buf, $i*60, 28)."\n");  
           }
 	}
       }
