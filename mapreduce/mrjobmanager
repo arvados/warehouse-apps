@@ -175,7 +175,6 @@ my $tasks_failed = 0;
 		       or $a <=> $b } @jobstep_todo;
 my $level = $jobstep[$jobstep_todo[0]]->{level};
 Log (undef, "start level $level");
-update_progress_stats();
 
 
 
@@ -183,6 +182,11 @@ my %proc;
 my @freeslot = (0..$#slot);
 my %reader;
 my ($id, $input, $attempts);
+
+update_progress_stats();
+
+
+
 THISROUND:
 for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 {
