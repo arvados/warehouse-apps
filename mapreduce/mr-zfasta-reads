@@ -155,7 +155,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  my $munge_ref="C"x28; 
 
 	  for (my $i=0; $i < 28; $i++) {
-	    my $bp = substr ($read_ref, $i, 1);
+	    my $base = substr ($read_ref, $i, 1);
 	    my $munge = 1; 
 	    for (my $j=0; $j < 7; $j++) {
 	      if (vec ($seed, 512 - $rand_bits--, 1)){
@@ -164,11 +164,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      }
 	    }
 	    if ($munge) {
-	      $bp = $conversion_table
+	      $base = $conversion_table
 		  [vec($seed,512-$rand_bits--,1)<<1|
 		   vec($seed,512-$rand_bits--,1)];  
 	    }
-	    substr ($munge_ref, $i, 1) = $bp; 
+	    substr ($munge_ref, $i, 1) = $base; 
 	  }
 
 	  $outstream->write_data 
