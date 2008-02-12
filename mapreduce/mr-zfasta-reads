@@ -168,7 +168,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		  [vec($seed,512-$rand_bits--,1)<<1|
 		   vec($seed,512-$rand_bits--,1)];  
 	    }
-	    substr ($munge_ref $i, 1) = $bp; 
+	    substr ($munge_ref, $i, 1) = $bp; 
 	  }
 
 	  $outstream->write_data 
