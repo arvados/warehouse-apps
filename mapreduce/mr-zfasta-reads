@@ -152,7 +152,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      substr($reference,
 		$current_position-$bp_start+760+$big_gap+$small_gap2,7);
 
-	  my $munge_ref="C"x28; 
+	  my $munge_ref=""; 
 
 	  for (my $i=0; $i < 28; $i++) {
 	    my $base = substr ($read_ref, $i, 1);
@@ -168,7 +168,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		  [vec($seed,512-$rand_bits--,1)<<1|
 		   vec($seed,512-$rand_bits--,1)];  
 	    }
-	    substr ($munge_ref, $i, 1) = $base; 
+	    $munge_ref .= $base; 
 	  }
 
 	  $outstream->write_data 
