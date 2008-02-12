@@ -163,12 +163,12 @@ elsif ($ENV{MR_LEVEL} == 1)
 	        last; 
 	      }
 	    }
-	    if ($munge) {
-	      $base = $conversion_table
-		  [vec($seed,512-$rand_bits--,1)<<1|
-		   vec($seed,512-$rand_bits--,1)];  
-	    }
-	    substr ($munge_ref, $i, 1) = $base; 
+	    #if ($munge) {
+	    #  $base = $conversion_table
+	    #[vec($seed,512-$rand_bits--,1)<<1|
+	    #vec($seed,512-$rand_bits--,1)];  
+	    #}
+	    #substr ($munge_ref, $i, 1) = $base; 
 	  }
 
 	  $outstream->write_data 
