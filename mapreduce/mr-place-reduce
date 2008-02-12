@@ -50,9 +50,12 @@ if ($ENV{MR_LEVEL} == 1)
       {
 	last if !defined $pos;
 	$instream->seek ($pos);
-	my $buf = "";
+	my $firstblockonly = 1;
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
+	  $$dataref =~ s/^(\#[^\n]+\n)+// if $firstblockonly;
+	  $firstblockonly = 0;
+
 	  $outstream->write_data ($dataref);
 	}
       }
