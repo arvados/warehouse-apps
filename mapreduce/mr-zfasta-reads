@@ -122,10 +122,9 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $valid_read; 
       
       do {
-	if ($rand_bits < 256 ) {
-	  $seed = sha512($seed); #generate some more randomness 
-	  $rand_bits = 512;
-	}
+	$seed = sha512($seed); #generate some more randomness 
+	$rand_bits = 512;
+	  
 	my $small_gap1 = vec ($seed, 512 - $rand_bits--, 1); 
 	my $small_gap2 = vec ($seed, 512 - $rand_bits--, 1);
 	my $orient = vec ($seed, 512 - $rand_bits--, 1);
@@ -164,12 +163,12 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      }
 	    }
 	    if ($munge) {
-	#      $base = $conversion_table
-	#	  [vec($seed,512-$rand_bits--,1)<<1|
-	#	   vec($seed,512-$rand_bits--,1)];  
+	      $base = $conversion_table
+		  [vec($seed,512-$rand_bits--,1)<<1|
+		   vec($seed,512-$rand_bits--,1)];  
 
-	      $base = sprintf ("X",vec($seed,512-$rand_bits--,1)<<1|
-			       vec($seed,512-$rand_bits--,1));
+#	      $base = sprintf ("X",vec($seed,512-$rand_bits--,1)<<1|
+#			       vec($seed,512-$rand_bits--,1));
 	    }
 	    $munge_ref .= $base; 
 	  }
