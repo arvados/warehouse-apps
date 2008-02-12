@@ -182,6 +182,7 @@ my %proc;
 my @freeslot = (0..$#slot);
 my %reader;
 my ($id, $input, $attempts);
+my $progress_is_dirty = 1;
 
 update_progress_stats();
 
@@ -277,7 +278,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   splice @jobstep_todo, $todo_ptr, 1;
   --$todo_ptr;
 
-  update_progress_stats() if !@freeslot;
+  $progress_is_dirty = 1;
 
   while (!@freeslot
 	 ||
@@ -288,6 +289,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	+ reapchildren ();
     if (!$gotsome)
     {
+      update_progress_stats();
       try_getting_impatient();
       select (undef, undef, undef, 0.1);
     }
@@ -309,7 +311,7 @@ while (%proc)
   readfrompipes ();
   if (!reapchildren())
   {
-    # nothing better to do
+    update_progress_stats();
     try_getting_impatient();
     select (undef, undef, undef, 0.1);
   }
@@ -411,6 +413,7 @@ exit 0;
 
 sub update_progress_stats
 {
+  return if !$progress_is_dirty;
   my ($todo, $done, $running) = (scalar @jobstep_todo,
 				 scalar @jobstep_done,
 				 scalar @slot - scalar @freeslot);
@@ -419,6 +422,7 @@ sub update_progress_stats
        undef,
        $todo, $done, $running, $job_id);
   Log (undef, "status: $done done, $running running, $todo todo");
+  $progress_is_dirty = 0;
 }
 
 
@@ -471,7 +475,7 @@ sub reapchildren
   push @freeslot, $proc{$pid}->{slot};
   delete $proc{$pid};
 
-  update_progress_stats();
+  $progress_is_dirty = 1;
   1;
 }
 
