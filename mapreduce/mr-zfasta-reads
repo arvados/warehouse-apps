@@ -167,8 +167,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 #		  [vec($seed,512-$rand_bits--,1)<<1|
 #		   vec($seed,512-$rand_bits--,1)];  
 
-	      $base = sprintf ("%X",vec($seed,512-$rand_bits--,1)<<1|
-			       vec($seed,512-$rand_bits--,1));
+	      #$base = sprintf ("%X",vec($seed,512-$rand_bits--,1)<<1|
+	      #	       vec($seed,512-$rand_bits--,1));
 	    }
 	    $munge_ref .= $base; 
 	  }
