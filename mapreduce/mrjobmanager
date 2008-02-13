@@ -317,6 +317,8 @@ while (%proc)
   }
 }
 
+update_progress_stats();
+
 
 
 if (@jobstep_tomerge && !@jobstep_todo)
