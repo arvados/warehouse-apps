@@ -52,11 +52,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
 	  my $buf = $suffix . $$dataref;
-	  my $cur_reads = int(length ($buf)/60); 
-	  $suffix = substr ($buf, $cur_reads*60+1); 
+	  my $cur_reads = int(length ($buf)/89); 
+	  $suffix = substr ($buf, $cur_reads*89+1); 
 	  for (my $i = 0; $i < $cur_reads; $i++) 
 	  {  
-	    $outstream->write_data (substr($buf, $i*60, 28)."\n");  
+	    $outstream->write_data (substr($buf, $i*89, 28)."\n");  
           }
 	}
       }
