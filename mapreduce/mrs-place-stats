@@ -7,7 +7,7 @@ my @fieldname;
 my @fieldtype;
 my %col;			# fieldname => col#
 my $mercount;
-my $has_answer_key;
+my $have_answer_key;
 my $answer_key_has_smallgaps;
 
 my @mersize;
