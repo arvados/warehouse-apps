@@ -23,8 +23,8 @@ while ($ARGV[0] =~ /^-/)
   }
 }
 
-die "usage: mrs-merge -h [-t] manifestkey\n"
-    if @ARGV != 1;
+die "usage: mrs-merge -h [-t] manifestkey subdir ...\n"
+    if @ARGV < 2;
 
 my $manifestkey = shift @ARGV;
 
