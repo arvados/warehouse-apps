@@ -168,15 +168,13 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      $base = $conversion_table
 		  [vec($seed,512-$rand_bits--,1)<<1|
 		   vec($seed,512-$rand_bits--,1)];  
-
-	      $base = sprintf ("%X",vec($seed,512-$rand_bits--,1)<<1|
-	      	       vec($seed,512-$rand_bits--,1));
 	    }
 	    $munge_ref .= $base; 
 	  }
 
 	  $outstream->write_data 
-	      ($munge_ref." ".$read_ref.$answer_key."\n".$read1.$read0."\n");
+	      ($munge_ref." ".$read_ref.$answer_key."\n".
+	       $read1.$read0." ".$read_ref.$answer_key."\n");
 	  $valid_read++; 
 	}
 	$read++; 
