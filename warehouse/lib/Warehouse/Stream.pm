@@ -503,8 +503,9 @@ sub read_until
     # skip "blockshortness" token
     shift @{$self->{nexthashes}} if $self->{nexthashes}->[0] =~ /^-\d+$/;
 
-    $self->{buf} .= $self->{whc}->fetch_block (shift @{$self->{nexthashes}})
+    my $dataref = $self->{whc}->fetch_block_ref (shift @{$self->{nexthashes}})
 	or die "fetch_block failed";
+    $self->{buf} .= $$dataref;
   }
   if (defined $dpos && $wantbytes > $dpos + length $delimiter) # only need bytes up to end of delimiter
   {

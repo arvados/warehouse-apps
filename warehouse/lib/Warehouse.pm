@@ -451,6 +451,15 @@ failure.
 sub fetch_block
 {
     my $self = shift;
+    my $r = $self->fetch_block_ref (@_);
+    return undef if !defined $r;
+    return $$r;
+}
+
+
+sub fetch_block_ref
+{
+    my $self = shift;
     my $hash = shift;
     my $verifyflag = shift;
     $verifyflag = 1 if !defined $verifyflag;
@@ -555,7 +564,7 @@ sub fetch_block
 	$self->_store_block_memcached ($md5, $dataref);
     }
 
-    return $$dataref;
+    return $dataref;
 }
 
 
