@@ -33,7 +33,7 @@ my $manifest = new Warehouse::Manifest (whc => $whc,
 					key => $manifestkey);
 my @stream;			# array of arrayrefs; $stream[0]->[0] is a Warehouse::Stream
 
-for (@ARGV)
+foreach my $subdir (@ARGV)
 {
   push @stream, [];
   $manifest->rewind;
