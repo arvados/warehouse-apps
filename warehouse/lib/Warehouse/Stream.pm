@@ -494,7 +494,7 @@ sub read_until
 
     if ($self->{bufcursor} > 0)
     {
-      substr $self->{buf}, 0, $self->{bufcursor}, "";
+      $self->{buf} = substr $self->{buf}, $self->{bufcursor};
       $wantbytes -= $self->{bufcursor};
       $self->{bufpos} += $self->{bufcursor};
       $self->{bufcursor} = 0;
@@ -514,10 +514,10 @@ sub read_until
   {
     $wantbytes = length $self->{buf};
   }
-  my $wantdata = substr $self->{buf}, $self->{bufcursor}, $wantbytes - $self->{bufcursor};
+  $self->{clientbuf} = substr $self->{buf}, $self->{bufcursor}, $wantbytes - $self->{bufcursor};
   $self->{bufcursor} = $wantbytes;
   
-  return \$wantdata;
+  return \$self->{clientbuf};
 }
 
 

@@ -56,13 +56,13 @@ if ($opt{"t"})
   my $did = 0;
   for (0..$#stream)
   {
-    if ($nextline[$_] =~ /^\#: taql-/)
+    if (${$nextline[$_]} =~ /^\#: taql-/)
     {
       my $morehdrs = $stream[$_]->read_until ($endpos[$_], "\n\#.\n");
       if (!$did)
       {
-	print $nextline[$_];
-	print $morehdrs;
+	print ${$nextline[$_]};
+	print $$morehdrs;
 	$did = 1;
       }
       $nextline[$_] = $stream[$_]->read_until ($endpos[$_], "\n");
@@ -78,13 +78,13 @@ while (1)
     if (defined $nextline[$_])
     {
       if (!defined $low
-	  || $nextline[$_] < $nextline[$low])
+	  || ${$nextline[$_]} < ${$nextline[$low]})
       {
 	$low = $_;
       }
     }
   }
   last if !defined $low;
-  print $nextline[$low];
+  print ${$nextline[$low]};
   $nextline[$low] = $stream[$low]->read_until ($endpos[$low], "\n");
 }
