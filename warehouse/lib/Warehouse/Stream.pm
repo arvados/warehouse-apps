@@ -504,7 +504,7 @@ sub read_until
     shift @{$self->{nexthashes}} if $self->{nexthashes}->[0] =~ /^-\d+$/;
 
     my $dataref = $self->{whc}->fetch_block_ref (shift @{$self->{nexthashes}})
-	or die "fetch_block failed";
+	or die "fetch_block_ref failed";
     $self->{buf} .= $$dataref;
   }
   if (defined $dpos && $wantbytes > $dpos + length $delimiter) # only need bytes up to end of delimiter
@@ -517,6 +517,14 @@ sub read_until
   }
   $self->{clientbuf} = substr $self->{buf}, $self->{bufcursor}, $wantbytes - $self->{bufcursor};
   $self->{bufcursor} = $wantbytes;
+
+  if ($self->{bufcursor} == length $self->{buf})
+  {
+    # convenient time to free up some memory
+    $self->{buf} = "";
+    $self->{bufpos} += $self->{bufcursor};
+    $self->{bufcursor} = 0;
+  }
   
   return \$self->{clientbuf};
 }
