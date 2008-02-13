@@ -35,21 +35,24 @@ if ($ENV{MR_LEVEL} == 0)
 }
 elsif ($ENV{MR_LEVEL} == 1)
 {
-
-  #setup global variables for "awzprng" 
-  my $awzprngseed = $ENV{KNOB_SEED}.$ENV{MR_ID};
-  my $awzprngbits = 0; 
-  my $awzprngblocks = 0; 
-  print STDERR "AWZPRNGSEED = $awzprngseed\n";
-
-
-
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
   
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
-					
+	
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  my $name = "./".$ENV{MR_INPUT}; 
+  $outstream->name ($name);
+  $outstream->clear;
+  $outstream->write_start ("reads.txt"); 
+
+  #setup global variables for "awzprng" 
+  my $awzprngseed = $ENV{KNOB_SEED}.$name;
+  my $awzprngbits = 0; 
+  my $awzprngblocks = 0; 
+  print STDERR "AWZPRNGSEED = $awzprngseed\n";
+			
   my @reads; 
 
   for (my $i = 0; $i < (2**$ENV{KNOB_SUF}); $i++ ){
@@ -62,14 +65,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $bp = 0; 
   my $current_read = 0; 
 
-  $manifest->rewind;
-
-  my $outstream = new Warehouse::Stream (whc => $whc);
-  my $name = "./".$ENV{MR_INPUT};
-  warn "$name\n"; 
-  $outstream->name ($name);
-  $outstream->clear;
-  $outstream->write_start ("reads.txt"); 
+  $manifest->rewind; #isn't this already done by "new" above? --AWZ
 
   while (my $instream = $manifest->subdir_next)
   {
