@@ -4,6 +4,8 @@
 ###MR_DESCRIPTION:collate output of mr-place, fix sample IDs
 ###MR_INPUT:manifest
 ###MR_KNOBS:ONE_FILE_PER_CHR=1
+###MR_KNOBS:MERS_AND_GAPS=14,250-761,14
+###MR_KNOBS:SMALLGAPMIN=3
 
 use strict; 
 use Warehouse;

@@ -7,6 +7,24 @@ my @fieldname;
 my @fieldtype;
 my %col;			# fieldname => col#
 my $mercount;
+my $has_answer_key;
+my $answer_key_has_smallgaps;
+
+my @mersize;
+my @gap;
+for (split (/,/, $ENV{KNOB_MERS_AND_GAPS}))
+{
+  if (@mersize > @gap)
+  {
+    my @gap = split (/-/);
+    push @gapmin, $gap[0];
+    push @gapmax, $gap[-1];
+  }
+  else
+  {
+    push @mersize, $_;
+  }
+}
 
 while (<>)
 {
@@ -36,6 +54,11 @@ EOF
       print qq{\# field "pos$_" "uint32"\n};
     }
     print qq{\#.\n};
+    if ($have_answer_key = exists $col{"start"} && exists $col{"gap0"})
+    {
+      # XXX so far this is only handled correctly for 2 mers & 3 gaps
+      $answer_key_has_smallgaps = exists $col{"gap".$#mercount+1};
+    }
   }
   my (@fields) = split (/ /);
   my @pos = map { $fields[$col{"pos$_"}] } (0..$mercount-1);
@@ -45,5 +68,26 @@ EOF
 	     $snps,
 	     $fields[$col{"ref"}],
 	     @pos);
+  if ($have_answer_key)
+  {
+    my $correct = 1;
+    my @answer_pos;
+    $answer_pos[0] = $fields[$col{"start"}];
+    $correct &&= $answer_pos[0] == $pos[0];
+    for (my $m=1, my $g=0; $m < $mercount; $m++)
+    {
+      $answer_pos[$m] = $answer_pos[$m-1];
+      $answer_pos[$m] += $gapmin[$m-1];
+      for (my $smallgap=0; $smallgap <= $answer_key_has_smallgaps; $smallgap++)
+      {
+	$answer_pos[$m] += $fields[$col{"gap$g"}];
+	$answer_pos[$m] += $ENV{KNOB_SMALLGAPMIN};
+	$g++;
+      }
+      $correct &&= $answer_pos[$m] == $pos[$m];
+    }
+    push @out, @answer_pos;
+    push @out, $correct;
+  }
   print "@out\n";
 }
