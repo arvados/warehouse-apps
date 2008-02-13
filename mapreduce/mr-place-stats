@@ -14,8 +14,9 @@ use Safepipe;
 
 my $manifestkey = $ENV{MR_INPUT0};
 
+my @subdirs = map { "./chr$_.fa-*" } (1..22, 'X', 'Y', 'M');
 Safepipe::readfrom ("main::S",
-		    "mrs-merge -h -t '$manifestkey'",
+		    "mrs-merge -h -t '$manifestkey' @subdirs",
 		    "mrs-place-stats",
 		    "mrs-store . place-stats.txt",
 		    "mrs-output");

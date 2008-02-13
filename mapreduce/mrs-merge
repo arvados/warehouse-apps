@@ -31,24 +31,29 @@ my $manifestkey = shift @ARGV;
 my $whc = new Warehouse;
 my $manifest = new Warehouse::Manifest (whc => $whc,
 					key => $manifestkey);
-$manifest->rewind;
-my @stream;
-while (my $stream = $manifest->subdir_next)
+my @stream;			# array of arrayrefs; $stream[0]->[0] is a Warehouse::Stream
+
+for (@ARGV)
 {
-  push @stream, $stream;
+  push @stream, [];
+  $manifest->rewind;
+  while (my $stream = $manifest->subdir_next)
+  {
+    if ($stream->name eq $subdir
+	|| $subdir eq '*'
+	|| ($subdir =~ /\*$/ && $stream->name =~ /^\Q$`\E/))
+    {
+      push @{$stream[-1]}, $stream;
+    }
+  }
+  die "subdir not found: $subdir" if !@{$stream[-1]};
 }
 
 my @endpos;
-for (@stream)
-{
-  push @endpos, 0;
-  while (my ($pos, $size, $filename) = $_->file_next)
-  {
-    last if !defined $pos;
-    $endpos[-1] = $pos + $size if $endpos[-1] < $pos + $size;
-  }
-}
-my @nextline = map { $stream[$_]->read_until ($endpos[$_]) } (0..$#stream);
+map { getendpos ($_) } (0..$#stream);
+
+my @nextline;
+map { $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_]) } (0..$#stream);
 
 if ($opt{"t"})
 {
@@ -56,17 +61,9 @@ if ($opt{"t"})
   my $did = 0;
   for (0..$#stream)
   {
-    if (${$nextline[$_]} =~ /^\#: taql-/)
-    {
-      my $morehdrs = $stream[$_]->read_until ($endpos[$_], "\n\#.\n");
-      if (!$did)
-      {
-	print ${$nextline[$_]};
-	print $$morehdrs;
-	$did = 1;
-      }
-      $nextline[$_] = $stream[$_]->read_until ($endpos[$_], "\n");
-    }
+    my $hdrs = skiptaql($_);
+    print $hdrs if !$did;
+    $did = 1;
   }
 }
 
@@ -78,13 +75,46 @@ while (1)
     if (defined $nextline[$_])
     {
       if (!defined $low
-	  || ${$nextline[$_]} < ${$nextline[$low]})
+	  || $ {$nextline[$_]} < $ {$nextline[$low]})
       {
 	$low = $_;
       }
     }
   }
   last if !defined $low;
-  print ${$nextline[$low]};
-  $nextline[$low] = $stream[$low]->read_until ($endpos[$low], "\n");
+  print $ {$nextline[$low]};
+  $nextline[$low] = $stream[$low]->[0]->read_until ($endpos[$low], "\n");
+  while (!defined $nextline[$low])
+  {
+    shift @{$stream[$low]};
+    last if !@{$stream[$low]};
+    getendpos ($low);
+    $nextline[$low] = $stream[$low]->[0]->read_until ($endpos[$low], "\n");
+    skiptaql ($low);
+  }
+}
+
+sub skiptaql
+{
+  local $_ = shift;
+  if ($ {$nextline[$_]} =~ /^\#: taql-/)
+  {
+    my $morehdrs = $stream[$_]->[0]->read_until ($endpos[$_], "\n\#.\n");
+    my $ret = $ {$nextline[$_]} . $morehdrs;
+    $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_], "\n");
+    return $ret;
+  }
+  return "";
+}
+
+sub getendpos
+{
+  local $_ = shift;
+  $endpos[$_] = 0;
+  $stream[$_]->[0]->rewind;
+  while (my ($pos, $size, $filename) = $stream[$_]->[0]->file_next)
+  {
+    last if !defined $pos;
+    $endpos[$_] = $pos + $size if $endpos[$_] < $pos + $size;
+  }
 }
