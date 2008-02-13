@@ -53,7 +53,7 @@ my @endpos;
 map { getendpos ($_) } (0..$#stream);
 
 my @nextline;
-map { $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_]) } (0..$#stream);
+map { $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_], "\n") } (0..$#stream);
 
 if ($opt{"t"})
 {
