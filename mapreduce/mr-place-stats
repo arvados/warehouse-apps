@@ -1,9 +1,8 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:collate output of mr-place, fix sample IDs
+###MR_DESCRIPTION:collate output of mr-place
 ###MR_INPUT:manifest
-###MR_KNOBS:ONE_FILE_PER_CHR=1
 ###MR_KNOBS:MERS_AND_GAPS=14,250-761,14
 ###MR_KNOBS:SMALLGAPMIN=3
 
@@ -15,33 +14,11 @@ use Safepipe;
 
 my $manifestkey = $ENV{MR_INPUT0};
 
-if ($ENV{MR_LEVEL} == 0)
-{
-  $ENV{MR_INPUT} = $manifestkey;
-  if ($ENV{KNOB_ONE_FILE_PER_CHR})
-  {
-    for (1..22, 'X', 'Y', 'M')
-    {
-      print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
-    }
-    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
-  }
-  else
-  {
-    $ENV{MR_LEVEL} = 1;
-  }
-}
-
-if ($ENV{MR_LEVEL} == 1)
-{
-  my $subdir = $ENV{KNOB_ONE_FILE_PER_CHR} ? "./$ENV{MR_INPUT}" : "*";
-  my $subdir_out = $ENV{KNOB_ONE_FILE_PER_CHR} ? "./$ENV{MR_INPUT}" : ".";
-  Safepipe::readfrom ("main::S",
-		      "mrs-fetch -h '$manifestkey' '$subdir-*' mer-nfa-report.txt",
-		      "mrs-place-stats",
-		      "mrs-store '$subdir_out' place-stats.txt",
-		      "mrs-output");
-  close "S" or die "close S: $!";
-  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
-  exit 0;
-}
+Safepipe::readfrom ("main::S",
+		    "mrs-merge -h -t '$manifestkey'",
+		    "mrs-place-stats",
+		    "mrs-store '$subdir_out' place-stats.txt",
+		    "mrs-output");
+close "S" or die "close S: $!";
+while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+exit 0;
