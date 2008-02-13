@@ -35,7 +35,7 @@ if ($ENV{MR_LEVEL} == 1)
   my $subdir = $ENV{KNOB_ONE_FILE_PER_CHR} ? "./$ENV{MR_INPUT}" : "*";
   my $subdir_out = $ENV{KNOB_ONE_FILE_PER_CHR} ? "./$ENV{MR_INPUT}" : ".";
   Safepipe::readfrom ("main::S",
-		      "mrs-fetch -h '$manifestkey' '$subdir' mer-nfa-report.txt",
+		      "mrs-fetch -h '$manifestkey' '$subdir-*' mer-nfa-report.txt",
 		      "mrs-place-stats",
 		      "mrs-store '$subdir_out' place-stats.txt",
 		      "mrs-output");

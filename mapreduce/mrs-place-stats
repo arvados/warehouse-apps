@@ -12,7 +12,7 @@ while (<>)
 {
   if (/^\#/)
   {
-    if (/^\# field "(.*?)" "(.*?)"/)
+    if (!defined ($mercount) && /^\# field "(.*?)" "(.*?)"/)
     {
       push @fieldname, $1;
       push @fieldtype, $2;
