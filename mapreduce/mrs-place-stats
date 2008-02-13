@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+
+my @fieldname;
+my @fieldtype;
+my %col;			# fieldname => col#
+my $mercount;
+
+while (<>)
+{
+  if (/^\#/)
+  {
+    if (/^\# field "(.*?)" "(.*?)"/)
+    {
+      push @fieldname, $1;
+      push @fieldtype, $2;
+      $col{$1} = $#fieldname;
+    }
+    next;
+  }
+  if (!defined $mercount)
+  {
+    $mercount = grep { /^pos\d+$/ } @fieldname;
+    print <<EOF;
+#: taql-0.1/text
+# field "sample" "uint32"
+# field "side" "int8"
+# field "snps" "int8"
+# field "ref" "sym"
+EOF
+    ;
+    for (0..$mercount-1)
+    {
+      print qq{\# field "pos$_" "uint32"\n};
+    }
+    print qq{\#.\n};
+  }
+  my (@fields) = split (/ /, $line);
+  my @pos = map { $fields[$col{"pos$_"}] } (0..$mercount-1);
+  my $snps = grep { $fields[$col{"snppos$_"}] ne "-1" } (0..$mercount-1);
+  my @out = ($fields[$col{"sample"}],
+	     $fields[$col{"side"}],
+	     $snps,
+	     $fields[$col{"ref"}],
+	     @pos);
+  print "@out\n";
+}
