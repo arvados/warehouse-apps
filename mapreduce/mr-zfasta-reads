@@ -12,7 +12,7 @@ use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA qw(sha512);
 
-my @conversion_table={"A","C","G","T"}; 
+my @conversion_table=("A","C","G","T"); 
 
 
 my $manifestkey = $ENV{MR_INPUT0};
@@ -165,12 +165,12 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      }
 	    }
 	    if ($munge) {
-#	      $base = $conversion_table
-#		  [vec($seed,512-$rand_bits--,1)<<1|
-#		   vec($seed,512-$rand_bits--,1)];  
+	      $base = $conversion_table
+		  [vec($seed,512-$rand_bits--,1)<<1|
+		   vec($seed,512-$rand_bits--,1)];  
 
-	      #$base = sprintf ("%X",vec($seed,512-$rand_bits--,1)<<1|
-	      #	       vec($seed,512-$rand_bits--,1));
+	      $base = sprintf ("%X",vec($seed,512-$rand_bits--,1)<<1|
+	      	       vec($seed,512-$rand_bits--,1));
 	    }
 	    $munge_ref .= $base; 
 	  }
