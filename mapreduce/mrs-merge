@@ -42,7 +42,7 @@ my @endpos;
 for (@stream)
 {
   push @endpos, 0;
-  while (my ($pos, $size, $filename) = $stream->file_next)
+  while (my ($pos, $size, $filename) = $_->file_next)
   {
     last if !defined $pos;
     $endpos[-1] = $pos + $size if $endpos[-1] < $pos + $size;
