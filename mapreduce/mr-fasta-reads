@@ -102,17 +102,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  my $current_position = 0; 
       
 	  while (1) {
-	    if ($rand_bits < 12 ) {
-	      $seed = sha512($seed); #generate some more randomness 
-	      $rand_bits = 512;
-	    }
-	    my $small_gap1 = vec ($seed, 512 - $rand_bits--, 1); 
-	    my $small_gap2 = vec ($seed, 512 - $rand_bits--, 1);
-	    my $orient = vec ($seed, 512 - $rand_bits--, 1);
-	    my $big_gap = 0;
-	    for (my $i=0; $i < 9; $i++) {
-	      $big_gap = $big_gap<<1 | vec ($seed, 512 - $rand_bits--, 1);
-	    }
+	  
+	    my $small_gap1 = awzprng(1);  
+	    my $small_gap2 = awzprng(1);
+	    my $orient = awzprng(1); 
+	    my $big_gap = awzprng(9); 
 	    
 	    $current_position = $reads[$current_read] >> 28; 
 	    $current_read++; 
