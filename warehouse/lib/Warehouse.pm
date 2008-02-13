@@ -465,12 +465,12 @@ sub fetch_block_ref
     $verifyflag = 1 if !defined $verifyflag;
     my $nowarnflag = shift;
 
-    return "" if $hash eq "d41d8cd98f00b204e9800998ecf8427e";
+    return \"" if $hash eq "d41d8cd98f00b204e9800998ecf8427e";
 
     if ($hash =~ /\+K/)
     {
 	my $dataref = $self->fetch_from_keep ($hash);
-	return $$dataref if $dataref;
+	return $dataref if $dataref;
     }
 
     my $sizehint;
@@ -534,7 +534,7 @@ sub fetch_block_ref
     {
 	if (!$verifyflag || $md5 eq Digest::MD5::md5_hex ($data))
 	{
-	    return $data;
+	    return \$data;
 	}
 	for (my $chunk = 0;
 	     $chunk * $memcached_max_data < (defined $sizehint

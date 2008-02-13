@@ -71,7 +71,7 @@ sub _init
     {
 	my $data = join ("",
 			 map {
-			   $self->{whc}->fetch_block ($_) or die $whc->errstr
+			   $self->{whc}->fetch_block ($_) or die $self->{whc}->errstr
 			     }
 			 split (",", $self->{key}));
 	$self->{data} = \$data;
