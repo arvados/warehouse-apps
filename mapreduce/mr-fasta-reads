@@ -129,7 +129,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      my @readstart;
 	      push @readstart, $current_position-$bp_start;
 	      push @readstart, $readstart[-1] + 7 + 3 + $small_gap1;
-	      push @readstart, $readstart[-1] + 7 + 750 + $big_gap;
+	      push @readstart, $readstart[-1] + 7 + 250 + $big_gap;
 	      push @readstart, $readstart[-1] + 7 + 3 + $small_gap2;
 	      my $read0 =
 		  substr($reference, $readstart[0], 7).
