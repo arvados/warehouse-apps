@@ -1,0 +1,90 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my %opt;
+while ($ARGV[0] =~ /^-/)
+{
+  local $_ = shift @ARGV;
+  if (/^--([^=]+)(=(.*))?$/)
+  {
+    $opt{$1} = $3;
+  }
+  elsif (/^-([^-=]+)$/)
+  {
+    foreach (split ("", $1))
+    {
+      $opt{$_} = 1;
+    }
+  }
+}
+
+die "usage: mrs-merge -h [-t] manifestkey\n"
+    if @ARGV != 1;
+
+my $manifestkey = shift @ARGV;
+
+my $whc = new Warehouse;
+my $manifest = new Warehouse::Manifest (whc => $whc,
+					key => $manifestkey);
+$manifest->rewind;
+my @stream;
+while (my $stream = $manifest->subdir_next)
+{
+  push @stream, $stream;
+}
+
+my @endpos;
+for (@stream)
+{
+  push @endpos, 0;
+  while (my ($pos, $size, $filename) = $stream->file_next)
+  {
+    last if !defined $pos;
+    $endpos[-1] = $pos + $size if $endpos[-1] < $pos + $size;
+  }
+}
+my @nextline = map { $stream[$_]->read_until ($endpos[$_]) } (0..$#stream);
+
+if ($opt{"t"})
+{
+  # only output one taql header
+  my $did = 0;
+  for (0..$#stream)
+  {
+    if ($nextline[$_] =~ /^\#: taql-/)
+    {
+      my $morehdrs = $stream[$_]->read_until ($endpos[$_], "\n\#.\n");
+      if (!$did)
+      {
+	print $nextline[$_];
+	print $morehdrs;
+	$did = 1;
+      }
+      $nextline[$_] = $stream[$_]->read_until ($endpos[$_], "\n");
+    }
+  }
+}
+
+while (1)
+{
+  my $low;
+  for (0..$#stream)
+  {
+    if (defined $nextline[$_])
+    {
+      if (!defined $low
+	  || $nextline[$_] < $nextline[$low])
+      {
+	$low = $_;
+      }
+    }
+  }
+  last if !defined $low;
+  print $nextline[$low];
+  $nextline[$low] = $stream[$low]->read_until ($endpos[$low], "\n");
+}
