@@ -142,14 +142,16 @@ elsif ($ENV{MR_LEVEL} == 1)
 	       $reads[$current_read] & $read_mask,  
 	       $current_position, $orient, 
 	       $small_gap1, $big_gap, $small_gap2); 
-	  
-	  my $read_ref = substr($reference,$current_position-$bp_start,7).
+
+	  my $read0 = substr($reference,$current_position-$bp_start,7).
+	      substr($reference,$current_position-$bp_start+10+$small_gap1,7);
+
+	  my $read1 = 
+	      substr($reference,$current_position-$bp_start+750+$big_gap, 7).
 	      substr($reference,
-		     $current_position-$bp_start+10+$small_gap1,7).
-	      substr($reference,
-		     $current_position-$bp_start+750+$big_gap, 7).
-	      substr($reference,
-		$current_position-$bp_start+760+$big_gap+$small_gap2,7);
+		     $current_position-$bp_start+760+$big_gap+$small_gap2,7);
+
+	  my $read_ref = $read0.$read1; 
 
 	  my $munge_ref=""; 
 
@@ -174,7 +176,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  }
 
 	  $outstream->write_data 
-	      ($munge_ref." ".$read_ref.$answer_key."\n");
+	      ($munge_ref." ".$read_ref.$answer_key."\n".$read1.$read0."\n");
 	  $valid_read++; 
 	}
 	$read++; 
