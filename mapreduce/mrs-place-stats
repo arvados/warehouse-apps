@@ -15,7 +15,7 @@ my @gapmin;
 my @gapmax;
 for (split (/,/, $ENV{KNOB_MERS_AND_GAPS}))
 {
-  if (@mersize > @gap)
+  if (@mersize > @gapmin)
   {
     my @gap = split (/-/);
     push @gapmin, $gap[0];
@@ -57,8 +57,7 @@ EOF
     print qq{\#.\n};
     if ($have_answer_key = exists $col{"start"} && exists $col{"gap0"})
     {
-      # XXX so far this is only handled correctly for 2 mers & 3 gaps
-      $answer_key_has_smallgaps = exists $col{"gap".$#mercount+1};
+      $answer_key_has_smallgaps = exists $col{"gap$mercount"};
     }
   }
   my (@fields) = split (/ /);
