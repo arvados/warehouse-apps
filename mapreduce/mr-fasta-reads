@@ -1,9 +1,13 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:visit all subdirectories and report stats for files ending in .fa (gunzip first for .fa.gz)   
+###MR_DESCRIPTION:visit all subdirectories and generate samples  
 ###MR_INPUT:manifest
 ###MR_KNOBS:N=4
+###MR_KNOBS:MER=8
+###MR_KNOBS:READ_LENGTH=18 
+###MR_KNOBS:SEED=12345
+###MR_KNOBS:READS=1000000
 
 use strict; 
 use Warehouse;
@@ -13,6 +17,15 @@ use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA qw(sha512);
 
 my $manifestkey = $ENV{MR_INPUT0};
+
+my $mer = $ENV{KNOB_MER}; 
+my $read_length = $ENV{KNOB_READ_LENGTH}; 
+
+#setup global variables for "awzprng" 
+my $awzprngseed = $ENV{KNOB_SEED}.$ENV{MR_ID};
+my $awzprngbits = 0; 
+my $awzprngblocks = 0; 
+warn "AWZPRNGSEED = $seed";
 
 if ($ENV{MR_LEVEL} == 0)
 {
@@ -31,8 +44,10 @@ elsif ($ENV{MR_LEVEL} == 1)
   
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
-					  
-  my $seed = sha512("123456"); #use "SEED" knob and job ID here 
+					
+  my $seed = $ENV{KNOB_SEED}.$ENV{JOBID};
+  warn "SEED = $seed"; 
+  my $seed = sha512($seed);  
   my $rand_blocks = 2**18; #implies 2^21 reads
   my $rand_bits = 512 * $rand_blocks; # implies 8 x 64 bit reads
   my $good_random_data = $seed;
@@ -156,10 +171,28 @@ elsif ($ENV{MR_LEVEL} == 1)
     }
   }
   $outstream->write_finish; 
-  
+
+  #report randomness consumed 
+  warn  "AWZPRNGBLOCKS = $awzprngblocks";
+ 
   my $fragkey = $whc->store_block ($outstream->as_string)
       or die "store_block failed: ".$whc->errstr;
   print STDERR "+++mrout ".$fragkey."+++\n";
   print STDERR $whc->iostats;
+ 
   exit 0;  
+}
+
+sub awzprng {
+   my ($bits) = @_;  
+   if ( $main::awzprngbits < $bits) {     
+     $main::awzprngseed = sha512($main::awzprngseed); 
+     $main::awzprngbits = 512; 
+     $main::awzprngblocks++; 
+   }
+   my $rand = 0; 
+   for (my $i = 0; $i < $bits; $i++) { 
+     $rand = $rand<<1 | vec ($seed, 512 - $rand_bits--, 1); 
+   }
+   return $rand; 
 }
