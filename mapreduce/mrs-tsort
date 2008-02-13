@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+# sort [args], but preserve order of taql headers
+
+use strict;
+
+my @sortargs = @ARGV;
+@ARGV = ();
+
+while (<>)
+{
+  if (/^\#/)
+  {
+    print;
+  }
+  else
+  {
+    open STDOUT, '|-', 'sort', @sortargs or die "sort: $!";
+    print;
+    while (<>)
+    {
+      print;
+    }
+    last;
+    wait;
+    die "sort exited $?" if $?;
+  }
+}
