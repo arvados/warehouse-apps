@@ -100,7 +100,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  
 	  my $current_position = 0; 
       
-	  while (1) {
+	  while ( $current_read < @reads) {
 	  
 	    my $small_gap1 = awzprng(1);  
 	    my $small_gap2 = awzprng(1);
