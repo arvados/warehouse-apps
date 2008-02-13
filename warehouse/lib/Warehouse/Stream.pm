@@ -54,6 +54,7 @@ sub _init
   my Warehouse::Stream $self = shift;
   $self->{myhashes} = \@{$self->{hash}} if exists $self->{hash};
   $self->{bufpos} = 0;
+  $self->{bufcursor} = 0;
   $self->{buf} = "";
   $self->rewind;
   return $self;
@@ -439,41 +440,83 @@ sub seek
 	print $$dataref;
     }
 
-Read data from stream until position $endpos is reached.
+    while (my $dataref = $stream->read_until ($endpos, "\n"))
+    {
+	print $$dataref;
+    }
+
+Read data from stream until position $endpos is reached, or until the
+given end-of-record delimiter is reached.
+
+If a delimiter is specified, then either $$dataref will end with the
+delimiter, or it will contain all data up to $endpos.
+
+If a delimiter is not specified, and $endpos has not already been
+reached, then $$dataref will have some data; but it will not
+necessarily contain all data up to $endpos.
 
 =cut
 
 sub read_until
 {
-    my $self = shift;
-    my $endpos = shift;
-    my $wantbytes = $endpos - $self->{bufpos};
-    if ($wantbytes < 0)
-    {
-	die "read_until endpos $endpos < current pos ".$self->{bufpos};
-    }
-    if ($wantbytes == 0)
-    {
-	return undef;
-    }
-    if (0 == length $self->{buf})
-    {
-	# skip "blockshortness" token
-	shift @{$self->{nexthashes}} if $self->{nexthashes}->[0] =~ /^-\d+$/;
+  my $self = shift;
+  my $endpos = shift;		# do not read past $endpos
+  my $delimiter = shift;	# read up to and including the next occurrence of $delimiter, or to $endpos if none
 
-	$self->{buf} = $self->{whc}->fetch_block (shift @{$self->{nexthashes}})
-	    or die "fetch_block failed";
-    }
-    if ($wantbytes > length $self->{buf})
+  # we have:
+  # $self->{buf} = some data from the stream
+  # $self->{bufpos} = where in the stream the first byte of $self->{buf} came from
+  # $self->{bufcursor} = where in $self->{buf} the client will get its next byte from
+  # $wantbytes = how long $self->{buf} should be in order to satisfy this request
+
+  my $wantbytes = $endpos - $self->{bufpos};
+  if ($wantbytes < $self->{bufcursor})
+  {
+    die "read_until endpos $endpos < current pos ".($self->{bufpos} + $self->{bufcursor});
+  }
+  if ($wantbytes == $self->{bufcursor})	# already at end of file
+  {
+    return undef;
+  }
+  my $dpos;
+  while ($self->{bufcursor} == length $self->{buf}
+	 ||
+	 (defined $delimiter
+	  && 0 > ($dpos = index $self->{buf}, $delimiter, $self->{bufcursor}) # no delimiter yet after bufcursor
+	  && $wantbytes > length $self->{buf})) # haven't reached end of this file yet
+  {
+    # maybe we reach the end of the stream without finding a $delimiter
+    last if !@{$self->{nexthashes}};
+
+    # maybe we found $delimiter in buf, but it's beyond $endpos
+    last if defined $dpos && $dpos > $wantbytes - length $delimiter;
+
+    if ($self->{bufcursor} > 0)
     {
-	$wantbytes = length $self->{buf};
+      substr $self->{buf}, 0, $self->{bufcursor}, "";
+      $wantbytes -= $self->{bufcursor};
+      $self->{bufpos} += $self->{bufcursor};
+      $self->{bufcursor} = 0;
     }
-    my $wantdata = substr ($self->{buf}, 0, $wantbytes);
 
-    substr ($self->{buf}, 0, $wantbytes) = "";
-    $self->{bufpos} += $wantbytes;
+    # skip "blockshortness" token
+    shift @{$self->{nexthashes}} if $self->{nexthashes}->[0] =~ /^-\d+$/;
 
-    return \$wantdata;
+    $self->{buf} .= $self->{whc}->fetch_block (shift @{$self->{nexthashes}})
+	or die "fetch_block failed";
+  }
+  if (defined $dpos && $wantbytes > $dpos + length $delimiter) # only need bytes up to end of delimiter
+  {
+    $wantbytes = $dpos + length $delimiter;
+  }
+  if ($wantbytes > length $self->{buf})	# can only have bytes up to end of buf, even if more requested
+  {
+    $wantbytes = length $self->{buf};
+  }
+  my $wantdata = substr $self->{buf}, $self->{bufcursor}, $wantbytes - $self->{bufcursor};
+  $self->{bufcursor} = $wantbytes;
+  
+  return \$wantdata;
 }
 
 
