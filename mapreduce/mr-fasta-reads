@@ -150,7 +150,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->write_finish; 
 
   #report randomness consumed 
-  print  "used AWZPRNGBLOCKS = $awzprngblocks";
+  print STDERR "used AWZPRNGBLOCKS = $awzprngblocks";
  
   my $fragkey = $whc->store_block ($outstream->as_string)
       or die "store_block failed: ".$whc->errstr;
