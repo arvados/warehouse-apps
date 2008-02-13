@@ -23,12 +23,6 @@ my $manifestkey = $ENV{MR_INPUT0};
 my $mer = $ENV{KNOB_K}; 
 my $read_length = $ENV{KNOB_READ_LENGTH}; 
 
-#setup global variables for "awzprng" 
-my $awzprngseed = $ENV{KNOB_SEED}.$ENV{MR_ID};
-my $awzprngbits = 0; 
-my $awzprngblocks = 0; 
-warn "AWZPRNGSEED = $awzprngseed";
-
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey; 
@@ -41,6 +35,15 @@ if ($ENV{MR_LEVEL} == 0)
 }
 elsif ($ENV{MR_LEVEL} == 1)
 {
+
+  #setup global variables for "awzprng" 
+  my $awzprngseed = $ENV{KNOB_SEED}.$ENV{MR_ID};
+  my $awzprngbits = 0; 
+  my $awzprngblocks = 0; 
+  warn "AWZPRNGSEED = $awzprngseed";
+
+
+
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
   
@@ -77,7 +80,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       $instream->seek ($pos); 
       my $reference; 
       if ($filename =~ m/hap|rand/) {
-	warn "ignoring $filename"; 
+	print STDERR "ignoring $filename"; 
 	next; 
       }
       elsif ($filename =~ m/\.fa$/i) 
