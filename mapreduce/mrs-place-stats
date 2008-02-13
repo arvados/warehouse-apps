@@ -77,17 +77,18 @@ EOF
     for (my $m=1, my $g=0; $m < $mercount; $m++)
     {
       $answer_pos[$m] = $answer_pos[$m-1];
+      $answer_pos[$m] += $mersize[$m-1];
       $answer_pos[$m] += $gapmin[$m-1];
       for (my $smallgap=0; $smallgap <= $answer_key_has_smallgaps; $smallgap++)
       {
 	$answer_pos[$m] += $fields[$col{"gap$g"}];
-	$answer_pos[$m] += $ENV{KNOB_SMALLGAPMIN};
+	$answer_pos[$m] += $ENV{KNOB_SMALLGAPMIN} if $smallgap;
 	$g++;
       }
       $correct &&= $answer_pos[$m] == $pos[$m];
     }
     push @out, @answer_pos;
-    push @out, $correct;
+    push @out, ($correct ? 1 : 0);
   }
   print "@out\n";
 }

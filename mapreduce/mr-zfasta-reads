@@ -136,20 +136,24 @@ elsif ($ENV{MR_LEVEL} == 1)
 	$current_position = $reads[$current_read] >> 28; 
 	$current_read++; 
 	
-	if ( ($current_position+760+$big_gap+18) < $bp){
+	if ( ($current_position+7+3+$small_gap1+7+750+$big_gap+7+3+$small_gap2+7) < $bp){
 	  my $answer_key = sprintf 
 	      (" %10X %9X %1X %1X %3X %1X", 
 	       $reads[$current_read] & $read_mask,  
 	       $current_position, $orient, 
 	       $small_gap1, $big_gap, $small_gap2); 
 
-	  my $read0 = substr($reference,$current_position-$bp_start,7).
-	      substr($reference,$current_position-$bp_start+10+$small_gap1,7);
-
+	  my @readstart;
+	  push @readstart, $current_position-$bp_start;
+	  push @readstart, $readstart[-1] + 7 + 3 + $small_gap1;
+	  push @readstart, $readstart[-1] + 7 + 750 + $big_gap;
+	  push @readstart, $readstart[-1] + 7 + 3 + $small_gap2;
+	  my $read0 =
+	      substr($reference, $readstart[0], 7).
+	      substr($reference, $readstart[1], 7);
 	  my $read1 = 
-	      substr($reference,$current_position-$bp_start+750+$big_gap, 7).
-	      substr($reference,
-		     $current_position-$bp_start+760+$big_gap+$small_gap2,7);
+	      substr($reference, $readstart[2], 7).
+	      substr($reference, $readstart[3], 7);
 
 	  my $read_ref = $read0.$read1; 
 
