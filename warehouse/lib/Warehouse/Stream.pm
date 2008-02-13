@@ -405,6 +405,7 @@ sub seek
 	$self->{bufpos} += length $self->{buf};
 	$self->{bufpos} += $sizehint;
 	$self->{buf} = "";
+	$self->{bufcursor} = 0;
     }
     while ($pos > $self->{bufpos} + length $self->{buf}
 	   && @{$self->{nexthashes}})
@@ -416,18 +417,18 @@ sub seek
 	$self->{bufpos} += length $self->{buf};
 	$self->{buf} = $self->{whc}->fetch_block (shift @{$self->{nexthashes}})
 	    or die "fetch_block failed";
+	$self->{bufcursor} = 0;
 
 	# this loop should only run once if size hints are present
     }
     if ($pos > $self->{bufpos}
 	&& $pos <= $self->{bufpos} + length $self->{buf})
     {
-	substr ($self->{buf}, 0, $pos - $self->{bufpos}) = "";
-	$self->{bufpos} = $pos;
+	$self->{bufcursor} = $pos - $self->{bufpos};
     }
-    if ($pos != $self->{bufpos})
+    if ($pos != $self->{bufpos} + $self->{bufcursor})
     {
-	die "Internal error: sought $pos but at ".$self->{bufpos};
+	die "Internal error: sought $pos but at ".($self->{bufpos} + $self->{bufcursor});
     }
 }
 
@@ -530,7 +531,7 @@ sub read_until
 sub tell
 {
     my $self = shift;
-    return $self->{bufpos};
+    return $self->{bufpos} + $self->{bufcursor};
 }
 
 1;
