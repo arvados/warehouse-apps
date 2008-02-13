@@ -40,7 +40,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $awzprngseed = $ENV{KNOB_SEED}.$ENV{MR_ID};
   my $awzprngbits = 0; 
   my $awzprngblocks = 0; 
-  warn "AWZPRNGSEED = $awzprngseed";
+  print STDERR "AWZPRNGSEED = $awzprngseed\n";
 
 
 
@@ -80,7 +80,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       $instream->seek ($pos); 
       my $reference; 
       if ($filename =~ m/hap|rand/) {
-	print STDERR "ignoring $filename"; 
+	print STDERR "ignoring $filename\n"; 
 	next; 
       }
       elsif ($filename =~ m/\.fa$/i) 
@@ -153,7 +153,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->write_finish; 
 
   #report randomness consumed 
-  print STDERR "used AWZPRNGBLOCKS = $awzprngblocks";
+  print STDERR "used AWZPRNGBLOCKS = $awzprngblocks\n";
  
   my $fragkey = $whc->store_block ($outstream->as_string)
       or die "store_block failed: ".$whc->errstr;
