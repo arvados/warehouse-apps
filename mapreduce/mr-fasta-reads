@@ -3,11 +3,13 @@
 
 ###MR_DESCRIPTION:visit all subdirectories and generate samples  
 ###MR_INPUT:manifest
-###MR_KNOBS:N=4
-###MR_KNOBS:MER=8
+###MR_KNOBS:PRE=1
+###MR_KNOBS:SUF=21 
+###MR_KNOBS:K=8
+###MR_KNOBS:BP=3142044949
+###MR_KNOBS:P=2 
 ###MR_KNOBS:READ_LENGTH=18 
 ###MR_KNOBS:SEED=12345
-###MR_KNOBS:READS=1000000
 
 use strict; 
 use Warehouse;
@@ -18,19 +20,19 @@ use Digest::SHA qw(sha512);
 
 my $manifestkey = $ENV{MR_INPUT0};
 
-my $mer = $ENV{KNOB_MER}; 
+my $mer = $ENV{KNOB_K}; 
 my $read_length = $ENV{KNOB_READ_LENGTH}; 
 
 #setup global variables for "awzprng" 
 my $awzprngseed = $ENV{KNOB_SEED}.$ENV{MR_ID};
 my $awzprngbits = 0; 
 my $awzprngblocks = 0; 
-warn "AWZPRNGSEED = $seed";
+warn "AWZPRNGSEED = $awzprngseed";
 
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey; 
-  for(0..$ENV{KNOB_N}-1) 
+  for(0..(2**$ENV{KNOB_PRE})-1) 
   { 
     print STDERR "+++mrjobstep 1 $_+++\n"; 
   }
@@ -45,34 +47,14 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
 					
-  my $seed = $ENV{KNOB_SEED}.$ENV{JOBID};
-  warn "SEED = $seed"; 
-  my $seed = sha512($seed);  
-  my $rand_blocks = 2**18; #implies 2^21 reads
-  my $rand_bits = 512 * $rand_blocks; # implies 8 x 64 bit reads
-  my $good_random_data = $seed;
-  my $read_mask = 2**21-1; 
+  my @reads; 
 
-  for (my $i = 1; $i < $rand_blocks; $i++) {
-     $seed = sha512($seed);
-     $good_random_data .= $seed;
-  }
-  my @reads = unpack ("Q*", $good_random_data);
-  undef $good_random_data;
-    
-  for (my $i=0; $i < @reads; $i++ ) {
-    $reads[$i] = ((($reads [$i] % (2*3142044949)) << 28) | $i);
-  }
+  for (my $i = 0; $i < (2**$ENV{KNOB_SUF}); $i++ ){
+    $reads[$i] = (((awzprng(64)%
+		    ($ENV{KNOB_PLOIDY}*$ENV{KNOB_BP}))<<28)|$i);
+  }  
   @reads = sort {$a <=> $b} (@reads);
   
-  my $first_pos = $reads[0]>>28;
-  my $first_read = $reads[0] & $read_mask; 
-  my $last_pos = $reads[@reads-1]>>28;
-  my $last_read = $reads[@reads-1] & $read_mask;
-      					      
-  warn "generated randomness for ".@reads." reads " 
-    ."first position is $first_pos (read $first_read) "
-    ."last position is $last_pos (read $last_read)\n";
 		
   my $bp = 0; 
   my $current_read = 0; 
