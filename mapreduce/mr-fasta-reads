@@ -169,7 +169,7 @@ sub awzprng {
    }
    my $rand = 0; 
    for (my $i = 0; $i < $bits; $i++) { 
-     $rand = $rand<<1 | vec ($seed, 512 - $rand_bits--, 1); 
+     $rand = $rand<<1|vec($main::awzprngseed,512-$main::awzprngbits--,1);
    }
    return $rand; 
 }
