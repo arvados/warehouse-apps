@@ -36,7 +36,9 @@ my $manifest = new Warehouse::Manifest (whc => $whc,
 $manifest->rewind;
 while (my $stream = $manifest->subdir_next)
 {
-  if ($stream->name eq $subdir || $subdir eq '*')
+  if ($stream->name eq $subdir
+      || $subdir eq '*'
+      || ($subdir =~ /\*$/ && $stream->name =~ /^\Q$`\E/))
   {
     if (defined $wantfilename)
     {
