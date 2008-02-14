@@ -50,21 +50,14 @@ foreach my $subdir (@ARGV)
 }
 
 my @endpos;
-map { getendpos ($_) } (0..$#stream);
 
+my $taql_header_printed = 0;
 my @nextline;
-map { $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_], "\n") } (0..$#stream);
-
-if ($opt{"t"})
+for (0..$#stream)
 {
-  # only output one taql header
-  my $did = 0;
-  for (0..$#stream)
-  {
-    my $hdrs = skiptaql($_);
-    print $hdrs if !$did;
-    $did = 1;
-  }
+  getendpos ($_);
+  my $h = getnextline ($_);
+  print $h if !$taql_header_printed++;
 }
 
 while (1)
@@ -83,26 +76,34 @@ while (1)
   }
   last if !defined $low;
   print $ {$nextline[$low]};
-  $nextline[$low] = $stream[$low]->[0]->read_until ($endpos[$low], "\n");
-  while (!defined $nextline[$low])
+  getnextline ($low);
+}
+
+sub getnextline
+{
+  local $_ = shift;
+  $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_], "\n");
+  while (!defined $nextline[$_])
   {
-    shift @{$stream[$low]};
-    last if !@{$stream[$low]};
-    getendpos ($low);
-    $nextline[$low] = $stream[$low]->[0]->read_until ($endpos[$low], "\n");
-    skiptaql ($low);
+    # end of this stream; start reading next stream
+    shift @{$stream[$_]};
+    last if !@{$stream[$_]};
+    getendpos ($_);
+    $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_], "\n");
+    skiptaql ($_);
   }
 }
 
 sub skiptaql
 {
   local $_ = shift;
+  return "" if !$opt{"t"};
   if ($ {$nextline[$_]} =~ /^\#: taql-/)
   {
     my $ret = $ {$nextline[$_]};
     my $morehdrs = $stream[$_]->[0]->read_until ($endpos[$_], "\n\#.\n");
     $ret .= $$morehdrs;
-    $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_], "\n");
+    getnextline ($_);
     return $ret;
   }
   return "";
