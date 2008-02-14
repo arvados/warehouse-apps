@@ -65,6 +65,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   #convenience 
   my $k = $ENV{KNOB_K}; 
 
+  my $shortoffset = 17 - 2 *$k; 
 
   while (my $instream = $manifest->subdir_next)
   {
@@ -78,16 +79,16 @@ elsif ($ENV{MR_LEVEL} == 1)
 	print STDERR "ignoring $filename\n"; 
 	next; 
       }
-      elsif ($filename =~ m/\.fa$/i) 
+      elsif ($filename =~ m/(.*)\.fa$/i) 
       {
+	my $fastaname = $1; 
 	my $read;
 	my $valid_read; 
 	my $overflow_ref; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
 	  $reference = $$dataref; 
-	  $reference =~ s/^>(.*)\n//;
-	  my $fastaname = $1; 
+	  $reference =~ s/^>.*\n//;
 	  $reference =~ s/\n//g;
       
 	  #do some work
@@ -111,13 +112,14 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $current_position = $reads[$current_read] >> 28; 
 	    $current_read++; 
 	    
-	    if ( ($current_position+7+3+$small_gap1+7+$big_gap+250+7+3+$small_gap2+7) < $bp){
+	    #still need to fix some constants (and overflow)
+	    if ( ($current_position+800+$big_gap+4*k) < $bp){
 
 	      my @readstart;
-	      push @readstart, $current_position-$bp_start;
-	      push @readstart, $readstart[-1] + $k + 3 + $small_gap1;
-	      push @readstart, $readstart[-1] + $k + 250 + $big_gap;
-	      push @readstart, $readstart[-1] + $k + 3 + $small_gap2;
+	      push @readstart,$current_position-$bp_start;
+	      push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap1;
+	      push @readstart,$readstart[-1]+$k+750+$big_gap;
+	      push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
 
 	      my $answer_key = sprintf 
 		  (" %8X %10s %8X %1X %3X %1X %1X", 
