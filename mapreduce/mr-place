@@ -128,6 +128,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS} --ref-label '$subdir_name' --add-sample-id '$start_at' --all-sample-fields -r \@$rr_fileno -s \@$rs_fileno -p -"],
 		      "gprint",
 		      "mrs-tsort -n",
+		      $ENV{KNOB_ALLFIELDS} ? () : "mrs-place-lessfields",
 		      "mrs-store './$subdir_name-$start_at' mer-nfa-report.txt")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES" or die "close SAMPLES: $!";
