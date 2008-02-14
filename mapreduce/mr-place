@@ -42,6 +42,7 @@ if ($ENV{MR_LEVEL} == 0)
 
 elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
 {
+  my @steps;
   my $n_samples = 0;
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' ./0 reads.txt")
@@ -50,11 +51,12 @@ elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
   {
     if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
     {
-      print STDERR "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n";
+      push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n";
     }
     ++$n_samples;
   }
-  close SAMPLES;
+  close SAMPLES or die "Pipe failed: $!";
+  print STDERR @steps;
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
 }
 
