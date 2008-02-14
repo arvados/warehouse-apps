@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:visit all subdirectories and generate samples  
+###MR_DESCRIPTION:visit all subdirectories and generate samples from files ending in .fa (gunzip first for .fa.gz)
 ###MR_INPUT:manifest
 ###MR_KNOBS:PRE=1
 ###MR_KNOBS:SUF=21 
@@ -81,86 +81,88 @@ elsif ($ENV{MR_LEVEL} == 1)
 	print STDERR "ignoring $filename\n"; 
 	next; 
       }
-      elsif ($filename =~ m/(.*)\.fa$/i) 
-      {
-	my $fastaname = $1; 
-	my $read;
-	my $valid_read; 
-	my $overflow_ref; 
+      elsif ($filename =~ s/\.fa\.g?z$//i){
+	my $zblob = ""; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
-	  $reference = $$dataref; 
-	  $reference =~ s/^>.*\n//;
-	  $reference =~ s/\n//g;
-      
-	  #do some work
-	  my $bp_start = $bp;
-	  $bp += length ($reference); 
-	  
-	  my $rand_bits = 0; 
-	  my $count = 0; 
-	  my $bit; 
-	  
-	  my $current_position = 0; 
-      
-	  while ( $current_read < @reads) {
-	  
-	    my $small_gap1 = awzprng(1);  
-	    my $small_gap2 = awzprng(1);
-	    my $orient = awzprng(1); 
-	    my $big_gap = awzprng(9); 
-	    my $readmask = 2**$ENV{KNOB_SUF}-1; 
-	    
-	    $current_position = $reads[$current_read] >> 28; 
-	    $current_read++; 
-	    
-	
-	    if ( ($current_position+$longoffset+$big_gap+2*$maxreadlength) < $bp){
-
-	      my @readstart;
-	      push @readstart,$current_position-$bp_start;
-	      push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap1;
-	      push @readstart,$readstart[-1]+$k+750+$big_gap;
-	      push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
-
-	      my $answer_key = sprintf 
-		  (" %8X %10s %8X %1X %3X %1X %1X", 
-		   int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
-		   ($reads[$current_read] & $readmask),
-		   $fastaname,
-		   $readstart[0], 
-		   $readstart[1] - $readstart[0],
-		   $readstart[2] - $readstart[1],
-		   $readstart[3] - $readstart[2],
-		   $orient); 
-
-	      my $read0 =
-		  substr($reference, $readstart[0], $k).
-		  substr($reference, $readstart[1], $k).
-		  substr($reference, $readstart[2], $k).
-		  substr($reference, $readstart[3], $k);
-
-	      if ($orient) {
-		$read0 = revc($read0); 		
-	      }
-
-	      $outstream->write_data ($read0.$answer_key."\n");
-	      $valid_read++; 
-	      $read++; 
-	    }
-	    else {
-	      last; 
-	    }
-	  }
-#	  my $overflow = $bp-$current_position; 
-#	  $bp -= $overflow; 
-# 	  $overflow_ref = substr
-#	      ($reference, $current_position-$bp_start, $overflow); 
+	  $zblob .= $$dataref; 
 	}
-	warn ($valid_read."/".$read." in ".$filename." (".$bp.")\n");	
+	gunzip \$zblob => \$reference or die $GunzipError;	
       }
- 	
+      elsif ($filename =~ s/\.fa//i) {
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $reference .= $$dataref; 
+	}
+      }
+      else {
+	next; 
+      }
+      my $fastaname = $1; 
+      my $read;
+      my $valid_read; 
+      my $overflow_ref; 
+      
+      $reference =~ s/^>.*\n//;
+      $reference =~ s/\n//g;
+      
+      #do some work
+      my $bp_start = $bp;
+      $bp += length ($reference); 
+	  
+      my $rand_bits = 0; 
+      my $count = 0; 
+      my $bit; 
+      
+      my $current_position = 0; 
+      
+      while ( $current_read < @reads) {
+	
+	my $small_gap1 = awzprng(1);  
+	my $small_gap2 = awzprng(1);
+	my $orient = awzprng(1); 
+	my $big_gap = awzprng(9); 
+	my $readmask = 2**$ENV{KNOB_SUF}-1; 
+	
+	$current_position = $reads[$current_read] >> 28; 
+	$current_read++; 
+	
+	
+	if (($current_position+$longoffset+$big_gap+2*$maxreadlength)<$bp){
+	  my @readstart;
+	  push @readstart,$current_position-$bp_start;
+	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap1;
+	  push @readstart,$readstart[-1]+$k+750+$big_gap;
+	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
+	  
+	  my $answer_key = sprintf 
+	      (" %8X %10s %8X %1X %3X %1X %1X", 
+	       int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
+	       ($reads[$current_read] & $readmask),
+	       $fastaname,
+	       $readstart[0], 
+	       $readstart[1] - $readstart[0],
+	       $readstart[2] - $readstart[1],
+	       $readstart[3] - $readstart[2],
+	       $orient); 
 
+	  my $read0 =
+	      substr($reference, $readstart[0], $k).
+	      substr($reference, $readstart[1], $k).
+	      substr($reference, $readstart[2], $k).
+	      substr($reference, $readstart[3], $k);
+
+	  if ($orient) {
+	    $read0 = revc($read0); 		
+	  }
+	  
+	  $outstream->write_data ($read0.$answer_key."\n");
+	  $valid_read++; 
+	  $read++; 
+	}
+	
+      }
+      print STDERR "$valid_read / $read in $filename ($bp)\n";     
     }
   }
   $outstream->write_finish; 
