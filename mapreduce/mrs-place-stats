@@ -41,7 +41,7 @@ while (<>)
 };
   }
   my (@fields) = split (/ /);
-  flush() if @out && $out[0] != $fields[$idcol];
+  flush() if !@out || $out[0] != $fields[$idcol];
   $out[0] = $fields[$idcol];
   $out[1]++ if $fields[$correctcol];
   $out[2]++ if $fields[$snpscol] == 0;
