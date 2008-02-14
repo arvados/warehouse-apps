@@ -121,7 +121,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      my $answer_key = sprintf 
 		  (" %s %X %X %X %X %X %X",
 		   $filename, 
-		   long($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
+		   int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
 		   ($reads[$current_read] & $readmask),  
 		   $readstart[0], 
 		   $readstart[1],
