@@ -65,7 +65,9 @@ elsif ($ENV{MR_LEVEL} == 1)
   #convenience 
   my $k = $ENV{KNOB_K}; 
 
-  my $shortoffset = 17 - 2 *$k; 
+  my $maxreadlength = 18; 
+  my $shortoffset = $maxreadlength-2*$k-1; 
+  my $longoffset = 750; 
 
   while (my $instream = $manifest->subdir_next)
   {
@@ -112,8 +114,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $current_position = $reads[$current_read] >> 28; 
 	    $current_read++; 
 	    
-	    #still need to fix some constants (and overflow)
-	    if ( ($current_position+800+$big_gap+4*k) < $bp){
+	
+	    if ( ($current_position+$longoffset+$big_gap+2*$maxreadlength) < $bp){
 
 	      my @readstart;
 	      push @readstart,$current_position-$bp_start;
