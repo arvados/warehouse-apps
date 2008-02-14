@@ -9,6 +9,7 @@ my %col;			# fieldname => col#
 my $mercount;
 my $have_answer_key;
 my $answer_key_has_smallgaps;
+my %answer_key_offset;
 
 my @mersize;
 my @gapmin;
@@ -62,6 +63,7 @@ EOF
 	print qq{\# field "orig$_" "uint32"\n};
       }
       print qq{\# field "correct" "int8"\n};
+      get_answer_key_offsets();
     }
     print qq{\#.\n};
   }
@@ -90,10 +92,34 @@ EOF
 	$answer_pos[$m] += $ENV{KNOB_SMALLGAPMIN} if $smallgap;
 	$g++;
       }
-      $correct &&= $answer_pos[$m] == $pos[$m];
+      $correct &&= $answer_pos[$m] == $pos[$m] + $answer_key_offset{$fields[$col{"ref"}]};
     }
     push @out, @answer_pos;
     push @out, ($correct ? 1 : 0);
   }
   print "@out\n";
+}
+
+sub get_answer_key_offsets
+{
+  my $whc = new Warehouse;
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  my $offset = 0;
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    while (my ($pos, $size, $filename) = $instream->file_next)
+    {
+      last if !defined $pos; 
+      if ($filename =~ m/hap|rand/) {
+	next; 
+      }
+      if ($filename =~ m/\.fa$/i) 
+      {
+	$answer_key_offset{"\"$filename\""} = $offset;
+	$offset += $size;
+      }
+    }
+  }
 }
