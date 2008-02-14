@@ -122,7 +122,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	my $big_gap = awzprng(9); 
 	my $readmask = 2**$ENV{KNOB_SUF}-1; 
 	
-	$current_position = $reads[$current_read] >> 28; 
+	$current_position = $reads[$current_read] >> $ENV{KNOB_SUF}; 
 	$current_read++; 
 	
 	
@@ -134,7 +134,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
 	  
 	  my $answer_key = sprintf 
-	      (" %9d %10s %9d %2d %4d %2d %1d", 
+	      (" %9X %10s %9d %2d %4d %2d %1d", 
 	       int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
 	       ($reads[$current_read] & $readmask),
 	       $filename,
