@@ -120,7 +120,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      push @readstart, $readstart[-1] + $k + 3 + $small_gap2;
 
 	      my $answer_key = sprintf 
-		  (" %s %X %X %X %X %X %X", 
+		  (" %8X %10s %8X %1X %3X %1X %1X", 
 		   int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
 		   ($reads[$current_read] & $readmask),
 		   $fastaname,
