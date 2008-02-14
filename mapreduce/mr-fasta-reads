@@ -165,7 +165,7 @@ sub awzprng {
      $main::awzprngseed = sha512($main::awzprngseed); 
      $main::awzprngbits = 512; 
      $main::awzprngblocks++; 
-     warn $main:awzprngblocks++; 
+     warn $main::awzprngblocks++; 
    }
    my $rand = 0; 
    for (my $i = 0; $i < $bits; $i++) { 
