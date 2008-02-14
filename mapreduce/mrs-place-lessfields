@@ -33,6 +33,7 @@ for (split (/,/, $ENV{KNOB_MERS_AND_GAPS}))
 
 while (<>)
 {
+  chomp;
   if (/^\#/)
   {
     if (!defined ($mercount) && /^\# field "(.*?)" "(.*?)"/)
