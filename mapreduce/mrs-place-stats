@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+
+my @fieldname;
+my @fieldtype;
+my %col;			# fieldname => col#
+
+my $idcol;
+my $correctcol;
+my $snpscol;
+
+my @out;
+while (<>)
+{
+  if (/^\#/)
+  {
+    if (!defined ($mercount) && /^\# field "(.*?)" "(.*?)"/)
+    {
+      push @fieldname, $1;
+      push @fieldtype, $2;
+      $col{$1} = $#fieldname;
+    }
+    next;
+  }
+  if (!defined $idcol)
+  {
+    $idcol = $col{sample};
+    $correctcol = $col{correct};
+    $snpscol = $col{snps};
+    die qq(Didn\'t find "sample", "correct", and "snps" fields in input)
+	unless defined $idcol && defined $correctcol && defined $snpscol;
+
+    print qq{#: taql-0.1/text
+# field "$fieldname[$idcol]" "$fieldtype[$idcol]"
+# field "correct" "uint32"
+# field "exact" "uint32"
+# field "total" "uint32"
+#.
+};
+  }
+  my (@fields) = split (/ /);
+  flush() if @out && $out[0] != $fields[$idcol];
+  $out[0] = $fields[$idcol];
+  $out[1]++ if $fields[$correctcol];
+  $out[2]++ if $fields[$snpscol] == 0;
+  $out[3]++;
+}
+flush();
+
+sub flush
+{
+  print "@out\n" if @out;
+  @out = (0,0,0,0);
+}
