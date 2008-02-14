@@ -99,15 +99,14 @@ sub skiptaql
 {
   local $_ = shift;
   return "" if !$opt{"t"};
-  if ($ {$nextline[$_]} =~ /^\#: taql-/)
-  {
-    my $ret = $ {$nextline[$_]};
-    my $morehdrs = $stream[$_]->[0]->read_until ($endpos[$_], "\n\#.\n");
-    $ret .= $$morehdrs;
-    getnextline ($_);
-    return $ret;
-  }
-  return "";
+  return "" if !defined $nextline[$_];
+  return "" if $ {$nextline[$_]} !~ /^\#: taql-/;
+
+  my $ret = $ {$nextline[$_]};
+  my $morehdrs = $stream[$_]->[0]->read_until ($endpos[$_], "\n\#.\n");
+  $ret .= $$morehdrs;
+  getnextline ($_);
+  return $ret;
 }
 
 sub getendpos
