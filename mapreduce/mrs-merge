@@ -56,7 +56,8 @@ my @nextline;
 for (0..$#stream)
 {
   getendpos ($_);
-  my $h = getnextline ($_);
+  getnextline ($_);
+  my $h = skiptaql ($_);
   print $h if !$taql_header_printed++;
 }
 
