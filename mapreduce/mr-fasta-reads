@@ -119,14 +119,14 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      push @readstart, $readstart[-1] + $k + 3 + $small_gap2;
 
 	      my $answer_key = sprintf 
-		  (" %s %X %X %X %X %X %X",
-		   $filename, 
+		  (" %s %X %X %X %X %X %X", 
 		   int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
-		   ($reads[$current_read] & $readmask),  
+		   ($reads[$current_read] & $readmask),
+		   $filename,
 		   $readstart[0], 
-		   $readstart[1],
-		   $readstart[2],
-		   $readstart[3],
+		   $readstart[1] - $readstart[0],
+		   $readstart[2] - $readstart[1],
+		   $readstart[3] - $readstart[2],
 		   $orient); 
 
 	      my $read0 =
