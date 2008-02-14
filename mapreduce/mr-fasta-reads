@@ -97,8 +97,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       }
       else {
 	next; 
-      }
-      my $fastaname = $1; 
+      }    
       my $read;
       my $valid_read; 
       my $overflow_ref; 
@@ -139,7 +138,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	      (" %8X %10s %8X %1X %3X %1X %1X", 
 	       int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
 	       ($reads[$current_read] & $readmask),
-	       $fastaname,
+	       $filename,
 	       $readstart[0], 
 	       $readstart[1] - $readstart[0],
 	       $readstart[2] - $readstart[1],
