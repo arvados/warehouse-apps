@@ -52,8 +52,9 @@ elsif ($ENV{MR_LEVEL} == 1)
   my @reads; 
 
   for (my $i = 0; $i < (2**$ENV{KNOB_SUF}); $i++ ){
-    $reads[$i] = (((awzprng(64)%
-		    ($ENV{KNOB_PLOIDY}*$ENV{KNOB_BP}))<<28)|$i);
+    $reads[$i] = 
+	(((awzprng(64)%
+	   ($ENV{KNOB_PLOIDY}*$ENV{KNOB_BP}))<<$ENV{KNOB_SUF})|$i);
   }  
   @reads = sort {$a <=> $b} (@reads);
   		
