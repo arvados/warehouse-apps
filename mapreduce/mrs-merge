@@ -99,8 +99,9 @@ sub skiptaql
   local $_ = shift;
   if ($ {$nextline[$_]} =~ /^\#: taql-/)
   {
+    my $ret = $ {$nextline[$_]};
     my $morehdrs = $stream[$_]->[0]->read_until ($endpos[$_], "\n\#.\n");
-    my $ret = $ {$nextline[$_]} . $$morehdrs;
+    $ret .= $$morehdrs;
     $nextline[$_] = $stream[$_]->[0]->read_until ($endpos[$_], "\n");
     return $ret;
   }
