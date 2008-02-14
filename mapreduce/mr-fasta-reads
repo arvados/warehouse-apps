@@ -87,7 +87,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	{
 	  $reference = $$dataref; 
 	  $reference =~ s/^>(.*)\n//;
-	  $fastaname = $1; 
+	  my $fastaname = $1; 
 	  $reference =~ s/\n//g;
       
 	  #do some work
