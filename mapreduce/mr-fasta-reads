@@ -111,6 +111,13 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $current_read++; 
 	    
 	    if ( ($current_position+7+3+$small_gap1+7+$big_gap+250+7+3+$small_gap2+7) < $bp){
+
+	      my @readstart;
+	      push @readstart, $current_position-$bp_start;
+	      push @readstart, $readstart[-1] + $k + 3 + $small_gap1;
+	      push @readstart, $readstart[-1] + $k + 250 + $big_gap;
+	      push @readstart, $readstart[-1] + $k + 3 + $small_gap2;
+
 	      my $answer_key = sprintf 
 		  (" %s %X %X %X %X %X %X",
 		   $filename, 
@@ -122,12 +129,6 @@ elsif ($ENV{MR_LEVEL} == 1)
 		   $readstart[3],
 		   $orient); 
 
-		   $small_gap1, $big_gap, $small_gap2); 
-	      my @readstart;
-	      push @readstart, $current_position-$bp_start;
-	      push @readstart, $readstart[-1] + $k + 3 + $small_gap1;
-	      push @readstart, $readstart[-1] + $k + 250 + $big_gap;
-	      push @readstart, $readstart[-1] + $k + 3 + $small_gap2;
 	      my $read0 =
 		  substr($reference, $readstart[0], $k).
 		  substr($reference, $readstart[1], $k).
