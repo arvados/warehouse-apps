@@ -48,10 +48,10 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->write_start ("reads.txt"); 
 
   #setup global variables for "awzprng" 
-  my $awzprngseed = $ENV{KNOB_SEED}.$name;
-  my $awzprngbits = 0; 
-  my $awzprngblocks = 0; 
-  print STDERR "AWZPRNGSEED = $awzprngseed\n";
+  $main::awzprngseed = $ENV{KNOB_SEED}.$name;
+  $main::awzprngbits = 0; 
+  $main::awzprngblocks = 0; 
+  print STDERR "AWZPRNGSEED = $main::awzprngseed\n";
 			
   my @reads; 
 
@@ -149,7 +149,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->write_finish; 
 
   #report randomness consumed 
-  print STDERR "used AWZPRNGBLOCKS = $awzprngblocks\n";
+  print STDERR "used AWZPRNGBLOCKS = $main::awzprngblocks\n";
  
   my $fragkey = $whc->store_block ($outstream->as_string)
       or die "store_block failed: ".$whc->errstr;
@@ -165,9 +165,7 @@ sub awzprng {
      $main::awzprngseed = sha512($main::awzprngseed); 
      $main::awzprngbits = 512; 
      $main::awzprngblocks++; 
-     my $seed = unpack "b32", $main::awzprngseed;
-     print STDERR "$seed\n";  
-   }
+    }
    my $rand = 0; 
    for (my $i = 0; $i < $bits; $i++) { 
      $rand = $rand<<1|vec($main::awzprngseed,512-$main::awzprngbits--,1);
