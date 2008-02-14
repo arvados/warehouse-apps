@@ -112,7 +112,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $count = 0; 
       my $bit; 
       
-      my $current_position = 0; 
+      my $current_position ; 
       
       while ( $current_read < @reads) {
 	
