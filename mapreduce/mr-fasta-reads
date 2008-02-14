@@ -134,7 +134,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
 	  
 	  my $answer_key = sprintf 
-	      (" %8X %10s %8X %1X %3X %1X %1X", 
+	      (" %9d %10s %9d %2d %4d %2d %1d", 
 	       int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
 	       ($reads[$current_read] & $readmask),
 	       $filename,
@@ -145,9 +145,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	       $orient); 
 
 	  my $read0 =
-	      substr($reference, $readstart[0], $k).
-	      substr($reference, $readstart[1], $k).
-	      substr($reference, $readstart[2], $k).
+	      substr($reference, $readstart[0], $k)." ".
+	      substr($reference, $readstart[1], $k)." ".
+	      substr($reference, $readstart[2], $k)." ".
 	      substr($reference, $readstart[3], $k);
 
 	  if ($orient) {
@@ -156,6 +156,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  
 	  $outstream->write_data ($read0.$answer_key."\n");
 	  $valid_read++;  
+	}
+	elsif {$current_position < $bp) {
+	  last; 
 	}
 	$read++;	
       }
