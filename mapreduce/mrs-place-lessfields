@@ -54,11 +54,16 @@ EOF
     {
       print qq{\# field "pos$_" "uint32"\n};
     }
-    print qq{\#.\n};
     if ($have_answer_key = exists $col{"start"} && exists $col{"gap0"})
     {
       $answer_key_has_smallgaps = exists $col{"gap$mercount"};
+      for (0..$mercount-1)
+      {
+	print qq{\# field "orig$_" "uint32"\n};
+      }
+      print qq{\# field "correct" "int8"\n};
     }
+    print qq{\#.\n};
   }
   my (@fields) = split (/ /);
   my @pos = map { $fields[$col{"pos$_"}] } (0..$mercount-1);
