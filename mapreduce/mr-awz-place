@@ -57,29 +57,30 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	while (my $dataref = $instream->read_until ($pos + $size, "\n")) {
 	  #mer0, mer1, mer2, mer3 read_id, chr, pos0, off1, off2, off3, orient
 	  @read = $$dataref; 
+
+	  my @merpos;
+	  push @merpos, $read[6];  
+	  push @merpos, $merpos[-1] + $read[7];
+	  push @merpos, $merpos[-1] + $read[8];
+	  push @merpos, $merpos[-1] + $read[9];
+      
+	  foreach my $x (@merpos) {
+
+	    #print STDERR $x; 
+	    
+	    my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
+	    my $suffix = $x & $suffixmask;
+	    if ($prefix == $ENV{MR_INPUT}){ 
+	      if (vec ($bitstring, $suffix, 2) < 3) {
+		vec ($bitstring, $suffix, 2)++; 
+	      }
+	    }	
+	  }
 	}
       }
       else {
 	next; 
-      }         
-      my @merpos;
-      push @merpos, $read[6];  
-      push @merpos, $merpos[-1] + $read[7];
-      push @merpos, $merpos[-1] + $read[8];
-      push @merpos, $merpos[-1] + $read[9];
-      
-      foreach my $x (@merpos) {
-
-	print STDERR $x; 
-	
-	my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
-	my $suffix = $x & $suffixmask;
-	if ($prefix == $ENV{MR_INPUT}){ 
-	  if (vec ($bitstring, $suffix, 2) < 3) {
-	    vec ($bitstring, $suffix, 2)++; 
-	  }
-	}	
-      }
+      }               
       print STDERR "read $filename\n";     
     }
   }
