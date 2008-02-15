@@ -41,6 +41,8 @@ elsif ($ENV{MR_LEVEL} == 1)
  		  
   $manifest->rewind; #isn't this already done by "new" above? --AWZ
 
+  my $filename; 
+
   while (my $instream = $manifest->subdir_next)
   {
     
