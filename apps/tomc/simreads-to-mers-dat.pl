@@ -22,40 +22,51 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
 # 
 
-open (STDOUT, "|gread") or die "$!";
+open (STDOUT, "|gread") or die "gread: $!";
 
 my @mersizes = @ARGV;
 @ARGV = ();
 
-print q{#: taql-0.1/text};
+print qq{#: taql-0.1/text\n};
 for (0..$#mersizes)
 {
-    print qq{\n# field "mer$_" "uint64"};
+    print qq{# field "mer$_" "uint64"\n};
 }
-print q{
-# field "masked" "uint32"
-# field "start" "uint32"
-# field "orient" "uint8"
-# field "gap0" "uint32"
-# field "gap1" "uint32"
-# field "gap2" "uint32"
-#.
-};
+print qq{# field "aref" "sym"\n};
+for (0..$#mersizes)
+{
+    print qq{# field "apos$_" "uint64"\n};
+}
+print qq{# field "aside" "uint8"\n};
+print qq{#.\n};
 
-pop @mersizes;
 while(<>)
 {
     chomp;
     my @in = split;
-    my $strpos = -1;
-    for (@mersizes)
+    my $mers_merged = 0;
+    for (0..$#mersizes)
     {
-	$strpos += $_ + 1;
-	substr ($in[0], $strpos, 0) = " ";
+	if (length $in[$_] < $mersizes[$_])
+	{
+	    $in[$_] .= $in[$_+1];
+	    splice @in, $_+1, 1;
+	}
+	$mers_merged++;
     }
-    for (1, 2, 4, 5, 6)
+    for (1 + $#mersizes)
     {
 	$in[$_] = hex($in[$_]);
+    }
+    splice @in, $#mersizes + 1, 1; # drop "masked" field
+    $in[$#mersizes + 1] =~ s/.*/"$&.fa"/; # chr1 -> "chr1.fa"
+    for (1..$#mersizes+$mers_merged)
+    {
+	$in[$#mersizes + 2 + $_] += $in[$#mersizes + 1 + $_];
+    }
+    for (0..$mers_merged)
+    {
+	splice @in, $#mersizes + 3 + $_, 1;
     }
     print "@in\n";
 }
