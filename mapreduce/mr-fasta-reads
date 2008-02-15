@@ -124,7 +124,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	my $small_gap2 = awzprng(1);
 	my $orient = awzprng(1); 
 	my $big_gap = awzprng(9); 
-	my $readmask = 2**bits-1; 
+	my $readmask = 2**$bits-1; 
 	
 	$current_position = $reads[$current_read] >> $bits; 
 	$current_read++; 
