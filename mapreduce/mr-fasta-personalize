@@ -61,7 +61,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	print STDERR "ignoring $filename\n"; 
 	next; 
       }
-      elsif ($filename =~ s/\.fa\.g?z$//i){
+      elsif ($filename =~ s/\.fa\.g?z$/\.fa/i){
 	my $zblob = ""; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
@@ -69,7 +69,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 	gunzip \$zblob => \$reference or die $GunzipError;	
       }
-      elsif ($filename =~ s/\.fa//i) {
+      elsif ($filename =~ m/\.fa/i) {
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
 	  $reference .= $$dataref; 
