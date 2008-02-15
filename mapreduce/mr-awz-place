@@ -73,6 +73,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
 	my $suffix = $x & $suffixmask;
 	if ($prefix == $ENV{MR_INPUT}){
+	  print STDERR $suffix; 
 	  if (vec ($bitstring, $suffix, 2) < 3) {
 	    vec ($bitstring, $suffix, 2)++; 
 	  }
