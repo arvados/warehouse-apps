@@ -138,7 +138,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
 	  
 	  my $answer_key = sprintf 
-	      (" %9X %10s %9d %2d %4d %2d %1d", 
+	      (" %X %s %d %d %d %d %d", 
 	       $reads[$current_read] & $readmask,
 	       $filename,
 	       $readstart[0], 
