@@ -11,7 +11,7 @@
 ###MR_KNOBS:SMALLGAPMAX=4
 ###MR_KNOBS:SMALLGAPPOS=7
 ###MR_KNOBS:BATCHSIZE=100000
-###MR_KNOBS:ALLFIELDS=0
+###MR_KNOBS:CHECKANSWERKEY=1
 ###MR_KNOBS:STEPSPERNODE=4
 
 use strict; 
@@ -130,7 +130,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      ["main::REPORTREFERENCE", "main::REPORTSAMPLES", "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS} --ref-label '$subdir_name' --add-sample-id '$start_at' --all-sample-fields -r \@$rr_fileno -s \@$rs_fileno -p -"],
 		      "gprint",
 		      "mrs-tsort -n",
-		      $ENV{KNOB_ALLFIELDS} ? () : "mrs-place-lessfields",
+		      $ENV{KNOB_CHECKANSWERKEY} ? "mrs-place-checkanswerkey" : (),
 		      "mrs-store './$subdir_name-$start_at' mer-nfa-report.txt")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES" or die "close SAMPLES: $!";
