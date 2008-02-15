@@ -77,7 +77,7 @@ elsif ($ENV{MR_LEVEL} == 1)
     $count[vec ($bitstring, $i, 2)]++;
   }
 
-  $outstream->write_data "@count\n";
+  $outstream->write_data ("@count\n");
 
   
   $outstream->write_finish; 
