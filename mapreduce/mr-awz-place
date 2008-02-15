@@ -62,7 +62,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
       else {
 	next; 
       }         
-      my @mer_pos;
+      my @merpos;
       push @merpos, $read[6];  
       push @merpos, $merpos[-1] + $read[7];
       push @merpos, $merpos[-1] + $read[8];
