@@ -78,7 +78,7 @@ EOF
     my $correct = 1;
     $correct &&= $fields[$col{"aref"}] eq $fields[$col{"ref"}];
     $correct &&= $fields[$col{"aside"}] eq $fields[$col{"side"}];
-    for (0..$#mercount)
+    for (0..$mercount)
     {
       $correct &&= $fields[$col{"apos$_"}] == $pos[$_];
     }
