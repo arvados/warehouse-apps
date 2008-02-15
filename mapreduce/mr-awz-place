@@ -43,6 +43,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   my $filename; 
 
+  my @count; 
+
+  vec (my $bitstring, 2**$ENV{SUFFIXBITS}, 2) = 3;
+  
   while (my $instream = $manifest->subdir_next)
   {
     
@@ -61,12 +65,20 @@ elsif ($ENV{MR_LEVEL} == 1)
       }
       else {
 	next; 
-      }    
-
-      $outstream->write_data ("@read\n");
+      }          
+      if (vec ($bitstring, $read[6], 2) < 3) {
+	vec ($bitstring, $read[6], 2)++; 
+      }
     }
     print STDERR "read $filename\n";     
   }
+
+  for (my $i=0; $i<2**27; $i++) {
+    $count[vec ($bitstring, $i, 2)]++;
+  }
+
+  $outstream->write_data "@count\n";
+
   
   $outstream->write_finish; 
   
