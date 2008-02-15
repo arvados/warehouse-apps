@@ -110,10 +110,10 @@ ascii_to_mer (const char * str)
   for (p = str; *p; ++p)
     {
       t_taql_uint64 bp = ascii_to_bp (*p);
-      mer |= (bp << pos);
-      pos += 4;
       if (pos >= 64)
         Fatal ("mer too long");
+      mer |= (bp << pos);
+      pos += 4;
     }
   return mer;
 }
