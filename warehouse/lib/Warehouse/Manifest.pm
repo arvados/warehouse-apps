@@ -75,6 +75,7 @@ sub _init
 			     }
 			 split (",", $self->{key}));
 	$self->{data} = \$data;
+	$self->rewind;
     }
     return $self;
 }
