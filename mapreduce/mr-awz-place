@@ -3,8 +3,8 @@
 
 ###MR_DESCRIPTION:visit all subdirectories and place samples from files ending in .txt 
 ###MR_INPUT:manifest
-###MR_KNOBS:PREFIXBITS=6
-###MR_KNOBS:SUFFIXBITS=26 
+###MR_KNOBS:PREFIXBITS=5
+###MR_KNOBS:SUFFIXBITS=27 
 
 use strict; 
 use Warehouse;
@@ -64,10 +64,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	  push @merpos, $merpos[-1] + $read[8];
 	  push @merpos, $merpos[-1] + $read[9];
       
-	  foreach my $x (@merpos) {
-
-	    print STDERR $x; 
-	    
+	  foreach my $x (@merpos) { 
 	    my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
 	    my $suffix = $x & $suffixmask;
 	    if ($prefix == $ENV{MR_INPUT}){ 
