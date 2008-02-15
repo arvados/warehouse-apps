@@ -81,7 +81,7 @@ elsif ($ENV{MR_LEVEL} == 1)
     {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      my $reference = ""; 
+      my $reference;
       if ($filename =~ m/hap|rand/) {
 	print STDERR "ignoring $filename\n"; 
 	next; 
@@ -161,7 +161,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  $outstream->write_data ($read0.$answer_key."\n");
 	  $valid_read++;  
 	}
-	elsif ($current_position < $bp) {
+	elsif ($current_position > $bp) {
 	  last; 
 	}
 	$read++;	
