@@ -15,8 +15,7 @@ use Digest::SHA qw(sha512);
 
 my $manifestkey = $ENV{MR_INPUT0};
 
-if ($ENV{MR_LEVEL} == 0)
-{
+if ($ENV{MR_LEVEL} == 0) {
   $ENV{MR_INPUT} = $manifestkey; 
   for(0..(2**$ENV{KNOB_PREFIXBITS})-1) 
   { 
@@ -25,60 +24,69 @@ if ($ENV{MR_LEVEL} == 0)
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   exit 0;
 }
-elsif ($ENV{MR_LEVEL} == 1)
-{
+elsif ($ENV{MR_LEVEL} == 1) {
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
   
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
-	
+  
   my $outstream = new Warehouse::Stream (whc => $whc);
   my $name = "./".$ENV{MR_INPUT}; 
   $outstream->name ($name);
   $outstream->clear;
   $outstream->write_start ("place.txt"); 
- 		  
+  
   $manifest->rewind; #isn't this already done by "new" above? --AWZ
 
   my $filename; 
-
-  my @count; 
-
-  vec (my $bitstring, 2**$ENV{SUFFIXBITS}, 2) = 3;
   
-  while (my $instream = $manifest->subdir_next)
-  {
-    
-    while (my ($pos, $size, $filename) = $instream->file_next)
-    {
+  my @count; 
+  
+  vec (my $bitstring, 2**$ENV{KNOB_SUFFIXBITS}, 2) = 3;
+
+  my $suffixmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
+  
+  while (my $instream = $manifest->subdir_next) {    
+    while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      my @read;
+      my @read; 
       if ($filename =~ m/\.txt$/i){
 	my $zblob = ""; 
-	while (my $dataref = $instream->read_until ($pos + $size, "\n"))
-	{
+	while (my $dataref = $instream->read_until ($pos + $size, "\n")) {
 	  #mer0, mer1, mer2, mer3 read_id, chr, pos0, off1, off2, off3, orient
 	  @read = $$dataref; 
 	}
       }
       else {
 	next; 
-      }          
-      if (vec ($bitstring, $read[6], 2) < 3) {
-	vec ($bitstring, $read[6], 2)++; 
+      }         
+      my @mer_pos;
+      push @merpos, $read[6];  
+      push @merpos, $merpos[-1] + $read[7];
+      push @merpos, $merpos[-1] + $read[8];
+      push @merpos, $merpos[-1] + $read[9];
+      
+      foreach $x (@merpos) {
+	
+	my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
+	my $suffix = $x & $suffixmask;
+	if ($prefix == $ENV{MR_INPUT}){
+	  if (vec ($bitstring, $suffix, 2) < 3) {
+	    vec ($bitstring, $suffix, 2)++; 
+	  }
+	}	
       }
+      print STDERR "read $filename\n";     
     }
-    print STDERR "read $filename\n";     
   }
-
   for (my $i=0; $i<2**27; $i++) {
     $count[vec ($bitstring, $i, 2)]++;
   }
-
+    
   $outstream->write_data ("@count\n");
-
+  
   
   $outstream->write_finish; 
   
@@ -86,7 +94,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       or die "store_block failed: ".$whc->errstr;
   print STDERR "+++mrout ".$fragkey."+++\n";
   print STDERR $whc->iostats;
- 
+  
   exit 0;  
 }
 
