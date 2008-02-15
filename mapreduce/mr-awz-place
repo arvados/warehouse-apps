@@ -69,11 +69,12 @@ elsif ($ENV{MR_LEVEL} == 1) {
       push @merpos, $merpos[-1] + $read[9];
       
       foreach my $x (@merpos) {
+
+	print STDERR $x; 
 	
 	my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
 	my $suffix = $x & $suffixmask;
-	if ($prefix == $ENV{MR_INPUT}){
-	  print STDERR $suffix; 
+	if ($prefix == $ENV{MR_INPUT}){ 
 	  if (vec ($bitstring, $suffix, 2) < 3) {
 	    vec ($bitstring, $suffix, 2)++; 
 	  }
