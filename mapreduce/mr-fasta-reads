@@ -19,8 +19,12 @@ use Digest::SHA qw(sha512);
 
 my $manifestkey = $ENV{MR_INPUT0};
 
+my $bits = $ENV{KNOB_PREFIXBITS}+$ENV{KNOB_SUFFIXBITS};
+
 if ($ENV{MR_LEVEL} == 0)
 {
+  print STDERR "bits = $bits";
+
   $ENV{MR_INPUT} = $manifestkey; 
   for(0..(2**$ENV{KNOB_PREFIXBITS})-1) 
   { 
@@ -48,10 +52,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   $main::awzprngbits = 0; 
   $main::awzprngblocks = 0; 
   print STDERR "AWZPRNGSEED = $main::awzprngseed\n";
-		
-
-  my $bits = $ENV{KNOB_PREFIXBITS}+$ENV{KNOB_SUFFIXBITS};
-	
+		  
   my @reads; 
 
   for (my $i = 0; $i < (2**$ENV{KNOB_SUFFIXBITS}); $i++ ){
@@ -80,7 +81,7 @@ elsif ($ENV{MR_LEVEL} == 1)
     {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      my $reference; 
+      my $reference = ""; 
       if ($filename =~ m/hap|rand/) {
 	print STDERR "ignoring $filename\n"; 
 	next; 
