@@ -56,7 +56,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	my $zblob = ""; 
 	while (my $dataref = $instream->read_until ($pos + $size, "\n")) {
 	  #mer0, mer1, mer2, mer3 read_id, chr, pos0, off1, off2, off3, orient
-	  @read = $$dataref; 
+	  @read = split " ", $$dataref; 
 
 	  my @merpos;
 	  push @merpos, $read[6];  
