@@ -87,9 +87,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       $outstream->write_start ($filename); 
       $outstream->write_data ($reference); 
       $outstream->write_finish; 
-    }
-    print STDERR "$filename\n";     
-    
+    }      
   }
   
   #report randomness consumed 
