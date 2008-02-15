@@ -66,7 +66,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
       
 	  foreach my $x (@merpos) {
 
-	    #print STDERR $x; 
+	    print STDERR $x; 
 	    
 	    my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
 	    my $suffix = $x & $suffixmask;
