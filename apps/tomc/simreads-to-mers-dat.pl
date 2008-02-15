@@ -59,7 +59,7 @@ while(<>)
 	$in[$_] = hex($in[$_]);
     }
     splice @in, $#mersizes + 1, 1; # drop "masked" field
-    $in[$#mersizes + 1] =~ s/.*/"$&.fa"/; # chr1 -> "chr1.fa"
+    $in[$#mersizes + 1] =~ s/.*/"$&"/; # chr1 -> "chr1"
     for (1..$#mersizes+$mers_merged)
     {
 	$in[$#mersizes + 2 + $_] += $in[$#mersizes + 1 + $_];
@@ -70,3 +70,5 @@ while(<>)
     }
     print "@in\n";
 }
+
+close STDOUT or die "$!";
