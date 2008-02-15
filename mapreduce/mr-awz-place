@@ -68,7 +68,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
       push @merpos, $merpos[-1] + $read[8];
       push @merpos, $merpos[-1] + $read[9];
       
-      foreach $x (@merpos) {
+      foreach my $x (@merpos) {
 	
 	my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
 	my $suffix = $x & $suffixmask;
