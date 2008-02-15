@@ -3,8 +3,8 @@
 
 ###MR_DESCRIPTION:visit all subdirectories and generate samples from files ending in .fa (gunzip first for .fa.gz)
 ###MR_INPUT:manifest
-###MR_KNOBS:PRE=1
-###MR_KNOBS:SUF=21 
+###MR_KNOBS:PREFIXBITS=1
+###MR_KNOBS:SUFFIXBITS=21 
 ###MR_KNOBS:K=8
 ###MR_KNOBS:BP=3142044949
 ###MR_KNOBS:PLOIDY=2 
@@ -22,7 +22,7 @@ my $manifestkey = $ENV{MR_INPUT0};
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey; 
-  for(0..(2**$ENV{KNOB_PRE})-1) 
+  for(0..(2**$ENV{KNOB_PREFIXBITS})-1) 
   { 
     print STDERR "+++mrjobstep 1 $_+++\n"; 
   }
@@ -48,13 +48,16 @@ elsif ($ENV{MR_LEVEL} == 1)
   $main::awzprngbits = 0; 
   $main::awzprngblocks = 0; 
   print STDERR "AWZPRNGSEED = $main::awzprngseed\n";
-			
+		
+
+  my $bits = $ENV{KNOB_PREFIXBITS}+$ENV{KNOB_SUFFIXBITS};
+	
   my @reads; 
 
-  for (my $i = 0; $i < (2**$ENV{KNOB_SUF}); $i++ ){
-    $reads[$i] = 
-	(((awzprng(64)%
-	   ($ENV{KNOB_PLOIDY}*$ENV{KNOB_BP}))<<$ENV{KNOB_SUF})|$i);
+  for (my $i = 0; $i < (2**$ENV{KNOB_SUFFIXBITS}); $i++ ){
+    $reads[$i] = ((awzprng(64)%($ENV{KNOB_PLOIDY}*$ENV{KNOB_BP}))<<$bits)|
+	$ENV{MR_INPUT} << $ENV{KNOB_SUFFIXBITS}|
+	$i;
   }  
   @reads = sort {$a <=> $b} (@reads);
   		
@@ -63,7 +66,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   $manifest->rewind; #isn't this already done by "new" above? --AWZ
 
-  #convenience 
+
   my $k = $ENV{KNOB_K}; 
 
   my $maxreadlength = 18; 
@@ -121,9 +124,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	my $small_gap2 = awzprng(1);
 	my $orient = awzprng(1); 
 	my $big_gap = awzprng(9); 
-	my $readmask = 2**$ENV{KNOB_SUF}-1; 
+	my $readmask = 2**bits-1; 
 	
-	$current_position = $reads[$current_read] >> $ENV{KNOB_SUF}; 
+	$current_position = $reads[$current_read] >> $bits; 
 	$current_read++; 
 	
 	
@@ -136,8 +139,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  
 	  my $answer_key = sprintf 
 	      (" %9X %10s %9d %2d %4d %2d %1d", 
-	       int($ENV{MR_INPUT}) << $ENV{KNOB_SUF} | 
-	       ($reads[$current_read] & $readmask),
+	       $reads[$current_read] & $readmask,
 	       $filename,
 	       $readstart[0], 
 	       $readstart[1] - $readstart[0],
