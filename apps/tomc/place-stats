@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use Warehouse;
+use Warehouse::Manifest;
 
 my %knob = ( prefixbits => 3,
 	     suffixbits => 21,
@@ -111,13 +112,14 @@ my $placements = 0;
 my $unique = 0;
 my $correct = 0;
 my $unique_and_correct = 0;
-my $manifest = $whc->fetch_manifest_by_key ($knob{place_stats_output});
+my $manifest = new Warehouse::Manifest (whc => $whc,
+					key => $knob{place_stats_output});
 while (my $stream = $manifest->subdir_next)
 {
     while (my ($pos, $size, $filename) = $stream->file_next)
     {
 	last if !defined $pos;
-	while (my $dataref = $stream->read_until ($pos, "\n"))
+	while (my $dataref = $stream->read_until ($pos + $size, "\n"))
 	{
 	    my @s = split (/ /, $$dataref);
 	    ++$reads;
