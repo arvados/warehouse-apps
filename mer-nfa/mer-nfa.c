@@ -926,7 +926,7 @@ mer_hash_index (t_taql_uint64 mer,
   /* Remember: hash_table_size is a power of 2.
    */
 
-  if (hash_table_size >= (1 << (mer_size * 2)))
+  if (hash_table_size >= (1ULL << (mer_size * 2)))
     {
       return hashable_bits & (hash_table_size - 1); 
     }
