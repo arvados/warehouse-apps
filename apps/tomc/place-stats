@@ -1,0 +1,194 @@
+#!/usr/bin/perl
+
+use Warehouse;
+
+my %knob = ( prefixbits => 3,
+	     suffixbits => 21,
+	     k => 8,
+	     bp => 3142044949,
+	     ploidy => 2,
+	     seed => 12345,
+	     reference => "88f0fab736bdf704a559ae48ade5a423",
+	     mutant => "88f0fab736bdf704a559ae48ade5a423",
+	     biggap => "750-1261",
+	     smallgap => "1-2",
+	     snps => 1,
+	     all => 1,
+	     batchsize => 100000,
+	     stepspernode => 4,
+	     photons => 1,
+	     nodes => 12,
+	     );
+
+for (@ARGV)
+{
+    if (/=/)
+    {
+	$knob{$`} = $';
+    }
+    else
+    {
+	die "usage: $0 knob=value knob=value ...\n"
+    }
+}
+
+my $svninfo = `svn info http://tomc.oxf.freelogy.org/repos/tomc/polony-tools`;
+$knob{revision} = $1
+    if !exists $knob{revision} && $svninfo =~ /\nRevision: (\d+)\n/;
+
+$whc = new Warehouse;
+my $jobid;
+if (!$knob{fasta_reads_output})
+{
+    $jobid = $whc->job_new (mrfunction => "fasta-reads",
+			    revision => $knob{revision},
+			    inputkey => $knob{mutant},
+			    knobs => join ("\n",
+					   map { uc($_) . "=" . $knob{$_} }
+					   qw(prefixbits
+					      suffixbits
+					      k
+					      bp
+					      ploidy
+					      seed)),
+			    nodes => ($knob{nodes} > 4 ? 4 : $knob{nodes}),
+			    photons => $knob{photons},
+			    )
+	or die $whc->errstr;
+    warn "submitted fasta-reads job $jobid\n";
+    $knob{fasta_reads_output} = wait_for_output ($jobid);
+}
+
+if (!$knob{place_output})
+{
+    my $bigmer = 2 * $knob{k};
+    $knob{mers_and_gaps} = "$bigmer,$knob{biggap},$bigmer";
+    ($knob{smallgapmin}, $knob{smallgapmax})
+	= (split ("-", $knob{smallgap})) x 2;
+    $knob{smallgappos} = $knob{k};
+    $knob{checkanswerkey} = 1;
+    $jobid = $whc->job_new (mrfunction => "place",
+			    revision => $knob{revision},
+			    inputkey => $knob{fasta_reads_output},
+			    knobs => join ("\n",
+					   map { uc($_) . "=" . $knob{$_} }
+					   qw(reference
+					      checkanswerkey
+					      mers_and_gaps
+					      smallgapmin
+					      smallgapmax
+					      smallgappos
+					      batchsize
+					      stepspernode
+					      snps
+					      all)),
+			    nodes => $knob{nodes},
+			    photons => $knob{photons},
+			    )
+	or die $whc->errstr;
+    warn "submitted place job $jobid\n";
+    $knob{place_output} = wait_for_output ($jobid);
+}
+
+
+if (!$knob{place_stats_output})
+{
+    $jobid = $whc->job_new (mrfunction => "place-stats",
+			    revision => $knob{revision},
+			    inputkey => $knob{place_output},
+			    knobs => "",
+			    nodes => 1,
+			    photons => $knob{photons},
+			    )
+	or die $whc->errstr;
+    warn "submitted place-stats job $jobid\n";
+    $knob{place_stats_output} = wait_for_output ($jobid);
+}
+
+
+my $reads = 0;
+my $placements = 0;
+my $unique = 0;
+my $correct = 0;
+my $unique_and_correct = 0;
+my $manifest = $whc->fetch_manifest_by_key ($knob{place_stats_output});
+while (my $stream = $manifest->subdir_next)
+{
+    while (my ($pos, $size, $filename) = $stream->file_next)
+    {
+	last if !defined $pos;
+	while (my $dataref = $stream->read_until ($pos, "\n"))
+	{
+	    my @s = split (/ /, $$dataref);
+	    ++$reads;
+	    ++$correct if $s[1] == 1;
+	    ++$unique if $s[2] == 1;
+	    ++$unique_and_correct if $s[1] == 1 && $s[2] == 1;
+	    $placements += $s[3];
+	}
+    }
+}
+printf (<<EOF, $reads, $placements, $correct, $unique, $unique_and_correct);
+%12d reads placed
+%12d placements
+%12d placements matched answer key
+%12d reads placed in only one location
+%12d reads placed in only the location specified in the answer key
+EOF
+
+
+sub wait_for_output
+{
+    local $_ = select STDERR; $|=1; select $_;
+    my $jobid = shift;
+    die "no job id" if !defined $jobid;
+    my $started = 0;
+    while (1)
+    {
+	sleep 10;
+	my $joblist = $whc->job_list (id_min => $jobid, id_max => $jobid);
+	my $job = $joblist->[0];
+	if ($job->{outputkey} && $job->{success})
+	{
+	    print STDERR "\njobid $jobid output ".$job->{outputkey}."\n";
+	    return $job->{outputkey};
+	}
+	elsif ($job->{finishtime})
+	{
+	    die "\njob $jobid failed or had no output: ".$job->{metakey}."\n";
+	}
+	elsif ($job->{starttime})
+	{
+	    if (!$started)
+	    {
+		print STDERR "\nStarted ".localtime()."\n";
+		$started = 1;
+	    }
+	    if (my $steps_total
+		= $job->{steps_todo}
+		+ $job->{steps_running}
+		+ $job->{steps_done})
+	    {
+		my $w = 60;
+		my $bar = "." x $w;
+		my $done = int ($job->{steps_done} * $w / $steps_total);
+		my $run = int ($job->{steps_running} * $w / $steps_total);
+		substr $bar, 0, $done, "=" x $done;
+		substr $bar, $done, $run, ">" x $run;
+		$bar .= sprintf (" %-17s",
+				 $job->{steps_done}.
+				 "+".$job->{steps_running}.
+				 "/".$steps_total);
+		print STDERR "\r$bar";
+	    }
+	    else
+	    {
+		print STDERR ">";
+	    }
+	}
+	else
+	{
+	    print STDERR ",";	# not running yet
+	}
+    }
+}
