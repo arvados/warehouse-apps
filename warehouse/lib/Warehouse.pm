@@ -752,9 +752,9 @@ sub _hash_keeps
 
 
 
-=head2 fetch_manifest_by_key
+=head2 fetch_manifest
 
- my $manifest = $whc->fetch_manifest_by_key ($key);
+ my $manifest = $whc->fetch_manifest ($key);
 
 Retrieve a manifest with the given key.
 
