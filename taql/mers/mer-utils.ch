@@ -177,7 +177,7 @@ hash_mer (size_t * hash_value,
   for (x = 0; x < n_mers; ++x)
     {
       unsigned int bp = (0xf & (mer0 >> (x * 4)));
-      unsigned int bits_for_hash = bp_in_2bits[bp];
+      int bits_for_hash = bp_in_2bits[bp];
 
       if (bits_for_hash < 0)
         return 0;
