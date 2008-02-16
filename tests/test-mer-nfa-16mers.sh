@@ -50,12 +50,15 @@ all-mers -m mer0 -n 16 < $ME.genome.dat \
   | cut -d\  -f1,3- \
   > $ME.placed.txt
 diff -u - $ME.placed.txt <<EOF || true
-7 0 174
-4 0 174
-0 0 174
-7 209 469
-4 209 469
-0 209 469
+7 0 198
+4 0 198
+0 0 198
+6 198 256
+5 198 256
+1 198 256
+7 256 454
+4 256 454
+0 256 454
 EOF
 
 place-report -n 16 -r $ME.genome.dat -s $ME.samples.dat -p $ME.placed.dat --gap-min 3 --gap-max 4 --gap-pos 8 --two-inrecs-per-sample --ref-label chrZZ.fa --add-sample-id 0 | gprint >$ME.report

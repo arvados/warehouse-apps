@@ -76,6 +76,13 @@ begin (int argc, const char * argv[])
 
   t_taql_uint64 mer0_mask;
   t_taql_uint64 mer1_mask;
+
+  t_taql_uint64 *mer;
+  t_taql_boxed *pos;
+  size_t bufpos;
+  size_t bufsize;
+  int buffull;
+
   int b;
 
   opts_parse (&argc, opts, argc, argv,
@@ -118,32 +125,48 @@ begin (int argc, const char * argv[])
 	  mer1_mask |= (0xfULL << (b * 4));
     }
 
-  while (N_ahead (infile) > gap_min)
+  bufsize = gap_max + 1;
+  mer = (t_taql_uint64*) malloc (sizeof (*mer) * (gap_max+1));
+  pos = (t_taql_boxed*) malloc (sizeof (*pos) * (gap_max+1));
+  bufpos = 0;
+  buffull = 0;
+
+  while (N_ahead (infile))
     {
-      t_taql_uint64 mer0;
-      t_taql_boxed pos = Peek (infile, 0, in_pos_col);
-      int x;
+      size_t nextbufpos = (bufpos + 1) % bufsize;
+      pos[bufpos] = Peek (infile, 0, in_pos_col);
+      mer[bufpos] = as_uInt64 (Peek (infile, 0, in_col));
 
-      if (gap_max >= N_ahead (infile))
-	gap_max = N_ahead (infile) - 1;
+      if (!buffull && nextbufpos == 0)
+	{
+	  buffull = 1;
+	}
 
-      mer0 = mer0_mask & as_uInt64 (Peek (infile, 0, in_col));
+      if (buffull)
+	{
+	  t_taql_uint64 mer0 = mer0_mask & mer[nextbufpos];
+	  size_t x;
+	  size_t g;
 
-      for (x = gap_min; x <= gap_max; ++x)
-        {
-	  t_taql_uint64 mer1;
+	  for (x = (nextbufpos + gap_min) % bufsize, g = gap_min;
+	       x != nextbufpos;
+	       x = (x+1) % bufsize, ++g)
+	    {
+	      t_taql_uint64 mer1 = mer1_mask & mer[x];
 
-	  mer1 = mer1_mask & as_uInt64 (Peek (infile, x, in_col));
+	      Poke (outfile, 0, 0, uInt64 (mer0 | mer1));
+	      Poke (outfile, 0, 1, pos[nextbufpos]);
+	      Poke (outfile, 0, 2, uInt8 (g));
 
-          Poke (outfile, 0, 0, uInt64 (mer0 | mer1));
-          Poke (outfile, 0, 1, pos);
-	  Poke (outfile, 0, 2, uInt8 (x));
-
-	  Advance (outfile, 1);
-        }
-
+	      Advance (outfile, 1);
+	    }
+	}
+      bufpos = nextbufpos;
       Advance (infile, 1);
     }
+
+  /* XXX fixme -- the last few mers in the input (where gap_max isn't
+     reached) are omitted here */
 
   Close (outfile);
   Close (infile);
