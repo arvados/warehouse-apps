@@ -196,11 +196,8 @@ sub awzprng {
 
 sub revc {
   my ($bp) = @_; 
- 
-  $bp =~s/a/t/gi;
-  $bp =~s/c/g/gi;
-  $bp =~s/g/c/gi;
-  $bp =~s/t/a/gi;
+
+  $bp =~ tr/acgtACGT/tgcaTGCA/;
 
   return reverse $bp; 
 }
