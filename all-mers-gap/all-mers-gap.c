@@ -105,7 +105,7 @@ begin (int argc, const char * argv[])
     Fatal ("bogus gap_pos");
 
   infile = Infile ("-");
-  File_fix (infile, gap_max+1, 0);
+  File_fix (infile, 1, 0);
   in_col = Field_pos (infile, Sym (in_col_name));
   in_pos_col = Field_pos (infile, Sym (in_pos_col_name));
 
