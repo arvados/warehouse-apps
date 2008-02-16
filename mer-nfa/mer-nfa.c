@@ -590,7 +590,7 @@ read_samples_building_nfa (void)
               nfa[n_samples].mer[x] = as_uInt64 (Peek (sample_file, offset, sample_mer_in_col[x]));
               nfa[n_samples].state[0].flags[x] = 0;
               nfa[n_samples].state[1].flags[x] = 0;
-	      if (0 <= find_non_bp (nfa[n_samples].mer[x], mer_size[x]))
+	      if (-1 != find_non_bp (nfa[n_samples].mer[x], mer_size[x]))
 		{
 		  /* put NNNN in all mer positions to ensure that this sample is always skipped */
 		  int xx;
@@ -670,7 +670,7 @@ build_hash_table (void)
         {
           t_taql_uint64 sample_mer = nfa[s].mer[x];
 
-	  if (0 <= find_non_bp (sample_mer, mer_size[x]))
+	  if (-1 != find_non_bp (sample_mer, mer_size[x]))
 	    continue;
 
           add_to_hash_table (x, sample_mer, s, -1, 0); /* -1 means "no SNP here" */
@@ -752,7 +752,7 @@ add_to_hash_table (int mer_pos,
   /* the block "time to hash the samples", above, also needs work
    * if we're to handle ambiguous base pairs in samples.
    */
-  if (0 <= find_non_bp (mer, mer_size[mer_pos]))
+  if (-1 != find_non_bp (mer, mer_size[mer_pos]))
     return;
   
   hash_index = mer_hash_index (mer, mer_size[mer_pos], sample_hash_table_size);
