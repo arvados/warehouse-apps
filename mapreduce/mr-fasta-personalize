@@ -84,9 +84,9 @@ elsif ($ENV{MR_LEVEL} == 1)
       $reference =~ s/([ACGT]{1})([^ACGT]+)/$1 x (1 + length($2))/ge;
       $reference =~ s/^([^ACGT]+)([ACGT]{1})/$2 x (1 + length($1))/e;
 
-      my $individual = $ENV{MR_INPUT}/$ENV{MR_PLOIDY};
+      my $individual = $ENV{MR_INPUT}/$ENV{KNOB_PLOIDY};
       $individual = $individual ? "$individual:" : ""; 
-      my $ploidy = $ENV{MR_INPUT}%$ENV{MR_PLOIDY};
+      my $ploidy = $ENV{MR_INPUT}%$ENV{KNOB_PLOIDY};
       $ploidy = $ploidy ? ":$ploidy" : ""; 
       $outstream->write_start ("$individual.$filename.$ploidy"); 
       $outstream->write_data ($reference); 
