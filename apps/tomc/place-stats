@@ -12,7 +12,7 @@ my %knob = ( prefixbits => 3,
 	     reference => "88f0fab736bdf704a559ae48ade5a423",
 	     mutant => "88f0fab736bdf704a559ae48ade5a423",
 	     biggap => "750-1261",
-	     smallgap => "1-2",
+	     maxreadlength => 18,
 	     snps => 1,
 	     all => 1,
 	     batchsize => 100000,
@@ -64,8 +64,8 @@ if (!$knob{place_output})
 {
     my $bigmer = 2 * $knob{k};
     $knob{mers_and_gaps} = "$bigmer,$knob{biggap},$bigmer";
-    ($knob{smallgapmin}, $knob{smallgapmax})
-	= (split ("-", $knob{smallgap})) x 2;
+    $knob{smallgapmin} = $knob{maxreadlength} - 2*$knob{k} - 1;
+    $knob{smallgapmax} = $knob{maxreadlength} - 2*$knob{k};
     $knob{smallgappos} = $knob{k};
     $knob{checkanswerkey} = 1;
     $jobid = $whc->job_new (mrfunction => "place",
