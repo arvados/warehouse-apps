@@ -80,9 +80,9 @@ elsif ($ENV{MR_LEVEL} == 1)
       }        
       $reference =~ s/^>.*\n//;
       $reference =~ s/\n//g;
-      $reference = uc ($reference); 
-      $reference =~ s/([ACGT]{1})([^ACGT]+)/$1 x (1 + length($2))/ge;
-      $reference =~ s/^([^ACGT]+)([ACGT]{1})/$2 x (1 + length($1))/e;
+      $reference = lc ($reference); 
+      $reference =~ s/([acgt]{1})([^acgt]+)/$1 x (1 + length($2))/ge;
+      $reference =~ s/^([^acgt]+)([acgt]{1})/$2 x (1 + length($1))/e;
 
       my $individual = int($ENV{MR_INPUT}/$ENV{KNOB_PLOIDY});
       $individual = $individual ? "$individual:" : ""; 
