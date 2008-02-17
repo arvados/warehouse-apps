@@ -19,7 +19,7 @@ my $manifestkey = $ENV{MR_INPUT0};
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey; 
-  for(0..($ENV{KNOB_PEOPLE}*$ENV{KNOB_PLOIDY})-1) 
+  for(0..($ENV{KNOB_INDIVIDUALS}*$ENV{KNOB_PLOIDY})-1) 
   { 
     print STDERR "+++mrjobstep 1 $_+++\n"; 
   }
