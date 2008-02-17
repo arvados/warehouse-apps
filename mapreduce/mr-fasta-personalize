@@ -3,7 +3,7 @@
 
 ###MR_DESCRIPTION:visit all subdirectories and personalize files ending in .fa (gunzip first for .fa.gz)
 ###MR_INPUT:manifest
-###MR_KNOBS:PEOPLE=2
+###MR_KNOBS:INDIVIDUALS=2
 ###MR_KNOBS:PLOIDY=2 
 ###MR_KNOBS:SEED=12345
 
@@ -84,7 +84,11 @@ elsif ($ENV{MR_LEVEL} == 1)
       $reference =~ s/([ACGT]{1})([^ACGT]+)/$1 x (1 + length($2))/ge;
       $reference =~ s/^([^ACGT]+)([ACGT]{1})/$2 x (1 + length($1))/e;
 
-      $outstream->write_start ($filename); 
+      my $individual = $ENV{MR_INPUT}/$ENV{MR_PLOIDY}
+      $individual = $individual ? "$individual:" : ""; 
+      my $ploidy = $ENV{MR_INPUT}%$ENV{MR_PLOIDY};
+      $ploidy = $ploidy ? ":$ploidy" : ""; 
+      $outstream->write_start ("$individual.$filename.$ploidy"); 
       $outstream->write_data ($reference); 
       $outstream->write_finish; 
     }      
