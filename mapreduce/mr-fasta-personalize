@@ -90,9 +90,10 @@ elsif ($ENV{MR_LEVEL} == 1)
       my @bp_array = ("a", "c", "g", "t"); 
       for (my $i=0; $i < length ($reference); $i++) {
 	if (!awzprng($ENV{KNOB_SNPBITS})) {
+	  my $bp;
 	  my $ref = substr ($reference, $i, 1);   
 	  do {
-	    my $bp = $bp_array[awzprng(2)];
+	    $bp = $bp_array[awzprng(2)];
 	  }while ($ref eq $bp); 
 	  $count++; 
 	  substr ($reference, $i, 1) = uc($bp);
