@@ -1,9 +1,14 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:visit all subdirectories and report stats for files ending in .fa (gunzip first for .fa.gz)   
+###MR_DESCRIPTION:visit all subdirectories and generate samples from files ending in .fa (gunzip first for .fa.gz)
 ###MR_INPUT:manifest
-###MR_KNOBS:N=4
+###MR_KNOBS:PREFIXBITS=1
+###MR_KNOBS:SUFFIXBITS=21 
+###MR_KNOBS:K=8
+###MR_KNOBS:BP=3080436051
+###MR_KNOBS:PLOIDY=2 
+###MR_KNOBS:SEED=12345
 
 use strict; 
 use Warehouse;
@@ -12,15 +17,12 @@ use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA qw(sha512);
 
-my @conversion_table=("A","C","G","T"); 
-
-
 my $manifestkey = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey; 
-  for(0..$ENV{KNOB_N}-1) 
+  for(0..(2**$ENV{KNOB_PREFIXBITS})-1) 
   { 
     print STDERR "+++mrjobstep 1 $_+++\n"; 
   }
@@ -34,45 +36,37 @@ elsif ($ENV{MR_LEVEL} == 1)
   
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
-					  
-  my $seed = sha512("123456"); #use "SEED" knob and job ID here 
-  my $rand_blocks = 2**18; #implies 2^21 reads
-  my $rand_bits = 512 * $rand_blocks; # implies 8 x 64 bit reads
-  my $good_random_data = $seed;
-  my $read_mask = 2**21-1; 
-
-  for (my $i = 1; $i < $rand_blocks; $i++) {
-     $seed = sha512($seed);
-     $good_random_data .= $seed;
-  }
-  my @reads = unpack ("Q*", $good_random_data);
-  undef $good_random_data;
-    
-  for (my $i=0; $i < @reads; $i++ ) {
-    $reads[$i] = ((($reads [$i] % (2*3142044949)) << 28) | $i);
-  }
-  @reads = sort {$a <=> $b} (@reads);
-  
-  my $first_pos = $reads[0]>>28;
-  my $first_read = $reads[0] & $read_mask; 
-  my $last_pos = $reads[@reads-1]>>28;
-  my $last_read = $reads[@reads-1] & $read_mask;
-      					      
-  warn "generated randomness for ".@reads." reads " 
-    ."first position is $first_pos (read $first_read) "
-    ."last position is $last_pos (read $last_read)\n";
-		
-  my $bp = 0; 
-  my $current_read = 0; 
-
-  $manifest->rewind;
-
+	
   my $outstream = new Warehouse::Stream (whc => $whc);
-  my $name = "./".$ENV{MR_INPUT};
-  warn "$name\n"; 
+  my $name = "./".$ENV{MR_INPUT}; 
   $outstream->name ($name);
   $outstream->clear;
   $outstream->write_start ("reads.txt"); 
+
+  #setup global variables for "awzprng" 
+  $main::awzprngseed = $ENV{KNOB_SEED}.$name;
+  $main::awzprngbits = 0; 
+  $main::awzprngblocks = 0; 
+  print STDERR "AWZPRNGSEED = $main::awzprngseed\n";
+		  
+  my @reads; 
+  my $bits = $ENV{KNOB_PREFIXBITS}+$ENV{KNOB_SUFFIXBITS};
+
+  for (my $i = 0; $i < (2**$ENV{KNOB_SUFFIXBITS}); $i++ ){
+    $reads[$i] = ((awzprng(64)%
+		   ($ENV{KNOB_PLOIDY}*$ENV{KNOB_INDIVIDUALS}*$ENV{KNOB_BP}))
+		  <<$bits)|$ENV{MR_INPUT} << $ENV{KNOB_SUFFIXBITS}|$i;
+  }  
+  @reads = sort {$a <=> $b} (@reads);
+  		
+  my $bp = 0; 
+  my $current_read = 0; 
+
+  my $k = $ENV{KNOB_K}; 
+
+  my $maxreadlength = 18; 
+  my $shortoffset = $maxreadlength-2*$k-1; 
+  my $longoffset = 750; 
 
   while (my $instream = $manifest->subdir_next)
   {
@@ -81,118 +75,126 @@ elsif ($ENV{MR_LEVEL} == 1)
     {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      my $reference; #(decompressed) reference data (if correct extension)
+      my $reference;
       if ($filename =~ m/hap|rand/) {
-	warn "ignoring $filename"; 
+	print STDERR "ignoring $filename\n"; 
 	next; 
       }
-      if ($filename =~ s/\.fa\.g?z$/\.fa/i) 
-      {
+      elsif ($filename =~ s/\.fa\.g?z$//i){
 	my $zblob = ""; 
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
 	  $zblob .= $$dataref; 
 	}
-	gunzip \$zblob => \$reference or die $GunzipError;
+	gunzip \$zblob => \$reference or die $GunzipError;	
       }
-      elsif ($filename =~ m/\.fa$/i) 
-      {
+      elsif ($filename =~ s/\.fa//i) {
 	while (my $dataref = $instream->read_until ($pos + $size))
 	{
 	  $reference .= $$dataref; 
 	}
       }
-      else 
-      {
+      else {
 	next; 
-      }	
+      }    
+      my $read;
+      my $valid_read; 
+     
       $reference =~ s/^>.*\n//;
       $reference =~ s/\n//g;
       
       #do some work
       my $bp_start = $bp;
       $bp += length ($reference); 
-      
+	  
       my $rand_bits = 0; 
       my $count = 0; 
       my $bit; 
       
-      my $current_position; 
-      my $read;
-      my $valid_read; 
+      my $current_position ; 
       
-      do {
-	$seed = sha512($seed); #generate some more randomness 
-	$rand_bits = 512;
-	  
-	my $small_gap1 = vec ($seed, 512 - $rand_bits--, 1); 
-	my $small_gap2 = vec ($seed, 512 - $rand_bits--, 1);
-	my $orient = vec ($seed, 512 - $rand_bits--, 1);
-	my $big_gap = 0;
-	for (my $i=0; $i < 9; $i++) {
-	  $big_gap = $big_gap<<1 | vec ($seed, 512 - $rand_bits--, 1);
-	}
+      while ( $current_read < @reads) {
 	
-	$current_position = $reads[$current_read] >> 28; 
+	my $small_gap1 = awzprng(1);  
+	my $small_gap2 = awzprng(1);
+	my $orient = awzprng(1); 
+	my $big_gap = awzprng(9); 
+	my $readmask = 2**$bits-1; 
+	
+	$current_position = $reads[$current_read] >> $bits; 
 	$current_read++; 
 	
-	if ( ($current_position+7+3+$small_gap1+7+750+$big_gap+7+3+$small_gap2+7) < $bp){
-	  my $answer_key = sprintf 
-	      (" %10X %9X %1X %1X %3X %1X", 
-	       $reads[$current_read] & $read_mask,  
-	       $current_position, $orient, 
-	       $small_gap1, $big_gap, $small_gap2); 
-
+	
+	if (($current_position+$longoffset+$big_gap+2*$maxreadlength)<$bp){
 	  my @readstart;
-	  push @readstart, $current_position-$bp_start;
-	  push @readstart, $readstart[-1] + 7 + 3 + $small_gap1;
-	  push @readstart, $readstart[-1] + 7 + 750 + $big_gap;
-	  push @readstart, $readstart[-1] + 7 + 3 + $small_gap2;
+	  push @readstart,$current_position-$bp_start;
+	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap1;
+	  push @readstart,$readstart[-1]+$k+750+$big_gap;
+	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
+	  
+	  my $answer_key = sprintf 
+	      (" %X %s %d %d %d %d %d", 
+	       $reads[$current_read] & $readmask,
+	       $filename,
+	       $readstart[0], 
+	       $readstart[1] - $readstart[0],
+	       $readstart[2] - $readstart[1],
+	       $readstart[3] - $readstart[2],
+	       $orient); 
+
 	  my $read0 =
-	      substr($reference, $readstart[0], 7).
-	      substr($reference, $readstart[1], 7);
-	  my $read1 = 
-	      substr($reference, $readstart[2], 7).
-	      substr($reference, $readstart[3], 7);
+	      substr($reference, $readstart[0], $k)." ".
+	      substr($reference, $readstart[1], $k)." ".
+	      substr($reference, $readstart[2], $k)." ".
+	      substr($reference, $readstart[3], $k);
 
-	  my $read_ref = $read0.$read1; 
-
-	  my $munge_ref=""; 
-
-	  for (my $i=0; $i < 28; $i++) {
-	    my $base = substr ($read_ref, $i, 1);
-	    my $munge = 1; 
-	    for (my $j=0; $j < 7; $j++) {
-	      if (vec ($seed, 512 - $rand_bits--, 1)){
-		$munge = 0;
-	        last; 
-	      }
-	    }
-	    if ($munge) {
-	      $base = $conversion_table
-		  [vec($seed,512-$rand_bits--,1)<<1|
-		   vec($seed,512-$rand_bits--,1)];  
-	    }
-	    $munge_ref .= $base; 
+	  if ($orient) {
+	    $read0 = revc($read0); 		
 	  }
-
-	  $outstream->write_data 
-	      ($munge_ref." ".$read_ref.$answer_key."\n".
-	       $read1.$read0." ".$read_ref.$answer_key."\n");
-	  $valid_read++; 
+	  
+	  $outstream->write_data ($read0.$answer_key."\n");
+	  $valid_read++;  
 	}
-	$read++; 
+	elsif ($current_position > $bp) {
+	  last; 
+	}
+	$read++;	
       }
-      while ($current_position <  $bp); 
-      
-      warn ($valid_read."/".$read." in ".$filename." (".$bp.")\n");
+      print STDERR "$valid_read / $read in $filename ($bp)\n";     
     }
   }
   $outstream->write_finish; 
-  
+
+  #report randomness consumed 
+  print STDERR "used AWZPRNGBLOCKS = $main::awzprngblocks\n";
+ 
   my $fragkey = $whc->store_block ($outstream->as_string)
       or die "store_block failed: ".$whc->errstr;
   print STDERR "+++mrout ".$fragkey."+++\n";
   print STDERR $whc->iostats;
+ 
   exit 0;  
+}
+
+sub awzprng {
+   my ($bits) = @_;  
+   if ( $main::awzprngbits < $bits) {     
+     $main::awzprngseed = sha512($main::awzprngseed); 
+     $main::awzprngbits = 512; 
+     $main::awzprngblocks++; 
+    }
+   my $rand = 0; 
+   for (my $i = 0; $i < $bits; $i++) { 
+     $rand = $rand<<1|vec($main::awzprngseed,512-$main::awzprngbits--,1);
+   }
+   return $rand; 
+}
+
+
+sub revc {
+  my ($bp) = @_; 
+
+  $bp =~ tr/acgtACGT/tgcaTGCA/;
+
+  return reverse $bp; 
 }
