@@ -5,7 +5,7 @@
 ###MR_INPUT:manifest
 ###MR_KNOBS:INDIVIDUALS=3
 ###MR_KNOBS:PLOIDY=2 
-###MR_KNOBS:SNPBITS=10
+###MR_KNOBS:SNPBITS=11
 ###MR_KNOBS:SEED=12345
 
 use strict; 
@@ -38,13 +38,13 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $outstream = new Warehouse::Stream (whc => $whc);
 
   my $individual = int($ENV{MR_INPUT}/$ENV{KNOB_PLOIDY});
-  $individual = $individual ? "$individual:" : ""; 
   my $ploidy = $ENV{MR_INPUT}%$ENV{KNOB_PLOIDY};
-  $ploidy = $ploidy ? ":$ploidy" : ""; 
-
-  my $name = "./i:$individual"."p$ploidy"; 
+ 
+  my $name = "./$individual:$ploidy"; 
   $outstream->name ($name);
   $outstream->clear;
+
+  my $total = 0; 
 
   #setup global variables for "awzprng" 
   $main::awzprngseed = $ENV{KNOB_SEED}.$name;
@@ -88,24 +88,28 @@ elsif ($ENV{MR_LEVEL} == 1)
       $reference =~ s/^([^acgt]+)([acgt]{1})/$2 x (1 + length($1))/e;
       
       my @bp_array = ("a", "c", "g", "t"); 
-      for (my $i=0; $i < length ($reference); $i++) {
-	if (!awzprng($ENV{KNOB_SNPBITS})) {
-	  my $bp;
-	  my $ref = substr ($reference, $i, 1);   
-	  do {
-	    $bp = $bp_array[awzprng(2)];
-	  }while ($ref eq $bp); 
+      my $i = awzprng($ENV{KNOB_SNPBITS}); 
+      while ($i < length ($reference)) {
+	my $ref = substr ($reference, $i, 1);   
+	my $snp = $bp_array[awzprng(2)];
+	if ($ref ne $bp) {
+	  substr($reference, $i, 1) = uc ($bp); 
 	  $count++; 
-	  substr ($reference, $i, 1) = uc($bp);
+	  $total++; 
 	}
       }	
       print STDERR "inserted $count SNPs into $name/$filename\n";
-      $outstream->write_start ("$individual$filename$ploidy.fa"); 
+
+      my $ind = $individual ? "$individual:" : ""; 
+      my $pl = $ploidy ? ":$ploidy" : ""; 
+      $outstream->write_start ("$ind$filename$pl.fa"); 
       $outstream->write_data ($reference); 
       $outstream->write_finish; 
-    }      
+    }     
   }
-  
+  #report total SNPs 
+  print STDERR "inserted $total SNPs for $name\n";
+ 
   #report randomness consumed 
   print STDERR "used AWZPRNGBLOCKS = $main::awzprngblocks\n";
  
