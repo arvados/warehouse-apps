@@ -81,7 +81,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	next; 
       }        
       my $count = 0; 
-      $reference =~ s/^>.*\n//;
+      $reference =~ s/(^>.*)\n//;
+      print STDERR "found FASTA header: *** $1 *** in $name/$filename\n";
+      
       $reference =~ s/\n//g;
       $reference = lc ($reference); 
       $reference =~ s/([acgt]{1})([^acgt]+)/$1 x (1 + length($2))/ge;
