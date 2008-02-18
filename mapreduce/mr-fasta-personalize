@@ -3,8 +3,9 @@
 
 ###MR_DESCRIPTION:visit all subdirectories and personalize files ending in .fa (gunzip first for .fa.gz)
 ###MR_INPUT:manifest
-###MR_KNOBS:INDIVIDUALS=2
+###MR_KNOBS:INDIVIDUALS=3
 ###MR_KNOBS:PLOIDY=2 
+###MR_KNOBS:SNPBITS=10
 ###MR_KNOBS:SEED=12345
 
 use strict; 
@@ -33,9 +34,15 @@ elsif ($ENV{MR_LEVEL} == 1)
   
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
-	
+
   my $outstream = new Warehouse::Stream (whc => $whc);
-  my $name = "./".$ENV{MR_INPUT}; 
+
+  my $individual = int($ENV{MR_INPUT}/$ENV{KNOB_PLOIDY});
+  $individual = $individual ? "$individual:" : ""; 
+  my $ploidy = $ENV{MR_INPUT}%$ENV{KNOB_PLOIDY};
+  $ploidy = $ploidy ? ":$ploidy" : ""; 
+
+  my $name = "./i:$individual"."p:$ploidy"; 
   $outstream->name ($name);
   $outstream->clear;
 
@@ -45,19 +52,15 @@ elsif ($ENV{MR_LEVEL} == 1)
   $main::awzprngblocks = 0; 
   print STDERR "AWZPRNGSEED = $main::awzprngseed\n";
 		  
-
-  $manifest->rewind; #isn't this already done by "new" above? --AWZ
-
-
   while (my $instream = $manifest->subdir_next)
   {
-    
     while (my ($pos, $size, $filename) = $instream->file_next)
     {
       last if !defined $pos; 
       $instream->seek ($pos); 
       my $reference;
       if ($filename =~ m/hap|rand/) {
+	#this clause should be controlled by a knob 
 	print STDERR "ignoring $filename\n"; 
 	next; 
       }
@@ -70,25 +73,33 @@ elsif ($ENV{MR_LEVEL} == 1)
 	gunzip \$zblob => \$reference or die $GunzipError;	
       }
       elsif ($filename =~ s/\.fa//i) {
-	while (my $dataref = $instream->read_until ($pos + $size))
-	{
+	while (my $dataref = $instream->read_until ($pos + $size)) {
 	  $reference .= $$dataref; 
 	}
       }
       else {
 	next; 
       }        
+      $my count = 0; 
       $reference =~ s/^>.*\n//;
       $reference =~ s/\n//g;
       $reference = lc ($reference); 
       $reference =~ s/([acgt]{1})([^acgt]+)/$1 x (1 + length($2))/ge;
       $reference =~ s/^([^acgt]+)([acgt]{1})/$2 x (1 + length($1))/e;
-
-      my $individual = int($ENV{MR_INPUT}/$ENV{KNOB_PLOIDY});
-      $individual = $individual ? "$individual:" : ""; 
-      my $ploidy = $ENV{MR_INPUT}%$ENV{KNOB_PLOIDY};
-      $ploidy = $ploidy ? ":$ploidy.fa" : ".fa"; 
-      $outstream->write_start ("$individual$filename$ploidy"); 
+      
+      my @bp_array = ("a", "c", "g", "t"); 
+      for (my $i=0; $i < length ($reference); $i++) {
+	if (!awzprng($ENV{$KNOB_SNPBITS})) {
+	  my $ref = substr ($reference, $i, 1);   
+	  do {
+	    $bp = $bp_array[awzprng(2)];
+	  }while ($ref eq $bp); 
+	  $count++; 
+	  substr ($reference, $i, 1) = uc($bp);
+	}
+      }	
+      print STDERR "inserted $count SNPs into $name/$filename\n"
+      $outstream->write_start ("$individual$filename$ploidy.fa"); 
       $outstream->write_data ($reference); 
       $outstream->write_finish; 
     }      
@@ -112,8 +123,8 @@ sub awzprng {
      $main::awzprngbits = 512; 
      $main::awzprngblocks++; 
     }
-   my $rand = 0; 
-   for (my $i = 0; $i < $bits; $i++) { 
+   my $rand = vec($main::awzprngseed,512-$main::awzprngbits--,1);
+   for (my $i = 1; $i < $bits; $i++) { 
      $rand = $rand<<1|vec($main::awzprngseed,512-$main::awzprngbits--,1);
    }
    return $rand; 
@@ -130,3 +141,4 @@ sub revc {
 
   return reverse $bp; 
 }
+
