@@ -40,7 +40,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $individual = int($ENV{MR_INPUT}/$ENV{KNOB_PLOIDY});
   my $ploidy = $ENV{MR_INPUT}%$ENV{KNOB_PLOIDY};
  
-  my $name = "./$individual:$ploidy"; 
+  my $name = "./$individual.$ploidy"; 
   $outstream->name ($name);
   $outstream->clear;
 
@@ -109,7 +109,7 @@ elsif ($ENV{MR_LEVEL} == 1)
     }     
   }
   #report total SNPs 
-  print STDERR "inserted $total SNPs for $name\n";
+  print STDERR "inserted $total SNPs into $name in total\n";
  
   #report randomness consumed 
   print STDERR "used AWZPRNGBLOCKS = $main::awzprngblocks\n";
