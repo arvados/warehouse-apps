@@ -92,8 +92,8 @@ elsif ($ENV{MR_LEVEL} == 1)
       while ($i < length ($reference)) {
 	my $ref = substr ($reference, $i, 1);   
 	my $snp = $bp_array[awzprng(2)];
-	if ($ref ne $bp) {
-	  substr($reference, $i, 1) = uc ($bp); 
+	if ($ref ne $snp) {
+	  substr($reference, $i, 1) = uc ($snp); 
 	  $count++; 
 	  $total++; 
 	}
