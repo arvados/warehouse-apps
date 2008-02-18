@@ -97,6 +97,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  $count++; 
 	  $total++; 
 	}
+	$i+= (awzprng($ENV{KNOB_SNPBITS})+1);
       }	
       print STDERR "inserted $count SNPs into $name/$filename\n";
 
