@@ -80,7 +80,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       else {
 	next; 
       }        
-      $my count = 0; 
+      my $count = 0; 
       $reference =~ s/^>.*\n//;
       $reference =~ s/\n//g;
       $reference = lc ($reference); 
@@ -130,15 +130,4 @@ sub awzprng {
    return $rand; 
 }
 
-
-sub revc {
-  my ($bp) = @_; 
- 
-  $bp =~s/a/t/gi;
-  $bp =~s/c/g/gi;
-  $bp =~s/g/c/gi;
-  $bp =~s/t/a/gi;
-
-  return reverse $bp; 
-}
 
