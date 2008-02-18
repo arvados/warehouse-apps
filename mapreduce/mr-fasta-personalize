@@ -89,16 +89,16 @@ elsif ($ENV{MR_LEVEL} == 1)
       
       my @bp_array = ("a", "c", "g", "t"); 
       for (my $i=0; $i < length ($reference); $i++) {
-	if (!awzprng($ENV{$KNOB_SNPBITS})) {
+	if (!awzprng($ENV{KNOB_SNPBITS})) {
 	  my $ref = substr ($reference, $i, 1);   
 	  do {
-	    $bp = $bp_array[awzprng(2)];
+	    my $bp = $bp_array[awzprng(2)];
 	  }while ($ref eq $bp); 
 	  $count++; 
 	  substr ($reference, $i, 1) = uc($bp);
 	}
       }	
-      print STDERR "inserted $count SNPs into $name/$filename\n"
+      print STDERR "inserted $count SNPs into $name/$filename\n";
       $outstream->write_start ("$individual$filename$ploidy.fa"); 
       $outstream->write_data ($reference); 
       $outstream->write_finish; 
