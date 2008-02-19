@@ -189,9 +189,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	       $orient); 
 
 	  my $read0 =
-	      substr($reference, $readstart[0], $k).
-	      substr($reference, $readstart[1], $k).
-	      substr($reference, $readstart[2], $k).
+	      substr($reference, $readstart[0], $k)." ".
+	      substr($reference, $readstart[1], $k)." ".
+	      substr($reference, $readstart[2], $k)." ".
 	      substr($reference, $readstart[3], $k);
 
 	  if ($orient) {
@@ -199,7 +199,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  }
 	  my $read1 = mungeread (lc($read0));
 
-	  $outstream->write_data ($read1." ".$read0.$answer_key."\n");
+	  $outstream->write_data ($read1.$read0.$answer_key."\n");
 	  $valid_read++;  
 	}
 	elsif ($current_position > $bp) {
@@ -248,6 +248,7 @@ sub revc {
 
 sub mungeread {
     my ($read) = @_; 
+    my @mers = split / /, $read; 
     my $munge; 
     my $k = length ($read)/4; 
 
