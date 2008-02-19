@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # First see if we need to convert runit to run under upstart
 DISTRO=`cat /etc/lsb-release  |grep CODENAME| cut -c 18-`
