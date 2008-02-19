@@ -36,11 +36,64 @@ for (@ARGV)
 my $svninfo = `svn info http://tomc.oxf.freelogy.org/repos/tomc/polony-tools`;
 $knob{revision} = $1
     if !exists $knob{revision} && $svninfo =~ /\nRevision: (\d+)\n/;
+print "Using revision $knob{revision}\n";
 
 $whc = new Warehouse;
-my $jobid;
-if (!$knob{fasta_reads_output})
+
+make_place_stats() if !$knob{place_stats_output};
+
+my $reads = 0;
+my $placements = 0;
+my $unique = 0;
+my $correct = 0;
+my $exact_reads = 0;
+my $exact_placements = 0;
+my $unique_and_correct = 0;
+my @nreads_vs_log_placements;
+my $manifest = new Warehouse::Manifest (whc => $whc,
+					key => $knob{place_stats_output});
+while (my $stream = $manifest->subdir_next)
 {
+    while (my ($pos, $size, $filename) = $stream->file_next)
+    {
+	last if !defined $pos;
+	while (my $dataref = $stream->read_until ($pos + $size, "\n"))
+	{
+	    next if $$dataref =~ /^\#/;
+	    my @s = split (/ /, $$dataref);
+	    ++$reads;
+	    ++$correct if $s[1];
+	    ++$unique if $s[3] == 1;
+	    ++$unique_and_correct if $s[3] == 1 && $s[1];
+	    ++$exact_reads if $s[2] > 0;
+	    $exact_placements += $s[2] if $s[2] > 0;
+	    $placements += $s[3];
+
+	    if ($s[3] > 0)
+	    {
+		++$nreads_vs_log_placements[int(log($s[3])/log(2))];
+	    }
+	}
+    }
+}
+printf (<<EOF, $reads, $placements, $exact_placements, $correct, $exact_reads, $unique, $unique_and_correct);
+%12d reads placed
+%12d placements
+%12d placements without SNPs
+%12d reads placed in the location specified by the answer key
+%12d reads placed without SNPs
+%12d reads placed in only one location
+%12d reads placed in only the location specified in the answer key
+EOF
+print "   P #reads placed 2^P .. 2^(P+1)-1 times\n";
+for (0..$#nreads_vs_log_placements)
+{
+    printf "%4d %12d\n", $_, $nreads_vs_log_placements[$_];
+}
+
+sub make_fasta_reads
+{
+    my $jobid;
     $jobid = $whc->job_new (mrfunction => "fasta-reads",
 			    revision => $knob{revision},
 			    inputkey => $knob{mutant},
@@ -60,14 +113,17 @@ if (!$knob{fasta_reads_output})
     $knob{fasta_reads_output} = wait_for_output ($jobid);
 }
 
-if (!$knob{place_output})
+sub make_place
 {
+    make_fasta_reads() if (!$knob{fasta_reads_output});
+
     my $bigmer = 2 * $knob{k};
     $knob{mers_and_gaps} = "$bigmer,$knob{biggap},$bigmer";
     $knob{smallgapmin} = $knob{maxreadlength} - 2*$knob{k} - 1;
     $knob{smallgapmax} = $knob{maxreadlength} - 2*$knob{k};
     $knob{smallgappos} = $knob{k};
     $knob{checkanswerkey} = 1;
+    my $jobid;
     $jobid = $whc->job_new (mrfunction => "place",
 			    revision => $knob{revision},
 			    inputkey => $knob{fasta_reads_output},
@@ -92,8 +148,11 @@ if (!$knob{place_output})
 }
 
 
-if (!$knob{place_stats_output})
+sub make_place_stats
 {
+    make_place() if (!$knob{place_output});
+
+    my $jobid;
     $jobid = $whc->job_new (mrfunction => "place-stats",
 			    revision => $knob{revision},
 			    inputkey => $knob{place_output},
@@ -105,45 +164,6 @@ if (!$knob{place_stats_output})
     warn "submitted place-stats job $jobid\n";
     $knob{place_stats_output} = wait_for_output ($jobid);
 }
-
-
-my $reads = 0;
-my $placements = 0;
-my $unique = 0;
-my $correct = 0;
-my $exact_reads = 0;
-my $exact_placements = 0;
-my $unique_and_correct = 0;
-my $manifest = new Warehouse::Manifest (whc => $whc,
-					key => $knob{place_stats_output});
-while (my $stream = $manifest->subdir_next)
-{
-    while (my ($pos, $size, $filename) = $stream->file_next)
-    {
-	last if !defined $pos;
-	while (my $dataref = $stream->read_until ($pos + $size, "\n"))
-	{
-	    my @s = split (/ /, $$dataref);
-	    ++$reads;
-	    ++$correct if $s[1];
-	    ++$unique if $s[3] == 1;
-	    ++$unique_and_correct if $s[3] == 1 && $s[1];
-	    ++$exact_reads if $s[2] > 0;
-	    $exact_placements += $s[2] if $s[2] > 0;
-	    $placements += $s[3];
-	}
-    }
-}
-printf (<<EOF, $reads, $placements, $exact_placements, $correct, $exact_reads, $unique, $unique_and_correct);
-%12d reads placed
-%12d placements
-%12d placements without SNPs
-%12d reads placed in the location specified by the answer key
-%12d reads placed without SNPs
-%12d reads placed in only one location
-%12d reads placed in only the location specified in the answer key
-EOF
-
 
 sub wait_for_output
 {
