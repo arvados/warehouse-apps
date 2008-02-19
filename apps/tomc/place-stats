@@ -111,6 +111,8 @@ my $reads = 0;
 my $placements = 0;
 my $unique = 0;
 my $correct = 0;
+my $exact_reads = 0;
+my $exact_placements = 0;
 my $unique_and_correct = 0;
 my $manifest = new Warehouse::Manifest (whc => $whc,
 					key => $knob{place_stats_output});
@@ -126,14 +128,18 @@ while (my $stream = $manifest->subdir_next)
 	    ++$correct if $s[1];
 	    ++$unique if $s[3] == 1;
 	    ++$unique_and_correct if $s[3] == 1 && $s[1];
+	    ++$exact_reads if $s[2] > 0;
+	    $exact_placements += $s[2] if $s[2] > 0;
 	    $placements += $s[3];
 	}
     }
 }
-printf (<<EOF, $reads, $placements, $correct, $unique, $unique_and_correct);
+printf (<<EOF, $reads, $placements, $exact_placements, $correct, $exact_reads, $unique, $unique_and_correct);
 %12d reads placed
 %12d placements
-%12d placements matched answer key
+%12d placements without SNPs
+%12d reads placed in the location specified by the answer key
+%12d reads placed without SNPs
 %12d reads placed in only one location
 %12d reads placed in only the location specified in the answer key
 EOF
