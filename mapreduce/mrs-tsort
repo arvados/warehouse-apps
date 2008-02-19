@@ -22,8 +22,8 @@ while (<>)
     {
       print;
     }
-    last;
     wait;
     die "sort exited $?" if $?;
+    last;
   }
 }
