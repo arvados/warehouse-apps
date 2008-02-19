@@ -18,6 +18,11 @@ use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA qw(sha512);
 
+#setup variables for "awzprng" 
+my $awzprngseed = $ENV{KNOB_SEED}.$name;
+my $awzprngbits = 0; 
+my $awzprngblocks = 0; 
+
 # IUPAC extended genetic alphabet
 # http://www.techfak.uni-bielefeld.de/bcd/Curric/PrwAli/node7.html
 
@@ -88,12 +93,8 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->clear;
   $outstream->write_start ("reads.txt"); 
 
-  #setup variables for "awzprng" 
-  my $awzprngseed = $ENV{KNOB_SEED}.$name;
-  my $awzprngbits = 0; 
-  my $awzprngblocks = 0; 
   print STDERR "AWZPRNGSEED = $awzprngseed\n";
-		  
+
   my @reads; 
   my $bits = $ENV{KNOB_PREFIXBITS}+$ENV{KNOB_SUFFIXBITS};
 
