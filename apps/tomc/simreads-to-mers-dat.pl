@@ -27,48 +27,87 @@ open (STDOUT, "|gread") or die "gread: $!";
 my @mersizes = @ARGV;
 @ARGV = ();
 
-print qq{#: taql-0.1/text\n};
-for (0..$#mersizes)
+my $didheader = 0;
+
+sub oldheader
 {
-    print qq{# field "mer$_" "uint64"\n};
+    return if $didheader;
+    $didheader = 1;
+    print qq{#: taql-0.1/text\n};
+    for (0..$#mersizes)
+    {
+	print qq{# field "mer$_" "uint64"\n};
+    }
+    print qq{# field "aref" "sym"\n};
+    for (0..$#mersizes)
+    {
+	print qq{# field "apos$_" "uint64"\n};
+    }
+    print qq{# field "aside" "uint8"\n};
+    print qq{#.\n};
 }
-print qq{# field "aref" "sym"\n};
-for (0..$#mersizes)
+
+sub newheader
 {
-    print qq{# field "apos$_" "uint64"\n};
+    return if $didheader;
+    $didheader = 1;
+    print qq{#: taql-0.1/text
+# field "mer0" "uint64"
+# field "mer1" "uint64"
+# field "aref" "sym"
+# field "apos0" "uint32"
+# field "apos1" "uint32"
+# field "agpos0" "uint32"
+# field "agpos1" "uint32"
+# field "aside" "uint8"
+#.
+};
 }
-print qq{# field "aside" "uint8"\n};
-print qq{#.\n};
 
 while(<>)
 {
     chomp;
     my @in = split;
-    my $mers_merged = 0;
-    for (0..$#mersizes)
+    if (@in > @mersizes * 3)
     {
-	if (length $in[$_] < $mersizes[$_])
+	# new format, more mers
+	die "I only work with #mers=2" if @mersizes != 2;
+	newheader();
+	my @out = ($in[0].$in[1],
+		   $in[2].$in[3],
+		   '"'.$in[10].'"',
+		   @in[12,14,13,15,16]);
+	print "@out\n";
+    }
+    else
+    {
+	oldheader();
+	my $mers_merged = 0;
+	for (0..$#mersizes)
 	{
-	    $in[$_] .= $in[$_+1];
-	    splice @in, $_+1, 1;
+	    if (length $in[$_] < $mersizes[$_])
+	    {
+		$in[$_] .= $in[$_+1];
+		splice @in, $_+1, 1;
+	    }
+	    $mers_merged++;
 	}
-	$mers_merged++;
+	for (1 + $#mersizes)
+	{
+	    $in[$_] = hex($in[$_]);
+	}
+	splice @in, $#mersizes + 1, 1; # drop "masked" field
+	$in[$#mersizes + 1] =~ s/.*/"$&"/; # chr1 -> "chr1"
+	for (1..$#mersizes+$mers_merged)
+	{
+	    $in[$#mersizes + 2 + $_] += $in[$#mersizes + 1 + $_];
+	}
+	for (0..$mers_merged)
+	{
+	    splice @in, $#mersizes + 3 + $_, 1;
+	}
+	print "@in\n";
     }
-    for (1 + $#mersizes)
-    {
-	$in[$_] = hex($in[$_]);
-    }
-    splice @in, $#mersizes + 1, 1; # drop "masked" field
-    $in[$#mersizes + 1] =~ s/.*/"$&"/; # chr1 -> "chr1"
-    for (1..$#mersizes+$mers_merged)
-    {
-	$in[$#mersizes + 2 + $_] += $in[$#mersizes + 1 + $_];
-    }
-    for (0..$mers_merged)
-    {
-	splice @in, $#mersizes + 3 + $_, 1;
-    }
-    print "@in\n";
 }
 
 close STDOUT or die "$!";
