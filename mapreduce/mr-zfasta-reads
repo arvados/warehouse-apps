@@ -177,11 +177,15 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap1;
 	  push @readstart,$readstart[-1]+$k+750+$big_gap;
 	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
-	  
+
+	  @chr = split /':'/, $filename; 
+
 	  my $answer_key = sprintf 
-	      (" %X %s %d %d %d %d %d", 
+	      (" %X %d %s %d %d %d %d %d %d", 
 	       $reads[$current_read] & $readmask,
-	       $filename,
+	       $chr[0],
+               $chr[1],
+	       $chr[2],
 	       $readstart[0], 
 	       $readstart[1] - $readstart[0],
 	       $readstart[2] - $readstart[1],
