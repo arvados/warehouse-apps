@@ -19,7 +19,7 @@ use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA qw(sha512);
 
 #setup variables for "awzprng" 
-my $awzprngseed = $ENV{KNOB_SEED}.$name;
+my $awzprngseed = $ENV{KNOB_SEED}.":".$ENV{MR_INPUT}.":".time;
 my $awzprngbits = 0; 
 my $awzprngblocks = 0; 
 
