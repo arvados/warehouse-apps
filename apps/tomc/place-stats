@@ -50,6 +50,7 @@ my $exact_reads = 0;
 my $exact_placements = 0;
 my $unique_and_correct = 0;
 my @nreads_vs_log_placements;
+my @nreads_exact_vs_log_placements;
 my $manifest = new Warehouse::Manifest (whc => $whc,
 					key => $knob{place_stats_output});
 while (my $stream = $manifest->subdir_next)
@@ -73,6 +74,10 @@ while (my $stream = $manifest->subdir_next)
 	    {
 		++$nreads_vs_log_placements[int(log($s[3])/log(2))];
 	    }
+	    if ($s[2] > 0)
+	    {
+		++$nreads_exact_vs_log_placements[int(log($s[2])/log(2))];
+	    }
 	}
     }
 }
@@ -88,7 +93,11 @@ EOF
 print "   P #reads placed 2^P .. 2^(P+1)-1 times\n";
 for (0..$#nreads_vs_log_placements)
 {
-    printf "%4d %12d\n", $_, $nreads_vs_log_placements[$_];
+    printf ("%4d %12d %12d\n",
+	    $_,
+	    $nreads_vs_log_placements[$_],
+	    $nreads_exact_vs_log_placements[$_],
+	    );
 }
 
 sub make_fasta_reads
