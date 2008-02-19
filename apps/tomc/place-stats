@@ -23,13 +23,13 @@ my %knob = ( prefixbits => 3,
 
 for (@ARGV)
 {
-    if (/=/)
+    if (/(.*?)=(.*)/)
     {
-	$knob{$`} = $';
+	$knob{$1} = $2;
     }
     else
     {
-	die "usage: $0 knob=value knob=value ...\n"
+	die "usage: $0 knob=value knob=value ...\n";
     }
 }
 
@@ -123,9 +123,9 @@ while (my $stream = $manifest->subdir_next)
 	{
 	    my @s = split (/ /, $$dataref);
 	    ++$reads;
-	    ++$correct if $s[1] == 1;
-	    ++$unique if $s[2] == 1;
-	    ++$unique_and_correct if $s[1] == 1 && $s[2] == 1;
+	    ++$correct if $s[1];
+	    ++$unique if $s[3] == 1;
+	    ++$unique_and_correct if $s[3] == 1 && $s[1];
 	    $placements += $s[3];
 	}
     }
