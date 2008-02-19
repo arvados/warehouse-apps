@@ -280,7 +280,7 @@ sub mungeread {
 		$mungemer .= $error; 
 	    }
 	}
-	$munge .= (($j%2) ? reverse ($mungemer) : $mungemer);  
+	$munge .= (($j%2) ? reverse ($mungemer) : $mungemer)." ";  
     }
     return $munge 
 }
