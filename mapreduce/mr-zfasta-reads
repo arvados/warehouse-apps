@@ -204,8 +204,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 
 	  my $read = mungeread (lc($read0));
 
-	  my $read_id = ($ENV{MR_INPUT}<<$ENV{KNOB_SUFFIXBITS})|
-			 ($reads[$current_read]&$readmask)." ";
+	  my $read_id = (($ENV{MR_INPUT}<<$ENV{KNOB_SUFFIXBITS})|
+			 ($reads[$current_read]&$readmask))." ";
 	    
 
 	  $outstream->write_data ($read.$read_id.$answer_key."\n");
