@@ -103,9 +103,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       }	
       print STDERR "inserted $count SNPs into $name/$filename\n";
 
-      my $ind = $individual ? "$individual:" : ""; 
-      my $pl = $ploidy ? ":$ploidy" : ""; 
-      $outstream->write_start ("$ind$filename$pl.fa"); 
+      $outstream->write_start ("$individual:$filename:$ploidy.fa"); 
       $outstream->write_data ($reference); 
       $outstream->write_finish; 
     }     
