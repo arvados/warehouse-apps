@@ -169,8 +169,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	
 	$current_position = $reads[$current_read] >> $bits; 
 	$current_read++; 
-	
-	
+		
 	if (($current_position+$longoffset+$big_gap+2*$maxreadlength)<$bp){
 	  my @readstart;
 	  push @readstart,$current_position-$bp_start;
@@ -179,18 +178,6 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
 
 	  my @chr = split (/:/, $filename); 
-
-	  my $answer_key = sprintf 
-	      (" %X %d %s %d %d %d %d %d %d", 
-	       $reads[$current_read] & $readmask,
-	       $chr[0],
-               $chr[1],
-	       $chr[2],
-	       $readstart[0], 
-	       $readstart[1] - $readstart[0],
-	       $readstart[2] - $readstart[1],
-	       $readstart[3] - $readstart[2],
-	       $orient); 
 
 	  my $read0 =
 	      substr($reference, $readstart[0], $k)." ".
@@ -201,9 +188,21 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  if ($orient) {
 	    $read0 = revc($read0); 		
 	  }
-	  my $read1 = mungeread (lc($read0));
+	  my $answer_key =
+	       $read0." ". 
+	       $chr[0]." ".
+               $chr[1]." ".
+	       $chr[2]." ".
+	       $readstart[0]." ". 
+	       $readstart[1] - $readstart[0]." ".
+	       $readstart[2] - $readstart[1]." ".
+	       $readstart[3] - $readstart[2]." ".
+	       $orient; 
 
-	  $outstream->write_data ($read1.$read0.$answer_key."\n");
+	  my $read = mungeread (lc($read0)).
+	      $reads[$current_read] & $readmask." ";
+
+	  $outstream->write_data ($read.$answer_key."\n");
 	  $valid_read++;  
 	}
 	elsif ($current_position > $bp) {
