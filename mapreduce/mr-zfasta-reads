@@ -10,9 +10,6 @@
 ###MR_KNOBS:BP=3080436051
 ###MR_KNOBS:PLOIDY=2 
 ###MR_KNOBS:SEED=12345
-###MR_KNOBS:LOWERRORBITS=4 
-###MR_KNOBS:HIGHERROBITS=6 
-###MR_KNOBS:ERRORPOS=5
 
 use strict; 
 use Warehouse;
@@ -91,10 +88,10 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->clear;
   $outstream->write_start ("reads.txt"); 
 
-  #setup global variables for "awzprng" 
-  $awzprngseed = $ENV{KNOB_SEED}.$name;
-  $awzprngbits = 0; 
-  $awzprngblocks = 0; 
+  #setup variables for "awzprng" 
+  my $awzprngseed = $ENV{KNOB_SEED}.$name;
+  my $awzprngbits = 0; 
+  my $awzprngblocks = 0; 
   print STDERR "AWZPRNGSEED = $awzprngseed\n";
 		  
   my @reads; 
