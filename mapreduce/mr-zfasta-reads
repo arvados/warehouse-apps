@@ -8,6 +8,8 @@
 ###MR_KNOBS:K=8
 ###MR_KNOBS:INDIVIDUALS=1
 ###MR_KNOBS:BP=3080436051
+###MR_KNOBS:CORRECTBITS=66666555
+###MR_KNOBS:REDUCEDBITS=44444333
 ###MR_KNOBS:PLOIDY=2 
 ###MR_KNOBS:SEED=12345
 
@@ -51,6 +53,7 @@ my %bp_numeric = (
     'n' => N_
 ); 
 
+#computed in http://polony.freelogy.org/wiki/AWZ_Journal#Feb_18
 my @numeric_bp = (
     '?','a','c','m','g','r','s','v','t','w','y','h','k','d','b','n'
 );
@@ -66,6 +69,17 @@ my %error = (
   'c' => [A_, G_, T_, A_|G_, A_|T_, T_|G_, A_|G_|T_, N_,],
   'g' => [A_, C_, T_, A_|C_, A_|T_, T_|C_, A_|C_|T_, N_,],
   't' => [A_, C_, G_, A_|C_, A_|G_, G_|C_, A_|C_|G_, N_,]); 
+
+my @correct_bits; 
+my @reduced_bits;
+ 
+
+for (my $i = 0; $i < length ($ENV{KNOB_CORRECTBITS}); $i++) {
+  $correct_bits[$i] = int(substr ($ENV{KNOB_CORRECTBITS}, $i, 1));  
+}
+for (my $i = 0; $i < length ($ENV{KNOB_REDUCEDBITS}); $i++) {
+  $reduced_bits[$i] = int(substr ($ENV{KNOB_REDUCEDBITS}, $i, 1));  
+}
 
 my $manifestkey = $ENV{MR_INPUT0};
 
@@ -96,12 +110,11 @@ elsif ($ENV{MR_LEVEL} == 1)
   print STDERR "AWZPRNGSEED = $awzprngseed\n";
 
   my @reads; 
-  my $bits = $ENV{KNOB_PREFIXBITS}+$ENV{KNOB_SUFFIXBITS};
 
   for (my $i = 0; $i < (2**$ENV{KNOB_SUFFIXBITS}); $i++ ){
     $reads[$i] = ((awzprng(64)%
 		   ($ENV{KNOB_PLOIDY}*$ENV{KNOB_INDIVIDUALS}*$ENV{KNOB_BP}))
-		  <<$bits)|$ENV{MR_INPUT} << $ENV{KNOB_SUFFIXBITS}|$i;
+	           << $ENV{KNOB_SUFFIXBITS})|$i;
   }  
   @reads = sort {$a <=> $b} (@reads);
   		
@@ -167,8 +180,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	my $big_gap = awzprng(9); 
 	my $readmask = 2**$bits-1; 
 	
-	$current_position = $reads[$current_read] >> $bits; 
-	$current_read++; 
+	$current_position = $reads[$current_read] >> $ENV{KNOB_SUFFIXBITS}; 
 		
 	if (($current_position+$longoffset+$big_gap+2*$maxreadlength)<$bp){
 	  my @readstart;
@@ -189,25 +201,21 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $read0 = revc($read0); 		
 	  }
 	  my $answer_key = "$read0 @chr @readstart $orient"; 
-#	       $chr[0]." ".
-#               $chr[1]." ".
-#	       $chr[2]." ".
-#	       $readstart[0]." ". 
-#	       $readstart[1]." ".
-#	       $readstart[2]." ".
-#	       $readstart[3]." ".
-#	       $orient; 
 
 	  my $read = mungeread (lc($read0));
 
-	  my $read_id = ($reads[$current_read] & $readmask)." ";
+	  my $read_id = ($ENV{MR_INPUT}<<$ENV{KNOB_SUFFIXBITS})|
+			 ($reads[$current_read]&$readmask)." ";
+	    
 
 	  $outstream->write_data ($read.$read_id.$answer_key."\n");
+
 	  $valid_read++;  
 	}
 	elsif ($current_position > $bp) {
 	  last; 
 	}
+	$current_read++; 
 	$read++;	
       }
       print STDERR "$valid_read / $read in $filename ($bp)\n";     
@@ -253,10 +261,6 @@ sub mungeread {
     my ($read) = @_; 
     my @mers = split (/ /, $read); 
     my $munge; 
-
-    #bigger = more correct/reduced BP 
-    my @correct_bits = (6,6,6,6,6,6,5,5); 
-    my @reduced_bits = (3,3,3,3,3,3,3,3);
  
     for (my $j = 0; $j < @mers; $j++) {
 	my $mungemer; 
