@@ -159,8 +159,28 @@ while (length $manifestblock)
 		print $q->header (-type => guesstype ($wantfile),
 				  -Content_length => $size);
 
+		my $isfirstline = 1;
 		while (my $dataref = $stream->read_until ($pos+$size))
 		{
+		    if ($isfirstline)
+		    {
+			$isfirstline = 0;
+			if (length $$dataref < 32)
+			{
+			    my $buf = $$dataref;
+			    $dataref = $stream->read_until ($pos+$size);
+			    if ($dataref)
+			    {
+				$buf .= $$dataref;
+			    }
+			    $dataref = \$buf;
+			}
+			if ($$dataref =~ /^\#: taql-0.1\n/)
+			{
+			    open STDOUT, "|/usr/local/polony-tools/current/install/bin/gprint"
+				or warn "$0: can't pipe to gprint: $!";
+			}
+		    }
 		    print $$dataref;
 		}
 		exit 0;
