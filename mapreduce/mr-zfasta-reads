@@ -188,7 +188,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  if ($orient) {
 	    $read0 = revc($read0); 		
 	  }
-	  my $answer_key = $read0." ".@chr.@readstart." ".$orient; 
+	  my $answer_key = "$read0 @chr @readstart $orient"; 
 #	       $chr[0]." ".
 #               $chr[1]." ".
 #	       $chr[2]." ".
@@ -198,10 +198,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 #	       $readstart[3]." ".
 #	       $orient; 
 
-	  my $read = mungeread (lc($read0)).
-	      $reads[$current_read] & $readmask." ";
+	  my $read = mungeread (lc($read0));
 
-	  $outstream->write_data ($read.$answer_key."\n");
+	  my $read_id = ($reads[$current_read] & $readmask)." ";
+
+	  $outstream->write_data ($read.$read_id.$answer_key."\n");
 	  $valid_read++;  
 	}
 	elsif ($current_position > $bp) {
