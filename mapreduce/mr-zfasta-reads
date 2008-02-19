@@ -250,19 +250,18 @@ sub mungeread {
     my ($read) = @_; 
     my @mers = split / /, $read; 
     my $munge; 
-    my $k = length ($read)/4; 
 
     #bigger = more correct/reduced BP 
     my @correct_bits = (6,6,6,6,6,6,5,5); 
     my @reduced_bits = (3,3,3,3,3,3,3,3);
  
-    for (my $j = 0; $j < 4; $j++) {
+    for (my $j = 0; $j < @mers; $j++) {
 	my $mungemer; 
-	my $mer = substr ($read, $j*$k, $k);
+	my $mer = $mers[$j];
 	if ($j%2) {
 	    $mer = reverse ($mer); 
 	} 
-	for (my $i = 0; $i < $k ; $i++) {
+	for (my $i = 0; $i < length($mer) ; $i++) {
 	    my $bp = substr ($mer, $i, 1); 
 	    if (awzprng($correct_bits[$i])) {
 		$mungemer .= $bp;
