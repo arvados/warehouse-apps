@@ -90,7 +90,8 @@ printf (<<EOF, $reads, $placements, $exact_placements, $correct, $exact_reads, $
 %12d reads placed in only one location
 %12d reads placed in only the location specified in the answer key
 EOF
-print "   P #reads placed 2^P .. 2^(P+1)-1 times\n";
+printf ("%4s %12s %12s %s\n",
+	"P", "#reads", "#exact", "# = #placed 2^P .. 2^(P+1)-1 times");
 for (0..$#nreads_vs_log_placements)
 {
     printf ("%4d %12d %12d\n",
