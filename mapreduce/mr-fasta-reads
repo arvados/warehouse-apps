@@ -6,6 +6,7 @@
 ###MR_KNOBS:PREFIXBITS=1
 ###MR_KNOBS:SUFFIXBITS=21 
 ###MR_KNOBS:K=8
+###MR_KNOBS:INDIVIDUALS=1
 ###MR_KNOBS:BP=3080436051
 ###MR_KNOBS:PLOIDY=2 
 ###MR_KNOBS:SEED=12345
@@ -53,17 +54,14 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $bits = $ENV{KNOB_PREFIXBITS}+$ENV{KNOB_SUFFIXBITS};
 
   for (my $i = 0; $i < (2**$ENV{KNOB_SUFFIXBITS}); $i++ ){
-    $reads[$i] = ((awzprng(64)%($ENV{KNOB_PLOIDY}*$ENV{KNOB_BP}))<<$bits)|
-	$ENV{MR_INPUT} << $ENV{KNOB_SUFFIXBITS}|
-	$i;
+    $reads[$i] = ((awzprng(64)%
+		   ($ENV{KNOB_PLOIDY}*$ENV{KNOB_INDIVIDUALS}*$ENV{KNOB_BP}))
+		  <<$bits)|$ENV{MR_INPUT} << $ENV{KNOB_SUFFIXBITS}|$i;
   }  
   @reads = sort {$a <=> $b} (@reads);
   		
   my $bp = 0; 
   my $current_read = 0; 
-
-  $manifest->rewind; #isn't this already done by "new" above? --AWZ
-
 
   my $k = $ENV{KNOB_K}; 
 
