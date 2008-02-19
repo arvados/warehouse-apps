@@ -253,8 +253,8 @@ sub mungeread {
     my $k = length ($read)/4; 
 
     #bigger = more correct/reduced BP 
-    my @correct_bits = (6,6,6,6,6,6,3,3); 
-    my @reduced_bits = (4,4,4,4,4,4,1,1);
+    my @correct_bits = (6,6,6,6,6,6,5,5); 
+    my @reduced_bits = (3,3,3,3,3,3,3,3);
  
     for (my $j = 0; $j < 4; $j++) {
 	my $mungemer; 
