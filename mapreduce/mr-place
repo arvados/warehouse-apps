@@ -33,7 +33,7 @@ $ENV{KNOB_BATCHSIZE} += 0;
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey;
-  for (1..22, 'X', 'Y', 'M')
+  for (1..22, 'X', 'Y', 'M')	# XXX should get chr list from manifest
   {
     print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
   }
@@ -45,7 +45,7 @@ elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
   my @steps;
   my $n_samples = 0;
   Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch -h '$manifestkey' ./0 reads.txt")
+		      "mrs-fetch -h '$manifestkey' '*'")
       or die "pipe failed: $!";
   while (defined ($_ = <SAMPLES>))
   {
