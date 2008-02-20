@@ -36,26 +36,39 @@ elsif ($ENV{MR_LEVEL} == 1) {
   $outstream->name ($name);
   $outstream->clear;
   $outstream->write_start ("place.txt"); 
-  
-  $manifest->rewind; #isn't this already done by "new" above? --AWZ
 
   my $filename; 
   
   my @count; 
   
-  vec (my $bitstring, 2**$ENV{KNOB_SUFFIXBITS}, 2) = 3;
+  vec (my $bitstring, 2**$ENV{KNOB_SUFFIXBITS}, 4) = 15;
 
   my $suffixmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
   
+  my @bp = ('a', 'c', 'g', 't'); 
+ 
+  my $prefixbp; 
+  for (my $i = 0; $i < $ENV{KNOB_PREFIXBITS}; $i+=2) {
+    $prefixbp .= $bp[($ENV{MR_INPUT}>>$i)&3];     
+  } 
+
   while (my $instream = $manifest->subdir_next) {    
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
       my @read; 
       if ($filename =~ m/\.txt$/i){
-	my $zblob = ""; 
 	while (my $dataref = $instream->read_until ($pos + $size, "\n")) {
-	  #mer0, mer1, mer2, mer3 read_id, chr, pos0, off1, off2, off3, orient
+
+	  if ( substr ($$dataref, 0, length ($prefixbp)) ne $prefixbp) {
+	    next;
+	  } 
+	  else {
+	    print STDERR "AWZ $prefixbp\n";
+	    next; 
+	  }
+	  #mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref,
+          #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient
 	  @read = split " ", $$dataref; 
 
 	  my @merpos;
@@ -81,11 +94,10 @@ elsif ($ENV{MR_LEVEL} == 1) {
       print STDERR "read $filename\n";     
     }
   }
-  for (my $i=0; $i<2**27; $i++) {
-    $count[vec ($bitstring, $i, 2)]++;
-  }
-    
-  $outstream->write_data ("@count\n");
+  #for (my $i=0; $i<2**27; $i++) {
+  #  $count[vec ($bitstring, $i, 2)]++;
+  #}
+  #$outstream->write_data ("@count\n");
   
   
   $outstream->write_finish; 
