@@ -68,7 +68,7 @@ while(<>)
 {
     chomp;
     my @in = split;
-    if (@in > @mersizes * 3)
+    if (@in > @mersizes * 6)
     {
 	# new format, more mers
 	die "I only work with #mers=2" if @mersizes != 2;
