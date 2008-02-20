@@ -8,6 +8,8 @@
 ###MR_KNOBS:K=8
 ###MR_KNOBS:INDIVIDUALS=1
 ###MR_KNOBS:BP=3080436051
+###MR_KNOBS:CORRECTBITS=66666555
+###MR_KNOBS:REDUCEDBITS=44444333
 ###MR_KNOBS:PLOIDY=2 
 ###MR_KNOBS:SEED=12345
 
@@ -17,6 +19,67 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA qw(sha512);
+
+#setup variables for "awzprng" 
+my $awzprngseed = $ENV{KNOB_SEED}.":".$ENV{MR_INPUT};
+my $awzprngbits = 0; 
+my $awzprngblocks = 0; 
+
+# IUPAC extended genetic alphabet
+# http://www.techfak.uni-bielefeld.de/bcd/Curric/PrwAli/node7.html
+
+use constant A_ => 1;  
+use constant C_ => 2; 
+use constant G_ => 4; 
+use constant T_ => 8;
+use constant N_ => 15; 
+
+my %bp_numeric = ( 
+    '?' => 0, 
+    'g' => G_,     
+    'a' => A_, 
+    't' => T_, 
+    'c' => C_,
+    'r' => G_|A_,
+    'y' => T_|C_, 
+    'm' => A_|C_, 
+    'k' => G_|T_, 
+    's' => G_|C_,
+    'w' => A_|T_,
+    'h' => A_|C_|T_, 
+    'b' => G_|T_|C_, 
+    'v' => G_|C_|A_,
+    'd' => G_|A_|T_, 
+    'n' => N_
+); 
+
+#computed in http://polony.freelogy.org/wiki/AWZ_Journal#Feb_18
+my @numeric_bp = (
+    '?','a','c','m','g','r','s','v','t','w','y','h','k','d','b','n'
+);
+
+my %reduced = ( 
+  'a' => [A_|C_, A_|G_, A_|T_, A_|C_|G_, A_|C_|T_, A_|G_|T_, N_, N_,],
+  'c' => [C_|A_, C_|G_, C_|T_, C_|A_|G_, C_|A_|T_, C_|T_|G_, N_, N_,],
+  'g' => [G_|A_, G_|C_, G_|T_, G_|A_|C_, G_|A_|T_, G_|T_|C_, N_, N_,],
+  't' => [T_|A_, T_|C_, T_|G_, T_|A_|C_, T_|A_|G_, T_|C_|G_, N_, N_,]); 
+
+my %error = ( 
+  'a' => [C_, G_, T_, C_|G_, C_|T_, G_|T_, C_|G_|T_, N_,],
+  'c' => [A_, G_, T_, A_|G_, A_|T_, T_|G_, A_|G_|T_, N_,],
+  'g' => [A_, C_, T_, A_|C_, A_|T_, T_|C_, A_|C_|T_, N_,],
+  't' => [A_, C_, G_, A_|C_, A_|G_, G_|C_, A_|C_|G_, N_,]); 
+
+my @correct_bits; 
+my @reduced_bits;
+ 
+
+for (my $i = 0; $i < length ($ENV{KNOB_CORRECTBITS}); $i++) {
+  $correct_bits[$i] = int(substr ($ENV{KNOB_CORRECTBITS}, $i, 1));  
+}
+for (my $i = 0; $i < length ($ENV{KNOB_REDUCEDBITS}); $i++) {
+  $reduced_bits[$i] = int(substr ($ENV{KNOB_REDUCEDBITS}, $i, 1));  
+}
 
 my $manifestkey = $ENV{MR_INPUT0};
 
@@ -44,19 +107,14 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->clear;
   $outstream->write_start ("reads.txt"); 
 
-  #setup global variables for "awzprng" 
-  $main::awzprngseed = $ENV{KNOB_SEED}.$name;
-  $main::awzprngbits = 0; 
-  $main::awzprngblocks = 0; 
-  print STDERR "AWZPRNGSEED = $main::awzprngseed\n";
-		  
+  print STDERR "AWZPRNGSEED = $awzprngseed\n";
+
   my @reads; 
-  my $bits = $ENV{KNOB_PREFIXBITS}+$ENV{KNOB_SUFFIXBITS};
 
   for (my $i = 0; $i < (2**$ENV{KNOB_SUFFIXBITS}); $i++ ){
     $reads[$i] = ((awzprng(64)%
 		   ($ENV{KNOB_PLOIDY}*$ENV{KNOB_INDIVIDUALS}*$ENV{KNOB_BP}))
-		  <<$bits)|$ENV{MR_INPUT} << $ENV{KNOB_SUFFIXBITS}|$i;
+	           << $ENV{KNOB_SUFFIXBITS})|$i;
   }  
   @reads = sort {$a <=> $b} (@reads);
   		
@@ -120,28 +178,18 @@ elsif ($ENV{MR_LEVEL} == 1)
 	my $small_gap2 = awzprng(1);
 	my $orient = awzprng(1); 
 	my $big_gap = awzprng(9); 
-	my $readmask = 2**$bits-1; 
+	my $readmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
 	
-	$current_position = $reads[$current_read] >> $bits; 
-	$current_read++; 
-	
-	
+	$current_position = $reads[$current_read] >> $ENV{KNOB_SUFFIXBITS}; 
+		
 	if (($current_position+$longoffset+$big_gap+2*$maxreadlength)<$bp){
 	  my @readstart;
 	  push @readstart,$current_position-$bp_start;
 	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap1;
 	  push @readstart,$readstart[-1]+$k+750+$big_gap;
 	  push @readstart,$readstart[-1]+$k+$shortoffset+$small_gap2;
-	  
-	  my $answer_key = sprintf 
-	      (" %X %s %d %d %d %d %d", 
-	       $reads[$current_read] & $readmask,
-	       $filename,
-	       $readstart[0], 
-	       $readstart[1] - $readstart[0],
-	       $readstart[2] - $readstart[1],
-	       $readstart[3] - $readstart[2],
-	       $orient); 
+
+	  my @chr = split (/:/, $filename); 
 
 	  my $read0 =
 	      substr($reference, $readstart[0], $k)." ".
@@ -152,13 +200,22 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  if ($orient) {
 	    $read0 = revc($read0); 		
 	  }
-	  
-	  $outstream->write_data ($read0.$answer_key."\n");
+	  my $answer_key = "$read0 @chr @readstart $orient"; 
+
+	  my $read = mungeread (lc($read0));
+
+	  my $read_id = (($ENV{MR_INPUT}<<$ENV{KNOB_SUFFIXBITS})|
+			 ($reads[$current_read]&$readmask))." ";
+	    
+
+	  $outstream->write_data ($read.$read_id.$answer_key."\n");
+
 	  $valid_read++;  
 	}
 	elsif ($current_position > $bp) {
 	  last; 
 	}
+	$current_read++; 
 	$read++;	
       }
       print STDERR "$valid_read / $read in $filename ($bp)\n";     
@@ -167,7 +224,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->write_finish; 
 
   #report randomness consumed 
-  print STDERR "used AWZPRNGBLOCKS = $main::awzprngblocks\n";
+  print STDERR "used AWZPRNGBLOCKS = $awzprngblocks\n";
  
   my $fragkey = $whc->store_block ($outstream->as_string)
       or die "store_block failed: ".$whc->errstr;
@@ -179,14 +236,14 @@ elsif ($ENV{MR_LEVEL} == 1)
 
 sub awzprng {
    my ($bits) = @_;  
-   if ( $main::awzprngbits < $bits) {     
-     $main::awzprngseed = sha512($main::awzprngseed); 
-     $main::awzprngbits = 512; 
-     $main::awzprngblocks++; 
+   if ( $awzprngbits < $bits) {     
+     $awzprngseed = sha512($awzprngseed); 
+     $awzprngbits = 512; 
+     $awzprngblocks++; 
     }
    my $rand = 0; 
    for (my $i = 0; $i < $bits; $i++) { 
-     $rand = $rand<<1|vec($main::awzprngseed,512-$main::awzprngbits--,1);
+     $rand = $rand<<1|vec($awzprngseed,512-$awzprngbits--,1);
    }
    return $rand; 
 }
@@ -199,3 +256,39 @@ sub revc {
 
   return reverse $bp; 
 }
+
+sub mungeread {
+    my ($read) = @_; 
+    my @mers = split (/ /, $read); 
+    my $munge; 
+ 
+    for (my $j = 0; $j < @mers; $j++) {
+	my $mungemer; 
+	my $mer = $mers[$j];
+	if ($j%2) {
+	    $mer = reverse ($mer); 
+	} 
+	for (my $i = 0; $i < length($mer) ; $i++) {
+	    my $bp = substr ($mer, $i, 1); 
+	    if (awzprng($correct_bits[$i])) {
+		$mungemer .= $bp;
+	    }
+	    else {
+		my $error; 
+		if (awzprng ($reduced_bits[$i])) {
+		    $error = $numeric_bp[$reduced{$bp}[awzprng(3)]];
+		} 
+		else {
+		    $error = $numeric_bp[$error{$bp}[awzprng(3)]];
+		    if ($error ne 'n') {
+			$error = uc($error); 
+		    }
+		}
+		$mungemer .= $error; 
+	    }
+	}
+	$munge .= (($j%2) ? reverse ($mungemer) : $mungemer)." ";  
+    }
+    return $munge 
+}
+ 
