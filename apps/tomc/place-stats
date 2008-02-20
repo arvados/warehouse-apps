@@ -36,7 +36,6 @@ for (@ARGV)
 my $svninfo = `svn info http://tomc.oxf.freelogy.org/repos/tomc/polony-tools`;
 $knob{revision} = $1
     if !exists $knob{revision} && $svninfo =~ /\nRevision: (\d+)\n/;
-print "Using revision $knob{revision}\n";
 
 $whc = new Warehouse;
 
@@ -119,7 +118,7 @@ sub make_fasta_reads
 			    photons => $knob{photons},
 			    )
 	or die $whc->errstr;
-    warn "submitted fasta-reads job $jobid\n";
+    warn "submitted fasta-reads r$knob{revision} job $jobid\n";
     $knob{fasta_reads_output} = wait_for_output ($jobid);
 }
 
@@ -153,7 +152,7 @@ sub make_place
 			    photons => $knob{photons},
 			    )
 	or die $whc->errstr;
-    warn "submitted place job $jobid\n";
+    warn "submitted place r$knob{revision} job $jobid\n";
     $knob{place_output} = wait_for_output ($jobid);
 }
 
@@ -171,7 +170,7 @@ sub make_place_stats
 			    photons => $knob{photons},
 			    )
 	or die $whc->errstr;
-    warn "submitted place-stats job $jobid\n";
+    warn "submitted place-stats r$knob{revision} job $jobid\n";
     $knob{place_stats_output} = wait_for_output ($jobid);
 }
 
