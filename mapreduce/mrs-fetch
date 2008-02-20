@@ -33,6 +33,7 @@ my $wantfilename = shift @ARGV;
 my $whc = new Warehouse;
 my $manifest = new Warehouse::Manifest (whc => $whc,
 					key => $manifestkey);
+my $foundstuff = 0;
 $manifest->rewind;
 while (my $stream = $manifest->subdir_next)
 {
@@ -48,15 +49,15 @@ while (my $stream = $manifest->subdir_next)
 	if ($filename eq $wantfilename)
 	{
 	  print "$subdir - $pos:$size:$filename\n" unless $opt{"h"};
+	  $opt{"h"} = 1;
 	  $stream->seek ($pos);
 	  while (my $dataref = $stream->read_until ($pos + $size))
 	  {
 	    print $$dataref;
 	  }
-	  exit 0;
+	  $foundstuff = 1;
 	}
       }
-      die "$wantfilename in $subdir: file not found";
     }
     else
     {
@@ -71,14 +72,18 @@ while (my $stream = $manifest->subdir_next)
 	else { splice @s2, 2, 1; }
       }
       print "@s2\n" unless $opt{"h"};
+      $opt{"h"} = 1;
       foreach (@block)
       {
 	my $data = $whc->fetch_block ($_)
 	    or die "fetch_block: ".$whc->errstr;
 	print $data;
       }
-      exit 0;
+      $foundstuff = 1;
     }
+    last if $subdir !~ /\*$/;
   }
 }
+exit 0 if $foundstuff;
+die "$wantfilename in $subdir: file not found" if defined $wantfilename;
 die "subdir $subdir not found in manifest $manifestkey";
