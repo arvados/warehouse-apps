@@ -103,12 +103,6 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
 	
-  my $outstream = new Warehouse::Stream (whc => $whc);
-  my $name = "./".$ENV{MR_INPUT}; 
-  $outstream->name ($name);
-  $outstream->clear;
-  $outstream->write_start ("reads.txt"); 
-
   print STDERR "AWZPRNGSEED = $awzprngseed\n";
 
   my @reads; 
@@ -129,6 +123,10 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $shortoffset = $maxreadlength-2*$k-1; 
   my $longoffset = 750; 
 
+  my $compressed;
+  my $z = new IO::Compress::Gzip \$compressed, Minimal=>1
+      or die "gzip failed: $GzipError\n";
+  
   while (my $instream = $manifest->subdir_next)
   {
     
@@ -210,7 +208,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 			 ($reads[$current_read]&$readmask))." ";
 	    
 
-	  $outstream->write_data ($read.$read_id.$answer_key."\n");
+	  print $z "$read$read_id$answer_key\n";
 
 	  $valid_read++;  
 	}
@@ -223,6 +221,16 @@ elsif ($ENV{MR_LEVEL} == 1)
       print STDERR "$valid_read / $read in $filename ($bp)\n";     
     }
   }
+  $z->close 
+      or die "gzip failed: $GzipError\n";
+ 
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  my $name = "./".$ENV{MR_INPUT}; 
+  $outstream->name ($name);
+  $outstream->clear;
+  $outstream->write_start ("reads.txt.gz"); 
+  $outstream->write_data (\$compressed)
+      or die "write failed: ".$outstream->errstr;
   $outstream->write_finish; 
 
   #report randomness consumed 
