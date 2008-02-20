@@ -17,6 +17,7 @@ use strict;
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
+use IO::Compress::Gzip qw($GzipError);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Digest::SHA qw(sha512);
 
