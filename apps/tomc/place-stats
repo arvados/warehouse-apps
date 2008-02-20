@@ -41,15 +41,17 @@ $whc = new Warehouse;
 
 make_place_stats() if !$knob{place_stats_output};
 
-my $reads = 0;
+my $nreads = 0;
+my $nreads_exact = 0;
+my $nreads_0or1snps = 0;
 my $placements = 0;
 my $unique = 0;
 my $correct = 0;
-my $exact_reads = 0;
 my $exact_placements = 0;
 my $unique_and_correct = 0;
 my @nreads_vs_log_placements;
 my @nreads_exact_vs_log_placements;
+my @nreads_0or1snps_vs_log_placements;
 my $manifest = new Warehouse::Manifest (whc => $whc,
 					key => $knob{place_stats_output});
 while (my $stream = $manifest->subdir_next)
@@ -61,41 +63,49 @@ while (my $stream = $manifest->subdir_next)
 	{
 	    next if $$dataref =~ /^\#/;
 	    my @s = split (/ /, $$dataref);
-	    ++$reads;
 	    ++$correct if $s[1];
 	    ++$unique if $s[3] == 1;
 	    ++$unique_and_correct if $s[3] == 1 && $s[1];
-	    ++$exact_reads if $s[2] > 0;
 	    $exact_placements += $s[2] if $s[2] > 0;
 	    $placements += $s[3];
 
 	    if ($s[3] > 0)
 	    {
 		++$nreads_vs_log_placements[int(log($s[3])/log(2))];
+		++$nreads;
 	    }
 	    if ($s[2] > 0)
 	    {
 		++$nreads_exact_vs_log_placements[int(log($s[2])/log(2))];
+		++$nreads_exact;
+	    }
+	    if ($s[4] > 0)
+	    {
+		++$nreads_0or1snps_vs_log_placements[int(log($s[4])/log(2))];
+		++$nreads_0or1snps;
 	    }
 	}
     }
 }
-printf (<<EOF, $reads, $placements, $exact_placements, $correct, $exact_reads, $unique, $unique_and_correct);
+printf (<<EOF, $nreads, $placements, $exact_placements, $correct, $nreads_exact, $nreads_0or1snps, $unique, $unique_and_correct);
 %12d reads placed
 %12d placements
 %12d placements without SNPs
 %12d reads placed in the location specified by the answer key
 %12d reads placed without SNPs
+%12d reads placed with <2 SNPs
 %12d reads placed in only one location
 %12d reads placed in only the location specified in the answer key
 EOF
-printf ("%4s %12s %12s %s\n",
-	"P", "#reads", "#exact", "# = #placed 2^P .. 2^(P+1)-1 times");
+printf ("%4s %12s %12s %12s %s\n",
+	"P", "#reads", "#<2snps", "#exact",
+	"# = #placed 2^P .. 2^(P+1)-1 times");
 for (0..$#nreads_vs_log_placements)
 {
-    printf ("%4d %12d %12d\n",
+    printf ("%4d %12d %12d %12d\n",
 	    $_,
 	    $nreads_vs_log_placements[$_],
+	    $nreads_0or1snps_vs_log_placements[$_],
 	    $nreads_exact_vs_log_placements[$_],
 	    );
 }
