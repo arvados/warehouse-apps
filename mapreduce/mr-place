@@ -108,7 +108,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   open REPORTSAMPLES, "+>", $samples_tempfile;
 
   Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch -h '$manifestkey' ./0 reads.txt",
+		      "mrs-fetch -h '$manifestkey' '*'",
 		      "perl -ne 'print if \$. > $start_at && \$. <= $start_at + $ENV{KNOB_BATCHSIZE}'",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
 		      "tee -a $samples_tempfile",
