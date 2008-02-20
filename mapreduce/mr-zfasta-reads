@@ -77,9 +77,11 @@ my @reduced_bits;
 for (my $i = 0; $i < length ($ENV{KNOB_CORRECTBITS}); $i++) {
   $correct_bits[$i] = int(substr ($ENV{KNOB_CORRECTBITS}, $i, 1));  
 }
+print STDERR "CORRECT_BITS=@correct_bits\n"; 
 for (my $i = 0; $i < length ($ENV{KNOB_REDUCEDBITS}); $i++) {
   $reduced_bits[$i] = int(substr ($ENV{KNOB_REDUCEDBITS}, $i, 1));  
 }
+print STDERR "REDUCED_BITS=@reduced_bits\n"; 
 
 my $manifestkey = $ENV{MR_INPUT0};
 
