@@ -36,8 +36,9 @@ while (<>)
     print qq{#: taql-0.1/text
 # field "$fieldname[$idcol]" "$fieldtype[$idcol]"
 # field "correct" "uint32"
-# field "exact" "uint32"
+# field "snps<1" "uint32"
 # field "total" "uint32"
+# field "snps<2" "uint32"
 #.
 };
   }
@@ -47,11 +48,12 @@ while (<>)
   $out[1]++ if $fields[$correctcol];
   $out[2]++ if $fields[$snpscol] == 0;
   $out[3]++;
+  $out[4]++ if $fields[$snpscol] <= 1;
 }
 flush();
 
 sub flush
 {
   print "@out\n" if @out;
-  @out = (0,0,0,0);
+  @out = (0,0,0,0,0);
 }
