@@ -38,8 +38,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	last if !defined $pos;
 	my $reads; 
-	if ($filename =~ s/\.txt\.gz$/\.bin/) 
-	{
+	if ($filename =~ s/\.txt\.gz$/\.bin/) {
 	  $outstream->write_start ($filename);
 	  $instream->seek ($pos);
 	  my $zblob; 
@@ -48,11 +47,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	    $zblob .= $$dataref; 
 	  } 
 	  gunzip \$zblob => \$reads or die $GunzipError; 
-
 	}
-	elsif ($filename =~ s/\.txt$/\.bin/)  
-	{
-;       
+	elsif ($filename =~ s/\.txt$/\.bin/)  { 
 	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
@@ -68,9 +64,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  #mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref 
 	  #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
 	  my @read = split " ", $1;  
-	  if (!$read[4] & 0xFFFF) {
-	    $outstream->write_data (@read)
-		or die "write failed: ".$outstream->errstr;
+	  if (!($read[4] & 0xFFFF)) {
+	    print STDERR "@reads\n"; 
+#	    $outstream->write_data (@read)
+#		or die "write failed: ".$outstream->errstr;
 	  }
 	}
 	$outstream->write_finish;
