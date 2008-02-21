@@ -31,11 +31,18 @@ elsif ($ENV{MR_LEVEL} == 1) {
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
   
+
+  my @bp = ('a', 'c', 'g', 't'); 
+ 
+  my $prefixbp; 
+  for (my $i = 0; $i < $ENV{KNOB_PREFIXBITS}; $i+=2) {
+    $prefixbp .= $bp[($ENV{MR_INPUT}>>$i)&3];     
+  } 
   my $outstream = new Warehouse::Stream (whc => $whc);
   my $name = "./".$ENV{MR_INPUT}; 
   $outstream->name ($name);
   $outstream->clear;
-  $outstream->write_start ("place.txt"); 
+  $outstream->write_start ("$prefixbp.txt"); 
 
   my $filename; 
   
@@ -45,52 +52,33 @@ elsif ($ENV{MR_LEVEL} == 1) {
 
   my $suffixmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
   
-  my @bp = ('a', 'c', 'g', 't'); 
  
-  my $prefixbp; 
-  for (my $i = 0; $i < $ENV{KNOB_PREFIXBITS}; $i+=2) {
-    $prefixbp .= $bp[($ENV{MR_INPUT}>>$i)&3];     
-  } 
-
   while (my $instream = $manifest->subdir_next) {    
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      my @read; 
-      if ($filename =~ m/\.txt$/i){
-	while (my $dataref = $instream->read_until ($pos + $size, "\n")) {
-
-	  if ( substr ($$dataref, 0, length ($prefixbp)) ne $prefixbp) {
-	    next;
-	  } 
-	  else {
-	    print STDERR "AWZ $prefixbp\n";
-	    next; 
-	  }
-	  #mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref,
-          #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient
-	  @read = split " ", $$dataref; 
-
-	  my @merpos;
-	  push @merpos, $read[6];  
-	  push @merpos, $merpos[-1] + $read[7];
-	  push @merpos, $merpos[-1] + $read[8];
-	  push @merpos, $merpos[-1] + $read[9];
-      
-	  foreach my $x (@merpos) { 
-	    my $prefix = $x >> $ENV{KNOB_SUFFIXBITS}; 
-	    my $suffix = $x & $suffixmask;
-	    if ($prefix == $ENV{MR_INPUT}){ 
-	      if (vec ($bitstring, $suffix, 2) < 3) {
-		vec ($bitstring, $suffix, 2)++; 
-	      }
-	    }	
-	  }
-	}
+      my $reads; 
+      if ($filename =~ m/\.txt.gz$/){
+	while (my $dataref = $instream->read_until ($pos + $size)) {
+	  my $zblob .= $$dataref; 
+	} 
+	gunzip \$zblob => \$reads or die $GunzipError; 
+      }
+      elsif ($filename =~m/\.txt$/){
+	while (my $dataref = $instream->read_until ($pos + $size)) {
+	  $reads .= $$dataref; 
+	} 	
       }
       else {
 	next; 
-      }               
+      }
+      while (/(.*?\n)/g) { 
+
+	#mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref 
+	#individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
+	my @read = split " ", $1;  
+
+      }   
       print STDERR "read $filename\n";     
     }
   }
@@ -113,10 +101,6 @@ elsif ($ENV{MR_LEVEL} == 1) {
 sub revc {
   my ($bp) = @_; 
  
-  $bp =~s/a/t/gi;
-  $bp =~s/c/g/gi;
-  $bp =~s/g/c/gi;
-  $bp =~s/t/a/gi;
-
+  $bp =~ tr/acgtACGT/tgcaTGCA/;
   return reverse $bp; 
 }
