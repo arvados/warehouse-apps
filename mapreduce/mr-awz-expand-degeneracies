@@ -39,7 +39,6 @@ elsif ($ENV{MR_LEVEL} == 1)
 	last if !defined $pos;
 	my $reads; 
 	if ($filename =~ s/\.txt\.gz$/\.bin/) {
-	  $outstream->write_start ($filename);
 	  $instream->seek ($pos);
 	  my $zblob; 
 	  while (my $dataref = $instream->read_until ($pos + $size))
@@ -60,6 +59,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 	$outstream->write_start ($filename);
 
+	print STDERR "gunziped ".length($reads)." bytes\n";  
 	while ($reads =~ m/(.*?\n)/g) { 
 	  #mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref 
 	  #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
