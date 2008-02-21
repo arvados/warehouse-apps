@@ -25,7 +25,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
-  $manifest->rewind;
+
   while (my $instream = $manifest->subdir_next)
   {
     if ($instream->name eq $wantsubdir)
@@ -37,32 +37,43 @@ elsif ($ENV{MR_LEVEL} == 1)
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
 	last if !defined $pos;
-	if ($filename =~ s/\.g?z$//i) 
+	my $reads; 
+	if ($filename =~ s/\.txt\.gz$/\.bin/) 
 	{
 	  $outstream->write_start ($filename);
 	  $instream->seek ($pos);
-	  my $zblob = ""; 
+	  my $zblob; 
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
 	    $zblob .= $$dataref; 
-	  }
-	  my $inblob; 
-	  gunzip \$zblob => \$inblob or die $GunzipError; 
-	  $outstream->write_data ($inblob)
-	      or die "write failed: ".$outstream->errstr; #Is this needed? 
-	  $outstream->write_finish;
+	  } 
+	  gunzip \$zblob => \$reads or die $GunzipError; 
+
 	}
-	else
+	elsif ($filename =~ s/\.txt$/\.bin/)  
 	{
-	  $outstream->write_start ($filename);       
+;       
 	  $instream->seek ($pos);
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
-	    $outstream->write_data ($dataref) 
-		or die "write failed: ".$outstream->errstr; #Is this needed? 
+	    $reads .= $$dataref; 
 	  }
-	  $outstream->write_finish
 	}
+	else {
+	  next; 
+	}
+	$outstream->write_start ($filename);
+
+	while ($reads =~ m/(.*?\n)/g) { 
+	  #mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref 
+	  #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
+	  my @read = split " ", $1;  
+	  if ($read[4] & 0xFFFF) {
+	    $outstream->write_data (@read)
+		or die "write failed: ".$outstream->errstr;
+	  }
+	}
+	$outstream->write_finish;
       }
       my $fragkey = $whc->store_block ($outstream->as_string)
 	  or die "store_block failed: ".$whc->errstr;
