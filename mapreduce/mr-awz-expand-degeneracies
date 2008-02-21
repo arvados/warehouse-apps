@@ -44,6 +44,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
 	    $zblob .= $$dataref; 
+	    print STDERR "read ".length($zblob)." bytes\n"; 
 	  } 
 	  print STDERR "trying to gunzip ".length($zblob)." bytes\n"; 
 	  gunzip \$zblob => \$reads or die $GunzipError; 
