@@ -12,7 +12,7 @@ while ($ARGV[0] =~ /^-/)
   local $_ = shift @ARGV;
   if (/^--([^=]+)(=(.*))?$/)
   {
-    $opt{$1} = $3;
+    $opt{$1} = defined($2) ? $3 : 1;
   }
   elsif (/^-([^-=]+)$/)
   {
@@ -25,12 +25,12 @@ while ($ARGV[0] =~ /^-/)
 
 die <<EOF if @ARGV < 2 || @ARGV > 3;
 usage:
-       mrs-fetch [-h] [-z] manifestkey subdir [filename]
-       mrs-fetch [-h] [-z] manifestkey subdirprefix* [filename]
-       mrs-fetch [-h] [-z] manifestkey * [filename]
+       mrs-fetch [options] manifestkey subdir [filename]
+       mrs-fetch [options] manifestkey subdirprefix* [filename]
+       mrs-fetch [options] manifestkey * [filename]
 options:
-   -h  suppress one-line stream header (subdir - pos:size:filename ...)
-   -z  uncompress files whose names end with .gz
+   -h           suppress one-line stream header (subdir - pos:size:filename ...)
+   --no-gunzip  don't automatically uncompress .gz files
 
 EOF
 
@@ -56,7 +56,7 @@ while (my $stream = $manifest->subdir_next)
       if (!defined $wantfilename || $filename eq $wantfilename)
       {
 	my $outname = $filename;
-	$outname =~ s/\.gz$// if $opt{"z"};
+	$outname =~ s/\.gz$// if !$opt{"no-gunzip"};
 	if (!$opt{"h"})
 	{
 	  print "$subdir - 0::$outname\n";
@@ -82,7 +82,7 @@ sub out
   my ($dataref, $filename) = @_;
   if (defined $filename)
   {
-    my $want_gunzip = $opt{"z"} && $filename =~ /\.gz$/;
+    my $want_gunzip = !$opt{"no-gunzip"} && $filename =~ /\.gz$/;
     if ($gunzip_pipe_open && !$want_gunzip)
     {
       close GUNZIP_PIPE or die "close gunzip pipe: $!";
