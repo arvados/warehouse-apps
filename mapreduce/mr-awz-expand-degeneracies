@@ -45,6 +45,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  {
 	    $zblob .= $$dataref; 
 	  } 
+	  print STDERR "trying to gunzip ".lenth($zblob)." bytes\n"; 
 	  gunzip \$zblob => \$reads or die $GunzipError; 
 	}
 	elsif ($filename =~ s/\.txt$/\.bin/)  { 
