@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:gunzip all subdirs 
+###MR_DESCRIPTION:gunzip all subdirs, expand reads, encode in 64bits + 64bit id 
 ###MR_INPUT:manifest
 
 use strict; 
@@ -38,6 +38,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	last if !defined $pos;
 	my $reads; 
+	print STDERR "reading $filename\n"; 
 	if ($filename =~ s/\.txt\.gz$/\.bin/) {
 	  $instream->seek ($pos);
 	  my $zblob; 
