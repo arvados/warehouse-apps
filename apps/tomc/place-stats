@@ -16,6 +16,8 @@ my %knob = ( prefixbits => 3,
 	     snps => 1,
 	     all => 1,
 	     batchsize => 100000,
+	     maxbatches => 0,
+	     skipdegenerates => 0,
 	     stepspernode => 4,
 	     photons => 1,
 	     nodes => 12,
@@ -160,6 +162,8 @@ sub make_place
 					      smallgapmax
 					      smallgappos
 					      batchsize
+					      maxbatches
+					      skipdegenerates
 					      stepspernode
 					      snps
 					      all)),
