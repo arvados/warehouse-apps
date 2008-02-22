@@ -8,7 +8,7 @@ use strict;
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Safepipe;
 
 my $manifestkey = $ENV{MR_INPUT0};
 
