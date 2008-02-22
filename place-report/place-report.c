@@ -235,7 +235,12 @@ begin (int argc, const char * argv[])
   add_sample_id = atoi (add_sample_id_spec);
   if (add_sample_id != 0 && sample_id_col_name)
     {
-      Fatal ("doesn't make sense to specify --add-sample-id if you are using sample-id-col");
+      Fatal ("doesn't make sense to specify --add-sample-id if you are using --sample-id-col");
+    }
+
+  if (sample_id_col_name && all_sample_fields)
+    {
+      Fatal ("doing both --all-sample-fields and --sample-id-col would result in two columns with the same name");
     }
 
   bp_after_match = atoi (bp_after_match_spec);
