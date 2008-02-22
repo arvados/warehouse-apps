@@ -55,9 +55,8 @@ while (<>)
     $mercount = grep { /^pos\d+$/ } @fieldname;
 
     my $read_id_colname;
-    if (exists $col{"read_id"}) { $read_id_colname = "read_id"; }
-    elsif (exists $col{"sample"}) { $read_id_colname = "sample"; }
-    else { die "can't find \"read_id\" or \"sample\" column in input file" }
+    if (exists $col{"sample"}) { $read_id_colname = "sample"; }
+    else { die "can't find \"sample\" column in input file" }
     $read_id_col = $col{$read_id_colname};
     my $read_id_type = $fieldtype[$read_id_col];
 
@@ -79,10 +78,10 @@ EOF
     }
     print qq{\#.\n};
 
-    $side_col = $col{"side"};
-    $ref_col = $col{"ref"};
-    $aside_col = $col{"aside"};
-    $aref_col = $col{"aref"};
+    $side_col = $col{"side"} or die "couldn't find \"side\" column in input";
+    $ref_col = $col{"ref"} or die "couldn't find \"ref\" column in input";
+    $aside_col = $col{"aside"} or die "couldn't find \"aside\" column in input";
+    $aref_col = $col{"aref"} or die "couldn't find \"aref\" column in input";
   }
   my (@fields) = split (/ /);
   my @pos = map { $fields[$col{"pos$_"}] } (0..$mercount-1);
