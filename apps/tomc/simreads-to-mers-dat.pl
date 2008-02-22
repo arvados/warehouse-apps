@@ -74,6 +74,10 @@ while(<>)
 	# new format, more mers
 	die "I only work with #mers=2" if @mersizes != 2;
 	newheader();
+	if ($ENV{KNOB_SKIPDEGENERATES})
+	{
+	    next if grep { /[^acgt]/i } @in[0..3];
+	}
 	my @out = ($in[0].$in[1],
 		   $in[2].$in[3],
 		   $in[4],
