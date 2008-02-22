@@ -16,6 +16,7 @@
 ###MR_KNOBS:MAXBATCHES=0
 ###MR_KNOBS:SKIPDEGENERATES=0
 ###MR_KNOBS:SKIPNOSNPS=0
+###MR_KNOBS:INPUTSTREAM=./0
 
 use strict; 
 use Warehouse;
@@ -53,7 +54,7 @@ elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
   my $n_samples = 0;
   my $n_batches = 0;
   Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch -h '$manifestkey' '*'")
+		      "mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'")
       or die "pipe failed: $!";
   while (defined ($_ = <SAMPLES>))
   {
@@ -124,7 +125,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   open REPORTSAMPLES, "+>", $samples_tempfile;
 
   Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch -h '$manifestkey' '*'",
+		      "mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'",
 		      "perl -ne 'print if \$. > $start_at && \$. <= $start_at + $ENV{KNOB_BATCHSIZE}'",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
 		      "tee -a $samples_tempfile",
