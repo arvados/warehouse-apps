@@ -78,6 +78,10 @@ while(<>)
 	{
 	    next if grep { /[^acgt]/i } @in[0..3];
 	}
+	if ($ENV{KNOB_SKIPNOSNPS})
+	{
+	    next if !grep { /[A-Z]/ } @in[0..3,5..8];
+	}
 	my @out = ($in[0].$in[1],
 		   $in[2].$in[3],
 		   $in[4],
