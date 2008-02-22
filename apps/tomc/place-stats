@@ -15,6 +15,7 @@ my %knob = ( prefixbits => 3,
 	     maxreadlength => 18,
 	     snps => 1,
 	     all => 1,
+	     inputstream => "./0",
 	     batchsize => 100000,
 	     maxbatches => 0,
 	     skipnosnps => 0,
@@ -162,6 +163,7 @@ sub make_place
 					      smallgapmin
 					      smallgapmax
 					      smallgappos
+					      inputstream
 					      batchsize
 					      maxbatches
 					      skipnosnps
