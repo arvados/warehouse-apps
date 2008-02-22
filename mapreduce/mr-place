@@ -59,9 +59,15 @@ elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
   {
     if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
     {
+      if ($ENV{KNOB_MAXBATCHES} > 0 &&
+	  $ENV{KNOB_MAXBATCHES} < ++$n_batches)
+      {
+	close SAMPLES;		# ignore "broken pipe"
+	print STDERR @steps;
+	print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+	exit 0;
+      }
       push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n"
-	  unless ($ENV{KNOB_MAXBATCHES} > 0 &&
-		  $ENV{KNOB_MAXBATCHES} < ++$n_batches);
     }
     ++$n_samples;
   }
