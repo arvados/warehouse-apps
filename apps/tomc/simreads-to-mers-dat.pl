@@ -54,6 +54,7 @@ sub newheader
     print qq{#: taql-0.1/text
 # field "mer0" "uint64"
 # field "mer1" "uint64"
+# field "read_id" "uint32"
 # field "aref" "sym"
 # field "apos0" "uint32"
 # field "apos1" "uint32"
@@ -75,6 +76,7 @@ while(<>)
 	newheader();
 	my @out = ($in[0].$in[1],
 		   $in[2].$in[3],
+		   $in[4],
 		   '"'.$in[10].'"',
 		   @in[12,14,13,15,16]);
 	print "@out\n";
