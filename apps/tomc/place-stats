@@ -203,6 +203,7 @@ sub wait_for_output
     my $jobid = shift;
     die "no job id" if !defined $jobid;
     my $started = 0;
+    my $status_last_iter = -1;
     while (1)
     {
 	sleep 10;
@@ -229,6 +230,13 @@ sub wait_for_output
 		+ $job->{steps_running}
 		+ $job->{steps_done})
 	    {
+		my $status_serial = join (",",
+					  $job->{steps_todo},
+					  $job->{steps_running},
+					  $job->{steps_done});
+		next if $status_last_iter eq $status_serial;
+		$status_last_iter = $status_serial;
+
 		my $w = 60;
 		my $bar = "." x $w;
 		my $done = int ($job->{steps_done} * $w / $steps_total);
