@@ -13,6 +13,7 @@
 ###MR_KNOBS:BATCHSIZE=100000
 ###MR_KNOBS:CHECKANSWERKEY=1
 ###MR_KNOBS:STEPSPERNODE=4
+###MR_KNOBS:MAXBATCHES=0
 
 use strict; 
 use Warehouse;
@@ -44,6 +45,7 @@ elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
 {
   my @steps;
   my $n_samples = 0;
+  my $n_batches = 0;
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' '*'")
       or die "pipe failed: $!";
@@ -51,7 +53,9 @@ elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
   {
     if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
     {
-      push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n";
+      push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n"
+	  unless ($ENV{KNOB_MAXBATCHES} > 0 &&
+		  $ENV{KNOB_MAXBATCHES} < ++$n_batches);
     }
     ++$n_samples;
   }
