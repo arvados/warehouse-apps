@@ -5,13 +5,14 @@ echo -n "$ME "
 
 gread <<EOF > $ME.samples.dat
 #: taql-0.1/text
+# field "readid" "uint64"
 # field "mer0" "uint64"
 # field "mer1" "uint64"
 #.
-acgtacgtacgtac agctagctagctag
-aaaaaaaaaaaaaa cccccccccccccc
-acgtacgtacgtac agctagctagctag
-ctagctagctagct gtacgtacgtacgt
+10 acgtacgtacgtac agctagctagctag
+20 aaaaaaaaaaaaaa cccccccccccccc
+30 acgtacgtacgtac agctagctagctag
+40 ctagctagctagct gtacgtacgtacgt
 EOF
 
 gread <<EOF > $ME.genome.dat
@@ -62,7 +63,7 @@ diff -u - $ME.placed.txt <<EOF || true
 0 209 469
 EOF
 
-place-report -n 14 -r $ME.genome.dat -s $ME.samples.dat -p $ME.placed.dat --gap-min 3 --gap-max 4 --gap-pos 7 --two-inrecs-per-sample --ref-label chrZZ.fa --add-sample-id 0 | gprint >$ME.report
+place-report -n 14 -r $ME.genome.dat -s $ME.samples.dat -p $ME.placed.dat --gap-min 3 --gap-max 4 --gap-pos 7 --two-inrecs-per-sample --ref-label chrZZ.fa --sample-id-col readid | gprint >$ME.report
 
 cat $ME.report
 

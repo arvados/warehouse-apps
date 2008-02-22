@@ -69,6 +69,8 @@ static size_t gap_pos;
 static const char * ref_label_spec = 0;
 static size_t ref_label_col = -1;
 static Taql ref_label;
+static const char * sample_id_col_name = 0;
+static size_t sample_id_col;
 static const char * add_sample_id_spec = "0";
 static size_t add_sample_id;
 static t_taql_uint64 placepos_per_refpos;
@@ -184,6 +186,7 @@ begin (int argc, const char * argv[])
       { OPTS_ARG, "-s", "--samples INPUT", 0, &sample_file_name },
       { OPTS_ARG, "-o", "--output OUTPUT", 0, &output_file_name },
       { OPTS_ARG, "-i", "--inrec-col", 0, &placement_inrec_col_name },
+      { OPTS_ARG, "-I", "--sample-id-col", 0, &sample_id_col_name },
       { OPTS_ARG, 0, "--mer0-col", 0, &sample_mer_col_name[0] },
       { OPTS_ARG, 0, "--mer1-col", 0, &sample_mer_col_name[1] },
       { OPTS_ARG, 0, "--mer2-col", 0, &sample_mer_col_name[2] },
@@ -230,6 +233,10 @@ begin (int argc, const char * argv[])
     Fatal ("bogus gap_pos");
 
   add_sample_id = atoi (add_sample_id_spec);
+  if (add_sample_id != 0 && sample_id_col_name)
+    {
+      Fatal ("doesn't make sense to specify --add-sample-id if you are using sample-id-col");
+    }
 
   bp_after_match = atoi (bp_after_match_spec);
   if (bp_after_match < 0)
@@ -260,13 +267,26 @@ begin (int argc, const char * argv[])
     {
       sample_mer_col[m] = Field_pos (sample_file, Sym (sample_mer_col_name[m]));
     }
+  if (sample_id_col_name)
+    {
+      sample_id_col = Field_pos (sample_file, Sym (sample_id_col_name));
+    }
 
   output_file = Outfile (output_file_name);
   for (c = 0; c < N_fields (placement_file); ++c)
     {
-      Add_field (output_file,
-		 Field_type (placement_file, c),
-		 Field_name (placement_file, c));
+      if (c == placement_inrec_col && sample_id_col_name)
+	{
+	  Add_field (output_file,
+		     Field_type (sample_file, sample_id_col),
+		     Field_name (sample_file, sample_id_col));
+	}
+      else
+	{
+	  Add_field (output_file,
+		     Field_type (placement_file, c),
+		     Field_name (placement_file, c));
+	}
     }
   output_inrec_col = placement_inrec_col;
   if (ref_label_spec)
@@ -400,7 +420,10 @@ begin (int argc, const char * argv[])
 	{
 	  Poke (output_file, 0, ref_label_col, ref_label);
 	}
-      Poke (output_file, 0, output_inrec_col, uInt64 (sample_row + add_sample_id));
+      Poke (output_file, 0, output_inrec_col,
+	    sample_id_col_name
+	    ? Peek (sample_file, sample_row, sample_id_col)
+	    : uInt64 (sample_row + add_sample_id));
 
       for (m = 0; m < mercount; ++m)
 	{
