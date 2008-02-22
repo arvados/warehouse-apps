@@ -36,6 +36,10 @@ if ($ENV{MR_LEVEL} == 0)
   $ENV{MR_INPUT} = $manifestkey;
   for (1..22, 'X', 'Y', 'M')	# XXX should get chr list from manifest
   {
+    # XXX should start a jobstep for each subdir in input0 -- and
+    # place-report should use specified read_id column instead of
+    # using line number from samples.dat file
+
     print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
