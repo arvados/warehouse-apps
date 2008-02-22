@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+
+use strict;
+
+while (<>)
+{
+    chomp;
+
+    #mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref 
+    #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
+    my @read = split " ";
+
+    if (!($read[4] & 0xFFFF)) {
+	# print one in 1/2^16 reads
+	print "@read\n";
+    }
+}

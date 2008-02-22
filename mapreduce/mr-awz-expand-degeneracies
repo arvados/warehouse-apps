@@ -17,70 +17,16 @@ if ($ENV{MR_LEVEL} == 0)
   $ENV{MR_INPUT} = $manifestkey;
   do "mrtask-queuesubdirs"; 
 }
+
 elsif ($ENV{MR_LEVEL} == 1)
 {
   my $wantsubdir = $ENV{MR_INPUT};
-  my $whc = new Warehouse
-      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
-  
-  my $manifest = new Warehouse::Manifest (whc => $whc,
-					  key => $manifestkey);
-
-  while (my $instream = $manifest->subdir_next)
-  {
-    if ($instream->name eq $wantsubdir)
-    {
-      my $outstream = new Warehouse::Stream (whc => $whc);
-      $outstream->name ($instream->name);
-      $outstream->clear;
-
-      while (my ($pos, $size, $filename) = $instream->file_next)
-      {
-	last if !defined $pos;
-	my $reads; 
-	print STDERR "reading $filename\n"; 
-	if ($filename =~ s/\.txt\.gz$/\.bin/) {
-	  $instream->seek ($pos);
-	  my $zblob; 
-	  while (my $dataref = $instream->read_until ($pos + $size))
-	  {
-	    $zblob .= $$dataref; 
-	    print STDERR "read ".length($zblob)." bytes\n"; 
-	  } 
-	  print STDERR "trying to gunzip ".length($zblob)." bytes\n"; 
-	  gunzip \$zblob => \$reads or die $GunzipError; 
-	}
-	elsif ($filename =~ s/\.txt$/\.bin/)  { 
-	  $instream->seek ($pos);
-	  while (my $dataref = $instream->read_until ($pos + $size))
-	  {
-	    $reads .= $$dataref; 
-	  }
-	}
-	else {
-	  next; 
-	}
-	$outstream->write_start ($filename);
-
-	print STDERR "gunziped ".length($reads)." bytes\n";  
-	while ($reads =~ m/(.*?\n)/g) { 
-	  #mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref 
-	  #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
-	  my @read = split " ", $1;  
-	  if (!($read[4] & 0xFFFF)) {
-	    print STDERR "@read\n"; 
-#	    $outstream->write_data (@read)
-#		or die "write failed: ".$outstream->errstr;
-	  }
-	}
-	$outstream->write_finish;
-      }
-      my $fragkey = $whc->store_block ($outstream->as_string)
-	  or die "store_block failed: ".$whc->errstr;
-      print STDERR "+++mrout ".$fragkey."+++\n";
-      print STDERR $whc->iostats;
-      exit 0;
-    }
-  }
-  die "Subdir not found: $wantsubdir";
+  Safepipe::readfrom ("main::S",
+		      "mrs-fetch -h '$manifestkey' '$wantsubdir'",
+		      "mrs-awz-expand-degeneracies",
+		      "gzip",
+		      "mrs-store . reads.txt.gz",
+		      "mrs-output");
+  close "S" or die "close S: $!";
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
 }
