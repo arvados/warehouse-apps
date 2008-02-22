@@ -80,7 +80,7 @@ while(<>)
 	}
 	if ($ENV{KNOB_SKIPNOSNPS})
 	{
-	    next if !grep { /[A-Z]/ } @in[0..3,5..8];
+	    next if !grep { /[A-Z]/ } @in[5..8];
 	}
 	my @out = ($in[0].$in[1],
 		   $in[2].$in[3],
