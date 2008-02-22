@@ -61,13 +61,13 @@
 #include "libcmd/opts.h"
 #include "taql/mers/mer-utils.ch"
 
-#define MAXMERCOUNT 4
+#define MAXMERCOUNT 8
 
 void
 begin (int argc, const char * argv[])
 {
   int argx;
-  const char * mer_col_name[MAXMERCOUNT] = { "mer0", 0, 0, 0, 0, 0 };
+  const char * mer_col_name[MAXMERCOUNT] = { "mer0", 0, 0, 0, 0, 0, 0, 0 };
   size_t mer_col[MAXMERCOUNT];
   int *complement_from_col;
 
