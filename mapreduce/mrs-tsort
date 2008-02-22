@@ -16,14 +16,16 @@ while (<>)
   }
   else
   {
+    $| = 1;
     open STDOUT, '|-', 'sort', @sortargs or die "sort: $!";
     print;
     while (<>)
     {
       print;
     }
-    wait;
-    die "sort exited $?" if $?;
+    close STDOUT or die "sort: $!";
+    die "sort exited $?" if wait != -1 && $?;
     last;
   }
 }
+exit 0;
