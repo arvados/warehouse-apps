@@ -24,8 +24,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   Safepipe::readfrom ("main::S",
 		      "mrs-fetch -h '$manifestkey' '$wantsubdir'",
 		      "mrs-awz-expand-degeneracies",
-		      "gzip",
-		      "mrs-store . reads.txt.gz",
+		      "mrs-store . reads.bin",
 		      "mrs-output");
   close "S" or die "close S: $!";
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
