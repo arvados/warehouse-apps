@@ -3,8 +3,8 @@
 
 ###MR_DESCRIPTION:visit all subdirectories and place samples from files ending in .txt 
 ###MR_INPUT:manifest
-###MR_KNOBS:PREFIXBITS=0
-###MR_KNOBS:SUFFIXBITS=32
+###MR_KNOBS:PREFIXBITS=2
+###MR_KNOBS:SUFFIXBITS=30
 
 use strict; 
 use Warehouse;
@@ -60,19 +60,24 @@ elsif ($ENV{MR_LEVEL} == 1) {
       }
       @reads = unpack "N*", $readsblob;  
       
-      my $bp = $ENV{MR_INPUT}; 
+      my $bp = $ENV{MR_INPUT};
+      my $prefixbits = $ENV{KNOB_PREFIXBITS}; 
+      my $suffixbits = $ENV{KNOB_SUFFIXBITS};
+      my $suffixmask = 2 ** $suffixbits -1; 
       for (my $i = 0; $i < @reads; $i+=3) {
-	if (vec ($big_vector, $reads[$i], 4) < 15) {
-	  vec ($big_vector, $reads[$i], 4)++; 
+	if ($reads[$i]>>$suffixbits == $bp && 
+          vec ($big_vector, $reads[$i] & $suffixmask, 8) < 255) {
+	  vec ($big_vector, $reads[$i] & $suffixmask, 8)++; 
 	}
-   	if (vec( $big_vector, $reads[$i+1], 4) < 15) {
-	  vec ($big_vector, $reads[$i+1], 4)++; 
+   	if ($reads[$i+1]>>$suffixbits == $bp &&
+	  vec( $big_vector, $reads[$i+1] & $suffixbits, 8) < 255) {
+	  vec ($big_vector, $reads[$i+1] & $suffixbits, 8)++; 
 	}
       } 
     }
   }  
-  for (my $i = 0; $i < 2**32; $i++) {
-    $outstream->write_data(pack "C", vec($big_vector, $i, 4));
+  for (my $i = 0; $i < 2**$ENV{KNOB_SUFFIXBITS}; $i++) {
+    $outstream->write_data(pack "C", vec($big_vector, $i, 8));
   }
   $outstream->write_finish; 
   
