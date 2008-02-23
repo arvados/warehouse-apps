@@ -72,14 +72,14 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	my $index0 = $reads[$i] & $suffixmask;
 	my $index1 = $reads[$i+1] & $suffixmask;
 
-	if (($reads[$i]>>$suffixbits == $bp) && 
-          (vec ($big_vector, $index0, 8) < 255)) {
-	  vec ($big_vector, $index0, 8)++; 
-	}
-   	if (($reads[$i+1]>>$suffixbits == $bp) &&
-	  (vec( $big_vector, $index1, 8) < 255)) {
-	  vec ($big_vector, $index1, 8)++; 
-	}
+	#if (($reads[$i]>>$suffixbits == $bp) && 
+        #  (vec ($big_vector, $index0, 8) < 255)) {
+	#  vec ($big_vector, $index0, 8)++; 
+	#}
+   	#if (($reads[$i+1]>>$suffixbits == $bp) &&
+	#  (vec( $big_vector, $index1, 8) < 255)) {
+	#  vec ($big_vector, $index1, 8)++; 
+	#}
       } 
     }
   }  
