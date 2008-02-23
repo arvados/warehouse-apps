@@ -43,7 +43,10 @@ elsif ($ENV{MR_LEVEL} == 1) {
   my $filename; 
   
   my $suffixmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
-  
+
+  my $big_vector; 
+  vec ($big_vector, 2**32, 16);
+ 
   while (my $instream = $manifest->subdir_next) {    
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
@@ -59,24 +62,20 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	next; 
       }
       @reads = unpack "N*", $readsblob;  
-      undef $readsblob; 
-
+      
       for (my $i = 0; $i < @reads; $i+=3) {
-	my $mers0;
-	my $mers1;
-	for (my $j = 30 ; $j >= 0; $j-=2) { 
-	  $mers0 .= $numeric2_bp[($reads[$i]>>$j)&3];
-	  $mers1 .= $numeric2_bp[($reads[$i+1]>>$j)&3];
+	if (vec ($big_vector, $reads[$i], 8) < 65535) {
+	  vec ($big_vector, $reads[$i], 8)++; 
 	}
-	my $id = $ENV{MR_INPUT}<22|$reads[$i+2]; 
-
-	$outstream->write_data ("$mers0 $mers1 $id"); 
-      }
-    
-      print STDERR "got ".length($readsblob)." bytes (".scalar(@reads).
-	  " reads) from $filename\n"; 
+   	if (vec ($big_vector, $reads[$i+1], 8) < 65535) {
+	  vec ($big_vector, $reads[$i+1], 8)++; 
+	}
+      } 
     }
   }  
+  for (my $i = 0; $i < 2**32; $i++) {
+    $outstream->write_data(pack "n", vec($big_vector, $i, 8));
+  }
   $outstream->write_finish; 
   
   my $fragkey = $whc->store_block ($outstream->as_string)
