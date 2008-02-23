@@ -61,7 +61,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
       else {
 	next; 
       }
-      @reads = unpack "I*", $readsblob;  
+      @reads = unpack "L*", $readsblob;  
       
       for (my $i = 0; $i < @reads; $i+=3) {
 	if (vec ($big_vector, $reads[$i], 4) < 16) {
