@@ -50,7 +50,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
       my @reads; 
       if ($filename =~ m/\.bin$/){
 	while (my $dataref = $instream->read_until ($pos + $size)) {
-	  my $readsblob .= $$dataref; 
+	  $readsblob .= $$dataref; 
 	} 	
       }
       else {
