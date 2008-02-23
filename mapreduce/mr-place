@@ -56,28 +56,31 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
 {
   my @steps;
-  my $n_samples = 0;
-  my $n_batches = 0;
-  Safepipe::readfrom ("main::SAMPLES",
-		      "mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'")
-      or die "pipe failed: $!";
-  while (defined ($_ = <SAMPLES>))
+  if ($ENV{KNOB_MAXBATCHES} > 0)
   {
-    if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
+    for (0..$ENV{KNOB_MAXBATCHES}-1)
     {
-      if ($ENV{KNOB_MAXBATCHES} > 0 &&
-	  $ENV{KNOB_MAXBATCHES} < ++$n_batches)
-      {
-	close SAMPLES;		# ignore "broken pipe"
-	print STDERR @steps;
-	print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
-	exit 0;
-      }
-      push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n"
+      my $offset = $ENV{KNOB_BATCHSIZE} * $_;
+      push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $offset+++\n";
     }
-    ++$n_samples;
   }
-  close SAMPLES or die "Pipe failed: $!";
+  else
+  {
+    Safepipe::readfrom ("main::SAMPLES",
+			"mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'",
+			"mrs-select-reads")
+	or die "pipe failed: $!";
+    my $n_samples = 0;
+    while (defined ($_ = <SAMPLES>))
+    {
+      if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
+      {
+	push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n";
+      }
+      ++$n_samples;
+    }
+    close SAMPLES or die "Pipe failed: $!";
+  }
   print STDERR @steps;
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
 }
@@ -131,6 +134,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   Safepipe::readfrom ("main::SAMPLES",
 		      "mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'",
+		      "mrs-select-reads",
 		      "perl -ne 'print if \$. > $start_at && \$. <= $start_at + $ENV{KNOB_BATCHSIZE}'",
 		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
 		      "tee -a $samples_tempfile",
