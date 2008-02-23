@@ -1,17 +1,114 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
+# -*- mode: perl; perl-indent-level: 2; -*-
 
 use strict;
+use Math::BigInt; #34bit IDs 
 
-while (<>)
-{
+use constant A_ => 1;  
+use constant C_ => 2; 
+use constant G_ => 4; 
+use constant T_ => 8;
+
+use constant READ_ID_MASK => 2**22-1;
+
+my %bp_numeric2 = (
+    'a' => 0, 
+    'c' => 1,
+    'g' => 2,
+    't' => 3
+    ); 
+
+my %bp_numeric4 = ( 
+    '?' => 0, 
+    'g' => G_,     
+    'a' => A_, 
+    't' => T_, 
+    'c' => C_,
+    'r' => G_|A_,
+    'y' => T_|C_, 
+    'm' => A_|C_, 
+    'k' => G_|T_, 
+    's' => G_|C_,
+    'w' => A_|T_,
+    'h' => A_|C_|T_, 
+    'b' => G_|T_|C_, 
+    'v' => G_|C_|A_,
+    'd' => G_|A_|T_, 
+    'n' => A_|C_|G_|T_
+); 
+
+while (<>) {
     chomp;
-
+    
     #mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref 
     #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
     my @read = split " ";
-
-    if (!($read[4] & 0xFFFF)) {
-	# print one in 1/2^16 reads
-	print "@read\n";
+        
+    if ($read[9] == 0) { 
+	
+	my $read0_4bit = $read[0].$read[1];
+	my $read1_4bit = $read[2].$read[3]; 
+ 	
+	my @reads0_2bit = expand (lc($read0_4bit));
+ 	my @reads1_2bit = expand (lc($read1_4bit));
+       
+	foreach my $read0_2bit (@reads0_2bit) {
+	    foreach my $read1_2bit (@reads1_2bit) {
+		#my $id = $read[4] & READ_ID_MASK; #64bit machines 
+		my $id = Math::BigInt->new($read[4]); #32bit machines 
+		$id->band(READ_ID_MASK);  
+		$id->numify(); 
+		print pack ("NNN",
+			    numeric ($read0_2bit),
+			    numeric ($read1_2bit),
+			    $id);  
+	    }
+	}
+   }
+    else {
+	last; 
     }
 }
+
+
+sub expand {
+    my ($read) = @_; 
+    my @output_reads;
+    
+    if ($read =~ m/[acgt]{16}/) {  #requires 2x8mer reads
+	push @output_reads, $read; 
+    }
+    elsif ($read =~ m/([acgt]*)([^acgt])(.*$)/) {
+	my $prefix = $1; 
+	my $degeneracy = $bp_numeric4{$2}; 
+	my $suffix = $3;
+	
+	if ($suffix =~ m/[^acgt]/) {
+	    return; #ignore more than one degeneracy per arm
+	}	
+	if ( $degeneracy & A_) {
+	    push @output_reads, "$prefix"."a"."$suffix"; 
+	} 
+	if ( $degeneracy & C_) {
+	    push @output_reads, "$prefix"."c"."$suffix"; 
+	} 
+	if ( $degeneracy & G_) {
+	    push @output_reads, "$prefix"."g"."$suffix"; 
+	} 
+	if ( $degeneracy & T_) {
+	    push @output_reads, "$prefix"."t"."$suffix"; 
+	}
+    }   
+    return @output_reads;
+}
+
+
+sub numeric {
+    my ($read) = @_;
+    my $read_numeric = 0;
+    while ($read =~ m/(.)/g) {
+	$read_numeric = ($read_numeric)<<2|$bp_numeric2{$1}; 
+    }
+    return $read_numeric; 
+}
+
