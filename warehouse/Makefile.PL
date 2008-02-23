@@ -8,6 +8,7 @@ WriteMakefile
      NAME => 'Warehouse',
      VERSION_FROM => 'lib/Warehouse.pm',
      EXE_FILES => [
+		   'client/whcopy',
 		   'client/whget',
 		   'client/whput',
 		   'client/whget.cgi',
