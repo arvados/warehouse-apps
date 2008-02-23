@@ -112,4 +112,5 @@ while(<>)
     }
 }
 
+newheader();
 close STDOUT or die "$!";
