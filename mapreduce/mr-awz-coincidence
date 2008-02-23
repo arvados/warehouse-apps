@@ -90,7 +90,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
   #for (my $i = 0; $i < 2**$ENV{KNOB_SUFFIXBITS}; $i++) {
   #  $outstream->write_data(pack "C", vec($big_vector, $i, 8));
   #}
-  print STDERR "counted $count with prefix $bp\n"; 
+  print STDERR "counted $count with prefix ".$ENV{MR_INPUT}."\n"; 
   $outstream->write_finish; 
   
   my $fragkey = $whc->store_block ($outstream->as_string)
