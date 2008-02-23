@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+
+use strict;
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my %opt;
+while ($ARGV[0] =~ /^-(.*)/)
+{ for (split ("", $1)) { $opt{$_}=1; } shift @ARGV }
+
+if ($opt{"v"})
+{ local $_ = select STDERR; $|=1; select $_ }
+
+@ARGV == 3 or die "usage: $0 [-v] key sourcewarehouse destwarehouse";
+
+my $key = shift @ARGV;
+my $src = new Warehouse (warehouse_name => shift @ARGV) or die;
+my $dst = new Warehouse (warehouse_name => shift @ARGV, warehouse_servers => "bogus") or die;
+
+my $m = new Warehouse::Manifest (whc => $src, key => $key) or die $src->errstr;
+$dst->write_start;
+while (my $s = $m->subdir_next)
+{
+    printf STDERR "%s\n", $s->name if $opt{"v"};
+    my $os = new Warehouse::Stream (whc => $dst);
+    $os->clear;
+    $os->name ($s->name);
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+	last if !defined $pos;
+	printf STDERR "%12d %s\n", $size, $filename if $opt{"v"};
+	$os->write_start ($filename);
+	while (my $dataref = $s->read_until ($pos + $size))
+	{
+	    $os->write_data ($dataref);
+	}
+	$os->write_finish;
+    }
+    $dst->write_data ($os->as_string);
+}
+my $key = $dst->write_finish;
+print "$key\n";
