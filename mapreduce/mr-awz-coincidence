@@ -42,10 +42,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
 
   my $filename; 
   
-  my $suffixmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
-
-  my $big_vector; 
-  vec ($big_vector, 2**32, 4);
+  vec (my $big_vector, 2**$ENV{KNOB_SUFFIXBITS}, 4) = 1;
  
   while (my $instream = $manifest->subdir_next) {    
     while (my ($pos, $size, $filename) = $instream->file_next) {
@@ -61,13 +58,14 @@ elsif ($ENV{MR_LEVEL} == 1) {
       else {
 	next; 
       }
-      @reads = unpack "L*", $readsblob;  
+      @reads = unpack "N*", $readsblob;  
       
+      $bp = $ENV{MR_INPUT}; 
       for (my $i = 0; $i < @reads; $i+=3) {
-	if (vec ($big_vector, $reads[$i], 4) < 16) {
+	if (vec ($big_vector, $reads[$i], 4) < 15) {
 	  vec ($big_vector, $reads[$i], 4)++; 
 	}
-   	if (vec ($big_vector, $reads[$i+1], 4) < 16) {
+   	if (vec( $big_vector, $reads[$i+1], 4) < 15) {
 	  vec ($big_vector, $reads[$i+1], 4)++; 
 	}
       } 
