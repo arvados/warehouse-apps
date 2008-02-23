@@ -17,7 +17,7 @@ if ($opt{"v"})
 
 my $key = shift @ARGV;
 my $src = new Warehouse (warehouse_name => shift @ARGV) or die;
-my $dst = new Warehouse (warehouse_name => shift @ARGV, warehouse_servers => "bogus") or die;
+my $dst = new Warehouse (warehouse_name => shift @ARGV) or die;
 
 my $m = new Warehouse::Manifest (whc => $src, key => $key) or die $src->errstr;
 $dst->write_start;
