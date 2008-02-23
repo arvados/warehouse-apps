@@ -1,0 +1,29 @@
+#!/usr/bin/perl -w
+# -*- mode: perl; perl-indent-level: 4; -*-
+
+use strict;
+use Math::BigInt; #34bit ID
+
+my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+
+while (read (STDIN, my $read_triple,12)) {
+     
+    my ($mers0_32, $mers1_32, $id_32) = unpack "NNN", $read_triple; 
+
+    my $mers0;
+    my $mers1; 
+
+    for (my $j = 30 ; $j >= 0; $j-=2) { 
+	$mers0 .= $numeric2_bp[($mers0_32>>$j)&3];
+	$mers1 .= $numeric2_bp[($mers1_32>>$j)&3];
+    }
+    #my $id = $ENV{MR_INPUT}<22|$id_32;  #64bit machines
+    
+    #want to use $ENV{MR_INPUT} but doesn't seem to be defined in this context 
+    my $id = Math::BigInt->new(0); #32bit machines 
+    $id->blsft (22); 
+    $id->bior($id_32);  
+
+    print "$mers0 $mers1 $id\n"; 
+}	
+    

@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:convert 32bit triples into two ascii mers and a read_id
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs"; 
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  Safepipe::readfrom ("main::S",
+		      "mrs-fetch -h '$manifestkey' '$wantsubdir'",
+		      "mrs-awz-bin2ascii",
+		      "mrs-store $wantsubdir reads.txt",
+		      "mrs-output");
+  close "S" or die "close S: $!";
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+}

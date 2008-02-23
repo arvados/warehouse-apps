@@ -64,7 +64,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
       for (my $i = 0; $i < @reads; $i+=3) {
 	my $mers0;
 	my $mers1;
-	for (my $j = 30 ; $j > 0; $j-=2) { 
+	for (my $j = 30 ; $j >= 0; $j-=2) { 
 	  $mers0 .= $numeric2_bp[($reads[$i]>>$j)&3];
 	  $mers1 .= $numeric2_bp[($reads[$i+1]>>$j)&3];
 	}
