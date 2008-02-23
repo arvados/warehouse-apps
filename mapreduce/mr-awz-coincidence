@@ -65,7 +65,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
       my $suffixbits = $ENV{KNOB_SUFFIXBITS};
       my $suffixmask = 2 ** $suffixbits -1;
 
-      print STDERR, "$bp $prefixbits $suffixbits $suffixmask\n"; 
+      print STDERR "$bp $prefixbits $suffixbits $suffixmask\n"; 
 
       for (my $i = 0; $i < @reads; $i+=3) {
 
