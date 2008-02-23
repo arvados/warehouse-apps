@@ -441,6 +441,8 @@ sub reapchildren
   my $elapsed = time - $proc{$pid}->{time};
   my $Jobstep = $jobstep[$jobstepid];
 
+  process_stderr_for_output_key ($jobstepid);
+
   my $exitcode = $?;
   my $exitinfo = "exit $exitcode";
   if (!exists $Jobstep->{output})
@@ -497,6 +499,17 @@ sub readfrompipes
 }
 
 
+sub process_stderr_for_output_key
+{
+  my $job = shift;
+  while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
+  {
+    $jobstep[$job]->{output} = $1;
+    $tasks_must_output_keys = 1;
+  }
+}
+
+
 sub process_stderr
 {
   my $job = shift;
@@ -528,14 +541,6 @@ sub process_stderr
     {
       push @jobstep, $newjobref;
       push @jobstep_todo, $#jobstep;
-    }
-  }
-  while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
-  {
-    if ($success)
-    {
-      $jobstep[$job]->{output} = $1;
-      $tasks_must_output_keys = 1;
     }
   }
   map {
