@@ -24,6 +24,7 @@ my %knob = ( prefixbits => 3,
 	     maxoutputspersample => 63,
 	     photons => 1,
 	     nodes => 12,
+	     warehouse => "templeton",
 	     );
 
 for (@ARGV)
@@ -42,7 +43,7 @@ my $svninfo = `svn info http://tomc.oxf.freelogy.org/repos/tomc/polony-tools`;
 $knob{revision} = $1
     if !exists $knob{revision} && $svninfo =~ /\nRevision: (\d+)\n/;
 
-$whc = new Warehouse;
+$whc = new Warehouse (warehouse_name => $knob{warehouse});
 
 make_place_stats() if !$knob{place_stats_output};
 
