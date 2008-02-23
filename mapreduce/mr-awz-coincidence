@@ -42,7 +42,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
 
   my $filename; 
   
-  vec (my $big_vector, 2**$ENV{KNOB_SUFFIXBITS}, 4) = 1;
+  vec (my $big_vector, 2**$ENV{KNOB_SUFFIXBITS}, 8) = 1;
  
   while (my $instream = $manifest->subdir_next) {    
     while (my ($pos, $size, $filename) = $instream->file_next) {
@@ -70,8 +70,8 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	  vec ($big_vector, $reads[$i] & $suffixmask, 8)++; 
 	}
    	if ($reads[$i+1]>>$suffixbits == $bp &&
-	  vec( $big_vector, $reads[$i+1] & $suffixbits, 8) < 255) {
-	  vec ($big_vector, $reads[$i+1] & $suffixbits, 8)++; 
+	  vec( $big_vector, $reads[$i+1] & $suffixmask, 8) < 255) {
+	  vec ($big_vector, $reads[$i+1] & $suffixmask, 8)++; 
 	}
       } 
     }
