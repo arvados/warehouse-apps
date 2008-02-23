@@ -45,7 +45,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
   my $suffixmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
 
   my $big_vector; 
-  vec ($big_vector, 2**32, 16);
+  vec ($big_vector, 2**32, 8);
  
   while (my $instream = $manifest->subdir_next) {    
     while (my ($pos, $size, $filename) = $instream->file_next) {
@@ -64,17 +64,17 @@ elsif ($ENV{MR_LEVEL} == 1) {
       @reads = unpack "N*", $readsblob;  
       
       for (my $i = 0; $i < @reads; $i+=3) {
-	if (vec ($big_vector, $reads[$i], 8) < 65535) {
+	if (vec ($big_vector, $reads[$i], 8) < 255) {
 	  vec ($big_vector, $reads[$i], 8)++; 
 	}
-   	if (vec ($big_vector, $reads[$i+1], 8) < 65535) {
+   	if (vec ($big_vector, $reads[$i+1], 8) < 255) {
 	  vec ($big_vector, $reads[$i+1], 8)++; 
 	}
       } 
     }
   }  
   for (my $i = 0; $i < 2**32; $i++) {
-    $outstream->write_data(pack "n", vec($big_vector, $i, 8));
+    $outstream->write_data(pack "C", vec($big_vector, $i, 8));
   }
   $outstream->write_finish; 
   
