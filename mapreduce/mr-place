@@ -36,6 +36,11 @@ $ENV{KNOB_BATCHSIZE} += 0;
 
 if ($ENV{MR_LEVEL} == 0)
 {
+  # should be:
+  # get list of subdirs in reads manifest
+  # for each subdir in reference
+  #  
+  # ...
   $ENV{MR_INPUT} = $manifestkey;
   for (1..22, 'X', 'Y', 'M')	# XXX should get chr list from manifest
   {

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# -*- mode: perl; perl-indent-level: 2; -*-
+# -*- mode: perl; perl-indent-level: 4; -*-
 
 use strict;
 use Math::BigInt; #34bit IDs 
@@ -64,9 +64,12 @@ while (<>) {
 			    $id);  
 	    }
 	}
-   }
-    else {
-	last; 
+    }
+    else
+    {
+	close STDIN;
+	close STDOUT;
+	exit 0;
     }
 }
 

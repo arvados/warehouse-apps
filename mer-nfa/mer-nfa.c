@@ -98,6 +98,8 @@ struct sample
        */
       t_taql_uint32 flags[MAX_N_MER_POSITIONS - 1];
     } state[2];
+
+  unsigned int times_reported;
 };
 
 
@@ -603,6 +605,7 @@ read_samples_building_nfa (void)
 		  continue;
 		}
             }
+	  nfa[n_samples].times_reported = 0;
           ++n_samples;
           ++offset;
         }
@@ -1268,6 +1271,7 @@ report_transition (struct output_record * outrec,
           Poke (output_file, 0, pos_out_col[x], uInt32 (outrec->positions[x]));
         }
 
+      ++nfa[sample].times_reported;
       Advance (output_file, 1);
       return 1;
     }
