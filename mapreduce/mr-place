@@ -14,6 +14,7 @@
 ###MR_KNOBS:CHECKANSWERKEY=1
 ###MR_KNOBS:STEPSPERNODE=4
 ###MR_KNOBS:MAXBATCHES=0
+###MR_KNOBS:MAXOUTPUTSPERSAMPLE=63
 ###MR_KNOBS:SKIPDEGENERATES=0
 ###MR_KNOBS:SKIPNOSNPS=0
 ###MR_KNOBS:INPUTSTREAM=./0
@@ -119,6 +120,8 @@ elsif ($ENV{MR_LEVEL} == 1)
   }
   $mer_nfa_opts .= " --snps" if $ENV{KNOB_SNPS};
   $mer_nfa_opts .= " --all" if $ENV{KNOB_ALL};
+  $mer_nfa_opts .= " --max-outputs-per-sample $ENV{KNOB_MAXOUTPUTSPERSAMPLE}"
+      if $ENV{KNOB_MAXOUTPUTSPERSAMPLE};
   my $complement_mers_args = "";
   for (0..$#mersize)
   {

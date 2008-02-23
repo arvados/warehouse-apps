@@ -21,6 +21,7 @@ my %knob = ( prefixbits => 3,
 	     skipnosnps => 0,
 	     skipdegenerates => 0,
 	     stepspernode => 4,
+	     maxoutputspersample => 63,
 	     photons => 1,
 	     nodes => 12,
 	     );
@@ -168,6 +169,7 @@ sub make_place
 					      maxbatches
 					      skipnosnps
 					      skipdegenerates
+					      maxoutputspersample
 					      stepspernode
 					      snps
 					      all)),
