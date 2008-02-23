@@ -466,9 +466,7 @@ sub reapchildren
   }
   $Jobstep->{exitcode} = $exitcode;
   $Jobstep->{finishtime} = time;
-  map {
-    Log ($jobstepid, "stderr $_");
-  } split ("\n", $Jobstep->{stderr});
+  process_stderr ($jobstepid, $exitcode == 0);
   Log ($jobstepid, "output $$Jobstep{output}");
 
   close $reader{$jobstepid};
@@ -488,50 +486,62 @@ sub readfrompipes
   foreach my $job (keys %reader)
   {
     my $buf;
-    while (0 < sysread ($reader{$job}, $buf, 1024))
+    while (0 < sysread ($reader{$job}, $buf, 8192))
     {
-      $gotsome = 1;
-      $jobstep[$job]->{stderr} .= $buf;
       print STDERR $buf if $ENV{MR_DEBUG};
-
-      while ($jobstep[$job]->{stderr} =~
-	     s/\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n//)
-      {
-	my ($merge, $level, $input) = ($1, $2, $3);
-	my $newjobref;
-	if ($merge)
-	{
-	  push @jobstep_tomerge, $input;
-	  if ($merge !~ /\D/ && @jobstep_tomerge >= $merge)
-	  {
-	    $newjobref = { input => join ("\n",
-					  splice @jobstep_tomerge, 0, $merge),
-			   level => $level,
-			   attempts => 0 };
-	  }
-	}
-	else
-	{
-	  $newjobref = { input => $input,
-			 level => $level,
-			 attempts => 0 };
-	}
-	if ($newjobref)
-	{
-	  push @jobstep, $newjobref;
-	  push @jobstep_todo, $#jobstep;
-	}
-      }
-      while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
-      {
-	$jobstep[$job]->{output} = $1;
-	$tasks_must_output_keys = 1;
-      }
+      $jobstep[$job]->{stderr} .= $buf;
+      $gotsome = 1;
     }
   }
   return $gotsome;
 }
 
+
+sub process_stderr
+{
+  my $job = shift;
+  my $success = shift;
+  while ($jobstep[$job]->{stderr} =~
+	 s/\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n//)
+  {
+    next if !$success;
+    my ($merge, $level, $input) = ($1, $2, $3);
+    my $newjobref;
+    if ($merge)
+    {
+      push @jobstep_tomerge, $input;
+      if ($merge !~ /\D/ && @jobstep_tomerge >= $merge)
+      {
+	$newjobref = { input => join ("\n",
+				      splice @jobstep_tomerge, 0, $merge),
+		       level => $level,
+		       attempts => 0 };
+      }
+    }
+    else
+    {
+      $newjobref = { input => $input,
+		     level => $level,
+		     attempts => 0 };
+    }
+    if ($newjobref)
+    {
+      push @jobstep, $newjobref;
+      push @jobstep_todo, $#jobstep;
+    }
+  }
+  while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
+  {
+    if ($success)
+    {
+      $jobstep[$job]->{output} = $1;
+      $tasks_must_output_keys = 1;
+    }
+  }
+  map {
+    Log ($jobstepid, "stderr $_");
+  } split ("\n", $jobstep[$job]->{stderr});
+}
 
 sub try_getting_impatient
 {
