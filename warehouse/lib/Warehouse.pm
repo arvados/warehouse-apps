@@ -146,16 +146,16 @@ sub _init
     if (defined $self->{warehouse_name})
     {
 	my ($idx) = grep {
-	    $warehouses[$_]->{name} eq $self->{warehouse_name}
-	} (0..$#warehouses)
+	    $warehouses->[$_]->{name} eq $self->{warehouse_name}
+	} (0..$#$warehouses)
 	    or die "I know no warehouse named ".$self->{warehouse_name};
 	$self->{warehouse_index} = $idx;
-	$self->{warehouse_servers} = $warehouses[$idx]->{controllers};
-	$self->{mogilefs_trackers} = $warehouses[$idx]->{mogilefs_trackers};
-	$self->{mogilefs_domain} = $warehouses[$idx]->{mogilefs_domain};
-	$self->{mogilefs_directory_class} = $warehouses[$idx]->{mogilefs_directory_class};
-	$self->{mogilefs_file_class} = $warehouses[$idx]->{mogilefs_file_class};
-	$self->{keeps} = $warehouses[$idx]->{keeps};
+	$self->{warehouse_servers} = $warehouses->[$idx]->{controllers};
+	$self->{mogilefs_trackers} = $warehouses->[$idx]->{mogilefs_trackers};
+	$self->{mogilefs_domain} = $warehouses->[$idx]->{mogilefs_domain};
+	$self->{mogilefs_directory_class} = $warehouses->[$idx]->{mogilefs_directory_class};
+	$self->{mogilefs_file_class} = $warehouses->[$idx]->{mogilefs_file_class};
+	$self->{keeps} = $warehouses->[$idx]->{keeps};
 	$self->{memcached_size_threshold} = 0 if $idx != 0;
     }
 
