@@ -60,7 +60,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
       }
       @reads = unpack "N*", $readsblob;  
       
-      $bp = $ENV{MR_INPUT}; 
+      my $bp = $ENV{MR_INPUT}; 
       for (my $i = 0; $i < @reads; $i+=3) {
 	if (vec ($big_vector, $reads[$i], 4) < 15) {
 	  vec ($big_vector, $reads[$i], 4)++; 
