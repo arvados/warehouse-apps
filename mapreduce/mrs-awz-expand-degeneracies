@@ -2,7 +2,7 @@
 # -*- mode: perl; perl-indent-level: 2; -*-
 
 use strict;
-use Math::BigInt; #34bit IDs 
+#use Math::BigInt; #34bit IDs 
 
 use constant A_ => 1;  
 use constant C_ => 2; 
@@ -54,10 +54,10 @@ while (<>) {
        
 	foreach my $read0_2bit (@reads0_2bit) {
 	    foreach my $read1_2bit (@reads1_2bit) {
-		#my $id = $read[4] & READ_ID_MASK; #64bit machines 
-		my $id = Math::BigInt->new($read[4]); #32bit machines 
-		$id->band(READ_ID_MASK);  
-		$id->numify(); 
+		my $id = $read[4] & READ_ID_MASK; #64bit machines 
+		#my $id = Math::BigInt->new($read[4]); #32bit machines 
+		#$id->band(READ_ID_MASK);  
+		#$id->numify(); 
 		print pack ("NNN",
 			    numeric ($read0_2bit),
 			    numeric ($read1_2bit),
