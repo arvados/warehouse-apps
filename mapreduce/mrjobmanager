@@ -539,7 +539,7 @@ sub process_stderr
     }
   }
   map {
-    Log ($jobstepid, "stderr $_");
+    Log ($job, "stderr $_");
   } split ("\n", $jobstep[$job]->{stderr});
 }
 
