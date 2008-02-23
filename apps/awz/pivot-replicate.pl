@@ -42,8 +42,14 @@ foreach my $rep (0 .. ($copies-1)) {
     if ($args{'r'}) { 
       $i = rand @streams;    
     } 
-    my $stream = splice (@streams, $i, 1); 
-    my @tokens = split ' ',$stream;
+    my $stream = splice (@streams, $i, 1);
+    
+    my @tokens; 
+    #if ($stream !~ m/random|hap/) {
+      @tokens = split ' ',$stream;
+    #print "***@tokens $stream***\n"; 
+    #}
+
     foreach my $x (@tokens) { 	
       if ($x =~ m/^[0-9a-f]{32}\+([0-9]+)/) {
         push @blocks, $x; 
@@ -52,7 +58,7 @@ foreach my $rep (0 .. ($copies-1)) {
       elsif ($x =~ m/^[0-9]+:([0-9]+):(.+)/) {
         push @files, "$bytes_in_files:$1:$2";
         $bytes_in_files+=$1;
-      }
+      }      
     }
   }	
   if ($bytes_in_blocks ne $bytes_in_files) {
