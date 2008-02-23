@@ -70,6 +70,10 @@ static int match_complement = 0;
  */
 static int show_all = 0;
 
+/* Limit # output records for a given sample
+ */
+static unsigned int max_outputs_per_sample;
+
 struct sample
 {
   /* The sample itself:
@@ -430,6 +434,7 @@ process_command_line_arguments (int argc, const char * argv[])
   const char * mer_size_spec[MAX_N_MER_POSITIONS] = { 0, };
   const char * gap_min_spec[MAX_N_MER_POSITIONS - 1] = { 0, };
   const char * gap_max_spec[MAX_N_MER_POSITIONS - 1] = { 0, };
+  const char * max_outputs_per_sample_spec = "0";
   int x;
   
 
@@ -448,6 +453,7 @@ process_command_line_arguments (int argc, const char * argv[])
       { OPTS_ARG, 0, "--gmax0", 0, &gap_max_spec[0] },
       { OPTS_ARG, 0, "--gmax1", 0, &gap_max_spec[1] },
       { OPTS_ARG, 0, "--gmax2", 0, &gap_max_spec[2] },
+      { OPTS_ARG, 0, "--max-outputs-per-sample", 0, &max_outputs_per_sample_spec },
       { OPTS_FLAG, 0, "--snps", &permit_snps, 0 },
       { OPTS_FLAG, 0, "--complement", &match_complement, 0 },
       { OPTS_FLAG, 0, "--all", &show_all, 0 },
@@ -534,6 +540,8 @@ process_command_line_arguments (int argc, const char * argv[])
       }
     --span_lower_bound;
   }
+
+  max_outputs_per_sample = atoi (max_outputs_per_sample_spec);
 
   reference_file = Infile (reference_file_name);
   File_fix (reference_file, 1, 0);
@@ -1261,6 +1269,13 @@ report_transition (struct output_record * outrec,
 	  return 0;
 	}
 
+      nfa[sample].times_reported ++;
+      if (max_outputs_per_sample > 0 &&
+	  nfa[sample].times_reported > max_outputs_per_sample)
+	{
+	  return 1;
+	}
+
       outrec->positions[mer_pos] = pos;
 
       Poke (output_file, 0, sample_out_col, uInt32 (sample));
@@ -1271,7 +1286,6 @@ report_transition (struct output_record * outrec,
           Poke (output_file, 0, pos_out_col[x], uInt32 (outrec->positions[x]));
         }
 
-      ++nfa[sample].times_reported;
       Advance (output_file, 1);
       return 1;
     }
