@@ -3,8 +3,8 @@
 
 ###MR_DESCRIPTION:visit all subdirectories and place samples from files ending in .txt 
 ###MR_INPUT:manifest
-###MR_KNOBS:PREFIXBITS=5
-###MR_KNOBS:SUFFIXBITS=27 
+###MR_KNOBS:PREFIXBITS=0
+###MR_KNOBS:SUFFIXBITS=32
 
 use strict; 
 use Warehouse;
@@ -31,63 +31,36 @@ elsif ($ENV{MR_LEVEL} == 1) {
   my $manifest = new Warehouse::Manifest (whc => $whc,
 					  key => $manifestkey);
   
-
-  my @bp = ('a', 'c', 'g', 't'); 
- 
-  my $prefixbp; 
-  for (my $i = 0; $i < $ENV{KNOB_PREFIXBITS}; $i+=2) {
-    $prefixbp .= $bp[($ENV{MR_INPUT}>>$i)&3];     
-  } 
+  
   my $outstream = new Warehouse::Stream (whc => $whc);
   my $name = "./".$ENV{MR_INPUT}; 
   $outstream->name ($name);
   $outstream->clear;
-  $outstream->write_start ("$prefixbp.txt"); 
+  $outstream->write_start ("foo.txt"); 
 
   my $filename; 
   
-  my @count; 
-  
-  vec (my $bitstring, 2**$ENV{KNOB_SUFFIXBITS}, 4) = 15;
-
   my $suffixmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
   
- 
   while (my $instream = $manifest->subdir_next) {    
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      my $reads; 
-      if ($filename =~ m/\.txt.gz$/){
+      my $readsblob; 
+      my @reads; 
+      if ($filename =~ m/\.bin$/){
 	while (my $dataref = $instream->read_until ($pos + $size)) {
-	  my $zblob .= $$dataref; 
-	} 
-	gunzip \$zblob => \$reads or die $GunzipError; 
-      }
-      elsif ($filename =~m/\.txt$/){
-	while (my $dataref = $instream->read_until ($pos + $size)) {
-	  $reads .= $$dataref; 
+	  my $readsblob .= $$dataref; 
 	} 	
       }
       else {
 	next; 
       }
-      while (/(.*?\n)/g) { 
-
-	#mer0,mer1,mer2,mer3,read_id,mer0_ref,mer1_ref,mer2_ref,mer3_ref 
-	#individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
-	my @read = split " ", $1;  
-
-      }   
-      print STDERR "read $filename\n";     
+      @reads = unpack "N*", $readsblob;  
+    
+      print STDERR "got ".scalar(@reads)." reads from $filename\n"; 
     }
-  }
-  #for (my $i=0; $i<2**27; $i++) {
-  #  $count[vec ($bitstring, $i, 2)]++;
-  #}
-  #$outstream->write_data ("@count\n");
-  
-  
+  }  
   $outstream->write_finish; 
   
   my $fragkey = $whc->store_block ($outstream->as_string)
