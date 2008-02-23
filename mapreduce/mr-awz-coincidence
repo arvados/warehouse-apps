@@ -42,8 +42,8 @@ elsif ($ENV{MR_LEVEL} == 1) {
 
   my $filename; 
   
-  vec (my $big_vector, 2**$ENV{KNOB_SUFFIXBITS}, 8) = 1;
- 
+  my $big_vector = (pack "C", 0) x 2**$ENV{KNOB_SUFFIXBITS}; 
+  print STDERR "allocated ".length($big_vector)." bytes\n"; 
   while (my $instream = $manifest->subdir_next) {    
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
