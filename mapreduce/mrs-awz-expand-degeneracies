@@ -67,9 +67,8 @@ while (<>) {
     }
     else
     {
-	close STDOUT;
-	close STDIN;
-	exit 0;
+	while (<>) { }
+	last;
     }
 }
 
