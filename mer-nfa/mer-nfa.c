@@ -1054,6 +1054,11 @@ do_probe (int side,
       const t_taql_uint64 sample_subst_bp = sample_list_tables[mer_position][list_index].snp_bp;
       const t_taql_uint64 sample_mer = nfa[sample].mer[mer_position];
       
+      if (max_outputs_per_sample > 0
+	  && max_outputs_per_sample <= nfa[sample].times_reported)
+	{
+	  /* don't bother, it will never be reported anyway */
+	}
       if (reference_snp_position >= 0)
         {
           /* reference mer has a SNP in it so the sample mer must not
