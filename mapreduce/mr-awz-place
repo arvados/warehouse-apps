@@ -58,7 +58,8 @@ elsif ($ENV{MR_LEVEL} == 1) {
       }
       @reads = unpack "N*", $readsblob;  
     
-      print STDERR "got ".scalar(@reads)." reads from $filename\n"; 
+      print STDERR "got ".length($readsblob)." bytes (".scalar(@reads).
+	  " reads) from $filename\n"; 
     }
   }  
   $outstream->write_finish; 
