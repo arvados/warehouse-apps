@@ -63,15 +63,22 @@ elsif ($ENV{MR_LEVEL} == 1) {
       my $bp = $ENV{MR_INPUT};
       my $prefixbits = $ENV{KNOB_PREFIXBITS}; 
       my $suffixbits = $ENV{KNOB_SUFFIXBITS};
-      my $suffixmask = 2 ** $suffixbits -1; 
+      my $suffixmask = 2 ** $suffixbits -1;
+
+      print STDERR, "$bp $prefixbits $suffixbits $suffixmask\n"; 
+
       for (my $i = 0; $i < @reads; $i+=3) {
-	if ($reads[$i]>>$suffixbits == $bp && 
-          vec ($big_vector, $reads[$i] & $suffixmask, 8) < 255) {
-	  vec ($big_vector, $reads[$i] & $suffixmask, 8)++; 
+
+	my $index0 = $reads[$i] & $suffixmask;
+	my $index1 = $reads[$i+1] & $suffixmask;
+
+	if (($reads[$i]>>$suffixbits == $bp) && 
+          (vec ($big_vector, $index0, 8) < 255)) {
+	  vec ($big_vector, $index0, 8)++; 
 	}
-   	if ($reads[$i+1]>>$suffixbits == $bp &&
-	  vec( $big_vector, $reads[$i+1] & $suffixmask, 8) < 255) {
-	  vec ($big_vector, $reads[$i+1] & $suffixmask, 8)++; 
+   	if (($reads[$i+1]>>$suffixbits == $bp) &&
+	  (vec( $big_vector, $index1, 8) < 255)) {
+	  vec ($big_vector, $index1, 8)++; 
 	}
       } 
     }
