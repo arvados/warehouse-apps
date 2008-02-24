@@ -37,60 +37,67 @@ $ENV{KNOB_BATCHSIZE} += 0;
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  # should be:
-  # get list of subdirs in reads manifest
-  # for each subdir in reference
-  #  
-  # ...
-  $ENV{MR_INPUT} = $manifestkey;
-  for (1..22, 'X', 'Y', 'M')	# XXX should get chr list from manifest
+  my $whc = new Warehouse;
+  my $ref = new Warehouse::Manifest (whc => $whc,
+				     key => $ENV{MR_REFERENCE});
+  while (my $s = $ref->subdir_next)
   {
-    # XXX should start a jobstep for each subdir in input0 -- and
-    # place-report should use specified read_id column instead of
-    # using line number from samples.dat file
-
-    print STDERR "+++mrjobstep 1 chr$_.fa+++\n";
+    my $ref_subdir = $s->name;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      next if !defined $pos;
+      next if $filename =~ /hap|rand/;
+      if ($ENV{KNOB_MAXBATCHES} > 0)
+      {
+	for (0..$ENV{KNOB_MAXBATCHES}-1)
+	{
+	  my $start_at = $ENV{KNOB_BATCHSIZE} * $_;
+	  print STDERR "+++mrjobstep 1 $ref_subdir $filename $start_at+++\n";
+	}
+      }
+      else
+      {
+	print STDERR "+++mrjobstep 1 $ref_subdir $filename+++\n";
+      }
+    }
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
 }
 
-elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
+my ($ref_subdir, $ref_filename, $start_at) = split (/ /, $ENV{MR_INPUT});
+
+if ($ENV{MR_LEVEL} == 1 && !defined $start_at)
 {
+  # no maxbatches specified, so we have to read the samples and queue
+  # the appropriate number of worker jobsteps
+
   my @steps;
-  if ($ENV{KNOB_MAXBATCHES} > 0)
+  Safepipe::readfrom ("main::SAMPLES",
+		      "mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'",
+		      "mrs-select-reads")
+      or die "pipe failed: $!";
+  my $n_samples = 0;
+  while (defined ($_ = <SAMPLES>))
   {
-    for (0..$ENV{KNOB_MAXBATCHES}-1)
+    if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
     {
-      my $offset = $ENV{KNOB_BATCHSIZE} * $_;
-      push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $offset+++\n";
+      push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n";
     }
+    ++$n_samples;
   }
-  else
-  {
-    Safepipe::readfrom ("main::SAMPLES",
-			"mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'",
-			"mrs-select-reads")
-	or die "pipe failed: $!";
-    my $n_samples = 0;
-    while (defined ($_ = <SAMPLES>))
-    {
-      if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
-      {
-	push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n";
-      }
-      ++$n_samples;
-    }
-    close SAMPLES or die "Pipe failed: $!";
-  }
+  close SAMPLES or die "Pipe failed: $!";
   print STDERR @steps;
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   exit 0;
 }
 
-elsif ($ENV{MR_LEVEL} == 1)
+if ($ENV{MR_LEVEL} == 1)
 {
-  my ($subdir_name, $start_at) = split (/ /, $ENV{MR_INPUT});
-  my ($ref_label) = $subdir_name =~ /(\w+)/;
+  # worker jobstep: process $ENV{KNOB_BATCHSIZE} reads starting at
+  # $start_at against reference data in $ref_subdir/$ref_filename
+
+  my ($ref_label) = $ref_filename =~ /(\w+)/; # XXX hope subdir is irrelevant
   $start_at += 0;
 
   my $posperref = 1 + $ENV{KNOB_SMALLGAPMAX} - $ENV{KNOB_SMALLGAPMIN};
@@ -146,7 +153,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       or die "samples pipe failed: $!";
 
   Safepipe::readfrom ("main::REFERENCE",
-		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$subdir_name'",
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' '$ref_subdir' '$ref_filename'",
 		      "perl $src/madeleine/chr-to-dat.pl -n $mersize[0] >$ref_tempfile; cat $ref_tempfile")
       or die "reference pipe failed: $!";
 
@@ -162,7 +169,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      "gprint",
 		      "mrs-tsort -n --buffer-size=400M",
 		      $ENV{KNOB_CHECKANSWERKEY} ? "mrs-place-checkanswerkey" : (),
-		      "mrs-store './$subdir_name-$start_at' mer-nfa-report.txt",
+		      "mrs-store '$ref_subdir-$ref_filename-$start_at' mer-nfa-report.txt",
 		      "mrs-output")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES" or die "close SAMPLES: $!";
