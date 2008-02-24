@@ -28,6 +28,10 @@ my %knob = ( prefixbits => 3,
 	     photons => 1,
 	     nodes => 12,
 	     warehouse => "templeton",
+	     fasta_personalize_output => undef,
+	     fasta_reads_output => undef,
+	     place_output => undef,
+	     place_stats_output => undef,
 	     );
 
 for (@ARGV)
