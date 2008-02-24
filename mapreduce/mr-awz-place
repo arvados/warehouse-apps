@@ -27,7 +27,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
   my $step = $ENV{MR_INPUT};
   Safepipe::readfrom ("main::S",
 		      "mrs-fetch -h '$manifestkey' '*'",
-		      "mrs-awz-coincidence",
+		      "mrs-awz-place",
 		      "mrs-store ./$step coincidence.bin",
 		      "mrs-output");
   close "S" or die "close S: $!";
