@@ -2,7 +2,7 @@
 # -*- mode: perl; perl-indent-level: 4; -*-
 
 use strict;
-use Math::BigInt; #34bit ID
+#use Math::BigInt; #34bit ID
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
 
@@ -17,11 +17,11 @@ while (read (STDIN, my $read_triple,12)) {
 	$mers0 .= $numeric2_bp[($mers0_32>>$j)&3];
 	$mers1 .= $numeric2_bp[($mers1_32>>$j)&3];
     }
-    #my $id = $ENV{MR_INPUT}<<22|$id_32;  #64bit machines
+    my $id = ($ENV{MR_ID}-1)<<22|$id_32;  #64bit machines
    
-    my $id = Math::BigInt->new(($ENV{MR_ID}-1)); #32bit machines 
-    $id->blsft (22); 
-    $id->bior($id_32);  
+    #my $id = Math::BigInt->new(($ENV{MR_ID}-1)); #32bit machines 
+    #$id->blsft (22); 
+    #$id->bior($id_32);  
 
     print "$mers0 $mers1 $id\n"; 
 }	
