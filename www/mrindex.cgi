@@ -58,7 +58,7 @@ print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed ToDo Done Run Success Output Meta OldLog));
+print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed ToDo Done Run Success Output Meta));
 print q{
 </tr>
 };
@@ -86,7 +86,6 @@ while (my @row = $sth->fetchrow)
     $row[3] .= "($atag<code>".substr($input0,0,8)."</code></a>)";
   }
 
-  push @row, "<a href=\"mrlog.cgi?id=$jobid\">log</a>";
   print "<tr>\n";
   print map ("<td valign=top>$_</td>\n", @row);
   print "</tr>\n";
