@@ -6,6 +6,7 @@ use Warehouse::Manifest;
 my %knob = ( prefixbits => 3,
 	     suffixbits => 21,
 	     k => 8,
+	     individuals => 1,
 	     bp => 3142044949,
 	     ploidy => 2,
 	     seed => 12345,
@@ -132,6 +133,7 @@ sub make_fasta_reads
 					   qw(prefixbits
 					      suffixbits
 					      k
+					      individuals
 					      bp
 					      ploidy
 					      seed)),
