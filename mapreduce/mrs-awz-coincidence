@@ -21,7 +21,8 @@ my $bp = $ENV{MR_INPUT};
 my $prefixbits = $ENV{KNOB_PREFIXBITS}; 
 my $suffixbits = $ENV{KNOB_SUFFIXBITS};
 my $suffixmask = 2 ** $suffixbits -1;
-my $count; 
+my $count;
+my $overflow; 
 
 print STDERR "$bp $prefixbits $suffixbits $suffixmask\n"; 
 
@@ -29,11 +30,12 @@ while (read(STDIN, my $read_triple, 12)) {
   
   my ($mers0_32, $mers1_32, $id_32) = unpack "NNN", $read_triple;
 
-  count ($mers0_32, $mers1_32, revc($mers0_32), revc($mers1_32));
+  coincidence ($mers0_32, $mers1_32, revc($mers0_32), revc($mers1_32));
 
 }
 print $big_vector; 
 
+print STDERR "counted $count with $overflow overflow\n"; 
 
 #should fix! -- don't convert to ASCII and back!
 sub revc {
@@ -54,7 +56,7 @@ sub revc {
 }
 
 #do the work 
-sub count {
+sub coincidence {
   my @reads = @_;
   
   foreach my $read (@reads) {
@@ -62,6 +64,10 @@ sub count {
       my $x = ord (substr ($big_vector, $read & $suffixmask, 1)); 
       if ($x < 255) {
 	substr ($big_vector, $read & $suffixmask, 1) = chr($x+1); 
+	$count++; 
+      }
+      else {
+	$overflow++; 
       }
     } 
   }
