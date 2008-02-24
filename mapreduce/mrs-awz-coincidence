@@ -25,7 +25,7 @@ my $count;
 
 print STDERR "$bp $prefixbits $suffixbits $suffixmask\n"; 
 
-while ($bytes = read(STDIN, my $read_triple, 12)) {
+while (read(STDIN, my $read_triple, 12)) {
   
   my ($mers0_32, $mers1_32, $id_32) = unpack "NNN", $read_triple;
 
@@ -44,7 +44,7 @@ sub revc {
     $bp .= $numeric2_bp[($read_numeric>>$i)&3];
   }
   $bp =~ tr/acgtACGT/tgcaTGCA/;
-  $bp_rc = reverse $bp; 
+  my $bp_rc = reverse $bp; 
 
   my $read_numeric_rc = 0;
   while ($bp_rc =~ m/(.)/g) {
