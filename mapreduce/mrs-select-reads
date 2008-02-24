@@ -4,13 +4,16 @@ use strict;
 
 while(<>)
 {
-    if ($ENV{KNOB_SKIPDEGENERATES})
+    if (!/^\#/)
     {
-	next if !/^[acgt ]{35} /i;
-    }
-    if ($ENV{KNOB_SKIPNOSNPS})
-    {
-	next if /^\S+ \S+ \S+ \S+ \S+ [a-z ]{35} /;
+	if ($ENV{KNOB_SKIPDEGENERATES})
+	{
+	    next if !/^[acgt ]{35} /i;
+	}
+	if ($ENV{KNOB_SKIPNOSNPS})
+	{
+	    next if /^\S+ \S+ \S+ \S+ \S+ [a-z ]{35} /;
+	}
     }
     print;
 }
