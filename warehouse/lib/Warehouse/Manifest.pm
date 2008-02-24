@@ -132,7 +132,7 @@ sub subdir_next
 {
   use Warehouse::Stream;
   my $self = shift;
-  die "subdir_next called without subdir_rewind"
+  die "subdir_next called without rewind"
       if !defined $self->{subdir_datapos};
   my $nextnewline = index $ {$self->{data}}, "\n", $self->{subdir_datapos};
   if ($nextnewline < 0)
