@@ -7,11 +7,13 @@ my %knob = ( prefixbits => 3,
 	     suffixbits => 21,
 	     k => 8,
 	     individuals => 1,
+	     correctbits => "66666555",
+	     reducebits => "44444333",
 	     bp => 3142044949,
 	     ploidy => 2,
+	     snpbits => 11,
 	     seed => 12345,
 	     reference => "88f0fab736bdf704a559ae48ade5a423",
-	     mutant => "88f0fab736bdf704a559ae48ade5a423",
 	     biggap => "750-1261",
 	     maxreadlength => 18,
 	     snps => 1,
@@ -32,6 +34,7 @@ for (@ARGV)
 {
     if (/(.*?)=(.*)/)
     {
+	warn "Warning: unknown knob \"$1\" ignored\n" if !exists $knob{$1};
 	$knob{$1} = $2;
     }
     else
@@ -146,12 +149,41 @@ for (0..$#nreads_vs_log_placements)
 	    );
 }
 
-sub make_fasta_reads
+sub make_fasta_personalize
 {
     my $jobid;
-    $jobid = $whc->job_new (mrfunction => "fasta-reads",
+
+    my $nodes =
+	int (($knob{individuals} * $knob{ploidy} + $knob{stepspernode} - 1)
+	     / $knob{stepspernode});
+    $nodes = $knob{nodes} if $nodes > $knob{nodes};
+
+    $jobid = $whc->job_new (mrfunction => "fasta-personalize",
 			    revision => $knob{revision},
-			    inputkey => $knob{mutant},
+			    inputkey => $knob{reference},
+			    knobs => join ("\n",
+					   map { uc($_) . "=" . $knob{$_} }
+					   qw(individuals
+					      ploidy
+					      snpbits
+					      seed
+					      stepspernode)),
+			    nodes => $nodes,
+			    photons => $knob{photons},
+			    )
+	or die $whc->errstr;
+    warn "submitted fasta-personalize r$knob{revision} job $jobid\n";
+    $knob{fasta_personalize_output} = wait_for_output ($jobid);
+}
+
+sub make_fasta_reads
+{
+    make_fasta_personalize() if !$knob{fasta_personalize_output};
+
+    my $jobid;
+    $jobid = $whc->job_new (mrfunction => "zfasta-reads",
+			    revision => $knob{revision},
+			    inputkey => $knob{fasta_personalize_output},
 			    knobs => join ("\n",
 					   map { uc($_) . "=" . $knob{$_} }
 					   qw(prefixbits
@@ -159,13 +191,16 @@ sub make_fasta_reads
 					      k
 					      individuals
 					      bp
+					      correctbits
+					      reducebits
 					      ploidy
-					      seed)),
+					      seed
+					      stepspernode)),
 			    nodes => ($knob{nodes} > 4 ? 4 : $knob{nodes}),
 			    photons => $knob{photons},
 			    )
 	or die $whc->errstr;
-    warn "submitted fasta-reads r$knob{revision} job $jobid\n";
+    warn "submitted zfasta-reads r$knob{revision} job $jobid\n";
     $knob{fasta_reads_output} = wait_for_output ($jobid);
 }
 
