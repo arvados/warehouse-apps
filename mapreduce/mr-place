@@ -84,6 +84,7 @@ elsif ($ENV{MR_LEVEL} == 1 && $ENV{MR_INPUT} !~ / /)
   }
   print STDERR @steps;
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
 }
 
 elsif ($ENV{MR_LEVEL} == 1)
@@ -161,20 +162,16 @@ elsif ($ENV{MR_LEVEL} == 1)
 		      "gprint",
 		      "mrs-tsort -n --buffer-size=400M",
 		      $ENV{KNOB_CHECKANSWERKEY} ? "mrs-place-checkanswerkey" : (),
-		      "mrs-store './$subdir_name-$start_at' mer-nfa-report.txt")
+		      "mrs-store './$subdir_name-$start_at' mer-nfa-report.txt",
+		      "mrs-output")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES" or die "close SAMPLES: $!";
   close "REFERENCE" or die "close REFERENCE: $!";
   close "REPORTREFERENCE" or die "close REPORTREFERENCE: $!";
   close "REPORTSAMPLES" or die "close REPORTSAMPLES: $!";
 
-  my @out = <PLACED>;
   close "PLACED" or die "close PLACED: $!";
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
-
-  open OUT, "|mrs-output" or die "mrs-output: $!";
-  print OUT @out;
-  close OUT or die "mrs-output: $!";
   exit 0;
 }
