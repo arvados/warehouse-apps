@@ -46,7 +46,7 @@ if ($ENV{MR_LEVEL} == 0)
     my $ref_subdir = $s->name;
     while (my ($pos, $size, $filename) = $s->file_next)
     {
-      next if !defined $pos;
+      last if !defined $pos;
       next if $filename =~ /hap|rand/;
       if ($ENV{KNOB_MAXBATCHES} > 0)
       {
