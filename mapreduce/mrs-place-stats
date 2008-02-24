@@ -39,6 +39,8 @@ while (<>)
 # field "snps<1" "uint32"
 # field "total" "uint32"
 # field "snps<2" "uint32"
+# field "answer0" "uint32"
+# field "answer1" "uint32"
 #.
 };
   }
@@ -49,11 +51,13 @@ while (<>)
   $out[2]++ if $fields[$snpscol] == 0;
   $out[3]++;
   $out[4]++ if $fields[$snpscol] <= 1;
+  $out[5]++ if $fields[$correctcol] && $fields[$snpscol] == 0;
+  $out[6]++ if $fields[$correctcol] && $fields[$snpscol] <= 1;
 }
 flush();
 
 sub flush
 {
   print "@out\n" if @out;
-  @out = (0,0,0,0,0);
+  @out = (0,0,0,0,0,0,0);
 }
