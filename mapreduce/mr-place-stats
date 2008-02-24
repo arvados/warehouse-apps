@@ -15,6 +15,7 @@ my $whc = new Warehouse;
 my @subdirs;
 my $m = new Warehouse::Manifest (whc => $whc,
 				 key => $manifestkey);
+$m->rewind;
 while (my $s = $m->subdir_next)
 {
   if ($s->name =~ /^(.*)-0$/)
