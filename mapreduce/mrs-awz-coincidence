@@ -14,6 +14,21 @@ my %bp_numeric2 = (
   't' => 3
     ); 
 
+my @RevcTable;
+foreach my $x (0 .. 255) {
+  my $bp;
+  my $x_rc; 
+  for (my $i = 6 ; $i >= 0; $i-=2) { 
+    $bp .= $numeric2_bp[($x>>$i)&3];
+  }
+  $bp =~ tr/acgt/tgca/;
+  my $bp_rc = reverse $bp; 
+  while ($bp_rc =~ m/(.)/g) {
+    $x_rc = ($x_rc)<<2|$bp_numeric2{$1}; 
+  }
+  $RevcTable[$x]=$x_rc; 
+}
+
 my $big_vector = chr(0) x 2**$ENV{KNOB_SUFFIXBITS}; 
 print STDERR "allocated ".length($big_vector)." bytes\n"; 
 
@@ -34,25 +49,17 @@ while (read(STDIN, my $read_triple, 12)) {
 
 }
 print $big_vector; 
-
 print STDERR "counted $count with $overflow overflow\n"; 
 
-#should fix! -- don't convert to ASCII and back!
+
 sub revc {
   my ($read_numeric) = @_; 
-
-  my $bp; 
-  for (my $i = 30 ; $i >= 0; $i-=2) { 
-    $bp .= $numeric2_bp[($read_numeric>>$i)&3];
-  }
-  $bp =~ tr/acgtACGT/tgcaTGCA/;
-  my $bp_rc = reverse $bp; 
-
-  my $read_numeric_rc = 0;
-  while ($bp_rc =~ m/(.)/g) {
-    $read_numeric_rc = ($read_numeric_rc)<<2|$bp_numeric2{$1}; 
-  }
-  return $read_numeric_rc; 
+  
+  return ($RevcTable[$read_numeric & 0xff] << 24) | 
+      ($RevcTable[($read_numeric >> 8) & 0xff] << 16) | 
+      ($RevcTable[($read_numeric >> 16) & 0xff] << 8) | 
+      ($RevcTable[($read_numeric >> 24) & 0xff]);
+  
 }
 
 #do the work 
