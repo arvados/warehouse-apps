@@ -10,7 +10,7 @@ use strict;
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use Safepine; 
+use Safepipe; 
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
 
