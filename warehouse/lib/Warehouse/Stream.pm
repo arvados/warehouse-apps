@@ -113,9 +113,15 @@ sub as_string
     die "as_string called while still writing ".$self->{write_filename}
 	if exists $self->{write_filename};
 
+    my $hashlistref = $self->{myhashes};
+    if (!@$hashlistref)
+    {
+      $hashlistref = [ "d41d8cd98f00b204e9800998ecf8427e+0" ];
+    }
+
     return join (" ",
 		 $self->name,
-		 @{$self->{myhashes}},
+		 @$hashlistref,
 		 @{$self->{myfiles}}) . "\n";
   }
 
