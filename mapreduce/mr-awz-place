@@ -1,19 +1,16 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:visit all subdirectories and place samples from files ending in .txt 
+###MR_DESCRIPTION: convert 32bit triples from mr-awz-expand-degeneracies 
 ###MR_INPUT:manifest
-###MR_KNOBS:PREFIXBITS=0
-###MR_KNOBS:SUFFIXBITS=32
+###MR_KNOBS:PREFIXBITS=2
+###MR_KNOBS:SUFFIXBITS=30
 
 use strict; 
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
-use Digest::SHA qw(sha512);
-
-my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+use Safepipe; 
 
 my $manifestkey = $ENV{MR_INPUT0};
 
@@ -27,69 +24,14 @@ if ($ENV{MR_LEVEL} == 0) {
   exit 0;
 }
 elsif ($ENV{MR_LEVEL} == 1) {
-  my $whc = new Warehouse
-      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
-  
-  my $manifest = new Warehouse::Manifest (whc => $whc,
-					  key => $manifestkey);
-  
-  
-  my $outstream = new Warehouse::Stream (whc => $whc);
-  my $name = "./".$ENV{MR_INPUT}; 
-  $outstream->name ($name);
-  $outstream->clear;
-  $outstream->write_start ("foo.txt"); 
-
-  my $filename; 
-  
-  my $suffixmask = 2**$ENV{KNOB_SUFFIXBITS}-1; 
-  
-  while (my $instream = $manifest->subdir_next) {    
-    while (my ($pos, $size, $filename) = $instream->file_next) {
-      last if !defined $pos; 
-      $instream->seek ($pos); 
-      my $readsblob; 
-      my @reads; 
-      if ($filename =~ m/\.bin$/){
-	while (my $dataref = $instream->read_until ($pos + $size)) {
-	  $readsblob .= $$dataref; 
-	} 	
-      }
-      else {
-	next; 
-      }
-      @reads = unpack "N*", $readsblob;  
-      undef $readsblob; 
-
-      for (my $i = 0; $i < @reads; $i+=3) {
-	my $mers0;
-	my $mers1;
-	for (my $j = 30 ; $j >= 0; $j-=2) { 
-	  $mers0 .= $numeric2_bp[($reads[$i]>>$j)&3];
-	  $mers1 .= $numeric2_bp[($reads[$i+1]>>$j)&3];
-	}
-	my $id = $ENV{MR_INPUT}<22|$reads[$i+2]; 
-
-	$outstream->write_data ("$mers0 $mers1 $id"); 
-      }
-    
-      print STDERR "got ".length($readsblob)." bytes (".scalar(@reads).
-	  " reads) from $filename\n"; 
-    }
-  }  
-  $outstream->write_finish; 
-  
-  my $fragkey = $whc->store_block ($outstream->as_string)
-      or die "store_block failed: ".$whc->errstr;
-  print STDERR "+++mrout ".$fragkey."+++\n";
-  print STDERR $whc->iostats;
-  
-  exit 0;  
+  my $step = $ENV{MR_INPUT};
+  Safepipe::readfrom ("main::S",
+		      "mrs-fetch -h '$manifestkey' '*'",
+		      "mrs-awz-coincidence",
+		      "mrs-store ./$step coincidence.bin",
+		      "mrs-output");
+  close "S" or die "close S: $!";
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
 }
 
-sub revc {
-  my ($bp) = @_; 
  
-  $bp =~ tr/acgtACGT/tgcaTGCA/;
-  return reverse $bp; 
-}

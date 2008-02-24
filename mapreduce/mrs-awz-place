@@ -14,7 +14,7 @@ my %bp_numeric2 = (
   't' => 3
     ); 
 
-my $big_vector = chr(0) x $ENV{KNOB_SUFFIXBITS}; 
+my $big_vector = chr(0) x (2**$ENV{KNOB_SUFFIXBITS} * 7); 
 print STDERR "allocated ".length($big_vector)." bytes\n"; 
 
 my $bp = $ENV{MR_INPUT};
