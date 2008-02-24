@@ -7,6 +7,13 @@ use strict;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
 
+my %bp_numeric2 = (
+  'a' => 0, 
+  'c' => 1,
+  'g' => 2,
+  't' => 3
+    ); 
+
 my $big_vector = chr(0) x 2**$ENV{KNOB_SUFFIXBITS}; 
 print STDERR "allocated ".length($big_vector)." bytes\n"; 
 
@@ -18,29 +25,44 @@ my $count;
 
 print STDERR "$bp $prefixbits $suffixbits $suffixmask\n"; 
 
-while (read(STDIN, my $read_triple, 12)) {
+while ($bytes = read(STDIN, my $read_triple, 12)) {
   
   my ($mers0_32, $mers1_32, $id_32) = unpack "NNN", $read_triple;
 
-  if ($mers0_32>>$suffixbits ==$bp) {
-    my $x = ord (substr ($big_vector, $mers0_32 & $suffixmask, 1)); 
-    if ($x < 255) {
-      substr ($big_vector, $mers0_32 & $suffixmask, 1) = chr($x+1); 
-    }
-  }
-  if ($mers1_32>>$suffixbits ==$bp) {
-    my $x = ord (substr ($big_vector, $mers1_32 & $suffixmask, 1)); 
-    if ($x < 255) {
-      substr ($big_vector, $mers1_32 & $suffixmask, 1) = chr($x+1); 
-    }
-  }  
+  count ($mers0_32, $mers1_32, revc($mers0_32), revc($mers1_32));
+
 }
 print $big_vector; 
 
 
+#should fix! -- don't convert to ASCII and back!
 sub revc {
-  my ($bp) = @_; 
- 
+  my ($read_numeric) = @_; 
+
+  my $bp; 
+  for (my $i = 30 ; $i >= 0; $i-=2) { 
+    $bp .= $numeric2_bp[($read_numeric>>$i)&3];
+  }
   $bp =~ tr/acgtACGT/tgcaTGCA/;
-  return reverse $bp; 
+  $bp_rc = reverse $bp; 
+
+  my $read_numeric_rc = 0;
+  while ($bp_rc =~ m/(.)/g) {
+    $read_numeric_rc = ($read_numeric_rc)<<2|$bp_numeric2{$1}; 
+  }
+  return $read_numeric_rc; 
+}
+
+#do the work 
+sub count {
+  my @reads = @_;
+  
+  foreach my $read (@reads) {
+    if ($read>>$suffixbits ==$bp) {
+      my $x = ord (substr ($big_vector, $read & $suffixmask, 1)); 
+      if ($x < 255) {
+	substr ($big_vector, $read & $suffixmask, 1) = chr($x+1); 
+      }
+    } 
+  }
 }
