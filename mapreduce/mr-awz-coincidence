@@ -12,8 +12,6 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use Safepipe; 
 
-my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
-
 my $manifestkey = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0) {
@@ -26,11 +24,11 @@ if ($ENV{MR_LEVEL} == 0) {
   exit 0;
 }
 elsif ($ENV{MR_LEVEL} == 1) {
-  my $wantsubdir = $ENV{MR_INPUT};
+  my $step = $ENV{MR_INPUT};
   Safepipe::readfrom ("main::S",
 		      "mrs-fetch -h '$manifestkey' '*'",
 		      "mrs-awz-coincidence",
-		      "mrs-store $wantsubdir coincidence.bin",
+		      "mrs-store ./$step coincidence.bin",
 		      "mrs-output");
   close "S" or die "close S: $!";
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
