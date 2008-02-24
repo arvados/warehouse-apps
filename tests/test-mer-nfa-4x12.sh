@@ -11,7 +11,7 @@ gread <<EOF > $ME.samples.dat
 # field "mer3" "uint64"
 #.
 tgctgcagcagc cacagagatata tagttagttagt aaaaaaaaatgc
-aaaaaaaaaaaa cccccccccccc gggggggggggg agagagagagag
+taaaaaaaaaat ccccccccccct gggggggggggt agagagagagag
 EOF
 
 gread <<EOF > $ME.genome.dat
@@ -25,7 +25,7 @@ gtaaaaaaaaaa
 tgctgcagcagc
 cacagagatata
 tagttagttagt
-aaaaaaaaaaaa
+aaaaaaaaaaat
 cccccccccccc
 gggggggggggg
 gg
@@ -97,10 +97,10 @@ all-mers -m mer0 -n 12 < $ME.genome.dat | mer-nfa --snps --all \
   > $ME.noflags.1
 diff -u - $ME.noflags.1 <<EOF
 0 0
+1 37
 0 48
 1 83
 1 84
-1 85
 EOF
 
 echo OK

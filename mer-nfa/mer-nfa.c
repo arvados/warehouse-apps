@@ -581,6 +581,20 @@ finalize_files (void)
 static void
 read_samples_building_nfa (void)
 {
+  t_taql_uint64 mer_mask[MAX_N_MER_POSITIONS];
+  int mp;
+  for (mp = 0; mp < n_mer_positions; mp++)
+    {
+      if (mer_size[mp] < 16)
+	{
+	  mer_mask[mp] = (1ULL << (mer_size[mp]*4)) - 1;
+	}
+      else
+	{
+	  mer_mask[mp] = ~0ULL;
+	}
+    }
+
   while (N_ahead (sample_file))
     {
       size_t new_n_samples = n_samples + N_ahead (sample_file);
@@ -600,13 +614,17 @@ read_samples_building_nfa (void)
               nfa[n_samples].mer[x] = as_uInt64 (Peek (sample_file, offset, sample_mer_in_col[x]));
               nfa[n_samples].state[0].flags[x] = 0;
               nfa[n_samples].state[1].flags[x] = 0;
-	      if (-1 != find_non_bp (nfa[n_samples].mer[x], mer_size[x]))
+	      if (!((nfa[n_samples].mer[x]^0x1111111111111111) & mer_mask[x]) ||
+		  !((nfa[n_samples].mer[x]^0x2222222222222222) & mer_mask[x]) ||
+		  !((nfa[n_samples].mer[x]^0x4444444444444444) & mer_mask[x]) ||
+		  !((nfa[n_samples].mer[x]^0x8888888888888888) & mer_mask[x]) ||
+		  -1 != find_non_bp (nfa[n_samples].mer[x], mer_size[x]))
 		{
 		  /* put NNNN in all mer positions to ensure that this sample is always skipped */
 		  int xx;
 		  for (xx = 0; xx < n_mer_positions; ++xx)
 		    {
-		      nfa[n_samples].mer[xx] = 0;
+		      nfa[n_samples].mer[xx] = ~0ULL;
 		      nfa[n_samples].state[0].flags[xx] = 0;
 		      nfa[n_samples].state[1].flags[xx] = 0;
 		    }
