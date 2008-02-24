@@ -39,7 +39,7 @@ if ($ENV{MR_LEVEL} == 0)
 {
   my $whc = new Warehouse;
   my $ref = new Warehouse::Manifest (whc => $whc,
-				     key => $ENV{MR_REFERENCE});
+				     key => $ENV{KNOB_REFERENCE});
   $ref->rewind;
   while (my $s = $ref->subdir_next)
   {
