@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+#KNOBS:PREFIXBITS, SUFFIXBITS
+
+use strict; 
+
+my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+
+my $big_vector = chr(0) x 2**$ENV{KNOB_SUFFIXBITS}; 
+print STDERR "allocated ".length($big_vector)." bytes\n"; 
+
+my $bp = $ENV{MR_INPUT};
+my $prefixbits = $ENV{KNOB_PREFIXBITS}; 
+my $suffixbits = $ENV{KNOB_SUFFIXBITS};
+my $suffixmask = 2 ** $suffixbits -1;
+my $count; 
+
+print STDERR "$bp $prefixbits $suffixbits $suffixmask\n"; 
+
+while (read(STDIN, my $read_triple, 12)) {
+  
+  my ($mers0_32, $mers1_32, $id_32) = unpack "NNN", $read_triple;
+
+  if ($mers0_32>>$suffixbits ==$bp) {
+    my $x = ord (substr ($big_vector, $mers0_32 & $suffixmask, 1)); 
+    if ($x < 255) {
+      substr ($big_vector, $mers0_32 & $suffixmask, 1) = chr($x+1); 
+    }
+  }
+  if ($mers1_32>>$suffixbits ==$bp) {
+    my $x = ord (substr ($big_vector, $mers1_32 & $suffixmask, 1)); 
+    if ($x < 255) {
+      substr ($big_vector, $mers1_32 & $suffixmask, 1) = chr($x+1); 
+    }
+  }  
+}
+print $big_vector; 
+
+
+sub revc {
+  my ($bp) = @_; 
+ 
+  $bp =~ tr/acgtACGT/tgcaTGCA/;
+  return reverse $bp; 
+}
