@@ -29,11 +29,16 @@ print STDERR "$bp $prefixbits $suffixbits $suffixmask\n";
 while (read(STDIN, my $read_triple, 12)) {
   
   my ($mers0_32, $mers1_32, $id_32) = unpack "NNN", $read_triple;
-
-  coincidence ($mers0_32, $mers1_32, revc($mers0_32), revc($mers1_32));
+  
+  if ($mers0_32 >> $suffixbits == $bp) {
+    $count++;
+  } 
+  #coincidence ($mers0_32, $mers1_32, revc($mers0_32), revc($mers1_32));
 
 }
-print $big_vector; 
+print STDERR "placing $count reads\n"
+
+#print $big_vector; 
 
 print STDERR "counted $count with $overflow overflow\n"; 
 
