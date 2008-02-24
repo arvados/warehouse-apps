@@ -610,7 +610,7 @@ read_samples_building_nfa (void)
 		      nfa[n_samples].state[0].flags[xx] = 0;
 		      nfa[n_samples].state[1].flags[xx] = 0;
 		    }
-		  continue;
+		  break;
 		}
             }
 	  nfa[n_samples].times_reported = 0;
@@ -1059,7 +1059,7 @@ do_probe (int side,
 	{
 	  /* don't bother, it will never be reported anyway */
 	}
-      if (reference_snp_position >= 0)
+      else if (reference_snp_position >= 0)
         {
           /* reference mer has a SNP in it so the sample mer must not
            * if they are to match.
@@ -1219,7 +1219,7 @@ enqueue_transition (int side,
 
   if (n_taken_transitions == size_taken_transitions)
     {
-      if (consumed_n_taken_transitions)
+      if (consumed_n_taken_transitions > size_taken_transitions >> 3)
         {
           memmove ((void *)taken_transitions,
                    (void *)&taken_transitions[consumed_n_taken_transitions],
