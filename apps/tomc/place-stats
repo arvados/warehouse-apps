@@ -53,6 +53,9 @@ my $nreads_maxplacements = 0;
 my $nreads_anysnps = 0;
 my $nreads_0snps = 0;
 my $nreads_0or1snps = 0;
+my $nreads_incorrect_anysnps = 0;
+my $nreads_incorrect_0snps = 0;
+my $nreads_incorrect_0or1snps = 0;
 my $nplacements_0or1snps = 0;
 my $nplacements = 0;
 my $unique = 0;
@@ -103,10 +106,16 @@ while (my $stream = $manifest->subdir_next)
 		++$nreads_0or1snps_vs_log_placements[int(log($s[4])/log(2))];
 		$nplacements_0or1snps += $s[4];
 	    }
+	    if ($s[3] == 1)
+	    {
+		++$nreads_incorrect_0snps if $s[2] > $s[5];
+		++$nreads_incorrect_0or1snps if $s[4] > $s[6];
+		++$nreads_incorrect_anysnps if $s[1] == 0;
+	    }
 	}
     }
 }
-printf (<<EOF, $nreads, $nreads_maxplacements, $knob{maxoutputspersample}, $nplacements_0snps, $nplacements_0or1snps, $nplacements, $nreads_0snps, $nreads_0or1snps, $nreads_anysnps, $nreads_correct, $unique, $unique_and_correct, $unique_and_correct_0snps, $unique_and_correct_0or1snps);
+printf (<<EOF, $nreads, $nreads_maxplacements, $knob{maxoutputspersample}, $nplacements_0snps, $nplacements_0or1snps, $nplacements, $nreads_0snps, $nreads_0or1snps, $nreads_anysnps, $nreads_correct, $unique, $unique_and_correct_0snps, $unique_and_correct_0or1snps, $unique_and_correct, $nreads_incorrect_0snps, $nreads_incorrect_0or1snps, $nreads_incorrect_anysnps);
 %12d reads placed
 %12d reads omitted from remainder of stats because they placed >= %d times
 %12d placements with 0 SNPs
@@ -116,10 +125,13 @@ printf (<<EOF, $nreads, $nreads_maxplacements, $knob{maxoutputspersample}, $npla
 %12d reads placed with <2 SNPs
 %12d reads placed with <2 SNPs per arm
 %12d reads placed in the location specified by the answer key
-%12d reads placed in only one location
-%12d reads placed in only the location specified in the answer key
-%12d reads placed in only the location specified in the answer key, with 0 SNPs
-%12d reads placed in only the location specified in the answer key, with <2 SNPs
+%12d reads placed only once
+%12d reads placed only once, == answer key, 0 SNPs
+%12d reads placed only once, == answer key, <2 SNPs
+%12d reads placed only once, == answer key, <2 SNPs per arm
+%12d reads placed only once, != answer key, 0 SNPs
+%12d reads placed only once, != answer key, <2 SNPs
+%12d reads placed only once, != answer key, <2 SNPs per arm
 EOF
 printf ("%4s %12s %12s %12s %s\n",
 	"P", "#reads", "#<2snps", "#exact",
