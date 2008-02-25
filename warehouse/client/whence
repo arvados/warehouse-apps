@@ -3,26 +3,20 @@
 use strict;
 use Warehouse;
 
-my %opt = ( warehouse => "templeton" );
+die "usage: whence {key|jobid}[\@warehouse]\n" unless @ARGV==1;
 
-while ($ARGV[0] =~ /^--(.*?)=(.*)/)
-{
-    shift @ARGV;
-    $opt{$1} = $2;
-}
+my ($key, $warehouse_name) = split (/\@/, shift @ARGV);
+$warehouse_name = $Warehouse::warehouses->[0]->{name}
+    if !defined $warehouse_name;
 
-die "usage: whence [--warehouse=warehousename] {key|jobid}\n" unless @ARGV==1;
-
-my $key = shift @ARGV;
-
-
-my $whc = new Warehouse (warehouse_name => $opt{warehouse});
+my $whc = new Warehouse (warehouse_name => $warehouse_name);
 my $joblist = $whc->job_list;
 my %output_to_job;
 my %id_to_job;
 for my $job (@$joblist)
 {
-    $output_to_job{$job->{outputkey}} = $job;
+    $output_to_job{$job->{outputkey}} = $job
+	unless $job->{outputkey} eq $job->{inputkey};
     $id_to_job{$job->{id}} = $job;
 }
 
@@ -33,7 +27,7 @@ die "Didn't find a job whose id or output is $key\n" if !defined $targetjob;
 
 while (defined $targetjob)
 {
-    printf "#%d\@%s\n", $targetjob->{id}, $opt{warehouse};
+    printf "#%d\@%s\n", $targetjob->{id}, $warehouse_name;
     printf "  mrfunction = %s\n", $targetjob->{mrfunction};
     printf "  output = %s\n", $targetjob->{outputkey};
     printf "  input = %s\n", $targetjob->{inputkey};
