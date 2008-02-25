@@ -53,7 +53,7 @@ our $VERSION = '0.01';
  my $content = $whc->fetch_block ($filehash, 0);
 
  # Give a manifest a name in the warehouse
- $whc->store_manifest_name ($newkey, $oldkey, $name)
+ $whc->store_manifest_by_name ($newkey, $oldkey, $name)
      or die "update failed";
 
  # Retrieve key of a named manifest
