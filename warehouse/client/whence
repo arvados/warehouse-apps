@@ -28,7 +28,7 @@ die "Didn't find a job whose id or output is $key\n" if !defined $targetjob;
 while (defined $targetjob)
 {
     printf "#%d\@%s\n", $targetjob->{id}, $warehouse_name;
-    printf "  mrfunction = %s\n", $targetjob->{mrfunction};
+    printf "  mrfunction = %s r%d\n", $targetjob->{mrfunction}, $targetjob->{revision};
     printf "  output = %s\n", $targetjob->{outputkey};
     printf "  input = %s\n", $targetjob->{inputkey};
     map { printf "  %s\n", $_ } split (/\\n/, $targetjob->{knobs});
