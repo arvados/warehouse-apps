@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+
+use strict;
+use Warehouse;
+
+my %opt = ( warehouse => "templeton" );
+
+while ($ARGV[0] =~ /^--(.*?)=(.*)/)
+{
+    shift @ARGV;
+    $opt{$1} = $2;
+}
+
+die "usage: whence [--warehouse=warehousename] {key|jobid}\n" unless @ARGV==1;
+
+my $key = shift @ARGV;
+
+
+my $whc = new Warehouse (warehouse_name => $opt{warehouse});
+my $joblist = $whc->job_list;
+my %output_to_job;
+my %id_to_job;
+for my $job (@$joblist)
+{
+    $output_to_job{$job->{outputkey}} = $job;
+    $id_to_job{$job->{id}} = $job;
+}
+
+my $targetjob;
+$targetjob = $id_to_job{$key} if exists $id_to_job{$key};
+$targetjob = $output_to_job{$key} if exists $output_to_job{$key};
+die "Didn't find a job whose id or output is $key\n" if !defined $targetjob;
+
+while (defined $targetjob)
+{
+    printf "#%d\@%s\n", $targetjob->{id}, $opt{warehouse};
+    printf "  mrfunction = %s\n", $targetjob->{mrfunction};
+    printf "  output = %s\n", $targetjob->{outputkey};
+    printf "  input = %s\n", $targetjob->{inputkey};
+    map { printf "  %s\n", $_ } split (/\\n/, $targetjob->{knobs});
+    print "\n";
+
+    $output_to_job{$targetjob->{outputkey}} = "loop";
+
+    last if $targetjob->{inputkey} !~ /\S/;
+
+    $targetjob = $output_to_job{$targetjob->{inputkey}};
+    if ($targetjob eq "loop")
+    {
+	warn "Cycle detected; stopping.\n";
+	last;
+    }
+}
