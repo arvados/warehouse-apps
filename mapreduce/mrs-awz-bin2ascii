@@ -2,7 +2,6 @@
 # -*- mode: perl; perl-indent-level: 4; -*-
 
 use strict;
-use Math::BigInt;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
 
@@ -29,8 +28,8 @@ while (read (STDIN, my $read_triple, 12)) {
 #conceivably exits without consuming all input (if it's malformed.)
 
 sub id_32 {
+    use Math::BigInt;
     my ($id_suffix) = @_; 
-   
     my $id = Math::BigInt->new(($ENV{MR_ID}-1)); 
     $id->blsft ($suffixbits); 
     $id->bior($id_suffix);
