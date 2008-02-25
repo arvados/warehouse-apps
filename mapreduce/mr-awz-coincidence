@@ -3,8 +3,8 @@
 
 ###MR_DESCRIPTION: convert 32bit triples from mr-awz-expand-degeneracies 
 ###MR_INPUT:manifest
-###MR_KNOBS:PREFIXBITS=2
-###MR_KNOBS:SUFFIXBITS=30
+###MR_KNOBS:PREFIXBITS=4
+###MR_KNOBS:SUFFIXBITS=28
 
 use strict; 
 use Warehouse;
