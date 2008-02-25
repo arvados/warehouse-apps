@@ -185,6 +185,8 @@ sub make_fasta_reads
     make_fasta_personalize() if !$knob{fasta_personalize_output};
 
     my $jobid;
+    my $nodes = int (2**$knob{prefixbits} / $knob{stepspernode} + 0.9999);
+    $nodes = $knob{nodes} if $nodes > $knob{nodes};
     $jobid = $whc->job_new (mrfunction => "zfasta-reads",
 			    revision => $knob{revision},
 			    inputkey => $knob{fasta_personalize_output},
@@ -200,7 +202,7 @@ sub make_fasta_reads
 					      ploidy
 					      seed
 					      stepspernode)),
-			    nodes => ($knob{nodes} > 4 ? 4 : $knob{nodes}),
+			    nodes => $nodes,
 			    photons => $knob{photons},
 			    )
 	or die $whc->errstr;
