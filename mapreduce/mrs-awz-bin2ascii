@@ -4,14 +4,9 @@
 use strict;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
-
-
-my $prefixbits = $ENV{KNOB_PREFIXBITS}; 
-my $suffixbits = $ENV{KNOB_SUFFIXBITS}; 
  
 my $id_ref = \&id_64;
-$id_ref = \&id_32 if ((1 << 32 < 1 << 29) && 
-		      ($prefixbits + $suffixbits > 32));
+$id_ref = \&id_32 if ( 2**(32-$ENV{KNOB_SUFFIXBITS})  < $ENV{MR_ID});
 
 while (read (STDIN, my $read_triple, 12)) {
      
@@ -24,7 +19,7 @@ while (read (STDIN, my $read_triple, 12)) {
 	$mers0 .= $numeric2_bp[($mers0_32>>$j)&3];
 	$mers1 .= $numeric2_bp[($mers1_32>>$j)&3];
     }
-    my $id = $id_ref->($id_32); #64bit scalar  
+    my $id = $id_ref->($id_32); #can be 64bit scalar  
 
     print "$mers0 $mers1 $id\n"; 
 }
@@ -34,12 +29,12 @@ sub id_32 {
     use Math::BigInt;
     my ($id_suffix) = @_; 
     my $id = Math::BigInt->new(($ENV{MR_ID}-1)); 
-    $id->blsft ($suffixbits); 
+    $id->blsft ($ENV{KNOB_SUFFIXBITS}); 
     $id->bior($id_suffix);
     return $id
 }	
     
 sub id_64 {
     my ($id_suffix) = @_; 
-    return ($ENV{MR_ID}-1)<<$suffixbits|$id_suffix;
+    return ($ENV{MR_ID}-1)<<$ENV{KNOB_SUFFIXBITS}|$id_suffix;
 }
