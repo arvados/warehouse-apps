@@ -6,9 +6,12 @@ use strict;
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
 
 
+my $prefixbits = $ENV{KNOB_PREFIXBITS}; 
 my $suffixbits = $ENV{KNOB_SUFFIXBITS}; 
+ 
 my $id_ref = \&id_64;
-$id_ref = \&id_32 if (1 << 32 < 1 << 29);
+$id_ref = \&id_32 if ((1 << 32 < 1 << 29) && 
+		      ($prefixbits + $suffixbits > 32));
 
 while (read (STDIN, my $read_triple, 12)) {
      
@@ -25,7 +28,7 @@ while (read (STDIN, my $read_triple, 12)) {
 
     print "$mers0 $mers1 $id\n"; 
 }
-#conceivably exits without consuming all input (if it's malformed.)
+#conceivably exits without consuming all input (eg. if malformed input.)
 
 sub id_32 {
     use Math::BigInt;
