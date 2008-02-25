@@ -2,17 +2,30 @@
 
 use strict;
 
+my $merfieldsize;
+
 while(<>)
 {
     if (!/^\#/)
     {
+	if (!defined $merfieldsize)
+	{
+	    if (/^([a-z ]+) \d/i)
+	    {
+		$merfieldsize = length $1;
+	    }
+	    else
+	    {
+		die "$0: Can't determine merfieldsize\n";
+	    }
+	}
 	if ($ENV{KNOB_SKIPDEGENERATES})
 	{
-	    next if !/^[acgt ]{35} /i;
+	    next if !/^[acgt ]{$merfieldsize} /i;
 	}
 	if ($ENV{KNOB_SKIPNOSNPS})
 	{
-	    next if /^\S+ \S+ \S+ \S+ \S+ [a-z ]{35} /;
+	    next if /^\S+ \S+ \S+ \S+ \S+ [a-z ]{$merfieldsize} /;
 	}
     }
     print;
