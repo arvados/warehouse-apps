@@ -39,7 +39,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   while (my $instream = $manifest->subdir_next)
   {
 
-    my $id_16 = $stream->name;
+    my $id_16 = $instream->name;
 
     print STDERR "reading $id_16\n"; 
 
