@@ -35,14 +35,6 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outstream->name ($name);
   $outstream->clear;
   $outstream->write_start ("reads.bin1"); 
-
-
-  my @reads; 
-
-  my $bit0_16 = $ENV{MR_INPUT} & 0x1;
-  my $bit0_16 = $ENV{MR_INPUT} & 0x2;
-  my $bit1a = $ENV{MR_INPUT} & 0x4;
-  my $bit1b = $ENV{MR_INPUT} & 0x8;
       
   while (my $instream = $manifest->subdir_next)
   {
@@ -61,14 +53,14 @@ elsif ($ENV{MR_LEVEL} == 1)
       else {
 	next; 
       }    
-      for ($x = 0; $x < length ($reads); $x+=12) {
+      for (my $i = 0; $i < length ($reads); $i+=12) {
 	my ($mers0_32, $mers1_32, $id_32) = 
-	    unpack "NNN", substr ($reads, $x, 12);  
+	    unpack "NNN", substr ($reads, $i, 12);  
 
-	my $mer0_16 = $mers0_32 >> 16;
-	my $mer1_16 = $mers0_32 & 0xFFFF; 
-	my $mer2_16 = $mers1_32 >> 16;
-	my $mer3_16 = $mers1_32 & 0xFFFF;
+	my $mer0 = $mers0_32 >> 16;
+	my $mer1 = $mers0_32 & 0xFFFF; 
+	my $mer2 = $mers1_32 >> 16;
+	my $mer3 = $mers1_32 & 0xFFFF;
 
 				      
 	if ( ((($mers0>>15)<<3)|
@@ -79,7 +71,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  my $id_16=0; # place-holder, set this earlier from instream name 
 	  
 	  $outstream->write_data (pack "SSSSSN", 
-	    $mer0_16, $mer1_16, $mer2_16, $mer3_16, $id_16, $id_32);  
+				  $mer0, $mer1, $mer2, $mer3, $id_16, $id_32);  
 	}
       }
     }
