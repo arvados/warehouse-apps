@@ -39,6 +39,8 @@ elsif ($ENV{MR_LEVEL} == 1)
   while (my $instream = $manifest->subdir_next)
   {
     
+    print STDERR "reading $instream->name\n"; 
+
     while (my ($pos, $size, $filename) = $instream->file_next)
     {
       last if !defined $pos; 
