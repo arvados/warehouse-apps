@@ -19,6 +19,6 @@ $analysis_mysql_database = "analysis";
 $analysis_mysql_username = "analysis";
 $analysis_mysql_password = "secXret";
 
-$svn_repos = "http://tomc/repos/tomc/polony-tools/trunk";
+$svn_repos = "http://dev.freelogy.org/svn/polony/polony-tools/trunk";
 
 ?>

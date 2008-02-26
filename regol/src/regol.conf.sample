@@ -18,6 +18,6 @@ $main::Warehouses = {
   },
 };
 
-$main::Repository = "http://tomc.oxf.freelogy.org/repos/tomc/polony-tools/trunk";
+$main::Repository = "http://dev.oxf.freelogy.org/svn/polony/polony-tools/trunk";
 
 1;

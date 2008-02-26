@@ -58,7 +58,7 @@ Download the Warehouse API source code:
 
  apt-get install -y subversion
  cd /usr/local/src
- svn co http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse
+ svn co http://dev.freelogy.org/svn/polony/polony-tools/trunk/warehouse
 
 Create /etc/warehouse/.
 

@@ -16,7 +16,7 @@ Give the warehouse user permission to use the mapreduce database:
 Extract current version:
 
  cd /tmp
- svn co http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse
+ svn co http://dev.freelogy.org/svn/polony/polony-tools/trunk/warehouse
  cd ./warehouse
 
 Create /etc/warehouse/warehouse-server.conf to suit:

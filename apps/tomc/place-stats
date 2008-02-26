@@ -47,7 +47,7 @@ for (@ARGV)
     }
 }
 
-my $svninfo = `svn info http://tomc.oxf.freelogy.org/repos/tomc/polony-tools`;
+my $svninfo = `svn info http://dev.oxf.freelogy.org/svn/polony/polony-tools`;
 $knob{revision} = $1
     if !exists $knob{revision} && $svninfo =~ /\nRevision: (\d+)\n/;
 

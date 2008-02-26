@@ -2,7 +2,7 @@ Install apache22, mysql5, php5.
 
 Install warehouse API.  Details:
 
- http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/warehouse/INSTALL
+ http://dev.freelogy.org/svn/polony/polony-tools/trunk/warehouse/INSTALL
 
 Install runit.
 
@@ -11,7 +11,7 @@ Install runit.
 Fetch the regol code.
 
  cd /usr/local/src
- svn co http://tomc.freelogy.org/repos/tomc/polony-tools/trunk/regol
+ svn co http://dev.freelogy.org/svn/polony/polony-tools/trunk/regol
 
 Install the regol runtime program.
 
