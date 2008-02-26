@@ -4,7 +4,7 @@
 ###MR_DESCRIPTION:convert 32bit triples into two ascii mers and a read_id
 ###MR_INPUT:manifest
 
-$ENV{"KNOB_FUNCTION"} = "mrs-awz-bin2-ascii";
+$ENV{"KNOB_FUNCTION"} = "mrs-awz-bin2ascii";
 $ENV{"KNOB_OUTPUTNAME"} = "reads.txt"; 
 
 exec "mr-awz-stream" or die "exec mr-awz-stream: $!";
