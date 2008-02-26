@@ -1,0 +1,22 @@
+#!/usr/bin/perl -w
+# -*- mode: perl; perl-indent-level: 4; -*-
+
+use strict;
+
+my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+ 
+
+while (read (STDIN, my $read_tuple, 14)) {
+     
+    my ($mer0, $mer1, $mer2, $mer3, $id_16, $id_32) = 
+	unpack "SSSSSN", $read_tuple; 
+
+    for (my $j = 14 ; $j >= 0; $j-=2) { 
+	$mer0 .= $numeric2_bp[($mer0>>$j)&3];
+	$mer1 .= $numeric2_bp[($mer1>>$j)&3];
+	$mer2 .= $numeric2_bp[($mer2>>$j)&3];
+	$mer3 .= $numeric2_bp[($mer3>>$j)&3];
+    }
+    print "$mer0 $mer1 $mer2 $mer3 $id_16 $id_32\n"; 
+}
+#conceivably exits without consuming all input (eg. if malformed input.)
