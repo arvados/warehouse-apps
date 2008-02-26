@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:visit all subdirectories and partition reads into "bins" by the first bit of each mer.   
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey; 
+  for(0..15) 
+  { 
+    print STDERR "+++mrjobstep 1 $_+++\n"; 
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+	
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  my $name = "./".$ENV{MR_INPUT}; 
+  $outstream->name ($name);
+  $outstream->clear;
+  $outstream->write_start ("reads.bin1"); 
+      
+  while (my $instream = $manifest->subdir_next)
+  {
+
+    my $id_16 = $instream->name;
+    $id_16 =~ s/.\/([0-9]*)/$1/;
+
+    print STDERR "reading $id_16\n"; 
+
+    while (my ($pos, $size, $filename) = $instream->file_next)
+    {
+      last if !defined $pos; 
+      $instream->seek ($pos); 
+      my $reads;
+      if ($filename =~ m/\.bin/) {
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $reads .= $$dataref; 
+	}
+      }
+      else {
+	next; 
+      }    
+      for (my $i = 0; $i < length ($reads); $i+=12) {
+	my ($mers0_32, $mers1_32, $id_32) = 
+	    unpack "NNN", substr ($reads, $i, 12);  
+
+	my $mer0 = $mers0_32 >> 16;
+	my $mer1 = $mers0_32 & 0xFFFF; 
+	my $mer2 = $mers1_32 >> 16;
+	my $mer3 = $mers1_32 & 0xFFFF;
+
+				      
+	if ( ((($mer0>>15)<<3)|
+	      (($mer1>>15)<<2)|
+	      (($mer2>>15)<<1)|
+	       ($mer3>>15)) == $ENV{MR_INPUT}) {	  
+	  $outstream->write_data (pack "SSSSSN", 
+				  $mer0, $mer1, $mer2, $mer3, $id_16, $id_32);  
+	}
+      }
+    }
+  }
+  $outstream->write_finish; 
+
+  my $fragkey = $whc->store_block ($outstream->as_string)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout ".$fragkey."+++\n";
+  print STDERR $whc->iostats;
+ 
+  exit 0;  
+}

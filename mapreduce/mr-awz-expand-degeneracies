@@ -1,31 +1,10 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:gunzip all subdirs, expand reads, encode in 64bits + 64bit id 
+###MR_DESCRIPTION:gunzip all subdirs, expand reads, encode in 32bit triples 
 ###MR_INPUT:manifest
 
-use strict; 
-use Warehouse;
-use Warehouse::Manifest;
-use Warehouse::Stream;
-use Safepipe;
+$ENV{"KNOB_FUNCTION"} = "awz-expand-degeneracies";
+$ENV{"KNOB_OUTPUTNAME"} = "reads.bin"; 
 
-my $manifestkey = $ENV{MR_INPUT0};
-
-if ($ENV{MR_LEVEL} == 0)
-{
-  $ENV{MR_INPUT} = $manifestkey;
-  do "mrtask-queuesubdirs"; 
-}
-
-elsif ($ENV{MR_LEVEL} == 1)
-{
-  my $wantsubdir = $ENV{MR_INPUT};
-  Safepipe::readfrom ("main::S",
-		      "mrs-fetch -h '$manifestkey' '$wantsubdir'",
-		      "mrs-awz-expand-degeneracies",
-		      "mrs-store $wantsubdir reads.bin",
-		      "mrs-output");
-  close "S" or die "close S: $!";
-  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
-}
+exec "mr-awz-stream" or die "exec mr-awz-stream: $!";
