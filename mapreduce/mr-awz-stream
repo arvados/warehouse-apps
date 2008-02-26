@@ -3,8 +3,8 @@
 
 ###MR_DESCRIPTION:stream all subdirs, apply mrs-* function, store 
 ###MR_INPUT:manifest
-###KNOBS_FUNCTION:mrs-awz-expand-degeneracies
-###KNOBS_OUTPUTNAME:reads.bin
+###MR_KNOBS:FUNCTION=mrs-awz-expand-degeneracies
+###MR_KNOBS:OUTPUTNAME=reads.bin
 
 use strict; 
 use Warehouse;
@@ -25,7 +25,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $wantsubdir = $ENV{MR_INPUT};
   Safepipe::readfrom ("main::S",
 		      "mrs-fetch -h '$manifestkey' '$wantsubdir'",
-		      "$ENV{KNOB_MRS}",
+		      "$ENV{KNOB_FUNCTION}",
 		      "mrs-store $wantsubdir $ENV{KNOB_OUTPUTNAME}",
 		      "mrs-output");
   close "S" or die "close S: $!";
