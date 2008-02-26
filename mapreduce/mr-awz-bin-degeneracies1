@@ -63,10 +63,10 @@ elsif ($ENV{MR_LEVEL} == 1)
 	my $mer3 = $mers1_32 & 0xFFFF;
 
 				      
-	if ( ((($mers0>>15)<<3)|
-	      (($mers1>>15)<<2)|
-	      (($mers2>>15)<<1)|
-	       ($mers3>>15)) == $ENV{MR_INPUT}) {
+	if ( ((($mer0>>15)<<3)|
+	      (($mer1>>15)<<2)|
+	      (($mer2>>15)<<1)|
+	       ($mer3>>15)) == $ENV{MR_INPUT}) {
 
 	  my $id_16=0; # place-holder, set this earlier from instream name 
 	  
