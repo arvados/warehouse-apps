@@ -4,7 +4,7 @@
 ###MR_DESCRIPTION:gunzip all subdirs, expand reads, encode in 32bit triples 
 ###MR_INPUT:manifest
 
-$ENV{"KNOB_FUNCTION"} = "awz-expand-degeneracies";
+$ENV{"KNOB_FUNCTION"} = "mrs-awz-expand-degeneracies";
 $ENV{"KNOB_OUTPUTNAME"} = "reads.bin"; 
 
 exec "mr-awz-stream" or die "exec mr-awz-stream: $!";
