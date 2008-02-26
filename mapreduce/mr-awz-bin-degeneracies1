@@ -38,8 +38,10 @@ elsif ($ENV{MR_LEVEL} == 1)
       
   while (my $instream = $manifest->subdir_next)
   {
-    
-    print STDERR "reading $instream->name\n"; 
+
+    my $id_16 = $stream->name;
+
+    print STDERR "reading $id_16\n"; 
 
     while (my ($pos, $size, $filename) = $instream->file_next)
     {
@@ -68,10 +70,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	if ( ((($mer0>>15)<<3)|
 	      (($mer1>>15)<<2)|
 	      (($mer2>>15)<<1)|
-	       ($mer3>>15)) == $ENV{MR_INPUT}) {
-
-	  my $id_16=0; # place-holder, set this earlier from instream name 
-	  
+	       ($mer3>>15)) == $ENV{MR_INPUT}) {	  
 	  $outstream->write_data (pack "SSSSSN", 
 				  $mer0, $mer1, $mer2, $mer3, $id_16, $id_32);  
 	}
