@@ -67,7 +67,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
       for (my $i = 0; $i < @reads; $i+=3) {
 				      
-	if ( ($reads[$i]>>24) == $prefix0 && ($reads[$i+1]>>24) == $prefix1) {	  
+	if ( ($reads[$i]>>28) == $prefix0 && ($reads[$i+1]>>28) == $prefix1) {	  
 	  $outstream->write_data (pack "SSSSSN", 
 				  $reads[$i] >>16, 
 				  $reads[$i] & 0xFFFF, 
