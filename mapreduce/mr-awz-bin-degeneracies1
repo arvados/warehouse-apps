@@ -32,8 +32,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	
   my $outstream = new Warehouse::Stream (whc => $whc);
   my $name = "./".$ENV{MR_INPUT}; 
-  my $prefix0 = $ENV{MR_INPUT} >> 4;
-  my $prefix1 = $ENV{MR_INPUT} & 0xF; 
+  my $prefix = $ENV{MR_INPUT};
 
   $outstream->name ($name);
   $outstream->clear;
@@ -67,7 +66,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
       for (my $i = 0; $i < @reads; $i+=3) {
 				      
-	if ( ($reads[$i]>>28) == $prefix0 && ($reads[$i+1]>>28) == $prefix1) {	  
+	if ( ($reads[$i]>>24) == $prefix ) {	  
 	  $outstream->write_data (pack "SSSSSN", 
 				  $reads[$i] >>16, 
 				  $reads[$i] & 0xFFFF, 
@@ -80,7 +79,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       }
     }
   }
-  print STDERR "$prefix0 $prefix1 $count\n"; 
+  print STDERR "$prefix $count\n"; 
   $outstream->write_finish; 
 
   my $fragkey = $whc->store_block ($outstream->as_string)
