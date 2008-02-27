@@ -15,7 +15,7 @@ my $manifestkey = $ENV{MR_INPUT0};
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey; 
-  for(0..63) 
+  for(0..255) 
   { 
     print STDERR "+++mrjobstep 1 $_+++\n"; 
   }
@@ -32,7 +32,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	
   my $outstream = new Warehouse::Stream (whc => $whc);
   my $name = "./".$ENV{MR_INPUT}; 
-  my $prefix = $ENV{MR_INPUT}; 
+  my $prefix0 = $ENV{MR_INPUT} >> 4;
+  my $prefix1 = $ENV{MR_INPUT} & 0xF; 
 
   $outstream->name ($name);
   $outstream->clear;
@@ -66,7 +67,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 
       for (my $i = 0; $i < @reads; $i+=3) {
 				      
-	if ( ($reads[$i]>>26) == $prefix) {	  
+	if ( ($reads[$i]>>24) == $prefix0 && ($reads[$i+1]>>24) == $prefix1) {	  
 	  $outstream->write_data (pack "SSSSSN", 
 				  $reads[$i] >>16, 
 				  $reads[$i] & 0xFFFF, 
