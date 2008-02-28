@@ -31,6 +31,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   if ($wantsubdir =~ m/hap|rand/) {
     #this clause should be controlled by a knob 
     print STDERR "ignoring $wantsubdir\n"; 
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
     exit 0; 
   }
   
