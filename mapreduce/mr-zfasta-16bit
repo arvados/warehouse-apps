@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:visit all subdirectories and expand .fa into 8mers per base (gunzip first for .fa.gz)    
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+
+my %bp_numeric2 = (
+    'a' => 0, 
+    'c' => 1,
+    'g' => 2,
+    't' => 3
+    ); 
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs"; 
+}
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    if ($instream->name eq $wantsubdir)
+    {
+      my $outstream = new Warehouse::Stream (whc => $whc);
+      $outstream->name ($instream->name);
+      $outstream->clear;
+      $outstream->write_start ("fasta.bin"); 
+
+      while (my ($pos, $size, $filename) = $instream->file_next)
+      {
+	last if !defined $pos; 
+	$instream->seek ($pos); 
+	my $reference; #bytes of (decompressed) file (if correct extension)
+     	if ($filename =~ s/\.fa\.g?z$/\.fa/i) 
+	{
+	  my $zblob = ""; 
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $zblob .= $$dataref; 
+	  }
+	  gunzip \$zblob => \$inblob or die $GunzipError;
+	}
+	elsif ($filename =~ m/\.fa$/i) 
+	{
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $reference .= $$dataref; 
+	  }
+	}
+	else 
+	{
+	  next; 
+	}
+	$reference =~ s/(^>.*)\n//;
+	print STDERR "found FASTA header: *** $1 *** in $name/$filename\n";
+	
+	$reference =~ s/\n//g;
+	$reference = lc ($reference); 
+	$reference =~ s/([acgt]{1})([^acgt]+)/$1 x (1 + length($2))/ge;
+	$reference =~ s/^([^acgt]+)([acgt]{1})/$2 x (1 + length($1))/e;
+
+	my $mer = 0; 
+	for ($i = 0; $i < 8; $i++) {
+	  $mer = $mer  << 2 | $bp_numeric2{substr ($reference, $i, 1)};
+	}
+	for ($i = 0; $i < (length ($reference)-7); $i++ ) {
+	  $outstream->write_data (pack "S", $mer);	  
+	  $mer = (($mer << 2) & 0xFFFF) | 
+	      $bp_numeric2{substr ($reference, $i+8, 1)};
+	}
+      }
+      $outstream->write_finish; 
+     
+      my $fragkey = $whc->store_block ($outstream->as_string)
+	  or die "store_block failed: ".$whc->errstr;
+      print STDERR "+++mrout ".$fragkey."+++\n";
+      print STDERR $whc->iostats;
+      exit 0;
+    }
+  }
+  die "Subdir not found: $wantsubdir";
+}
