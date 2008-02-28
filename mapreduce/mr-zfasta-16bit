@@ -46,7 +46,12 @@ elsif ($ENV{MR_LEVEL} == 1)
 	last if !defined $pos; 
 	$instream->seek ($pos); 
 	my $reference; #bytes of (decompressed) file (if correct extension)
-     	if ($filename =~ s/\.fa\.g?z$/\.fa\.16bit/i) 
+     	if ($filename =~ m/hap|rand/) {
+	#this clause should be controlled by a knob 
+	print STDERR "ignoring $filename\n"; 
+	next; 
+	}
+	elsif ($filename =~ s/\.fa\.g?z$/\.fa\.16bit/i) 
 	{
 	  my $zblob = ""; 
 	  while (my $dataref = $instream->read_until ($pos + $size))
