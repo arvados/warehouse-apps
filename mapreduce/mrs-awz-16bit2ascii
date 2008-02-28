@@ -1,0 +1,21 @@
+#!/usr/bin/perl -w
+# -*- mode: perl; perl-indent-level: 4; -*-
+
+use strict;
+
+my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+ 
+my $id_ref = \&id_64;
+$id_ref = \&id_32 if ( 2**(32-$ENV{KNOB_SUFFIXBITS})  < $ENV{MR_ID});
+
+while (read (STDIN, my $mer_data, 2)) {
+     
+    my ($mer) = unpack "S", $mer_data; 
+
+    my $mer_ascii; 
+    for (my $j = 14 ; $j >= 0; $j-=2) { 
+	$mer_ascii .= $numeric2_bp[($mer>>$j)&3];
+    }
+    print "$mer_ascii\n"; 
+}
+#conceivably exits without consuming all input (eg. if malformed input.)
