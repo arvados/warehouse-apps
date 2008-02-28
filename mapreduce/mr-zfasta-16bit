@@ -40,14 +40,13 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $outstream = new Warehouse::Stream (whc => $whc);
       $outstream->name ($instream->name);
       $outstream->clear;
-      $outstream->write_start ("fasta.16bit.bin"); 
-
+   
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
 	last if !defined $pos; 
 	$instream->seek ($pos); 
 	my $reference; #bytes of (decompressed) file (if correct extension)
-     	if ($filename =~ s/\.fa\.g?z$/\.fa/i) 
+     	if ($filename =~ s/\.fa\.g?z$/\.fa\.16bit/i) 
 	{
 	  my $zblob = ""; 
 	  while (my $dataref = $instream->read_until ($pos + $size))
@@ -56,7 +55,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  }
 	  gunzip \$zblob => \$reference or die $GunzipError;
 	}
-	elsif ($filename =~ m/\.fa$/i) 
+	elsif ($filename =~ s/\.fa$/\.fa\.16bit/i) 
 	{
 	  while (my $dataref = $instream->read_until ($pos + $size))
 	  {
@@ -76,6 +75,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	$reference =~ s/([acgt]{1})([^acgt]+)/$1 x (1 + length($2))/ge;
 	$reference =~ s/^([^acgt]+)([acgt]{1})/$2 x (1 + length($1))/e;
 
+	$outstream->write_start ("$filenamefasta.16bit.bin"); 
+
 	my $mer = 0; 
 	for (my $i = 0; $i < 8; $i++) {
 	  $mer = $mer  << 2 | $bp_numeric2{substr ($reference, $i, 1)};
@@ -85,8 +86,9 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  $mer = (($mer << 2) & 0xFFFF) | 
 	      $bp_numeric2{substr ($reference, $i+8, 1)};
 	}
+
+	$outstream->write_finish;   
       }
-      $outstream->write_finish; 
      
       my $fragkey = $whc->store_block ($outstream->as_string)
 	  or die "store_block failed: ".$whc->errstr;
