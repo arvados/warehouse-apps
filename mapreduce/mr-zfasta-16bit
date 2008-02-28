@@ -40,7 +40,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       my $outstream = new Warehouse::Stream (whc => $whc);
       $outstream->name ($instream->name);
       $outstream->clear;
-      $outstream->write_start ("fasta.bin"); 
+      $outstream->write_start ("fasta.16bit.bin"); 
 
       while (my ($pos, $size, $filename) = $instream->file_next)
       {
@@ -68,7 +68,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  next; 
 	}
 	$reference =~ s/(^>.*)\n//;
-	print STDERR "found FASTA header: *** $1 *** in $name/$filename\n";
+	print STDERR 
+	    "found FASTA header: *** $1 *** in $wantsubdir/$filename\n";
 	
 	$reference =~ s/\n//g;
 	$reference = lc ($reference); 
