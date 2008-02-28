@@ -27,6 +27,13 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   my $wantsubdir = $ENV{MR_INPUT};
+
+  if ($wantsubdir =~ m/hap|rand/) {
+    #this clause should be controlled by a knob 
+    print STDERR "ignoring $wantsubdir\n"; 
+    exit 0; 
+  }
+  
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
   
@@ -46,10 +53,11 @@ elsif ($ENV{MR_LEVEL} == 1)
 	last if !defined $pos; 
 	$instream->seek ($pos); 
 	my $reference; #bytes of (decompressed) file (if correct extension)
-     	if ($filename =~ m/hap|rand/) {
-	#this clause should be controlled by a knob 
-	print STDERR "ignoring $filename\n"; 
-	next; 
+     	
+	if ($filename =~ m/hap|rand/) {
+	  #this clause should be controlled by a knob 
+	  print STDERR "ignoring $filename\n"; 
+	  next; 
 	}
 	elsif ($filename =~ s/\.fa\.g?z$/\.fa\.16bit/i) 
 	{
