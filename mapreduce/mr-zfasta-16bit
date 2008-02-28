@@ -75,7 +75,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	$reference =~ s/([acgt]{1})([^acgt]+)/$1 x (1 + length($2))/ge;
 	$reference =~ s/^([^acgt]+)([acgt]{1})/$2 x (1 + length($1))/e;
 
-	$outstream->write_start ("$filenamefasta.16bit.bin"); 
+	$outstream->write_start ($filename); 
 
 	my $mer = 0; 
 	for (my $i = 0; $i < 8; $i++) {
