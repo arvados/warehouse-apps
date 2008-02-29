@@ -82,8 +82,10 @@ begin (int argc, const char * argv[])
       { OPTS_ARG, "-M", "--mer1-col", 0, &mer_col_name[1] },
       { OPTS_ARG, 0, "--mer2-col", 0, &mer_col_name[2] },
       { OPTS_ARG, 0, "--mer3-col", 0, &mer_col_name[3] },
-      { OPTS_ARG, 0, "--mer3-col", 0, &mer_col_name[4] },
-      { OPTS_ARG, 0, "--mer3-col", 0, &mer_col_name[5] },
+      { OPTS_ARG, 0, "--mer4-col", 0, &mer_col_name[4] },
+      { OPTS_ARG, 0, "--mer5-col", 0, &mer_col_name[5] },
+      { OPTS_ARG, 0, "--mer6-col", 0, &mer_col_name[6] },
+      { OPTS_ARG, 0, "--mer7-col", 0, &mer_col_name[7] },
       { OPTS_ARG, "-n", "--n-mers", 0, &n_mers_spec_unused },
     };
   
