@@ -1,4 +1,4 @@
-/* snp-mers.c: 
+/* complement-mers.c: 
  *
  ****************************************************************
  * Copyright (C) 2006 Harvard University
