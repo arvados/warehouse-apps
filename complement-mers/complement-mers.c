@@ -87,6 +87,7 @@ begin (int argc, const char * argv[])
       { OPTS_ARG, 0, "--mer6-col", 0, &mer_col_name[6] },
       { OPTS_ARG, 0, "--mer7-col", 0, &mer_col_name[7] },
       { OPTS_ARG, "-n", "--n-mers", 0, &n_mers_spec_unused },
+      { OPTS_END, }
     };
   
   size_t infile;
