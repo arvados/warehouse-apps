@@ -43,10 +43,10 @@ while (read(STDIN, my $read_tuple, 14)) {
     $skip++; 
   }
 
-  if ($j % 1000000 == 0) {
-    print STDERR "count = $count skip = $skip\n"; 
+  if ($count == 40000000 ) {
+    while (<>) {}; 
+    last; 
   }
-  $j++; 
 }
 #conceivably exits without consuming all input (eg. if malformed input.)
 
