@@ -5,18 +5,6 @@
 
 use strict; 
 
-my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
-
-my %bp_numeric2 = (
-  'a' => 0, 
-  'c' => 1,
-  'g' => 2,
-  't' => 3
-    ); 
-
-my $big_vector = chr(0) x (2**$ENV{KNOB_SUFFIXBITS} * 7); 
-print STDERR "allocated ".length($big_vector)." bytes\n"; 
-
 my $bp = $ENV{MR_INPUT};
 my $prefixbits = $ENV{KNOB_PREFIXBITS}; 
 my $suffixbits = $ENV{KNOB_SUFFIXBITS};
@@ -26,55 +14,49 @@ my $overflow;
 
 print STDERR "$bp $prefixbits $suffixbits $suffixmask\n"; 
 
-while (read(STDIN, my $read_triple, 12)) {
+my @reads; 
+my $count = 0;
+my $skip = 0; 
+
+my $j = 0; 
+
+while (read(STDIN, my $read_tuple, 14)) {
   
-  my ($mers0_32, $mers1_32, $id_32) = unpack "NNN", $read_triple;
+  my ($mer0,$mer1,$mer2,$mer3,$id_16,$id_32 ) = unpack "SSSSSN", $read_tuple;
   
-  if ($mers0_32 >> $suffixbits == $bp) {
-    $count++;
+  my $index = (($mer0>>8) << 16 )| $mer1;
+
+  my @list = unpack "S*", $reads[$index];   
+
+  my $not_present = 1; 
+  for (my $i = 0 ; $i < @list; $i+=2) {
+    if ($list[$i] == $mer2 && $list[$i+1] == $mer3) {
+      $not_present = 0; 
+      last; 
+    }    
+  }
+  if ($not_present) {
+    $reads[$index] .= pack "SS", $mer2, $mer3; 
+    $count++; 
   }
   else {
-    $overflow++; 
+    $skip++; 
   }
-  #coincidence ($mers0_32, $mers1_32, revc($mers0_32), revc($mers1_32));
 
+  if ($j % 1000000 == 0) {
+    print STDERR "count = $count skip = $skip\n"; 
+  }
+  $j++; 
 }
-#print $big_vector; 
+#conceivably exits without consuming all input (eg. if malformed input.)
 
-print STDERR "counted $count with $overflow overflow\n"; 
+print STDERR "count = $count skip = $skip\n"; 
 
-#should fix! -- don't convert to ASCII and back!
-sub revc {
-  my ($read_numeric) = @_; 
-
-  my $bp; 
-  for (my $i = 30 ; $i >= 0; $i-=2) { 
-    $bp .= $numeric2_bp[($read_numeric>>$i)&3];
-  }
-  $bp =~ tr/acgtACGT/tgcaTGCA/;
-  my $bp_rc = reverse $bp; 
-
-  my $read_numeric_rc = 0;
-  while ($bp_rc =~ m/(.)/g) {
-    $read_numeric_rc = ($read_numeric_rc)<<2|$bp_numeric2{$1}; 
-  }
-  return $read_numeric_rc; 
+my %hash; 
+for (my $i = 0; $i < 2**24; $i++ ) {
+  $hash{length($reads[$i])}++; 
 }
-
-#do the work 
-sub coincidence {
-  my @reads = @_;
-  
-  foreach my $read (@reads) {
-    if ($read>>$suffixbits ==$bp) {
-      my $x = ord (substr ($big_vector, $read & $suffixmask, 1)); 
-      if ($x < 255) {
-	substr ($big_vector, $read & $suffixmask, 1) = chr($x+1); 
-	$count++; 
-      }
-      else {
-	$overflow++; 
-      }
-    } 
-  }
+while ( my ($k, $v) = each %hash ) {
+  $k /= 4;
+  print "$v $k\n";
 }
