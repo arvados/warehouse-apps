@@ -1,37 +1,10 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION: convert 32bit triples from mr-awz-expand-degeneracies 
+###MR_DESCRIPTION:read binary tuples (mers, read ids) and place against reference mers.
 ###MR_INPUT:manifest
-###MR_KNOBS:PREFIXBITS=2
-###MR_KNOBS:SUFFIXBITS=30
 
-use strict; 
-use Warehouse;
-use Warehouse::Manifest;
-use Warehouse::Stream;
-use Safepipe; 
+$ENV{"KNOB_FUNCTION"} = "mrs-awz-place";
+$ENV{"KNOB_OUTPUTNAME"} = "out.txt"; 
 
-my $manifestkey = $ENV{MR_INPUT0};
-
-if ($ENV{MR_LEVEL} == 0) {
-  $ENV{MR_INPUT} = $manifestkey; 
-  for(0..(2**$ENV{KNOB_PREFIXBITS})-1) 
-  { 
-    print STDERR "+++mrjobstep 1 $_+++\n"; 
-  }
-  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
-  exit 0;
-}
-elsif ($ENV{MR_LEVEL} == 1) {
-  my $step = $ENV{MR_INPUT};
-  Safepipe::readfrom ("main::S",
-		      "mrs-fetch -h '$manifestkey' '*'",
-		      "mrs-awz-place",
-		      "mrs-store ./$step coincidence.bin",
-		      "mrs-output");
-  close "S" or die "close S: $!";
-  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
-}
-
- 
+exec "mr-awz-stream" or die "exec mr-awz-stream: $!";
