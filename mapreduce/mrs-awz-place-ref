@@ -73,6 +73,8 @@ sub place_reads {
 					  key => $ref_key);
 
   $manifest->rewind; 
+
+  print STDERR "!!! opened reference manifest for input... !!!\n";  
   
   while (my $instream = $manifest->subdir_next) {
     while (my ($pos, $size, $filename) = $instream->file_next) {
