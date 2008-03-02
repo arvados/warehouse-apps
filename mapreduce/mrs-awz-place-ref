@@ -2,6 +2,13 @@
 # -*- mode: perl; perl-indent-level: 2; -*-
 
 use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+#knobs
+my $dump_N = $ENV{"KNOB_DUMP_READS"};
+my $ref_key = $ENV{"KNOB_REF"}; 
 
 my $index; 
 my $buf; 
@@ -18,15 +25,19 @@ if ($count*2 != read(STDIN, $buf, $count*2)) {
 #conceivably exits without consuming all input (eg. if malformed input.)
 print STDERR "count = $count\n"; 
 
-my $dump_N = $ENV{"KNOB_DUMP_READS"};
 
 if ($dump_N) {
   dump_reads($dump_N);
+}
+else {
+  place_reads (); 
+  
 }
 
 sub dump_reads {
   my ($dump_N) = @_; 
   my %hash; 
+
   for (my $i = 0; $i < 2**24; $i++ ) {
     my $start = $i ? vec($index, $i-1, 32) : 0;
     my $len = vec ($index, $i, 32) - $start; 
@@ -44,9 +55,32 @@ sub dump_reads {
       }
     }  
   } 
-  
+  print "\nFrequencies:\n";
   while ( my ($k, $v) = each %hash ) {  
     $k/=3;
     print "$v $k\n"; 
+  }
+}
+
+sub place_reads {
+  
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $ref_key);
+
+  $manifest->rewind; 
+  
+  while (my $instream = $manifest->subdir_next) {
+    while (my $pos, $size, $filename) = $instream->file_next {
+      last if !defined $pos; 
+      $instream->seek ($pos); 
+      my $reference; 
+      while (my $dataref = $instream->read_until ($pos+$size)) {
+	print length ($$dataref)." "; 
+      }
+      print "$filename\n"; 
+    }  
   }
 }
