@@ -63,6 +63,8 @@ sub dump_reads {
 }
 
 sub place_reads {
+
+  print STDERR "!!! starting place reads... !!!\n"; 
   
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
