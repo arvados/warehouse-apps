@@ -77,7 +77,7 @@ sub place_reads {
   print STDERR "!!! opened $ref_key for input... !!!\n";  
   
   while (my $instream = $manifest->subdir_next) {
-    print "Reading $instream->name\n";
+    print "Reading ".$instream->name."\n";
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
