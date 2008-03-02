@@ -85,4 +85,5 @@ sub place_reads {
       print "$filename\n"; 
     }  
   }
+  print STDERR $whc->iostats; 
 }
