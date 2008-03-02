@@ -18,14 +18,29 @@ if ($count*2 != read(STDIN, $buf, $count*2)) {
 #conceivably exits without consuming all input (eg. if malformed input.)
 print STDERR "count = $count\n"; 
 
-my %hash; 
-for (my $i = 0; $i < 2**24; $i++ ) {
-  my $start = $i ? vec($index, $i-1, 32) : 0;
-  my $len = vec ($index, $i, 32) - $start; 
-  $hash{$len}++;  
-} 
+#dump_reads();
 
-while ( my ($k, $v) = each %hash ) {  
-  $k/=3;
-  print "$v $k\n"; 
-} 
+
+sub dump_reads {
+  my %hash; 
+  for (my $i = 0; $i < 2**24; $i++ ) {
+    my $start = $i ? vec($index, $i-1, 32) : 0;
+    my $len = vec ($index, $i, 32) - $start; 
+    $hash{$len}++;
+    
+    if ($i % 1000 == 0) {
+      for (my $j = 0; $j < $len; $j+=3) {
+	print STDOUT
+	    vec($buf, $start+$j, 16)." ".
+	    vec($buf, $start+$j+1, 16)." ". 
+	    vec($buf, $start+$j+2, 16)." ";  
+      }
+      print STDOUT "*** $i\n";
+    }  
+  } 
+  
+  while ( my ($k, $v) = each %hash ) {  
+    $k/=3;
+    print "$v $k\n"; 
+  }
+}
