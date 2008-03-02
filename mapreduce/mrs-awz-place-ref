@@ -7,28 +7,32 @@ my $index;
 my $buf; 
 
 if (2**26 != read(STDIN, $index, 2**26)) {
-  die "failed to read index $_\n";
+  die "failed to read 2**26 byte index\n";
 }
 my $count = vec ($index, 2**24-1, 32);  
 
 if ($count*2 != read(STDIN, $buf, $count*2)) {
-  die "failed to read buffer $count\n"; 
+  die "failed to read $count reads\n"; 
 }
 
 #conceivably exits without consuming all input (eg. if malformed input.)
 print STDERR "count = $count\n"; 
 
-#dump_reads();
+my $dump_N = $ENV{"KNOB_DUMP_READS"};
 
+if ($dump_N) {
+  dump_reads($dump_N);
+}
 
 sub dump_reads {
+  my ($dump_N) = @_; 
   my %hash; 
   for (my $i = 0; $i < 2**24; $i++ ) {
     my $start = $i ? vec($index, $i-1, 32) : 0;
     my $len = vec ($index, $i, 32) - $start; 
     $hash{$len}++;
     
-    if ($i % 1000 == 0) {
+    if ($i % $dump_N == 0) {
       for (my $j = 0; $j < $len; $j+=3) {
 	print STDOUT
 	    vec($buf, $start+$j, 16)." ".
