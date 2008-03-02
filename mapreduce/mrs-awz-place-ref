@@ -87,4 +87,5 @@ sub place_reads {
       print STDERR "$filename\n"; 
     }  
   }
+  print STDERR "!!! read manifest, exiting... !!!\n"; 
 }
