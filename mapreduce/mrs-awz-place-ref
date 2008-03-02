@@ -8,7 +8,7 @@ use Warehouse::Stream;
 
 #knobs
 my $dump_N = $ENV{"KNOB_DUMP_READS"};
-my $ref_key = $ENV{"KNOB_REF"}; 
+my $ref_key = $ENV{"KNOB_REFERENCE"}; 
 
 my $index; 
 my $buf; 
@@ -74,7 +74,7 @@ sub place_reads {
 
   $manifest->rewind; 
 
-  print STDERR "!!! opened reference manifest for input... !!!\n";  
+  print STDERR "!!! opened $ref_key for input... !!!\n";  
   
   while (my $instream = $manifest->subdir_next) {
     print "Reading $instream->name\n";
