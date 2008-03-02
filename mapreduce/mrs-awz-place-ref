@@ -39,7 +39,9 @@ sub dump_reads {
 	    vec($buf, $start+$j+1, 16)." ". 
 	    vec($buf, $start+$j+2, 16)." ";  
       }
-      print STDOUT "*** $i\n";
+      if ($len) {
+	print STDOUT "*** $i\n";
+      }
     }  
   } 
   
