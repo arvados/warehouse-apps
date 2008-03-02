@@ -63,9 +63,7 @@ sub dump_reads {
 }
 
 sub place_reads {
-
-  print STDERR "!!! starting place reads... !!!\n"; 
-  
+ 
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
   
@@ -77,16 +75,14 @@ sub place_reads {
   print STDERR "!!! opened $ref_key for input... !!!\n";  
   
   while (my $instream = $manifest->subdir_next) {
-    print "Reading ".$instream->name."\n";
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
       my $reference; 
       while (my $dataref = $instream->read_until ($pos+$size)) {
-	print STDERR length ($$dataref)." "; 
+	print length ($$dataref)." "; 
       }
-      print STDERR "$filename\n"; 
+      print "$filename\n"; 
     }  
   }
-  print STDERR "!!! read manifest, exiting... !!!\n"; 
 }
