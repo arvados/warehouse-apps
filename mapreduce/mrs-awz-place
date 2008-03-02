@@ -52,7 +52,7 @@ my $pos = 0;
 for (my $i = 0; $i < 2**24; $i++ ) {
   my $len = length($reads[$i]);
   if ($len < 1024) {
-    $pos += $len*6/4; 
+    $pos += $len*3/4; 
   } 
   vec(my $index, 0, 32) = $pos; 
   print $index; 

@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+
+my $index; 
+my $buf; 
+
+if (2**26 != read(STDIN, $index, 2**26)) {
+  die "failed to read index $_\n";
+}
+my $count = vec ($index, 2**24-1, 32);  
+
+if ($count*2 != read(STDIN, $buf, $count*2)) {
+  die "failed to read buffer $count\n"; 
+}
+
+#conceivably exits without consuming all input (eg. if malformed input.)
+print STDERR "count = $count\n"; 
+
+my %hash; 
+for (my $i = 0; $i < 2**24; $i++ ) {
+  my $start = $i ? vec($index, $i-1, 32) : 0;
+  my $len = vec ($index, $i, 32) - $start; 
+  $hash{$len}++;  
+} 
+
+while ( my ($k, $v) = each %hash ) {  
+  $k/=3;
+  print "$v $k\n"; 
+} 
