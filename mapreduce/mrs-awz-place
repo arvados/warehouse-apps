@@ -7,6 +7,7 @@ my @reads;
 my $count = 0;
 my $skip = 0; 
 my $bad = 0; 
+my $badindex = 0; 
 
 while (read(STDIN, my $read_tuple, 14)) {
   
@@ -30,24 +31,51 @@ while (read(STDIN, my $read_tuple, 14)) {
   if ($not_present) {
     $reads[$index] .= pack "SS", $mer2, $mer3;     
     if (length ($reads[$index]) == 1024) {
-      print STDERR 
-        "badindex = $index count = $count skip = $skip bad = $bad\n";   
+      #print STDERR 
+      #  "badindex = $index count = $count skip = $skip bad = $bad\n";   
+      $badindex++; 
+      $count -= 255; 
+      $bad += 256; 
     }
-    $count++;     
+    else {
+      $count++;     
+    }
   }
   else {
     $skip++; 
   }
 }
 #conceivably exits without consuming all input (eg. if malformed input.)
+print STDERR "count = $count skip = $skip bad = $bad badindex = $badindex\n"; 
 
-print STDERR "count = $count skip = $skip bad = $bad\n"; 
-
-my %hash; 
+my $pos = 0; 
 for (my $i = 0; $i < 2**24; $i++ ) {
-  $hash{length($reads[$i])}++; 
+  my $len = length($reads[$i]);
+  if ($len < 1024) {
+    $pos += $len*6/4; 
+  } 
+  vec(my $index, 0, 32) = $pos; 
+  print $index; 
 }
-while ( my ($k, $v) = each %hash ) {
-  $k /= 4;
-  print "$v $k\n";
+ 
+my $recount = 0; 
+for (my $i = 0; $i < 2**24; $i++) {
+  my $len = length($reads[$i]);
+  if ($len == 1024) {
+    next; 
+  } 
+  my @list = unpack "S*", $reads[$i]; 
+  my $mers;
+  my $k = 0; 
+  for (my $j = 0 ; $j < @list; $j+=2) {
+    vec($mers, $k++, 16) = $list[$j];
+    vec($mers, $k++, 16) = $list[$j+1];
+    vec($mers, $k++, 16) = 0; 
+    $recount++; 
+  }
+  print $mers; 
+}
+if ($recount != $count) {
+  print STDERR "recount = $recount but should be $count\n"; 
+
 }
