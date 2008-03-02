@@ -73,7 +73,7 @@ sub place_reads {
   $manifest->rewind; 
   
   while (my $instream = $manifest->subdir_next) {
-    while (my $pos, $size, $filename) = $instream->file_next {
+    while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
       my $reference; 
