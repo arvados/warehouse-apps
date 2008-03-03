@@ -85,7 +85,7 @@ sub place_reads {
       $instream->seek ($pos); 
       my $reference; 
       while (my $dataref = $instream->read_until ($pos+$size)) {
-	print STDERR place_ref->($dataref)." ".length($$dataref)." "; 
+	print STDERR $place_ref->($dataref)." ".length($$dataref)." "; 
       } 
       print "$filename\n"; 
     }  
