@@ -88,7 +88,7 @@ sub place_reads {
 	print $place_ref->($dataref)." ".length($$dataref)." "; 
       } 
       print "$filename\n"; 
-      #exit 0; 
+      exit 0; 
     }  
   }
   print STDERR $whc->iostats; 
@@ -107,6 +107,11 @@ sub place0 {
   }
   $bp /= 2; 
 
+
+  @hash_mers; 
+  for (my $i = 750; $i < 1256; $i++) {
+    $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
+  }
   for (my $i = 0; $i < $bp-1400; $i++){
     my $mers01 = vec($$dataref, $i, 16); 
     
@@ -124,6 +129,10 @@ sub place0 {
       $stop = vec ($index, $suffixB, 32); 
       $count += ($stop - $start);
     }
+
+    delete ($hash_mers[vec($$dataref, $i+750, 16)]);
+    $hash_mers[vec($$dataref, $i+1256, 16)] = $i+1256; 
+
   }  
   return $count; 
 }
