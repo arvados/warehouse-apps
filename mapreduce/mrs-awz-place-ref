@@ -125,7 +125,12 @@ sub place0 {
       	  
       my $start = $suffixA ? vec($index, $suffixA-1, 32) : 0;
       my $stop = vec ($index, $suffixA, 32); 
-      $count += ($stop - $start);
+      my $N = $stop - $start; 
+      if ( N % 3) {
+	print STDERR "!!! expected triples; got $N !!!\n";
+	return 0;
+
+      }
 
       for (my $j = $start; $j <= $stop; $j+=3) {
 	my $mer2 = vec ($buf, $j, 16);  
