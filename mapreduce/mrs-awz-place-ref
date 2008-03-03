@@ -126,7 +126,7 @@ sub place0 {
       my $start = $suffixA ? vec($index, $suffixA-1, 32) : 0;
       my $stop = vec ($index, $suffixA, 32); 
       my $N = $stop - $start; 
-      if ( N % 3) {
+      if ( $N % 3) {
 	print STDERR "!!! expected triples; got $N !!!\n";
 	return 0;
 
