@@ -98,7 +98,7 @@ sub place0 {
   my ($dataref) = @_; 
 
   my $count; 
-  for ($i = 0; $i < length ($$dataref)-1400; $i+=2){
+  for (my $i = 0; $i < length ($$dataref)-1400; $i+=2){
     if ( vec($$dataref, $i+1, 8) == $prefix) {
       my $suffix = 
 	  vec($$dataref, $i, 8) <<16 | 
@@ -119,7 +119,7 @@ sub place1 {
   my ($dataref) = @_; 
  
   my $count; 
-  for ($i = 0; $i < length ($$dataref); $i+=2){
+  for (my $i = 0; $i < length ($$dataref); $i+=2){
     if ( vec($$dataref, $i+1, 16) == $prefix) {
 
     }	
