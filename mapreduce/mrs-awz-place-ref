@@ -139,7 +139,7 @@ sub place0 {
 	  my $mer1 = $suffixA & 0xFFFF;
 	  $count++; 
 	}
-	print "$i mer0 ".$i+9." mer1 $pos2 $mer2 $pos3 $mer3\n"; 
+	print "$i mer0 ".($i+9)." mer1 $pos2 $mer2 $pos3 $mer3\n"; 
 	
 	#$start = $suffixB ? vec($index, $suffixB-1, 32) : 0;
 	#$stop = vec ($index, $suffixB, 32); 
