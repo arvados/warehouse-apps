@@ -99,7 +99,9 @@ sub place0 {
 
   my $count; 
   for ($i = 0; $i < length ($$dataref); $i+=2){
-	
+    if ( vec($$dataref, $i+1, 8) == $prefix) {
+      $count++;
+    }
   }  
   return $count; 
 }
@@ -110,7 +112,9 @@ sub place1 {
  
   my $count; 
   for ($i = 0; $i < length ($$dataref); $i+=2){
-	
+    if ( vec($$dataref, $i+1, 16) == $prefix) {
+
+    }	
   }
   return $count; 
 }
