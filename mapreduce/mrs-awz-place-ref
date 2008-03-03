@@ -126,28 +126,26 @@ sub place0 {
       my $start = $suffixA ? vec($index, $suffixA-1, 32) : 0;
       my $stop = vec ($index, $suffixA, 32); 
       my $N = $stop - $start; 
-      if ( $N % 3) {
+      if ($N % 3) {
 	print STDERR "!!! expected triples; got $N !!!\n";
 	return 0;
-
       }
-
-#      for (my $j = $start; $j <= $stop; $j+=3) {
-#	my $mer2 = vec ($buf, $j, 16);  
-#	my $mer3 = vec ($buf, $j+1, 16);
-#	my $pos2 = $hash_mers[$mer2];
-#	my $pos3 = $hash_mers[$mer3]; 
-
-#	if (defined ($pos2) && defined ($pos3)) {
-#	  my $mer1 = $suffixA & 0xFFFF;
-#	  count++; 
-#	}
+      for (my $j = $start; $j <= $stop; $j+=3) {
+	my $mer2 = vec ($buf, $j, 16);  
+	my $mer3 = vec ($buf, $j+1, 16);
+	my $pos2 = $hash_mers[$mer2];
+	my $pos3 = $hash_mers[$mer3]; 
+	
+	if ($pos2 && $pos3) {
+	  my $mer1 = $suffixA & 0xFFFF;
+	  count++; 
+	}
 	#print "$i mer0 ".$i+9." mer1 $pos2 $mer2 $pos3 $mer3\n"; 
-	        
-      #$start = $suffixB ? vec($index, $suffixB-1, 32) : 0;
-      #$stop = vec ($index, $suffixB, 32); 
-      #$count += ($stop - $start);
-
+	
+	#$start = $suffixB ? vec($index, $suffixB-1, 32) : 0;
+	#$stop = vec ($index, $suffixB, 32); 
+	#$count += ($stop - $start);	
+      }
     }
     $hash_mers[vec($$dataref, $i+750, 16)] = 0; 
     $hash_mers[vec($$dataref, $i+1256, 16)] = $i+1256;
