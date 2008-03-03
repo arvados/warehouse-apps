@@ -108,7 +108,7 @@ sub place0 {
   $bp /= 2; 
 
 
-  @hash_mers; 
+  my @hash_mers; 
   for (my $i = 750; $i < 1256; $i++) {
     $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
   }
