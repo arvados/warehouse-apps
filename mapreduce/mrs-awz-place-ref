@@ -88,12 +88,12 @@ sub place_reads {
       while (my $dataref = $instream->read_until ($pos+$size)) {
 	print STDERR $place_ref->($dataref)." "
 	    .length($$dataref)." $filename\n";
-	print STDERR whc->iostats; 
+	print STDERR $whc->iostats; 
 	return;
       } 
     }  
   }
-  print STDERR whc->iostats; 
+  print STDERR $whc->iostats; 
 }
 
 sub place0 {
