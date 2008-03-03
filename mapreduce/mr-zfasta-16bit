@@ -96,7 +96,8 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  $mer = $mer  << 2 | $bp_numeric2{substr ($reference, $i, 1)};
 	}
 	for (my $i = 0; $i < (length ($reference)-7); $i++ ) {
-	  $outstream->write_data (pack "S", $mer);	  
+	  vec (my $buf, 0, 16) = $mer;  
+	  $outstream->write_data ($buf);	  
 	  $mer = (($mer << 2) & 0xFFFF) | 
 	      $bp_numeric2{substr ($reference, $i+8, 1)};
 	}

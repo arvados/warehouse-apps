@@ -6,9 +6,14 @@ use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
 
-#knobs
+ 
 my $dump_N = $ENV{"KNOB_DUMP_READS"};
 my $ref_key = $ENV{"KNOB_REFERENCE"}; 
+my $prefix = $ENV{"MR_ID"}-1; 
+my $place_ref = \&place0;
+$place_ref = \&place1 if $ENV{"KNOB_VARIANT"};
+
+print STDERR "PREFIX *** $prefix ***\n"; 
 
 my $index; 
 my $buf; 
@@ -80,10 +85,32 @@ sub place_reads {
       $instream->seek ($pos); 
       my $reference; 
       while (my $dataref = $instream->read_until ($pos+$size)) {
-	print length ($$dataref)." "; 
-      }
+	print STDERR place_ref->($data_ref)." ".length($$dataref)." "; 
+      } 
       print "$filename\n"; 
     }  
   }
   print STDERR $whc->iostats; 
+}
+
+sub place0 {
+
+  my ($dataref) = @_; 
+
+  my $count; 
+  for ($i = 0; $i < length ($$dataref); $i+=2){
+	
+  }  
+  return $count; 
+}
+
+sub place1 {
+
+  my ($dataref) = @_; 
+ 
+  my $count; 
+  for ($i = 0; $i < length ($$dataref); $i+=2){
+	
+  }
+  return $count; 
 }
