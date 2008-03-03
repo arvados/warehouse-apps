@@ -98,9 +98,17 @@ sub place0 {
   my ($dataref) = @_; 
 
   my $count; 
-  for ($i = 0; $i < length ($$dataref); $i+=2){
+  for ($i = 0; $i < length ($$dataref)-1400; $i+=2){
     if ( vec($$dataref, $i+1, 8) == $prefix) {
-      $count++;
+      my $suffix = 
+	  vec($$dataref, $i, 8) <<16 | 
+	  vec($$dataref, $i+10, 8) << 8 | 
+	  vec($$dataref, $i+9, 8); 
+
+      my $start = $suffix ? vec($index, $suffix-1, 32) : 0;
+      my $stop = vec ($index, $suffix, 32); 
+
+      $count += ($stop - $start);
     }
   }  
   return $count; 
