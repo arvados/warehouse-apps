@@ -38,6 +38,8 @@ else {
   place_reads (); 
   
 }
+print STDERR whc->iostats; 
+
 
 sub dump_reads {
   my ($dump_N) = @_; 
@@ -85,15 +87,12 @@ sub place_reads {
       $instream->seek ($pos); 
       my $reference; 
       while (my $dataref = $instream->read_until ($pos+$size)) {
-	print $place_ref->($dataref)." ".length($$dataref)." "; 
-	print "$filename\n"; 
-	exit 0;
+	print STDERR $place_ref->($dataref)." "
+	    .length($$dataref)." $filename\n";
+	return;
       } 
-      print "$filename\n"; 
-      #exit 0; 
     }  
   }
-  print STDERR $whc->iostats; 
 }
 
 sub place0 {
@@ -140,7 +139,7 @@ sub place0 {
 	  my $mer1 = $suffixA & 0xFFFF;
 	  $count++; 
 	}
-	#print "$i mer0 ".$i+9." mer1 $pos2 $mer2 $pos3 $mer3\n"; 
+	print "$i mer0 ".$i+9." mer1 $pos2 $mer2 $pos3 $mer3\n"; 
 	
 	#$start = $suffixB ? vec($index, $suffixB-1, 32) : 0;
 	#$stop = vec ($index, $suffixB, 32); 
