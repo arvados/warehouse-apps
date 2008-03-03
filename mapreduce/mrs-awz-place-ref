@@ -136,6 +136,7 @@ sub place1 {
   for (my $i = 0; $i < length ($$dataref); $i+=2){
     if ( vec($$dataref, $i+1, 16) == $prefix) {
 
+
     }	
   }
   return $count; 
