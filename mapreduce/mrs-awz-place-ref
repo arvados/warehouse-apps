@@ -86,9 +86,11 @@ sub place_reads {
       my $reference; 
       while (my $dataref = $instream->read_until ($pos+$size)) {
 	print $place_ref->($dataref)." ".length($$dataref)." "; 
+	print "$filename\n"; 
+	exit 0;
       } 
       print "$filename\n"; 
-      exit 0; 
+      #exit 0; 
     }  
   }
   print STDERR $whc->iostats; 
@@ -102,7 +104,7 @@ sub place0 {
   
   my $bp = length ($$dataref); 
   if ($bp % 2) {
-    print STDERR 
+    print STDERR "!!! expected even number of bytes; got $bp !!!\n";
     return 0;
   }
   $bp /= 2; 
@@ -113,11 +115,11 @@ sub place0 {
     $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
   }
   for (my $i = 0; $i < $bp-1400; $i++){
-    my $mers01 = vec($$dataref, $i, 16); 
+    my $mer0 = vec($$dataref, $i, 16); 
     
-    if ( $mers01>>8 == $prefix) {
+    if ( $mer0>>8 == $prefix) {
       
-      my $suffixA = ($mers01 & 0xFF)<< 16; 
+      my $suffixA = ($mer0 & 0xFF)<< 16; 
       my $suffixB = $suffixA | vec($$dataref, $i+10, 16); 
       $suffixA |= vec($$dataref, $i+9, 16); 
       	  
@@ -125,14 +127,25 @@ sub place0 {
       my $stop = vec ($index, $suffixA, 32); 
       $count += ($stop - $start);
 
-      $start = $suffixB ? vec($index, $suffixB-1, 32) : 0;
-      $stop = vec ($index, $suffixB, 32); 
-      $count += ($stop - $start);
+      for (my $j = $start; $j <= $stop; $j+=3) {
+	my $mer2 = vec ($buf, $j, 16);  
+	my $mer3 = vec ($buf, $j+1, 16);
+	my $pos2 = $hash_mers[$mer2];
+	my $pos3 = $hash_mers[$mer3]; 
+
+	if (defined ($pos2) && defined ($pos3)) {
+	  my $mer1 = $suffixA & 0xFFFF;
+	  count++; 
+	}
+	#print "$i mer0 ".$i+9." mer1 $pos2 $mer2 $pos3 $mer3\n"; 
+		
+      } 
+      #$start = $suffixB ? vec($index, $suffixB-1, 32) : 0;
+      #$stop = vec ($index, $suffixB, 32); 
+      #$count += ($stop - $start);
     }
-
     delete ($hash_mers[vec($$dataref, $i+750, 16)]);
-    $hash_mers[vec($$dataref, $i+1256, 16)] = $i+1256; 
-
+    $hash_mers[vec($$dataref, $i+1256, 16)] = $i+1256;
   }  
   return $count; 
 }
