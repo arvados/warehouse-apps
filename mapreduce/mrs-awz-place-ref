@@ -8,6 +8,7 @@ use Warehouse::Stream;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
+my $max_blocks = $ENV{"KNOB_MAX_BLOCKS"};
 my $dump_N = $ENV{"KNOB_DUMP_READS"};
 my $ref_key = $ENV{"KNOB_REFERENCE"}; 
 my $prefix = $ENV{"MR_ID"}-1; 
@@ -100,16 +101,14 @@ sub place_reads {
 
   print STDERR "!!! opened $ref_key for input... !!!\n";  
   
-  while (my $instream = $manifest->subdir_next) {
+  while (my $instream = $manifest->subdir_next ) {
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      my $reference; 
-      while (my $dataref = $instream->read_until ($pos+$size)) {
+      while (my $dataref = $instream->read_until ($pos+$size) && $max_blocks) {
 	print STDERR $place_ref->($dataref)." "
 	    .length($$dataref)." $filename\n";
-	#print STDERR $whc->iostats; 
-	#return;
+	$max_blocks--; 
       } 
     }  
   }
@@ -140,12 +139,11 @@ sub place0 {
 
       if ( $mer0>>8 == $prefix) {
         
-	my $suffix = (($mer0 & 0xFF)<< 16) | vec($$dataref, $i+$wobble01, 16); 
-	
-	my $mer1 = $suffix & 0xFFFF;	  
+	my $mer1 = vec($$dataref, $i+$wobble01, 16);
+	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
+		  
 	my $start = $suffix ? vec($index, $suffix-1, 32) : 0;
 	my $stop = vec ($index, $suffix, 32); 
-	my $N = $stop - $start; 
 
 	for (my $j = $start; $j <= $stop; $j+=3) {
 	  my $mer2 = vec ($buf, $j, 16);  
@@ -164,7 +162,7 @@ sub place0 {
 	    
 #	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
 	   
-	    if (vec ($buf, $j+2, 16 < 65535)) {
+	    if (vec ($buf, $j+2, 16) < 65535) {
 	      vec($buf, $j+2, 16)++; 
 	    }
 	    $count++; 
