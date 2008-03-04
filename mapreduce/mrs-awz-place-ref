@@ -157,8 +157,6 @@ sub place0 {
   return $count; 
 }
 
-sub 
-
 
 sub place1 {
 
