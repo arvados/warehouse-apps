@@ -138,7 +138,9 @@ sub place0 {
 	
 	if ($pos2 && $pos3) {
 	  my $mer1 = $suffixA & 0xFFFF;
-	  print "$i $mer0 ".($i+9)." $mer1 $pos2 $mer2 $pos3 $mer3\n"; 
+
+	  my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
+	  print "$i ".($i+9)." $pos2 $pos3\n"; 
 	  $count++; 
 	}
 	
@@ -165,4 +167,21 @@ sub place1 {
     }	
   }
   return $count; 
+}
+
+
+my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+ 
+sub convert_mers {
+
+  my @mers = @_; 
+
+  $read = ""; 
+  
+  foreach my $mer (@mers) {  
+    for (my $j = 14 ; $j >= 0; $j-=2) { 
+      $read .= $numeric2_bp[($mer>>$j)&3];
+    } 
+  }
+  return $read; 
 }
