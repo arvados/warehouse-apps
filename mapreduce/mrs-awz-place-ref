@@ -117,7 +117,7 @@ sub place0 {
   for (my $i = 0; $i < $bp-1400; $i++){
     my $mer0 = vec($$dataref, $i, 16); 
     
-    foreach $gap (9..10) {
+    foreach my $gap (9..10) {
 
       if ( $mer0>>8 == $prefix) {
         
