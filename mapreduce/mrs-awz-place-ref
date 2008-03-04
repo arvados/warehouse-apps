@@ -140,7 +140,7 @@ sub place0 {
 	  my $mer1 = $suffixA & 0xFFFF;
 
 	  my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
-	  print "$i ".($i+9)." $pos2 $pos3\n"; 
+	  print "$read $i ".($i+9)." $pos2 $pos3\n"; 
 	  $count++; 
 	}
 	
