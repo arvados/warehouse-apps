@@ -176,7 +176,7 @@ sub convert_mers {
 
   my @mers = @_; 
 
-  $read = ""; 
+  my $read = ""; 
   
   foreach my $mer (@mers) {  
     for (my $j = 14 ; $j >= 0; $j-=2) { 
