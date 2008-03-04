@@ -141,7 +141,15 @@ sub place0 {
 	  my $mer1 = $suffixA & 0xFFFF;
 
 	  my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
-	  print "$read $i ".($i+9)." $pos2 $pos3\n"; 
+
+	  my $ref = convert_mers (vec($$dataref, $i, 16),
+				  vec($$dataref, $i+9, 16),
+				  vec($$dataref, $pos2, 16), 
+				  vec($$dataref, $pos3, 16)); 
+	    
+	  print "$read $i ".($i+9)." $pos2 $pos3 \n";
+	  print "$ref\n";
+ 
 	  $count++; 
 	}
 	
