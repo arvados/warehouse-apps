@@ -8,10 +8,10 @@ use Warehouse::Stream;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
-my $max_blocks = 1000000; 
-if (defined ($ENV{"KNOB_MAX_BLOCKS"})) {
-  $max_blocks = $ENV{"KNOB_MAX_BLOCKS"};
-} 
+#my $max_blocks = 1000000; 
+#if (defined ($ENV{"KNOB_MAX_BLOCKS"})) {
+#  $max_blocks = $ENV{"KNOB_MAX_BLOCKS"};
+#} 
 my $dump_N = $ENV{"KNOB_DUMP_READS"};
 my $ref_key = $ENV{"KNOB_REFERENCE"}; 
 my $prefix = $ENV{"MR_ID"}-1; 
@@ -108,7 +108,7 @@ sub place_reads {
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      while (my $dataref = $instream->read_until ($pos+$size) && $max_blocks) {
+      while (my $dataref = $instream->read_until ($pos+$size)) {
 	print STDERR $place_ref->($dataref)." "
 	    .length($$dataref)." $filename\n";
 	$max_blocks--; 
