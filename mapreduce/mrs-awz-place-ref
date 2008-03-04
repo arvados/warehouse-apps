@@ -89,8 +89,8 @@ sub place_reads {
       while (my $dataref = $instream->read_until ($pos+$size)) {
 	print STDERR $place_ref->($dataref)." "
 	    .length($$dataref)." $filename\n";
-	print STDERR $whc->iostats; 
-	return;
+	#print STDERR $whc->iostats; 
+	#return;
       } 
     }  
   }
@@ -135,9 +135,7 @@ sub place0 {
 	  my $pos3 = $hash_mers[$mer3]; 
 	  
 	  my $wobble = $pos3-$pos2; 
-#	  if ( $wobble == 9 || $wobble == 10) {
-	  if ( $wobble == 100 ) {
-	    
+	  if ( $wobble == 9 || $wobble == 10) {	    
 	    my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
 	    
 #	    my $ref = convert_mers (vec($$dataref, $i, 16),
@@ -145,7 +143,7 @@ sub place0 {
 #				    vec($$dataref, $pos2, 16), 
 #				    vec($$dataref, $pos3, 16)); 
 	    
-	    print "$read $i ".($i+$wobble)." $pos2 $pos3 EXACT\n";
+	    print "$read $i ".($i+$wobble)." $pos2 $pos3\n";
 	    
 	    $count++; 
 	  }	
