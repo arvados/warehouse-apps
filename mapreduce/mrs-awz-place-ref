@@ -110,7 +110,6 @@ sub place0 {
   }
   $bp /= 2; 
 
-
   my @hash_mers; 
   for (my $i = 750; $i < 1256; $i++) {
     $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
@@ -118,45 +117,38 @@ sub place0 {
   for (my $i = 0; $i < $bp-1400; $i++){
     my $mer0 = vec($$dataref, $i, 16); 
     
-    if ( $mer0>>8 == $prefix) {
-      
-      my $suffixA = ($mer0 & 0xFF)<< 16; 
-      my $suffixB = $suffixA | vec($$dataref, $i+10, 16); 
-      $suffixA |= vec($$dataref, $i+9, 16); 
-      	  
-      my $start = $suffixA ? vec($index, $suffixA-1, 32) : 0;
-      my $stop = vec ($index, $suffixA, 32); 
-      my $N = $stop - $start; 
-      if ($N % 3) {
-	print STDERR "!!! expected triples; got $N !!!\n";
-	return 0;
-      }
-      for (my $j = $start; $j <= $stop; $j+=3) {
-	my $mer2 = vec ($buf, $j, 16);  
-	my $mer3 = vec ($buf, $j+1, 16);
-	my $pos2 = $hash_mers[$mer2];
-	my $pos3 = $hash_mers[$mer3]; 
+    foreach $gap (9..10) {
+
+      if ( $mer0>>8 == $prefix) {
+        
+	my $suffix = (($mer0 & 0xFF)<< 16) | vec($$dataref, $i+$gap, 16); 
 	
-	my $wobble = $pos3-$pos2; 
-	if ( $wobble == 9 || $wobble == 10) {
-	  my $mer1 = $suffixA & 0xFFFF;
+	my $mer1 = $suffix & 0xFFFF;	  
+	my $start = $suffix ? vec($index, $suffix-1, 32) : 0;
+	my $stop = vec ($index, $suffix, 32); 
+	my $N = $stop - $start; 
 
-	  my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
-
-	  my $ref = convert_mers (vec($$dataref, $i, 16),
-				  vec($$dataref, $i+9, 16),
-				  vec($$dataref, $pos2, 16), 
-				  vec($$dataref, $pos3, 16)); 
+	for (my $j = $start; $j <= $stop; $j+=3) {
+	  my $mer2 = vec ($buf, $j, 16);  
+	  my $mer3 = vec ($buf, $j+1, 16);
+	  my $pos2 = $hash_mers[$mer2];
+	  my $pos3 = $hash_mers[$mer3]; 
+	  
+	  my $wobble = $pos3-$pos2; 
+	  if ( $wobble == 9 || $wobble == 10) {
 	    
-	  print "$read $i ".($i+9)." $pos2 $pos3 \n";
-	  print "$ref\n";
- 
-	  $count++; 
+	    my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
+	    
+#	    my $ref = convert_mers (vec($$dataref, $i, 16),
+#				    vec($$dataref, $i+$wobble, 16),
+#				    vec($$dataref, $pos2, 16), 
+#				    vec($$dataref, $pos3, 16)); 
+	    
+	    print "$read $i ".($i+$wobble)." $pos2 $pos3 EXACT\n";
+	    
+	    $count++; 
+	  }	
 	}
-	
-	#$start = $suffixB ? vec($index, $suffixB-1, 32) : 0;
-	#$stop = vec ($index, $suffixB, 32); 
-	#$count += ($stop - $start);	
       }
     }
     $hash_mers[vec($$dataref, $i+750, 16)] = 0; 
@@ -164,6 +156,9 @@ sub place0 {
   }  
   return $count; 
 }
+
+sub 
+
 
 sub place1 {
 
