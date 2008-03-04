@@ -176,6 +176,8 @@ sub convert_mers {
 
   my @mers = @_; 
 
+  print STDERR @mers; 
+
   my $read = ""; 
   
   foreach my $mer (@mers) {  
