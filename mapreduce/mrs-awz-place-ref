@@ -137,7 +137,8 @@ sub place0 {
 	my $pos2 = $hash_mers[$mer2];
 	my $pos3 = $hash_mers[$mer3]; 
 	
-	if ($pos2 && $pos3) {
+	my $wobble = $pos3-$pos2; 
+	if ( $wobble == 9 || $wobble == 10) {
 	  my $mer1 = $suffixA & 0xFFFF;
 
 	  my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
