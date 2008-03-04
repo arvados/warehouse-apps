@@ -37,7 +37,7 @@ if ($dump_N) {
 }
 else {
   place_reads (); 
-  
+  dump_placements(); 
 }
 
 
@@ -68,6 +68,25 @@ sub dump_reads {
     print "$v $k\n"; 
   }
 }
+
+sub dump_placements {
+  my ($dump_P) = @_; 
+  my %hash; 
+
+  for (my $i = 0; $i < 2**24; $i++ ) {
+    my $start = $i ? vec($index, $i-1, 32) : 0;
+    my $len = vec ($index, $i, 32) - $start; 
+    
+    for (my $j = 0; $j < $len; $j+=3) {
+      $hash{vec($buf, $start+$j+2, 16)}++  
+    }
+  }   
+  print "\nPlacement Frequencies:\n";
+  while ( my ($k, $v) = each %hash ) {  
+    print "$v $k\n"; 
+  }
+}
+
 
 sub place_reads {
  
@@ -117,11 +136,11 @@ sub place0 {
   for (my $i = 0; $i < $bp-1400; $i++){
     my $mer0 = vec($$dataref, $i, 16); 
     
-    foreach my $gap (9..10) {
+    foreach my $wobble01 (9..10) {
 
       if ( $mer0>>8 == $prefix) {
         
-	my $suffix = (($mer0 & 0xFF)<< 16) | vec($$dataref, $i+$gap, 16); 
+	my $suffix = (($mer0 & 0xFF)<< 16) | vec($$dataref, $i+$wobble01, 16); 
 	
 	my $mer1 = $suffix & 0xFFFF;	  
 	my $start = $suffix ? vec($index, $suffix-1, 32) : 0;
@@ -134,19 +153,22 @@ sub place0 {
 	  my $pos2 = $hash_mers[$mer2];
 	  my $pos3 = $hash_mers[$mer3]; 
 	  
-	  my $wobble = $pos3-$pos2; 
-	  if ( $wobble == 9 || $wobble == 10) {	    
+	  my $wobble23 = $pos3-$pos2; 
+	  if ( $wobble23 == 9 || $wobble23 == 10) {	    
 	    my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
 	    
 #	    my $ref = convert_mers (vec($$dataref, $i, 16),
-#				    vec($$dataref, $i+$wobble, 16),
+#				    vec($$dataref, $i+$wobble01, 16),
 #				    vec($$dataref, $pos2, 16), 
 #				    vec($$dataref, $pos3, 16)); 
 	    
-#	    print "$read $i ".($i+$gap)." $pos2 $pos3\n";
-	    
+#	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
+	   
+	    if (vec ($buf, $j+2, 16 < 65535)) {
+	      vec($buf, $j+2, 16)++; 
+	    }
 	    $count++; 
-	  }	
+	  }
 	}
       }
     }
