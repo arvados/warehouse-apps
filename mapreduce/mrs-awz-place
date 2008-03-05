@@ -3,7 +3,9 @@
 
 use strict; 
 
-my $collision_limit = 2**$ENV{"KNOB_COLLISION_BITS"}; 
+my $collision_limit = 2**$ENV{KNOB_COLLISION_BITS}; 
+
+print STDERR "$collision_limit\n"; 
 
 my @reads; 
 my $count = 0;
