@@ -15,7 +15,7 @@ while (read(STDIN, my $read_tuple, 14)) {
   
   my $index = (($mer0>>8) << 16 )| $mer1;
 
-  if (length ($reads[$index]) == 1024) {
+  if (length ($reads[$index]) == 4096) {
       $bad++;
       next;
   }  
@@ -30,12 +30,12 @@ while (read(STDIN, my $read_tuple, 14)) {
   }
   if ($not_present) {
     $reads[$index] .= pack "SS", $mer2, $mer3;     
-    if (length ($reads[$index]) == 1024) {
+    if (length ($reads[$index]) == 4096) {
       #print STDERR 
       #  "badindex = $index count = $count skip = $skip bad = $bad\n";   
       $badindex++; 
-      $count -= 255; 
-      $bad += 256; 
+      $count -= 1023; 
+      $bad += 1024; 
     }
     else {
       $count++;     
