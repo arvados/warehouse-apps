@@ -3,6 +3,8 @@
 
 use strict; 
 
+my $collision_limit = 2**$ENV{"KNOB_COLLISION_BITS"}; 
+
 my @reads; 
 my $count = 0;
 my $skip = 0; 
@@ -15,7 +17,7 @@ while (read(STDIN, my $read_tuple, 14)) {
   
   my $index = (($mer0>>8) << 16 )| $mer1;
 
-  if (length ($reads[$index]) == 4096) {
+  if (length ($reads[$index]) == 4 * $collision_limit) {
       $bad++;
       next;
   }  
@@ -30,12 +32,12 @@ while (read(STDIN, my $read_tuple, 14)) {
   }
   if ($not_present) {
     $reads[$index] .= pack "SS", $mer2, $mer3;     
-    if (length ($reads[$index]) == 4096) {
+    if (length ($reads[$index]) == 4 * $colission_limit) {
       #print STDERR 
       #  "badindex = $index count = $count skip = $skip bad = $bad\n";   
-      $badindex++; 
-      $count -= 1023; 
-      $bad += 1024; 
+      $badindex++;  
+      $count -= ($collision_limit-1); 
+      $bad += $collision_limit; 
     }
     else {
       $count++;     
@@ -51,7 +53,7 @@ print STDERR "count = $count skip = $skip bad = $bad badindex = $badindex\n";
 my $pos = 0; 
 for (my $i = 0; $i < 2**24; $i++ ) {
   my $len = length($reads[$i]);
-  if ($len < 1024) {
+  if ($len < $collision_limit) {
     $pos += $len*3/4; 
   } 
   vec(my $index, 0, 32) = $pos; 
@@ -61,7 +63,7 @@ for (my $i = 0; $i < 2**24; $i++ ) {
 my $recount = 0; 
 for (my $i = 0; $i < 2**24; $i++) {
   my $len = length($reads[$i]);
-  if ($len == 1024) {
+  if ($len == 4 * $collision_limit) {
     next; 
   } 
   my @list = unpack "S*", $reads[$i]; 
