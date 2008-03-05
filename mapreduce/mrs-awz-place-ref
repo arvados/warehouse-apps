@@ -111,7 +111,7 @@ sub place_reads {
       while (my $dataref = $instream->read_until ($pos+$size)) {
 	print STDERR $place_ref->($dataref)." "
 	    .length($$dataref)." $filename\n";
-	$max_blocks--; 
+	#$max_blocks--; 
       } 
     }  
   }
