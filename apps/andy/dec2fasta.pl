@@ -18,6 +18,11 @@ while (<>)
 	print;
     }
 }
+while ($lastdec < 255)
+{
+    ++$lastdec;
+    print (join ("\t", dec2fasta($lastdec), 0, 0, 0, 0), "\n");
+}
 
 sub dec2fasta
 {
