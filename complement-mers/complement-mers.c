@@ -130,7 +130,7 @@ begin (int argc, const char * argv[])
     }
   for (m = 0; m < mercount; ++m)
     {
-      if (mer_col[m] < 0)
+      if (mer_col[m] == -1)
 	{
 	  Fatal ("specified field is not present in input.");
 	}
