@@ -58,7 +58,7 @@ Log (undef,
 
 
 my $max_ncpus;
-map { $max_ncpus = $' if /^STEPSPERNODE=/ } split ("\n", $$Job{knobs});
+map { $max_ncpus = $1 if /^STEPSPERNODE=(.*)/ } split ("\n", $$Job{knobs});
 
 
 
