@@ -8,13 +8,13 @@ use Warehouse::Stream;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
-#my $max_blocks = 1000000; 
-#if (defined ($ENV{"KNOB_MAX_BLOCKS"})) {
-#  $max_blocks = $ENV{"KNOB_MAX_BLOCKS"};
-#} 
-my $dump_N = $ENV{"KNOB_DUMP_READS"};
-my $ref_key = $ENV{"KNOB_REFERENCE"}; 
-my $prefix = $ENV{"MR_ID"}-1; 
+my $max_blocks = 1000000; 
+if ($ENV{KNOB_MAX_BLOCKS}) {
+  $max_blocks = $ENV{KNOB_MAX_BLOCKS};
+} 
+my $dump_N = $ENV{KNOB_DUMP_READS};
+my $ref_key = $ENV{KNOB_REFERENCE}; 
+my $prefix = $ENV{MR_ID}-1; 
 my $place_ref = \&place0;
 $place_ref = \&place1 if $ENV{"KNOB_VARIANT"};
 
