@@ -17,9 +17,8 @@ barplot(as.matrix(t(A[,2:ncol(A)])),
 	names.arg=c(as.matrix(A[,1])));
 
 legend (nrow(A),
-	max(A[,2:ncol(A)]),
+	max(apply(A[,2:ncol(A)],1,sum)),
 	c('count','skip','bad'),
-	cex=0.8,
 	fill=heat.colors(ncol(A)-1));
 
 dev.off();
