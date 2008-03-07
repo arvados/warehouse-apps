@@ -108,9 +108,11 @@ sub place_reads {
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
       $instream->seek ($pos); 
-      while ((my $dataref = $instream->read_until($pos+$size)) && $max_blocks){ 
-	print STDERR $place_ref->($dataref)." "
-	    .length($$dataref)." $filename\n";
+      while (my $dataref = $instream->read_until($pos+$size)) {
+	if ($max_blocks){ 
+	  print STDERR $place_ref->($dataref)." "
+	      .length($$dataref)." $filename\n";
+	}
 	$max_blocks--;
       } 
     }  
