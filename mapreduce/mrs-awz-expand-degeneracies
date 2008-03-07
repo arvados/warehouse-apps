@@ -4,7 +4,7 @@
 use strict;
 
 my $individual = $ENV{KNOB_INDIVIDUAL}; 
-my $chromsome = $ENV{KNOB_CHROMOSOME}; 
+my $chromosome = $ENV{KNOB_CHROMOSOME}; 
 my $ploidy = $ENV{KNOB_PLOIDY}; 
 
 my $id_ref = \&id_64;
@@ -51,7 +51,7 @@ while (<>) {
     my @read = split " ";
         
     if ($read[9] == $individual && 
-	$read[10] == $chromosome && 
+	$read[10] eq $chromosome && 
 	$read[11] == $ploidy) { 
 	
 	my $read0_4bit = $read[0].$read[1];
