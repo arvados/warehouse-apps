@@ -2,7 +2,12 @@
 # -*- mode: perl; perl-indent-level: 4; -*-
 
 use strict;
-#use Math::BigInt; #34bit IDs 
+
+my $individual = $ENV{KNOB_INDIVIDUAL}; 
+my $chromsome = $ENV{KNOB_CHROMOSOME}; 
+
+my $id_ref = \&id_64;
+$id_ref = \&id_32 if (1<< 32 < 1 << 29);
 
 use constant A_ => 1;  
 use constant C_ => 2; 
@@ -44,7 +49,7 @@ while (<>) {
     #individual, chr, ploidy, pos0, pos1, pos2, pos3, orient 
     my @read = split " ";
         
-    if ($read[9] == 0) { 
+    if ($read[9] == $individual && $read[10] == $chromosome) { 
 	
 	my $read0_4bit = $read[0].$read[1];
 	my $read1_4bit = $read[2].$read[3]; 
@@ -54,10 +59,7 @@ while (<>) {
        
 	foreach my $read0_2bit (@reads0_2bit) {
 	    foreach my $read1_2bit (@reads1_2bit) {
-		my $id = $read[4] & READ_ID_MASK; #64bit machines 
-		#my $id = Math::BigInt->new($read[4]); #32bit machines 
-		#$id->band(READ_ID_MASK);  
-		#$id->numify(); 
+		my $id = $id_ref->($read[4]); 
 		print pack ("NNN",
 			    numeric ($read0_2bit),
 			    numeric ($read1_2bit),
@@ -114,3 +116,16 @@ sub numeric {
     return $read_numeric; 
 }
 
+
+sub id_32 {
+    use Math::BigInt;
+    my ($id) = @_; 
+    my $id = Math::BigInt->new($id); 
+    $id->band(READ_ID_MASK); 
+    return $id->numify();
+}	
+    
+sub id_64 {
+    my ($id) = @_; 
+    return $id & READ_ID_MASK; 
+}
