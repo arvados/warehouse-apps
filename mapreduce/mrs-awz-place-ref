@@ -76,6 +76,8 @@ sub dump_placements {
   my ($dump_P) = @_; 
   my %hash; 
 
+  print STDERR "entering dump placements\n";
+
   for (my $i = 0; $i < 2**24; $i++ ) {
     my $start = $i ? vec($index, $i-1, 32) : 0;
     my $len = vec ($index, $i, 32) - $start; 
@@ -84,7 +86,6 @@ sub dump_placements {
       $hash{vec($buf, $start+$j+2, 16)}++  
     }
   }   
-  print "\nPlacement Frequencies:\n";
   while ( my ($k, $v) = each %hash ) {  
     print "$v $k\n"; 
   }
