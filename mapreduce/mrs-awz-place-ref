@@ -36,11 +36,11 @@ print STDERR "count = $count\n";
 
 
 if ($dump_N) {
-  dump_reads($dump_N);
+  #dump_reads($dump_N);
 }
 else {
-  place_reads (); 
-  dump_placements(); 
+  #place_reads (); 
+  #dump_placements(); 
 }
 
 
