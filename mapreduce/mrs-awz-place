@@ -32,12 +32,12 @@ while (read(STDIN, my $read_tuple, 14)) {
   }
   if ($not_present) {
     $reads[$index] .= pack "SS", $mer2, $mer3;     
-    if (length ($reads[$index]) == 4 * $collision_limit) {
-      #print STDERR 
-      #  "badindex = $index count = $count skip = $skip bad = $bad\n";   
+    if (length ($reads[$index]) == 4 * $collision_limit) {       
       $badindex++;  
       $count -= ($collision_limit-1); 
       $bad += $collision_limit; 
+      print STDERR 
+        "badsuffix = $index count = $count skip = $skip bad = $bad\n";
     }
     else {
       $count++;     
