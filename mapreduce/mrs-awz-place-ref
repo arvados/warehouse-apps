@@ -29,6 +29,8 @@ if (2**26 != read(STDIN, $index, 2**26)) {
 }
 my $count = vec ($index, 2**24-1, 32);  
 
+print STDERR "read index, count = $count\n"; 
+
 if ($count*2 != read(STDIN, $buf, $count*2)) {
   print STDERR "failed to read $count reads\n"; 
   $read_error = 1; 
