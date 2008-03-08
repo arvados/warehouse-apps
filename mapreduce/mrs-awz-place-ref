@@ -22,17 +22,26 @@ print STDERR "PREFIX *** $prefix ***\n";
 my $index; 
 my $buf; 
 
+my $read_error = 0; 
 if (2**26 != read(STDIN, $index, 2**26)) {
-  die "failed to read 2**26 byte index\n";
+  print STDERR "failed to read 2**26 byte index\n";
+  $read_all = 1;
 }
 my $count = vec ($index, 2**24-1, 32);  
 
 if ($count*2 != read(STDIN, $buf, $count*2)) {
-  die "failed to read $count reads\n"; 
+  print STDERR "failed to read $count reads\n"; 
+  $read_all = 1; 
 }
-
 #conceivably exits without consuming all input (eg. if malformed input.)
 print STDERR "count = $count\n"; 
+
+if ($read_err) {
+  while (<>) {};
+  print STDERR "read error; exiting...\n"; 
+  exit (0); 
+
+}
 
 
 if ($dump_N) {
