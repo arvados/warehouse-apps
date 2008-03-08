@@ -52,18 +52,20 @@ sub dump_reads {
     my $start = $i ? vec($index, $i-1, 32) : 0;
     my $len = vec ($index, $i, 32) - $start; 
     $hash{$len}++;
-    
-    if ($i % $dump_N == 0) {
-      for (my $j = 0; $j < $len; $j+=3) {
-	print STDOUT
-	    vec($buf, $start+$j, 16)." ".
-	    vec($buf, $start+$j+1, 16)." ". 
-	    vec($buf, $start+$j+2, 16)." ";  
-      }
-      if ($len) {
-	print STDOUT "*** $i\n";
-      }
-    }  
+ 
+    if ($len) {
+      my $read01 = $prefix << 24 | $i;
+      
+      print convert_mers (($read >> 16, $read & 0xFFFF));
+
+      if ($i % $dump_N == 0) {
+	for (my $j = 0; $j < $len; $j+=3) {
+	  print " ".convert_mers ( (vec($buf, $start+$j,   16),
+				    vec($buf, $start+$j+1, 16)));
+	}
+	print "\n";
+      }  
+    }
   } 
   print "\nFrequencies:\n";
   while ( my ($k, $v) = each %hash ) {  
