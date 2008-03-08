@@ -56,7 +56,7 @@ sub dump_reads {
     if ($len) {
       my $read01 = $prefix << 24 | $i;
       
-      print convert_mers (($read >> 16, $read & 0xFFFF));
+      print convert_mers (($read01 >> 16, $read01 & 0xFFFF));
 
       if ($i % $dump_N == 0) {
 	for (my $j = 0; $j < $len; $j+=3) {
