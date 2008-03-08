@@ -36,7 +36,9 @@ if ($count*2 != read(STDIN, $buf, $count*2)) {
   $read_error = 1; 
 }
 #conceivably exits without consuming all input (eg. if malformed input.)
-print STDERR "count = $count\n"; 
+print STDERR "read buf, count = $count\n"; 
+
+print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
 
 if ($read_error) {
   while (<>) {};
