@@ -53,7 +53,7 @@ print STDERR "count = $count skip = $skip bad = $bad badindex = $badindex\n";
 my $pos = 0; 
 for (my $i = 0; $i < 2**24; $i++ ) {
   my $len = length($reads[$i]);
-  if ($len < $collision_limit) {
+  if ($len < 4*$collision_limit) {
     $pos += $len*3/4; 
   } 
   vec(my $index, 0, 32) = $pos; 
