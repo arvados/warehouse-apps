@@ -10,7 +10,7 @@ my $collision_limit = 2**$ENV{KNOB_COLLISION_BITS};
 my @reads; 
 my $count = 0;
 my $skip = 0; 
-my $skipindex = 0; 
+my $skipsuffix = 0; 
 
 while (read(STDIN, my $read_tuple, 14)) {
   
@@ -26,18 +26,18 @@ while (read(STDIN, my $read_tuple, 14)) {
   $mer2, $mer3, $id_16, $id_32>>16, $id_32 & 0xFFFF;     
 
   if (length ($reads[$index]) == 10 * $collision_limit) {       
-    $skipindex++;  
+    $skipsuffix++;  
     $count -= ($collision_limit-1); 
     $skip += $collision_limit; 
 
-    print STDERR convert_mers (($mer0,$mer1));
+    print STDERR skip convert_mers (($mer0,$mer1))."\n";
   }
   else {
     $count++;     
   }
 }
 #conceivably exits without consuming all input (eg. if malformed input.)
-print STDERR "count = $count skip = $skip skipindex = $skipindex\n"; 
+print STDERR "count = $count skip = $skip skipsuffix = $skipsuffix\n"; 
 
 my $pos = 0; 
 for (my $i = 0; $i < 2**24; $i++ ) {
@@ -52,7 +52,7 @@ for (my $i = 0; $i < 2**24; $i++ ) {
 my $recount = 0; 
 for (my $i = 0; $i < 2**24; $i++) {
   my $len = length($reads[$i]);
-  if ($len == 10 * $collision_limit) {
+  if ($len == 10*$collision_limit) {
     next; 
   } 
   my @list = unpack "S*", $reads[$i]; 
