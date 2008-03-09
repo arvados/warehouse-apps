@@ -43,7 +43,7 @@ print STDERR "count = $count skip = $skip\n";
 my $pos = 0; 
 for (my $i = 0; $i <= 2**24; $i++ ) {
   vec(my $index, 0, 32) = $pos; 
-  print $index
+  print $index;
   my $len = length($reads[$i]);
   if ($len < 10*$collision_limit) {
     $pos += $len/2; 
