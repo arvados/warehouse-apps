@@ -17,7 +17,7 @@ while (read(STDIN, my $read_tuple, 14)) {
   
   my ($mer0,$mer1,$mer2,$mer3,$id_16,$id_32 ) = unpack "SSSSSN", $read_tuple;
 
-  my $index = (($mer0>>8) << 16 )| $mer1;
+  my $index = (($mer0&0xFF) << 16 )| $mer1;
 
   if (length ($reads[$index]) == 10 * $collision_limit) {
     $skip++;
