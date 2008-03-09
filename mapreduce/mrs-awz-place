@@ -8,43 +8,30 @@ my $collision_limit = 2**$ENV{KNOB_COLLISION_BITS};
 my @reads; 
 my $count = 0;
 my $skip = 0; 
-my $bad = 0; 
-my $badindex = 0; 
+my $skipindex = 0; 
 
 while (read(STDIN, my $read_tuple, 14)) {
   
   my ($mer0,$mer1,$mer2,$mer3,$id_16,$id_32 ) = unpack "SSSSSN", $read_tuple;
-  
+
   my $index = (($mer0>>8) << 16 )| $mer1;
 
-  if (length ($reads[$index]) == 4 * $collision_limit) {
-      $bad++;
-      next;
-  }  
-  my @list = unpack "S*", $reads[$index];   
+  if (length ($reads[$index]) == 10 * $collision_limit) {
+    $skip++;
+    next;
+  } 
+  $reads[$index] .= pack "SSSSS", 
+  $mer2, $mer3, $id_16, $id_32>>16, $id_32 & 0xFFFF;     
 
-  my $not_present = 1; 
-  for (my $i = 0 ; $i < @list; $i+=2) {
-    if ($list[$i] == $mer2 && $list[$i+1] == $mer3) {
-      $not_present = 0; 
-      last; 
-    }    
-  }
-  if ($not_present) {
-    $reads[$index] .= pack "SS", $mer2, $mer3;     
-    if (length ($reads[$index]) == 4 * $collision_limit) {       
-      $badindex++;  
-      $count -= ($collision_limit-1); 
-      $bad += $collision_limit; 
+  if (length ($reads[$index]) == 10 * $collision_limit) {       
+    $skipindex++;  
+    $count -= ($collision_limit-1); 
+    $skip += $collision_limit; 
 
-      print STDERR convert_mers (($prefix<<8|$index>>16,$index&0xFFFF));
-    }
-    else {
-      $count++;     
-    }
+    print STDERR convert_mers (($mer0,$mer1));
   }
   else {
-    $skip++; 
+    $count++;     
   }
 }
 #conceivably exits without consuming all input (eg. if malformed input.)
@@ -53,8 +40,8 @@ print STDERR "count = $count skip = $skip bad = $bad badindex = $badindex\n";
 my $pos = 0; 
 for (my $i = 0; $i < 2**24; $i++ ) {
   my $len = length($reads[$i]);
-  if ($len < 4*$collision_limit) {
-    $pos += $len*3/4; 
+  if ($len < 10*$collision_limit) {
+    $pos += $len/2; 
   } 
   vec(my $index, 0, 32) = $pos; 
   print $index; 
@@ -63,16 +50,18 @@ for (my $i = 0; $i < 2**24; $i++ ) {
 my $recount = 0; 
 for (my $i = 0; $i < 2**24; $i++) {
   my $len = length($reads[$i]);
-  if ($len == 4 * $collision_limit) {
+  if ($len == 10 * $collision_limit) {
     next; 
   } 
   my @list = unpack "S*", $reads[$i]; 
   my $mers;
   my $k = 0; 
-  for (my $j = 0 ; $j < @list; $j+=2) {
+  for (my $j = 0 ; $j < @list; $j+=5) {
     vec($mers, $k++, 16) = $list[$j];
     vec($mers, $k++, 16) = $list[$j+1];
-    vec($mers, $k++, 16) = 0; 
+    vec($mers, $k++, 16) = $list[$j+2];
+    vec($mers, $k++, 16) = $list[$j+3];
+    vec($mers, $k++, 16) = $list[$j+4];
     $recount++; 
   }
   print $mers; 
