@@ -36,8 +36,8 @@ while (read(STDIN, my $read_tuple, 14)) {
       $badindex++;  
       $count -= ($collision_limit-1); 
       $bad += $collision_limit; 
-      print STDERR 
-        "badsuffix = $index count = $count skip = $skip bad = $bad\n";
+
+      print STDERR convert_mers (($prefix<<8|$index>>16,$index&0xFFFF));
     }
     else {
       $count++;     
@@ -80,4 +80,18 @@ for (my $i = 0; $i < 2**24; $i++) {
 if ($recount != $count) {
   print STDERR "recount = $recount but should be $count\n"; 
 
+}
+
+sub convert_mers {
+
+  my @mers = @_;
+
+  my $read = ""; 
+  
+  foreach my $mer (@mers) {  
+    for (my $j = 14 ; $j >= 0; $j-=2) { 
+      $read .= $numeric2_bp[($mer>>$j)&3];
+    } 
+  }
+  return $read; 
 }
