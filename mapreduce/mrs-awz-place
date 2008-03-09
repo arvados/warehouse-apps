@@ -66,7 +66,7 @@ for (my $i = 0; $i < 2**24; $i++) {
     vec($mers, $k++, 16) = $list[$j+4];
     $recount++; 
   }
-  if (length($mers)) {
+  if ($len) {
     print $mers; 
   }
   else {
