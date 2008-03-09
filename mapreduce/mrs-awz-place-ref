@@ -7,7 +7,6 @@ use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
 
-
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
 my $max_blocks = 1000000; 
@@ -46,17 +45,13 @@ if ($read_error) {
   exit (0); 
 }
 
-my $pause = int (rand(100)); 
-sleep (rand(100));
-print "Hello World, paused for $pause seconds\n"; 
-exit(0); 
 
 if ($dump_N) {
-  #dump_reads($dump_N);
+  dump_reads($dump_N);
 }
 else {
-  #place_reads (); 
-  #dump_placements(); 
+  place_reads (); 
+  dump_placements(); 
 }
 
 
