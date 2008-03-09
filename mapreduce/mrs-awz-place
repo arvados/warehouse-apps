@@ -35,7 +35,7 @@ while (read(STDIN, my $read_tuple, 14)) {
   }
 }
 #conceivably exits without consuming all input (eg. if malformed input.)
-print STDERR "count = $count skip = $skip bad = $bad badindex = $badindex\n"; 
+print STDERR "count = $count skip = $skip skipindex = $skipindex\n"; 
 
 my $pos = 0; 
 for (my $i = 0; $i < 2**24; $i++ ) {
