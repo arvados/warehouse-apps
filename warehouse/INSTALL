@@ -50,6 +50,8 @@ Install prerequisites:
  sudo perl -MCPAN -e 'install MogileFS::Client'
  sudo perl -MCPAN -e 'install Crypt::GpgME'
  sudo perl -MCPAN -e 'install IO::Uncompress::Gunzip'
+ sudo perl -MCPAN -e 'install Test::Pod::Coverage'
+ sudo perl -MCPAN -e 'install Test::Pod'
 
 Create configuration files: see server/INSTALL and client/INSTALL for
 details.
