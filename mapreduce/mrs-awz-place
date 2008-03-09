@@ -30,7 +30,7 @@ while (read(STDIN, my $read_tuple, 14)) {
     $count -= ($collision_limit-1); 
     $skip += $collision_limit; 
 
-    print STDERR skip convert_mers (($mer0,$mer1))."\n";
+    print STDERR "skip ".convert_mers (($mer0,$mer1))."\n";
   }
   else {
     $count++;     
