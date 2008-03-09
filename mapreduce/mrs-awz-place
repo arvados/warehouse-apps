@@ -3,6 +3,8 @@
 
 use strict; 
 
+my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+ 
 my $collision_limit = 2**$ENV{KNOB_COLLISION_BITS}; 
 
 my @reads; 
