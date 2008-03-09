@@ -2,9 +2,11 @@
 # -*- mode: perl; perl-indent-level: 2; -*-
 
 use strict; 
+
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
+
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
@@ -44,7 +46,9 @@ if ($read_error) {
   exit (0); 
 }
 
-print "Hello World\n"; 
+my $pause = int (rand(100)); 
+sleep (rand(100));
+print "Hello World, paused for $pause seconds\n"; 
 exit(0); 
 
 if ($dump_N) {
