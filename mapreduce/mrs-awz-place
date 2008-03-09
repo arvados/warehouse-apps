@@ -38,15 +38,16 @@ while (read(STDIN, my $read_tuple, 14)) {
   }
 }
 #conceivably exits without consuming all input (eg. if malformed input.)
+print STDERR "count = $count skip = $skip\n";
 
 my $pos = 0; 
-for (my $i = 0; $i < 2**24; $i++ ) {
+for (my $i = 0; $i <= 2**24; $i++ ) {
+  vec(my $index, 0, 32) = $pos; 
+  print $index
   my $len = length($reads[$i]);
   if ($len < 10*$collision_limit) {
     $pos += $len/2; 
   } 
-  vec(my $index, 0, 32) = $pos; 
-  print $index; 
 }
  
 my $recount = 0; 
@@ -77,8 +78,7 @@ if ($recount != $count) {
   print STDERR "recount = $recount but should be $count\n"; 
 
 }
-print STDERR "count = $count skip = $skip ".
-    "skipsuffix = $skipsuffix emptysuffix = $emptysuffix\n"; 
+print STDERR "skipsuffix = $skipsuffix emptysuffix = $emptysuffix\n"; 
 
 sub convert_mers {
 
