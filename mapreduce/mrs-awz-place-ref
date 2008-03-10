@@ -140,7 +140,7 @@ sub place0 {
 	  
 	  my $wobble23 = $pos3-$pos2; 
 	  if ( $wobble23 == 9 || $wobble23 == 10) {	    
-	    my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
+#	    my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
 	    
 #	    my $ref = convert_mers (vec($$dataref, $i, 16),
 #				    vec($$dataref, $i+$wobble01, 16),
