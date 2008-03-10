@@ -3,16 +3,12 @@
 
 use strict; 
 
-use Warehouse;
-use Warehouse::Manifest;
-use Warehouse::Stream;
-
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
 my $max_blocks = 1000000; 
 $max_blocks = $ENV{KNOB_MAX_BLOCKS} if $ENV{KNOB_MAX_BLOCKS};
  
-my $dump_N = $ENV{KNOB_DUMP_READS};
+my $dump_f = $ENV{KNOB_DUMP};
 my $ref_key = $ENV{KNOB_REFERENCE}; 
 my $prefix = $ENV{MR_ID}-1; 
 my $place_ref = \&place0;
@@ -23,31 +19,14 @@ print STDERR "PREFIX *** $prefix ***\n";
 my $index; 
 my $buf; 
 
-my $read_error = 0; 
-if (2**26 != read(STDIN, $index, 2**26)) {
-  print STDERR "failed to read 2**26 byte index\n";
-  $read_error = 1;
-}
-my $count = vec ($index, 2**24-1, 32);  
+read(STDIN, $index, (2**24+1)*4);
+my $count = vec ($index, 2**24, 32);  
+read(STDIN, $buf, $count*2);
 
 print STDERR "read index, count = $count\n"; 
 
-if ($count*2 != read(STDIN, $buf, $count*2)) {
-  print STDERR "failed to read $count reads\n"; 
-  $read_error = 1; 
-}
-#conceivably exits without consuming all input (eg. if malformed input.)
-print STDERR "read buf, count = $count\n"; 
-
-if ($read_error) {
-  while (<>) {};
-  print STDERR "read error; exiting...\n"; 
-  exit (0); 
-}
-
-
-if ($dump_N) {
-  dump_reads($dump_N);
+if ($dump_f) {
+  dump_freq();
 }
 else {
   place_reads (); 
@@ -55,49 +34,36 @@ else {
 }
 
 
-sub dump_reads {
-  my ($dump_N) = @_; 
+sub dump_freq {
   my %hash; 
 
-  for (my $i = 0; $i < 2**24; $i++ ) {
-    my $start = $i ? vec($index, $i-1, 32) : 0;
-    my $len = vec ($index, $i, 32) - $start; 
-    $hash{$len}++;
- 
-    if ($len) {
-      my $read01 = $prefix << 24 | $i;
-      
-      print convert_mers (($read01 >> 16, $read01 & 0xFFFF));
+  print STDERR "entering dump frequencies...\n";
 
-      if ($i % $dump_N == 0) {
-	for (my $j = 0; $j < $len; $j+=3) {
-	  print " ".convert_mers ( (vec($buf, $start+$j,   16),
-				    vec($buf, $start+$j+1, 16)));
-	}
-	print "\n";
-      }  
-    }
-  } 
+  for (my $i = 0; $i < 2**24; $i++ ) {
+    my $start = vec($index, $i, 32);
+    my $len = vec ($index, $i+1, 32) - $start; 
+    $hash{$len}++;
+  }
   print "\nFrequencies:\n";
   while ( my ($k, $v) = each %hash ) {  
-    $k/=3;
+    $k/=5;
     print "$v $k\n"; 
   }
 }
 
 sub dump_placements {
-  my ($dump_P) = @_; 
   my %hash; 
 
-  print STDERR "entering dump placements\n";
+  print STDERR "entering dump placements...\n";
 
   for (my $i = 0; $i < 2**24; $i++ ) {
-    my $start = $i ? vec($index, $i-1, 32) : 0;
-    my $len = vec ($index, $i, 32) - $start; 
-    
-    for (my $j = 0; $j < $len; $j+=3) {
-      $hash{vec($buf, $start+$j+2, 16)}++  
-    }
+    my $start = vec($index, $i, 32);
+    my $len = vec ($index, $i+1, 32) - $start; 
+    $hash{$len}++; 
+
+    #for (my $j = 0; $j < $len; $j+=5) {
+    #  $hash{vec($buf, $start+$j+2, 16)}++  
+    #}
   }   
   while ( my ($k, $v) = each %hash ) {  
     print "$v $k\n"; 
@@ -106,7 +72,10 @@ sub dump_placements {
 
 
 sub place_reads {
- 
+  use Warehouse;
+  use Warehouse::Manifest;
+  use Warehouse::Stream;
+
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
   
@@ -115,7 +84,7 @@ sub place_reads {
 
   $manifest->rewind; 
 
-  print STDERR "!!! opened $ref_key for input... !!!\n";  
+  print STDERR "entering place reads... opened $ref_key for input...\n";  
   
   while (my $instream = $manifest->subdir_next ) {
     while (my ($pos, $size, $filename) = $instream->file_next) {
@@ -160,10 +129,10 @@ sub place0 {
 	my $mer1 = vec($$dataref, $i+$wobble01, 16);
 	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
 		  
-	my $start = $suffix ? vec($index, $suffix-1, 32) : 0;
-	my $stop = vec ($index, $suffix, 32); 
+	my $start = vec ($index, $suffix, 32);
+	my $stop = vec ($index, $suffix+1, 32); 
 
-	for (my $j = $start; $j <= $stop; $j+=3) {
+	for (my $j = $start; $j <= $stop; $j+=5) {
 	  my $mer2 = vec ($buf, $j, 16);  
 	  my $mer3 = vec ($buf, $j+1, 16);
 	  my $pos2 = $hash_mers[$mer2];
@@ -180,9 +149,9 @@ sub place0 {
 	    
 #	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
 	   
-	    if (vec ($buf, $j+2, 16) < 65535) {
-	      vec($buf, $j+2, 16)++; 
-	    }
+#	    if ((vec ($buf, $j+3, 16) >> 10)  < 1024) {
+#	      vec($buf, $j+2, 16)++; 
+#	    }
 	    $count++; 
 	  }
 	}
