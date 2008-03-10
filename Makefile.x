@@ -19,6 +19,7 @@ subdirs_to_build =	libcmd \
                         mer-nfa \
 			place-report \
 			billy-grep \
+			cons-stats \
 			find-objects \
 			register-raw-translate \
 			levels
