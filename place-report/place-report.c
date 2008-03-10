@@ -55,6 +55,8 @@ static const char * sample_file_name = "/dev/null";
 static size_t sample_file = 0;
 static const char * output_file_name = "-";
 static size_t output_file = 0;
+static const char * cons_file_name = 0;
+static size_t cons_file = 0;
 
 static const char * mercount_spec = "2";
 static int mercount;
@@ -140,6 +142,117 @@ peek_reference (t_taql_uint64 pos,
   return mer;
 }
 
+struct cons_t
+{
+  short int a,c,g,t;
+  short int refbp;
+};
+
+static struct cons_t *cons = 0;
+static size_t cons_qmin = 16384; /* must be > mer sizes + largest gap sizes */
+static size_t cons_qmax = 32768; /* must be > cons_qmin, should be >= 2x */
+static size_t cons_pos;		 /* start of buffer relative to start of ref */
+static size_t cons_qfilled;	 /* how much of queue has ref data filled in */
+
+/* fill consensus queue with reference data */
+void
+cons_fill ()
+{
+  memset (&cons[cons_qfilled], 0,
+	  sizeof(struct cons_t) * (cons_qmax - cons_qfilled));
+  while (cons_qfilled < cons_qmax)
+    {
+      size_t pos = cons_pos + cons_qfilled;
+      if (pos / n_mers >= reference_file_rows)
+	{
+	  break;
+	}
+      else
+	{
+	  t_taql_uint64 mer_here = as_uInt64 (Peek (reference_file, pos / n_mers, reference_mer_col));
+	  size_t n_bp = n_mers - (pos % n_mers);
+	  for (; n_bp > 0 && cons_qfilled < cons_qmax; --n_bp)
+	    {
+	      cons[cons_qfilled++].refbp = mer_here & 0xf;
+	      mer_here >>= 4;
+	    }
+	}
+    }
+}
+
+
+/* output consensus results up to want_pos (ie. assert that anything
+ * up to that point won't be voted on any more)
+ */
+
+void
+cons_flush (size_t want_pos)
+{
+  size_t x;
+  while (cons_pos < want_pos)
+    {
+      for (x = 0;
+	   x < cons_qfilled && x + cons_pos < want_pos;
+	   ++x)
+	{
+	  Poke (cons_file, 0, 0, uInt32 (cons_pos + x));
+	  Poke (cons_file, 0, 1, uInt8 (cons[x].a>255?255:cons[x].a));
+	  Poke (cons_file, 0, 2, uInt8 (cons[x].c>255?255:cons[x].c));
+	  Poke (cons_file, 0, 3, uInt8 (cons[x].g>255?255:cons[x].g));
+	  Poke (cons_file, 0, 4, uInt8 (cons[x].t>255?255:cons[x].t));
+	  Poke (cons_file, 0, 5, uInt8 (cons[x].refbp));
+	  Advance (cons_file, 1);
+	}
+      if (x == 0)
+	Fatal ("can't get to requested cons_pos");
+      cons_pos += x;
+      cons_qfilled -= x;
+      if (cons_qfilled > 0)
+	{
+	  memmove ((void*) cons,
+		   (void*) &cons[x],
+		   sizeof (struct cons_t) * cons_qfilled);
+	}
+      cons_fill();
+    }
+}
+
+
+void
+cons_alloc ()
+{
+  cons = (struct cons_t *) malloc (sizeof (struct cons_t) * cons_qmax);
+  if (!cons) Fatal ("out of memory");
+  cons_pos = 0;
+  cons_qfilled = 0;
+}
+
+
+/* Vote for "mer" occurring at "pos". */
+void
+cons_poke (t_taql_uint64 pos,
+	   t_taql_uint64 mer,
+	   size_t gappos,
+	   size_t gapsize)
+{
+  size_t x, cons_x, needlastpos;
+
+  needlastpos = pos + n_mers + gapsize;
+  cons_flush (needlastpos > cons_qmin ? needlastpos - cons_qmin : 0);
+  if (cons_pos > pos)
+    Fatal ("cons_poke() can't poke, already flushed past desired pos");
+  for (x = 0, cons_x = pos - cons_pos; x < n_mers; ++x, ++cons_x)
+    {
+      t_taql_uint64 bp = mer >> (x*4);
+      if (x == gappos)
+	cons_pos += gapsize;
+      if (bp & 1) cons[cons_x].a++;
+      if (bp & 2) cons[cons_x].c++;
+      if (bp & 4) cons[cons_x].g++;
+      if (bp & 8) cons[cons_x].t++;
+    }
+}
+
 
 /* Count how many [of the first n_mers] positions differ between two mers.
  *
@@ -185,6 +298,7 @@ begin (int argc, const char * argv[])
       { OPTS_ARG, "-r", "--reference INPUT", 0, &reference_file_name },
       { OPTS_ARG, "-s", "--samples INPUT", 0, &sample_file_name },
       { OPTS_ARG, "-o", "--output OUTPUT", 0, &output_file_name },
+      { OPTS_ARG, "-c", "--consensus OUTPUT", 0, &cons_file_name },
       { OPTS_ARG, "-i", "--inrec-col", 0, &placement_inrec_col_name },
       { OPTS_ARG, "-I", "--sample-id-col", 0, &sample_id_col_name },
       { OPTS_ARG, 0, "--mer0-col", 0, &sample_mer_col_name[0] },
@@ -275,6 +389,20 @@ begin (int argc, const char * argv[])
   if (sample_id_col_name)
     {
       sample_id_col = Field_pos (sample_file, Sym (sample_id_col_name));
+    }
+
+  if (cons_file_name)
+    {
+      cons_file = Outfile (cons_file_name);
+      Add_field (cons_file, Sym("uint32"), Sym("pos"));
+      Add_field (cons_file, Sym("uint8"), Sym("a"));
+      Add_field (cons_file, Sym("uint8"), Sym("c"));
+      Add_field (cons_file, Sym("uint8"), Sym("g"));
+      Add_field (cons_file, Sym("uint8"), Sym("t"));
+      Add_field (cons_file, Sym("uint8"), Sym("mer0ref"));
+      File_fix (cons_file, 1, 0);
+      cons_alloc ();
+      cons_fill ();
     }
 
   output_file = Outfile (output_file_name);
@@ -421,7 +549,7 @@ begin (int argc, const char * argv[])
 	{
 	  Poke (output_file, 0, c, Peek (placement_file, 0, c));
 	}
-      if (ref_label_col >= 0)
+      if (ref_label_spec)
 	{
 	  Poke (output_file, 0, ref_label_col, ref_label);
 	}
@@ -494,6 +622,18 @@ begin (int argc, const char * argv[])
 	    }
 	}
 
+      for (m = 0; m < mercount; ++m)
+	{
+	  if (cons_file_name)
+	    {
+	      cons_poke (pos[m],
+			 side == 1
+			 ? reverse_complement_mer (samplemer[mercount-m-1])
+			 : samplemer[m],
+			 gap_pos, smallgapsize[m]);
+	    }
+	}
+
       if (output_prefix_contents)
 	{
 	  t_taql_uint64 prepos = (pos[0]<8)?0:(pos[0]-8);
@@ -531,6 +671,12 @@ begin (int argc, const char * argv[])
       Advance (placement_file, 1);
     }
 
+  if (cons_file_name)
+    {
+      cons_flush (reference_file_rows * n_mers - 1);
+      cons_flush (cons_pos + cons_qfilled);
+      Close (cons_file);
+    }
   Close (output_file);
   Close (sample_file);
   Close (reference_file);
