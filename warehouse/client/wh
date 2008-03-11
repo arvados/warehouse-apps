@@ -19,7 +19,7 @@ while (!$commands->{$cmd})
 }
 
 my %opt;
-map { $opt{$1} = $2 if /(.+?)=(.*)/ } @ARGV;
+map { $opt{$1} = $2 if /(.+?)=(.*)/s } @ARGV;
 
 my $whc;
 $whc = new Warehouse ($opt{warehouse_name}
