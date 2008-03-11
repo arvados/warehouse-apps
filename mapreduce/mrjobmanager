@@ -644,8 +644,9 @@ sub Log				# ($jobstep_id, $logmessage)
   print STDERR $message;
 
   return if !$metastream;
+  my @gmtime = gmtime;
   my $datetime = sprintf ("%04d-%02d-%02d_%02d:%02d:%02d",
-			  (gmtime)[5]+1900, (gmtime)[4,3,2,1,0]);
+			  $gmtime[5]+1900, $gmtime[4]+1, @gmtime[3,2,1,0]);
   $metastream->write_data ($datetime . " " . $message);
 }
 
