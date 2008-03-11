@@ -3,6 +3,7 @@
 use strict;
 
 use Warehouse;
+use Warehouse::Stream;
 use Digest::MD5;
 use HTTP::Request::Common;
 use LWP::UserAgent;
@@ -26,27 +27,54 @@ my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
 			 );
 my $manifest = "";
 
-traverse ($localbase, "", ".", \$manifest);
-
-$whc->write_start;
-$whc->write_data ($manifest);
-my $manifest_key = $whc->write_finish;
-
-print "Manifest key is: $manifest_key\n";
-
-
-
-if (my $manifestname = $opt{"name"})
+if (-f $localbase)
 {
-    print "storing: $manifestname => $manifest_key\n";
+    write_file ($localbase);
+    exit 0;
+}
+else
+{
+    traverse ($localbase, "", ".", \$manifest);
 
-    my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
-    $whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
+    $whc->write_start;
+    $whc->write_data ($manifest);
+    my $manifest_key = $whc->write_finish;
 
-    my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
-    print "fetch says: $manifestname => $checkkey\n";
+    print "Manifest key is: $manifest_key\n";
+
+
+    if (my $manifestname = $opt{"name"})
+    {
+	print "storing: $manifestname => $manifest_key\n";
+
+	my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
+	$whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
+
+	my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
+	print "fetch says: $manifestname => $checkkey\n";
+    }
 }
 
+
+sub write_file
+{
+    my $filename = shift;
+    open F, "<", $filename or die "Can't open $filename: $!";
+    my $s = new Warehouse::Stream (whc => $whc);
+    $s->clear;
+    $s->write_start ("-");
+    my $buf;
+    my $ok;
+    while ($ok = read F, $buf, 2**26)
+    {
+	$s->write_data ($buf);
+    }
+    die "Error reading $filename: $!" if !defined $ok;
+    close F;
+    $s->write_finish;
+    my $k = $s->as_key;
+    print "$k\n";
+}
 
 
 sub traverse
@@ -100,19 +128,6 @@ sub traverse
     }
 }
 
-sub usage
-{
-    die <<EOF
-usage:
-    $0 [options] localdir
-options:
-    --warehouse-controllers=host:port
-    --mogilefs-trackers=host:port,host:port
-    --name=/manifestname
-EOF
-;
-}
-
 sub md5_file
 {
     my $file = shift;
@@ -154,4 +169,18 @@ sub send_file
     }
     close FILE or die "Read error: $file: $!";
     return $totalsize;
+}
+
+sub usage
+{
+    die qq{
+usage:
+    $0 [options] localdir
+    $0 [options] localfile
+options:
+    --warehouse-controllers=host:port
+    --mogilefs-trackers=host:port,host:port
+    --name=/manifestname
+
+};
 }
