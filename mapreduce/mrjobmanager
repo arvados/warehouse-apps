@@ -150,6 +150,10 @@ Log (undef, "start");
 $SIG{'INT'} = \&croak;
 $SIG{'QUIT'} = \&croak;
 $SIG{'TERM'} = \&croak;
+$SIG{'TSTP'} = sub { $main::please_freeze = 1; };
+$SIG{'ALRM'} = sub { $main::please_info = 1; };
+$main::please_freeze = 0;
+$main::please_info = 0;
 my $time_slowest_success = 60;	# always reasonable to allow this long
 my $tasks_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
@@ -163,6 +167,14 @@ push @jobstep, { input => $Job->{input0},
 my @jobstep_todo = (0);
 my @jobstep_done = ();
 my @jobstep_tomerge = ();
+my $jobstep_tomerge_level = 0;
+
+
+
+if (defined $Job->{thawedfromkey})
+{
+  thaw ($Job->{thawedfromkey});
+}
 
 
 
@@ -284,6 +296,8 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	 ||
 	 (@slot > @freeslot && $todo_ptr+1 > $#jobstep_todo))
   {
+    last THISROUND if $main::please_freeze;
+    $main::please_info = 0, freeze() if $main::please_info;
     my $gotsome
 	= readfrompipes ()
 	+ reapchildren ();
@@ -305,15 +319,18 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   }
 }
 
+
 Log (undef, "wait for last ".(scalar keys %proc)." children to finish");
 while (%proc)
 {
+  $main::please_info = 0, freeze() if $main::please_info;
   readfrompipes ();
   if (!reapchildren())
   {
     update_progress_stats();
     try_getting_impatient();
     select (undef, undef, undef, 0.1);
+    killem (keys %proc) if $main::please_freeze;
   }
 }
 
@@ -321,10 +338,20 @@ update_progress_stats();
 
 
 
+if ($main::please_freeze)
+{
+  freeze();
+  cleanup();
+  cleanup_meta();
+  exit 0;
+}
+
+
+
 if (@jobstep_tomerge && !@jobstep_todo)
 {
   push @jobstep, { input => join ("\n", splice @jobstep_tomerge, 0),
-		   level => $level,
+		   level => $jobstep_tomerge_level,
 		   attempts => 0 };
   push @jobstep_todo, $#jobstep;
 }
@@ -523,6 +550,7 @@ sub process_stderr
     if ($merge)
     {
       push @jobstep_tomerge, $input;
+      $jobstep_tomerge_level = $level;
       if ($merge !~ /\D/ && @jobstep_tomerge >= $merge)
       {
 	$newjobref = { input => join ("\n",
@@ -548,45 +576,52 @@ sub process_stderr
   } split ("\n", $jobstep[$job]->{stderr});
 }
 
+
 sub try_getting_impatient
 {
   if ($tasks_succeeded > keys %proc)
   {
-    # enough jobsteps have succeeded that $time_slowest_success might
+    # Enough jobsteps have succeeded that $time_slowest_success might
     # be meaningful
     if (@slot >= 2 * keys %proc)
     {
-      # at least half of our task slots (cpus) are idle
-      for (grep { $proc{$_}->{time} + $time_slowest_success * 2 < time }
-	   keys %proc)
-      {
-	# pid $_ has taken more than twice as long as the longest
-	# successful job in this round.  It's probably hung.  Kill
-	# it, and restart it in the next round.
+      # At least half of our task slots (cpus) are idle.
 
-	my $sig = 2;		# SIGINT first
-	if (exists $proc{$_}->{"sent_$sig"} &&
-	    time - $proc{$_}->{"sent_$sig"} > 4)
-	{
-	  $sig = 15;		# SIGTERM if SIGINT doesn't work
-	}
-	if (exists $proc{$_}->{"sent_$sig"} &&
-	    time - $proc{$_}->{"sent_$sig"} > 4)
-	{
-	  $sig = 9;		# SIGKILL if SIGTERM doesn't work
-	}
-	if (!exists $proc{$_}->{"sent_$sig"})
-	{
-	  Log ($proc{$_}->{jobstep}, "sending 2x signal $sig to pid $_");
-	  kill $sig, $_;
-	  select (undef, undef, undef, 0.1);
-	  if ($sig == 2)
-	  {
-	    kill $sig, $_;	# srun wants two SIGINT to really interrupt
-	  }
-	  $proc{$_}->{"sent_$sig"} = time;
-	}
+      # Each of these pids have taken more than twice as long as the
+      # longest successful job in this round.  It's probably hung.
+      # Kill it, and restart it in the next round.
+      killem (grep { $proc{$_}->{time} + $time_slowest_success * 2 < time }
+	      keys %proc);
+    }
+  }
+}
+
+
+sub killem
+{
+  foreach (@_)
+  {
+    my $sig = 2;		# SIGINT first
+    if (exists $proc{$_}->{"sent_$sig"} &&
+	time - $proc{$_}->{"sent_$sig"} > 4)
+    {
+      $sig = 15;		# SIGTERM if SIGINT doesn't work
+    }
+    if (exists $proc{$_}->{"sent_$sig"} &&
+	time - $proc{$_}->{"sent_$sig"} > 4)
+    {
+      $sig = 9;			# SIGKILL if SIGTERM doesn't work
+    }
+    if (!exists $proc{$_}->{"sent_$sig"})
+    {
+      Log ($proc{$_}->{jobstep}, "sending 2x signal $sig to pid $_");
+      kill $sig, $_;
+      select (undef, undef, undef, 0.1);
+      if ($sig == 2)
+      {
+	kill $sig, $_;	   # srun wants two SIGINT to really interrupt
       }
+      $proc{$_}->{"sent_$sig"} = time;
     }
   }
 }
@@ -645,4 +680,103 @@ sub cleanup_meta
   $dbh->do ("update mrjob set metakey=? where id=?",
 	    undef,
 	    $metakey, $job_id);
+}
+
+
+sub freeze
+{
+  Log (undef, "freeze");
+
+  my $freezer = new Warehouse::Stream (whc => $whc);
+  $freezer->clear;
+  $freezer->name (".");
+  $freezer->write_start ("state.txt");
+
+  foreach my $Jobstep (@jobstep)
+  {
+    my $str = join ("\n",
+		    map
+		    {
+		      $_ . "=" . freezequote ($Jobstep->{$_})
+		    } grep { $_ ne "stderr" } keys %$Jobstep);
+    $freezer->write_data ($str."\n\n");
+  }
+  if (@jobstep_tomerge)
+  {
+    $freezer->write_data
+	("merge $jobstep_tomerge_level "
+	 . freezequote (join ("\n",
+			      map { freezequote ($_) } @jobstep_tomerge))
+	 . "\n\n");
+  }
+
+  $freezer->write_finish;
+  my $frozentokey = $freezer->as_key;
+  undef $freezer;
+  Log (undef, "frozento key is $frozentokey");
+  $dbh->do ("update mrjob set frozentokey=? where id=?",
+	    undef,
+	    $frozentokey, $job_id);
+  return $frozentokey;
+}
+
+
+sub thaw
+{
+  my $key = shift;
+  Log (undef, "thaw from $key");
+
+  @jobstep = ();
+  @jobstep_done = ();
+  @jobstep_todo = ();
+  @jobstep_tomerge = ();
+  $jobstep_tomerge_level = 0;
+
+  my $stream = new Warehouse::Stream ( whc => $whc,
+				       hash => [split (",", $key)] );
+  $stream->rewind;
+  while (my $dataref = $stream->read_until (undef, "\n\n"))
+  {
+    if ($$dataref =~ /^merge (\d+) (.*)/)
+    {
+      $jobstep_tomerge_level = $1;
+      @jobstep_tomerge
+	  = map { freezeunquote ($_) } split ("\n", freezeunquote($2));
+      next;
+    }
+
+    my $Jobstep = { };
+    foreach (split ("\n", $$dataref))
+    {
+      my ($k, $v) = split ("=", $_, 2);
+      $Jobstep->{$k} = freezeunquote ($v) if $k;
+    }
+    push @jobstep, $Jobstep;
+
+    if ($Jobstep->{exitcode} eq "0")
+    {
+      push @jobstep_done, $#jobstep;
+    }
+    else
+    {
+      push @jobstep_todo, $#jobstep;
+    }
+  }
+}
+
+
+sub freezequote
+{
+  my $s = shift;
+  $s =~ s/\\/\\\\/g;
+  $s =~ s/\n/\\n/g;
+  return $s;
+}
+
+
+sub freezeunquote
+{
+  my $s = shift;
+  $s =~ s{\\(.)}{$1 eq "n" ? "\n" : $1}ge;
+  return $s;
 }

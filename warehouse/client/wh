@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+
+use strict;
+
+use Warehouse;
+
+my $commands = {
+    "help" => \&help,
+    "job freeze" => \&job_freeze,
+    "job list" => \&job_list,
+    "job new" => \&job_new,
+};
+
+my $cmd = shift @ARGV;
+while (!$commands->{$cmd})
+{
+    die "Unrecognized command.  Try \"$0 help\".\n" if !@ARGV;
+    $cmd .= " ".(shift @ARGV);
+}
+
+my %opt;
+map { $opt{$1} = $2 if /(.+?)=(.*)/ } @ARGV;
+
+my $whc;
+$whc = new Warehouse ($opt{warehouse_name}
+		      ? (warehouse_name => $opt{warehouse_name})
+		      : ());
+
+$commands->{$cmd}->();
+
+sub help
+{
+    print qq{
+wh help
+wh job freeze id=ID [stop=1]
+wh job list [id_min=ID] [id_max=ID]
+wh job new nodes=N photons=N mrfunction=NAME revision=N input=KEY knobs=S
+wh job new nodes=N photons=N thaw=ID
+
+};
+}
+
+sub job_freeze
+{
+    if (!$whc->job_freeze (%opt))
+    {
+	warn ($whc->errstr . "\n");
+    }
+}
+
+sub job_list
+{
+    my $joblist = $whc->job_list (%opt);
+    if ($joblist)
+    {
+	foreach my $j (@$joblist)
+	{
+	    print join (", ", map { $_ . "=" . $j->{$_} } sort keys %$j) . "\n";
+	}
+    }
+    else { warn ($whc->errstr . "\n"); }
+}
+
+sub job_new
+{
+    my $jobid = $whc->job_new (%opt);
+    if ($jobid) { print ($jobid . "\n"); }
+    else { warn ($whc->errstr . "\n"); }
+}

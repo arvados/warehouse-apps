@@ -163,6 +163,8 @@ create table if not exists mrjob (
  success tinyint,
  output text,
  metakey text,
+ frozentokey text,
+ thawedfromkey text,
  steps_todo int,
  steps_done int,
  steps_running int,
@@ -205,5 +207,18 @@ grant insert, update on mrjobstep to mrwebgui\@localhost
   {
     my $sth = $dbh->prepare ($_);
     $sth->execute or die $dbh->errstr;
+  }
+
+  foreach (qq{
+alter table mrjob add frozentokey text after metakey
+  },
+	   qq{
+alter table mrjob add thawedfromkey text after frozentokey
+  })
+  {
+    my $sth = $dbh->prepare ($_);
+    $sth->{PrintWarn} = 0;
+    $sth->{PrintError} = 0;
+    $sth->execute;
   }
 }

@@ -87,7 +87,9 @@ sub _init
 
     $self->{daemon} = new HTTP::Daemon
 	( LocalAddr => $self->{ListenAddress},
-	  LocalPort => $self->{ListenPort} );
+	  LocalPort => $self->{ListenPort},
+	  Reuse => 1,
+	);
 
     $self->{daemon} or die "HTTP::Daemon::new failed";
 
@@ -312,6 +314,8 @@ sub run
 		    last;
 		}
 
+		my $mrdb = $self->{MapReduceDB};
+
 		my %jobspec;
 		foreach (split (/\n/, $plainmessage))
 		{
@@ -321,9 +325,27 @@ sub run
 		my @fields = qw(mrfunction
 				revision
 				inputkey
-				knobs
-				nodes
-				photons);
+				knobs);
+		if ($jobspec{thaw})
+		{
+		    # XXX fixme -- should have more error checking here
+		    my $sth = $self->{dbh}->prepare ("select * from $mrdb.mrjob where id=?");
+		    $sth->execute ($jobspec{thaw});
+		    if (my $thaw = $sth->fetchrow_hashref)
+		    {
+			for (@fields) {
+			    $jobspec{$_} = $thaw->{$_};
+			}
+			$jobspec{inputkey} = $thaw->{input0};
+			$jobspec{thawedfromkey} = "".$thaw->{frozentokey};
+		    }
+		}
+		else
+		{
+		    $jobspec{thawedfromkey} = undef;
+		}
+		push @fields, qw(nodes
+				 photons);
 		if (my @missing = grep { !defined $jobspec{$_} } @fields)
 		{
 		    my $resp = HTTP::Response->new
@@ -332,19 +354,19 @@ sub run
 		    $c->send_response ($resp);
 		    last;
 		}
-		my $mrdb = $self->{MapReduceDB};
 		my $ok = $self->{dbh}->do
 		    ("insert into $mrdb.mrjob
 		      (jobmanager_id, mrfunction, revision, nodes,
-		       input0, knobs, submittime)
-		      values (?, ?, ?, ?, ?, ?, now())",
+		       input0, knobs, thawedfromkey, submittime)
+		      values (?, ?, ?, ?, ?, ?, ?, now())",
 		     undef,
 		     -1,
 		     $jobspec{mrfunction},
 		     $jobspec{revision},
 		     $jobspec{nodes},
 		     $jobspec{inputkey},
-		     $jobspec{knobs});
+		     $jobspec{knobs},
+		     $jobspec{thawedfromkey});
 		my $jobid = $self->{dbh}->last_insert_id (undef, undef, undef, undef)
 		    if $ok;
 		$ok = $self->{dbh}->do
@@ -363,6 +385,68 @@ sub run
 		    ($jobid ? 200 : 500,
 		     $jobid ? "OK" : "Error",
 		     [], $jobid);
+		$c->send_response ($resp);
+	    }
+	    elsif ($r->method eq "POST" and $r->url->path eq "/job/freeze")
+	    {
+		my $result;
+		my $signedmessage = $r->content;
+
+		# XXX verify signature here XXX
+		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
+		my $plainmessage = $1;
+		my $verified = $plainmessage =~ /\S/;
+
+		if (!$verified)
+		{
+		    my $resp = HTTP::Response->new
+			(401, "SigFail",
+			 [], "Signature verification failed.\n");
+		    $c->send_response ($resp);
+		    last;
+		}
+
+		my $mrdb = $self->{MapReduceDB};
+
+		my %jobspec;
+		foreach (split (/\n/, $plainmessage))
+		{
+		    my ($k, $v) = split (/=/, $_, 2);
+		    $jobspec{$k} = _unescape($v);
+		}
+
+		my $status;
+		my $sth = $self->{dbh}->prepare ("select mrjobmanager.pid pid from $mrdb.mrjob left join $mrdb.mrjobmanager on mrjobmanager.id=mrjob.jobmanager_id and mrjob.finishtime is null where mrjob.id=?");
+		$sth->execute ($jobspec{id});
+		if (my $job = $sth->fetchrow_hashref)
+		{
+		    if (my $pid = $job->{pid})
+		    {
+			if ($jobspec{stop})
+			{
+			    kill "TSTP", $pid;
+			}
+			else
+			{
+			    kill "ALRM", $pid;
+			}
+			$status = 200;
+		    }
+		    else
+		    {
+			$status = 400;
+			$error = "Specified job is not running.";
+		    }
+		}
+		else
+		{
+		    $status = 404;
+		    $error = "No such job.";
+		}
+		my $resp = HTTP::Response->new
+		    ($status,
+		     $status == 200 ? "OK" : "Error",
+		     [], $status == 200 ? "OK" : $error);
 		$c->send_response ($resp);
 	    }
 	    else

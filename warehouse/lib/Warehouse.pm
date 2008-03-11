@@ -485,7 +485,7 @@ sub fetch_block_ref
     $verifyflag = 1 if !defined $verifyflag;
     my $nowarnflag = shift;
 
-    return \"" if $hash eq "d41d8cd98f00b204e9800998ecf8427e";
+    return \qq{} if $hash eq "d41d8cd98f00b204e9800998ecf8427e";
 
     if ($hash =~ /\+K/)
     {
@@ -978,6 +978,43 @@ sub job_list
 
 
 
+=head2 job_freeze
+
+    $whc->job_freeze (id => 1234);
+
+    $whc->job_freeze (id => 1234,
+		      stop => 1);
+
+=cut
+
+sub job_freeze
+{
+    my $self = shift;
+    my %job = @_;
+    map { for ($job{$_}) { s/\\/\\\\/g; s/\n/\\n/g; } } keys %job;
+
+    my $reqtext = join ("\n", map { $_."=".$job{$_} } keys %job);
+    my $signedreq = $self->_sign ($reqtext);
+
+    my $url = "http://".$self->{warehouse_servers}."/job/freeze";
+    my $req = HTTP::Request->new (POST => $url);
+    $req->header ('Content-Length' => length $signedreq);
+    $req->content ($signedreq);
+    my $r = $self->{ua}->request ($req);
+
+    if ($r->is_success)
+    {
+	return 1;
+    }
+    else
+    {
+	$self->{errstr} = $r->content;
+	return undef;
+    }
+}
+
+
+
 =head2 job_new
 
     my $id = $whc->job_new (mrfunction => "zmd5",
@@ -985,6 +1022,10 @@ sub job_list
 			    inputkey => "f171d0aa385d601d13d3f5292a4ed4c5",
 			    knobs => "GZIP=yes\nFOO=bar",
 			    nodes => 20,
+			    photons => 1);
+
+    my $id = $whc->job_new (thaw => 1234,
+			    nodes => 10,
 			    photons => 1);
 
 =cut
@@ -1017,7 +1058,7 @@ sub job_new
     }
     else
     {
-	$self->{errstr} = $r->status_line;
+	$self->{errstr} = $r->content;
     }
     return undef;
 }

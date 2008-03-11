@@ -452,6 +452,11 @@ sub seek
 	print $$dataref;
     }
 
+    while (my $dataref = $stream->read_until (undef, "\n"))
+    {
+	print $$dataref;
+    }
+
 Read data from stream until position $endpos is reached, or until the
 given end-of-record delimiter is reached.
 
@@ -476,7 +481,9 @@ sub read_until
   # $self->{bufcursor} = where in $self->{buf} the client will get its next byte from
   # $wantbytes = how long $self->{buf} should be in order to satisfy this request
 
-  my $wantbytes = $endpos - $self->{bufpos};
+  my $wantbytes = (defined ($endpos)
+		   ? $endpos - $self->{bufpos}
+		   : 2 * $Warehouse::blocksize);
   if ($wantbytes < $self->{bufcursor})
   {
     die "read_until endpos $endpos < current pos ".($self->{bufpos} + $self->{bufcursor});
@@ -520,6 +527,10 @@ sub read_until
   if ($wantbytes > length $self->{buf})	# can only have bytes up to end of buf, even if more requested
   {
     $wantbytes = length $self->{buf};
+  }
+  if ($wantbytes == 0)
+  {
+    return undef;
   }
   $self->{clientbuf} = substr $self->{buf}, $self->{bufcursor}, $wantbytes - $self->{bufcursor};
   $self->{bufcursor} = $wantbytes;
