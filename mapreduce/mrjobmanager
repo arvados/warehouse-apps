@@ -679,6 +679,7 @@ sub save_meta
   $m = $m->copy if $justcheckpoint;
   $m->write_finish;
   my $key = $m->as_key;
+  undef $metastream if !$justcheckpoint; # otherwise Log() will try to use it
   Log (undef, "meta key is $key");
   $dbh->do ("update mrjob set metakey=? where id=?",
 	    undef,
