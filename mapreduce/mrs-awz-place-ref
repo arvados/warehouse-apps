@@ -52,7 +52,9 @@ sub dump_freq {
 }
 
 sub dump_placements {
-  my %hash; 
+  my %hash_exact;
+  my %hash_mer2;
+  my %hash_mer3;
 
   print STDERR "entering dump placements...\n";
 
@@ -60,11 +62,22 @@ sub dump_placements {
     my $start = vec($index, $i, 32);
     my $stop = vec ($index, $i+1, 32); 
 
-    for (my $j = $start+3; $j < $stop+5; $j+=5) {
-      $hash{vec($buf, $j, 16)>>6}++;  
+    for (my $j = $start; $j <= $stop; $j+=5) {
+      $hash_exact{vec($buf, $j+2, 16)>>12}++;  
+      $hash_mer2{vec($buf, $j+3, 16)>>11}++;  
+      $hash_mer3{(vec($buf, $j+3, 16)>>6)&0x1F}++;        
     }
-  }   
-  while ( my ($k, $v) = each %hash ) {  
+  }
+  print "exact frequencies\n"; 
+  while ( my ($k, $v) = each %hash_exact ) {  
+    print "$v $k\n"; 
+  }
+  print "mer2 frequencies\n"; 
+  while ( my ($k, $v) = each %hash_mer2 ) {  
+    print "$v $k\n"; 
+  }
+  print "mer3 frequencies\n"; 
+  while ( my ($k, $v) = each %hash_mer3 ) {  
     print "$v $k\n"; 
   }
 }
@@ -149,10 +162,16 @@ sub place0 {
 	    
 #	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
 	   
-	    if ((vec ($buf, $j+3, 16) >> 6)  < 1024) {
-	      vec($buf, $j+3, 16)+=64; 
+	    if ((vec ($buf, $j+4, 16) >> 12)  < 15) {
+	      vec($buf, $j+2, 16)+=16; 
 	    }
-	    $count++; 
+	    $count++;
+	  }
+	  if ($pos2 && ((vec ($buf, $j+3, 16) >> 11)  < 31)) {
+	    vec($buf, $j+3, 16)+=2048; 	  
+	  }
+	  if ($pos3 && (((vec ($buf, $j+3, 16) >> 6) &0x1F)  < 31)) {
+	    vec($buf, $j+3, 16)+=64; 
 	  }
 	}
       }
