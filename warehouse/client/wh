@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 use strict;
 
 use Warehouse;
@@ -20,6 +23,12 @@ while (!$commands->{$cmd})
 
 my %opt;
 map { $opt{$1} = $2 if /(.+?)=(.*)/s } @ARGV;
+
+# Putting in a newline as a separator for knob keypairs is unwieldy on the
+# command line. Instead, let's just accept a space as separator and turn it
+# into a proper newline here, which is what the new_job warehouse function
+# expects.
+$opt{'knobs'} =~ s/ /\n/g;
 
 my $whc;
 $whc = new Warehouse ($opt{warehouse_name}
