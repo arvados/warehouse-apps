@@ -60,6 +60,16 @@ sub _init
   return $self;
 }
 
+sub copy
+{
+  my $self = shift;
+  my $copy = { %$self };
+  bless $copy, ref $self;
+  $copy->{myhashes} = [ @ {$self->{myhashes}} ] if exists $self->{myhashes};
+  $copy->{hash} = [ @ {$self->{hash}} ] if exists $self->{hash};
+  return $copy;
+}
+
 
 
 =head2 name
