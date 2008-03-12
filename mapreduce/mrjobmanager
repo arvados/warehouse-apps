@@ -155,7 +155,7 @@ $SIG{'ALRM'} = sub { $main::please_info = 1; };
 $main::please_freeze = 0;
 $main::please_info = 0;
 my $time_slowest_success = 60;	# always reasonable to allow this long
-my $tasks_must_output_keys = 0;	# becomes 1 when any task outputs a key
+my $jobsteps_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 
 
@@ -180,8 +180,8 @@ if (defined $Job->{thawedfromkey})
 
 ONELEVEL:
 
-my $tasks_succeeded = 0;
-my $tasks_failed = 0;
+my $thisround_succeeded = 0;
+my $thisround_failed = 0;
 
 @jobstep_todo = sort { $jobstep[$a]->{level} <=> $jobstep[$b]->{level}
 		       or $a <=> $b } @jobstep_todo;
@@ -307,11 +307,11 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
       try_getting_impatient();
       select (undef, undef, undef, 0.1);
     }
-    if (($tasks_failed >= 8 && $tasks_succeeded == 0) ||
-	($tasks_failed >= 16 && $tasks_failed > $tasks_succeeded))
+    if (($thisround_failed >= 8 && $thisround_succeeded == 0) ||
+	($thisround_failed >= 16 && $thisround_failed > $thisround_succeeded))
     {
-      my $message = "Failure rate too high ($tasks_failed/"
-	  .($tasks_failed+$tasks_succeeded)
+      my $message = "Failure rate too high ($thisround_failed/"
+	  .($thisround_failed+$thisround_succeeded)
 	  .") -- giving up on this round";
       Log (undef, $message);
       last THISROUND;
@@ -363,13 +363,13 @@ if (@jobstep_tomerge && !@jobstep_todo)
 
 $time_slowest_success = $time_slowest_success * 2;
 
-if ($tasks_succeeded > 0 || ($tasks_failed > 0 && $tasks_failed < 5))
+if ($thisround_succeeded > 0 || ($thisround_failed > 0 && $thisround_failed < 5))
 {
   goto ONELEVEL if @jobstep_todo;
 }
-elsif ($tasks_failed > 0)
+elsif ($thisround_failed > 0)
 {
-  my $message = "stop because $tasks_failed tasks failed and none succeeded";
+  my $message = "stop because $thisround_failed tasks failed and none succeeded";
   Log (undef, $message);
   croak ($message);
 }
@@ -475,19 +475,19 @@ sub reapchildren
   if (!exists $Jobstep->{output})
   {
     $exitinfo .= " with no output key";
-    $exitcode = -1 if $exitcode == 0 && $tasks_must_output_keys;
+    $exitcode = -1 if $exitcode == 0 && $jobsteps_must_output_keys;
   }
   Log ($jobstepid, "child $pid on $whatslot $exitinfo");
 
   if ($exitcode != 0)
   {
-    ++$tasks_failed;
+    ++$thisround_failed;
     push @jobstep_todo, $jobstepid;
     Log ($jobstepid, "failure in $elapsed seconds");
   }
   else
   {
-    ++$tasks_succeeded;
+    ++$thisround_succeeded;
     $time_slowest_success = $elapsed
 	if $time_slowest_success < $elapsed;
     push @jobstep_done, $jobstepid;
@@ -532,7 +532,7 @@ sub process_stderr_for_output_key
   while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
   {
     $jobstep[$job]->{output} = $1;
-    $tasks_must_output_keys = 1;
+    $jobsteps_must_output_keys = 1;
   }
 }
 
@@ -579,7 +579,7 @@ sub process_stderr
 
 sub try_getting_impatient
 {
-  if ($tasks_succeeded > keys %proc)
+  if ($thisround_succeeded > keys %proc)
   {
     # Enough jobsteps have succeeded that $time_slowest_success might
     # be meaningful
