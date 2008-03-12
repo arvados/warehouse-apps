@@ -44,7 +44,8 @@ sub help
 wh help
 wh job freeze id=ID [stop=1]
 wh job list [id_min=ID] [id_max=ID]
-wh job new nodes=N photons=N mrfunction=NAME revision=N input=KEY knobs=S
+wh job new nodes=N photons=N mrfunction=NAME revision=N input=KEY \
+           BARKNOB=foo BAZKNOB=baz
 wh job new nodes=N photons=N thaw=ID
 
 };
