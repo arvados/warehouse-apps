@@ -27,7 +27,8 @@ map { $opt{$1} = $2 if /(.+?)=(.*)/s } @ARGV;
 # Putting in a newline as a separator for knob keypairs is unwieldy on the
 # command line. Instead, let's just accept a space as separator and turn it
 # into a proper newline here, which is what the new_job warehouse function
-# expects.
+# expects. If you need to include spaces in knobs, submit the knobs as
+# separate opts like FOO="bar baz" instead of knobs="FOO=bar baz".
 $opt{'knobs'} =~ s/ /\n/g;
 
 my $whc;
@@ -72,6 +73,17 @@ sub job_list
 
 sub job_new
 {
+    my @knobs = split (/\n/, $opt{'knobs'});
+    foreach (sort keys %opt)
+    {
+	if (!/[a-z]/)		# treat uppercase wh opts as job knobs
+	{
+	    push @knobs, $_."=".$opt{$_};
+	    delete $opt{$_};
+	}
+    }
+    $opt{'knobs'} = join ("\n", @knobs);
+
     my $jobid = $whc->job_new (%opt);
     if ($jobid) { print ($jobid . "\n"); }
     else { warn ($whc->errstr . "\n"); }
