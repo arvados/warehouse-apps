@@ -58,12 +58,11 @@ sub dump_placements {
 
   for (my $i = 0; $i < 2**24; $i++ ) {
     my $start = vec($index, $i, 32);
-    my $len = vec ($index, $i+1, 32) - $start; 
-    $hash{$len}++; 
+    my $stop = vec ($index, $i+1, 32); 
 
-    #for (my $j = 0; $j < $len; $j+=5) {
-    #  $hash{vec($buf, $start+$j+2, 16)}++  
-    #}
+    for (my $j = $start+3; $j < $stop+5; $j+=5) {
+      $hash{vec($buf, $j, 16)>>6}++;  
+    }
   }   
   while ( my ($k, $v) = each %hash ) {  
     print "$v $k\n"; 
@@ -93,7 +92,7 @@ sub place_reads {
       while (my $dataref = $instream->read_until($pos+$size)) {
 	if ($max_blocks){ 
 	  print STDERR $place_ref->($dataref)." "
-	      .length($$dataref)." $filename\n";
+	      .length($$dataref)." $filename $max_blocks\n";
 	}
 	$max_blocks--;
       } 
@@ -122,11 +121,12 @@ sub place0 {
   for (my $i = 0; $i < $bp-1400; $i++){
     my $mer0 = vec($$dataref, $i, 16); 
     
-    foreach my $wobble01 (9..10) {
 
-      if ( $mer0>>8 == $prefix) {
+    if ( $mer0>>8 == $prefix) {
         
-	my $mer1 = vec($$dataref, $i+$wobble01, 16);
+      foreach my $wobble01 (9..10) {
+
+  	my $mer1 = vec($$dataref, $i+$wobble01, 16);
 	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
 		  
 	my $start = vec ($index, $suffix, 32);
@@ -149,9 +149,9 @@ sub place0 {
 	    
 #	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
 	   
-#	    if ((vec ($buf, $j+3, 16) >> 10)  < 1024) {
-#	      vec($buf, $j+2, 16)++; 
-#	    }
+	    if ((vec ($buf, $j+3, 16) >> 6)  < 1024) {
+	      vec($buf, $j+3, 16)+=64; 
+	    }
 	    $count++; 
 	  }
 	}
