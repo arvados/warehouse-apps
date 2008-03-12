@@ -90,7 +90,7 @@ sub place_reads {
       last if !defined $pos; 
       $instream->seek ($pos); 
       while (my $dataref = $instream->read_until($pos+$size)) {
-	if ($max_blocks){ 
+	if ($max_blocks>0){ 
 	  print STDERR $place_ref->($dataref)." "
 	      .length($$dataref)." $filename $max_blocks\n";
 	}
