@@ -162,9 +162,9 @@ sub place0 {
 	    
 #	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
 	   
-	    #if ((vec ($buf, $j+2, 16) >> 12)  < 15) {
-	    #  vec($buf, $j+2, 16)+=4096; 
-	    #}
+	    if ((vec ($buf, $j+2, 16) >> 12)  < 15) {
+	      vec($buf, $j+2, 16)+=4096; 
+	    }
 	    $count++;
 	  }
 	  #if ($pos2 && ((vec ($buf, $j+3, 16) >> 11)  < 31)) {
