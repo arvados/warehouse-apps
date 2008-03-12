@@ -297,7 +297,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	 (@slot > @freeslot && $todo_ptr+1 > $#jobstep_todo))
   {
     last THISROUND if $main::please_freeze;
-    $main::please_info = 0, freeze() if $main::please_info;
+    $main::please_info = 0, freeze(), save_meta(1) if $main::please_info;
     my $gotsome
 	= readfrompipes ()
 	+ reapchildren ();
@@ -323,7 +323,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 Log (undef, "wait for last ".(scalar keys %proc)." children to finish");
 while (%proc)
 {
-  $main::please_info = 0, freeze() if $main::please_info;
+  $main::please_info = 0, freeze(), save_meta(1) if $main::please_info;
   readfrompipes ();
   if (!reapchildren())
   {
@@ -342,7 +342,7 @@ if ($main::please_freeze)
 {
   freeze();
   cleanup();
-  cleanup_meta();
+  save_meta();
   exit 0;
 }
 
@@ -435,7 +435,7 @@ $sth = $dbh->prepare ("update mrjob set finishtime=now(), success=?
 $sth->execute ($success, $job_id, $jobmanager_id)
     or croak ($dbh->errstr);
 
-cleanup_meta();
+save_meta();
 exit 0;
 
 
@@ -657,7 +657,7 @@ sub croak
   my $message = "@_ at $file line $line\n";
   Log (undef, $message);
   cleanup() if $dbh;
-  cleanup_meta() if $metastream;
+  save_meta() if $metastream;
   die;
 }
 
@@ -672,15 +672,17 @@ sub cleanup
 }
 
 
-sub cleanup_meta
+sub save_meta
 {
-  $metastream->write_finish;
-  my $metakey = $metastream->as_key;
-  undef $metastream;
-  Log (undef, "meta key is $metakey");
+  my $justcheckpoint = shift; # false if this will be the last meta saved
+  my $m = $metastream;
+  $m = $m->copy if $justcheckpoint;
+  $m->write_finish;
+  my $key = $m->as_key;
+  Log (undef, "meta key is $key");
   $dbh->do ("update mrjob set metakey=? where id=?",
 	    undef,
-	    $metakey, $job_id);
+	    $key, $job_id);
 }
 
 
