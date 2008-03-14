@@ -62,7 +62,7 @@ sub dump_placements {
     my $start = vec($index, $i, 32);
     my $stop = vec ($index, $i+1, 32); 
 
-    for (my $j = $start; $j <= $stop; $j+=5) {
+    for (my $j = $start; $j < $stop; $j+=5) {
       $hash_exact{vec($buf, $j+2, 16)>>12}++;  
       $hash_mer2{vec($buf, $j+3, 16)>>11}++;  
       $hash_mer3{(vec($buf, $j+3, 16)>>6)&0x1F}++;        
@@ -162,14 +162,14 @@ sub place0 {
 	    
 #	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
 	   
-	    if ((vec ($buf, $j+2, 16) >> 12)  < 15) {
-	      vec($buf, $j+2, 16)+=4096; 
-	    }
+	    #if ((vec ($buf, $j+2, 16) >> 12)  < 15) {
+	    #  vec($buf, $j+2, 16)+=4096; 
+	    #}
 	    $count++;
 	  }
-	  if ($pos2 && ((vec ($buf, $j+3, 16) >> 11)  < 31)) {
-	    vec($buf, $j+3, 16)+=2048; 	  
-	  }
+	  #if ($pos2 && ((vec ($buf, $j+3, 16) >> 11)  < 31)) {
+	  #  vec($buf, $j+3, 16)+=2048; 	  
+	  #}
 	  #if ($pos3 && (((vec ($buf, $j+3, 16) >> 6) &0x1F)  < 31)) {
 	  #  vec($buf, $j+3, 16)+=64; 
 	  #}
