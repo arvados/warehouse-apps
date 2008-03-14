@@ -80,11 +80,12 @@ sub dump_placements {
   while ( my ($k, $v) = each %hash_mer3 ) {  
     print "$v $k\n"; 
   }
-  if ($hash_exact{0} != $count/5 || 
-      $hash_mer2{0} != $count/5 || 
-      $hash_mer3{0} != $count/5) {
-    print STDERR "DECODE ERROR ".$count/5." ".
-	" ".$hash_exact{0}." ".$hash_mer2{0}." ".$hash_mer3{0}."\n";
+  my $reads = $count/5; 
+  if ($hash_exact{0} != $reads || 
+      $hash_mer2{0} != $reads || 
+      $hash_mer3{0} != $reads) {
+    print STDERR "DECODE ERROR $reads ".
+	$hash_exact{0}." ".$hash_mer2{0}." ".$hash_mer3{0}."\n";
   }
 }
 
