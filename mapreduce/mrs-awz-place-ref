@@ -80,6 +80,12 @@ sub dump_placements {
   while ( my ($k, $v) = each %hash_mer3 ) {  
     print "$v $k\n"; 
   }
+  if ($hash_exact{0} != $count/5 || 
+      $hash_mer2{0} != $count/5 || 
+      $hash_mer3{0} != $count/5) {
+    print STDERR "DECODE ERROR ".$count/5.
+	" hash_exact{0} $hash_mer2{0} $hash_mer3{0}\n";
+  }
 }
 
 
@@ -145,7 +151,7 @@ sub place0 {
 	my $start = vec ($index, $suffix, 32);
 	my $stop = vec ($index, $suffix+1, 32); 
 
-	for (my $j = $start; $j <= $stop; $j+=5) {
+	for (my $j = $start; $j < $stop; $j+=5) {
 	  my $mer2 = vec ($buf, $j, 16);  
 	  my $mer3 = vec ($buf, $j+1, 16);
 	  my $pos2 = $hash_mers[$mer2];
