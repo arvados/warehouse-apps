@@ -83,8 +83,8 @@ sub dump_placements {
   if ($hash_exact{0} != $count/5 || 
       $hash_mer2{0} != $count/5 || 
       $hash_mer3{0} != $count/5) {
-    print STDERR "DECODE ERROR ".$count/5.
-	" $hash_exact{0} $hash_mer2{0} $hash_mer3{0}\n";
+    print STDERR "DECODE ERROR ".$count/5." ".
+	" ".$hash_exact{0}." ".$hash_mer2{0}." ".$hash_mer3{0}."\n";
   }
 }
 
