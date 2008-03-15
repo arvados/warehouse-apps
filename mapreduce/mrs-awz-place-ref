@@ -35,7 +35,7 @@ for (my $j = $t; $j <= 2**24; $j++) {
   vec($index, $j, 32) = $recount; 
 } 
 read(STDIN, $buf, $recount*2);
-while (<>); 
+while (<>) {}; 
 
 print STDERR "read index, count = $count, recount = $recount, t = $t\n"; 
 
