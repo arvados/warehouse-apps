@@ -47,6 +47,7 @@ sub self_check {
 	 (vec($buf, $i+3, 16)>>11) || 
 	 ((vec($buf, $i+3, 16)>>6)&0x1F)) {
       print STDERR "read $i corrupted\n"; 
+      exit(0); 
     }     
   } 
 } 
