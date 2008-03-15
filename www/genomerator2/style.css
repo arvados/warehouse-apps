@@ -33,7 +33,7 @@ padding:3.5em 1em 0em 0em;
 position:absolute;
 left:0.5em;
 top:8em;
-width:220px;
+width:500px;
 margin:0;
 padding:1em .5em 2em .5em;
 border:1px solid #828383;
@@ -75,7 +75,7 @@ margin-left: 17.50em;
 margin-right:0.5em;
 voice-family: "\"}\"";
 voice-family: inherit;
-margin-left:17.50em;
+margin-left:37em;
 margin-right:0.5em;
 padding:1em .5em 2em .5em;
 border:1px solid #828383;
@@ -83,7 +83,7 @@ font-size:.9em;
 }
 
 html>body #centerColumn {
-margin-left:17.50em;
+margin-left:37em;
 margin-right:0.5em;
 }
 
