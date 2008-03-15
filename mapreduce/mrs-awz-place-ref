@@ -24,6 +24,7 @@ my $count = vec ($index, 2**24, 32);
 
 #truncate reads to avoid perl vec() bug. 
 my $t;   
+my $recount;
 for ($t=0; $t <= 2**24; $t++) {
   if (vec($index, $t, 32) >= (2**28-1))  {
     last;
