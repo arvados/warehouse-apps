@@ -26,10 +26,10 @@ my $count = vec ($index, 2**24, 32);
 my $t;   
 my $recount;
 for ($t=0; $t <= 2**24; $t++) {
-  if (vec($index, $t, 32) >= (2**28-1))  {
+  $recount = vec($index, $t, 32); 
+  if ($recount > 2**27)  {
     last;
-  }
-  $recount++; 
+  }  
 }
 for (my $j = $t; $j <= 2**24; $j++) {
   vec($index, $j, 32) = $recount; 
