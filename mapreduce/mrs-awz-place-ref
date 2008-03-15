@@ -20,22 +20,23 @@ my $index;
 my $buf; 
 
 read(STDIN, $index, (2**24+1)*4);
-my $count = vec ($index, 2**24, 32);  
-read(STDIN, $buf, $count*2);
+my $count = vec ($index, 2**24, 32); 
 
-print STDERR "read index, count = $count\n"; 
-
-#truncate reads to avoid perl vec() bug.  
-my $truncate = 0; 
-for (my $i=0; $i <= 2**24; $i++) {
-  if (vec($index, $i, 32) >= 2**28-1)  {
-    vec($index, $i, 32) = vec($index, $i-1, 32);
-    $truncate++; 
+#truncate reads to avoid perl vec() bug. 
+my $t;   
+for ($t=0; $t <= 2**24; $t++) {
+  if (vec($index, $t, 32) >= (2**28-1))  {
+    last;
   }
+  $recount++; 
 }
-if ($truncate) {
-  print STDERR "truncated $truncate reads\n";      
-}
+for (my $j = $t; $j <= 2**24; $j++) {
+  vec($index, $j, 32) = $recount; 
+} 
+read(STDIN, $buf, $recount*2);
+while (<>); 
+
+print STDERR "read index, count = $count, recount = $recount, t = $t\n"; 
 
 if ($dump_f) {
   dump_freq();
