@@ -25,6 +25,8 @@ read(STDIN, $buf, $count*2);
 
 print STDERR "read index, count = $count\n"; 
 
+self_check(); 
+
 if ($dump_f) {
   dump_freq();
 }
@@ -33,6 +35,14 @@ else {
   dump_placements(); 
 }
 
+sub self_check {
+  print STDERR "entering self-check...\n"; 
+  for (my $i = 0; $i <= 2**24; $i++) {
+    if (vec($index, $i, 32) % 5) {
+      print STDERR "index corrupted\n"; 
+    }
+  }
+} 
 
 sub dump_freq {
   my %hash; 
