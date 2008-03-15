@@ -28,7 +28,7 @@ print STDERR "read index, count = $count\n";
 #truncate reads to avoid perl vec() bug.  
 my $truncate = 0; 
 for (my $i=0; $i <= 2**24; $i++) {
-  if (vec($index, $i, 32) >= 2^28-1)  {
+  if (vec($index, $i, 32) >= 2**28-1)  {
     vec($index, $i, 32) = vec($index, $i-1, 32);
     $truncate++; 
   }
