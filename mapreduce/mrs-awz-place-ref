@@ -25,7 +25,17 @@ read(STDIN, $buf, $count*2);
 
 print STDERR "read index, count = $count\n"; 
 
-self_check(); 
+#truncate reads to avoid perl vec() bug.  
+my $truncate = 0; 
+for (my $i=0; $i <= 2**24; $i++) {
+  if (vec($index, $i, 32) >= 2^28-1)  {
+    vec($index, $i, 32) = vec($index, $i-1, 32);
+    $truncate++; 
+  }
+}
+if ($truncate) {
+  print STDERR "truncated $truncate reads\n";      
+}
 
 if ($dump_f) {
   dump_freq();
@@ -34,23 +44,6 @@ else {
   place_reads (); 
   dump_placements(); 
 }
-
-sub self_check {
-  print STDERR "entering self-check...\n"; 
-  for (my $i=0; $i <= 2**24; $i++) {
-    if (vec($index, $i, 32) % 5) {
-      print STDERR "index $i corrupted\n"; 
-    }
-  }
-  for (my $i=0; $i < $count; $i+=5) {
-    if ( (vec($buf, $i+2, 16)>>12) || 
-	 (vec($buf, $i+3, 16)>>11) || 
-	 ((vec($buf, $i+3, 16)>>6)&0x1F)) {
-      print STDERR "read $i corrupted\n"; 
-      exit(0); 
-    }     
-  } 
-} 
 
 sub dump_freq {
   my %hash; 
@@ -86,24 +79,14 @@ sub dump_placements {
       $hash_mer3{(vec($buf, $j+3, 16)>>6)&0x1F}++;        
     }
   }
-  print "exact frequencies\n"; 
   while ( my ($k, $v) = each %hash_exact ) {  
-    print "$v $k\n"; 
+    print "exact $v $k\n"; 
   }
-  print "mer2 frequencies\n"; 
   while ( my ($k, $v) = each %hash_mer2 ) {  
-    print "$v $k\n"; 
+    print "mer2 $v $k\n"; 
   }
-  print "mer3 frequencies\n"; 
   while ( my ($k, $v) = each %hash_mer3 ) {  
-    print "$v $k\n"; 
-  }
-  my $reads = $count/5; 
-  if ($hash_exact{0} != $reads || 
-      $hash_mer2{0} != $reads || 
-      $hash_mer3{0} != $reads) {
-    print STDERR "DECODE ERROR $reads ".
-	$hash_exact{0}." ".$hash_mer2{0}." ".$hash_mer3{0}."\n";
+    print "mer3 $v $k\n"; 
   }
 }
 
@@ -187,17 +170,17 @@ sub place0 {
 	    
 #	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
 	   
-	    #if ((vec ($buf, $j+2, 16) >> 12)  < 15) {
-	    #  vec($buf, $j+2, 16)+=4096; 
-	    #}
+	    if ((vec ($buf, $j+2, 16) >> 12)  < 15) {
+	      vec($buf, $j+2, 16)+=4096; 
+	    }
 	    $count++;
 	  }
-	  #if ($pos2 && ((vec ($buf, $j+3, 16) >> 11)  < 31)) {
-	  #  vec($buf, $j+3, 16)+=2048; 	  
-	  #}
-	  #if ($pos3 && (((vec ($buf, $j+3, 16) >> 6) &0x1F)  < 31)) {
-	  #  vec($buf, $j+3, 16)+=64; 
-	  #}
+	  if ($pos2 && ((vec ($buf, $j+3, 16) >> 11)  < 31)) {
+	    vec($buf, $j+3, 16)+=2048; 	  
+	  }
+	  if ($pos3 && (((vec ($buf, $j+3, 16) >> 6) &0x1F)  < 31)) {
+	    vec($buf, $j+3, 16)+=64; 
+	  }
 	}
       }
     }
