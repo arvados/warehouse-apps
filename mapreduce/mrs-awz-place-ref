@@ -37,11 +37,18 @@ else {
 
 sub self_check {
   print STDERR "entering self-check...\n"; 
-  for (my $i = 0; $i <= 2**24; $i++) {
+  for (my $i=0; $i <= 2**24; $i++) {
     if (vec($index, $i, 32) % 5) {
-      print STDERR "index corrupted\n"; 
+      print STDERR "index $i corrupted\n"; 
     }
   }
+  for (my $i=0; $i < $count; $i+=5) {
+    if ( (vec($buf, $i+2, 16)>>12) || 
+	 (vec($buf, $i+3, 16)>>11) || 
+	 ((vec($buf, $i+3, 16)>>6)&0x1F)) {
+      print STDERR "read $i corrupted\n"; 
+    }     
+  } 
 } 
 
 sub dump_freq {
