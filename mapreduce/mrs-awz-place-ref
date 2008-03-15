@@ -11,6 +11,7 @@ $max_blocks = $ENV{KNOB_MAX_BLOCKS} if $ENV{KNOB_MAX_BLOCKS};
 my $dump_f = $ENV{KNOB_DUMP};
 my $ref_key = $ENV{KNOB_REFERENCE}; 
 my $prefix = $ENV{MR_ID}-1; 
+my $cutoff = 2*$ENV{KNOB_CUTBITS}; 
 my $place_ref = \&place0;
 $place_ref = \&place1 if $ENV{KNOB_VARIANT};
 
@@ -27,7 +28,7 @@ my $t;
 my $recount;
 for ($t=0; $t <= 2**24; $t++) {
   $recount = vec($index, $t, 32); 
-  if ($recount > 2**27)  {
+  if ($recount > $cutoff)  {
     last;
   }  
 }
