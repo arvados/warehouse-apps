@@ -83,13 +83,13 @@ sub dump_placements {
     }
   }
   while ( my ($k, $v) = each %hash_exact ) {  
-    print "exact $v $k\n"; 
+    print STDERR "exact $v $k\n"; 
   }
   while ( my ($k, $v) = each %hash_mer2 ) {  
-    print "mer2 $v $k\n"; 
+    print STDERR "mer2 $v $k\n"; 
   }
   while ( my ($k, $v) = each %hash_mer3 ) {  
-    print "mer3 $v $k\n"; 
+    print STDERR "mer3 $v $k\n"; 
   }
 }
 
@@ -181,9 +181,11 @@ sub place0 {
 	  else {
 	    if ($pos2 && ((vec ($buf, $j+3, 16) >> 11)  < 31)) {
 	      vec($buf, $j+3, 16)+=2048; 	  
+	      print convert_mers($mer3)." ".$pos2+9;  
 	    }
 	    if ($pos3 && (((vec ($buf, $j+3, 16) >> 6) &0x1F)  < 31)) {
-	      vec($buf, $j+3, 16)+=64; 
+	      vec($buf, $j+3, 16)+=64;
+	      print convert_memrs($mer2)." ".$pos3-9; 
 	    }
 	  }
 	}
