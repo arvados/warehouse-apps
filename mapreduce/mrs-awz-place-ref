@@ -181,11 +181,11 @@ sub place0 {
 	  else {
 	    if ($pos2 && ((vec ($buf, $j+3, 16) >> 11)  < 31)) {
 	      vec($buf, $j+3, 16)+=2048; 	  
-	      print convert_mers($mer3)." ".$pos2+9;  
+	      print convert_mers($mer3)." ".($pos2+9)."\n";  
 	    }
 	    if ($pos3 && (((vec ($buf, $j+3, 16) >> 6) &0x1F)  < 31)) {
 	      vec($buf, $j+3, 16)+=64;
-	      print convert_memrs($mer2)." ".$pos3-9; 
+	      print convert_mers($mer2)." ".($pos3-9)."\n"; 
 	    }
 	  }
 	}
