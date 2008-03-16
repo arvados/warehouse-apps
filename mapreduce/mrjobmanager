@@ -583,14 +583,24 @@ sub try_getting_impatient
   {
     # Enough jobsteps have succeeded that $time_slowest_success might
     # be meaningful
+
     if (@slot >= 2 * keys %proc)
     {
       # At least half of our task slots (cpus) are idle.
 
-      # Each of these pids have taken more than twice as long as the
-      # longest successful job in this round.  It's probably hung.
-      # Kill it, and restart it in the next round.
-      killem (grep { $proc{$_}->{time} + $time_slowest_success * 2 < time }
+      # Each of the following pids have taken more than twice as long
+      # as the longest successful jobstep in this round.  It's
+      # probably hung, so we'll kill and restart it.  If it has
+      # already been killed this way before, allow it to take at least
+      # twice as long this time.
+
+      killem (grep
+	      {
+		time >
+		    ($proc{$_}->{"time"}
+		     + 2 * ($proc{$_}->{"killedafter"}
+			    or $time_slowest_success))
+	      }
 	      keys %proc);
     }
   }
@@ -622,6 +632,7 @@ sub killem
 	kill $sig, $_;	   # srun wants two SIGINT to really interrupt
       }
       $proc{$_}->{"sent_$sig"} = time;
+      $proc{$_}->{"killedafter"} = time - $proc{$_}->{"time"};
     }
   }
 }
@@ -741,6 +752,11 @@ sub thaw
   $stream->rewind;
   while (my $dataref = $stream->read_until (undef, "\n\n"))
   {
+    if ($$dataref =~ /^job /)
+    {
+      next;
+    }
+
     if ($$dataref =~ /^merge (\d+) (.*)/)
     {
       $jobstep_tomerge_level = $1;
