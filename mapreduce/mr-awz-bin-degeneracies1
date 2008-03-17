@@ -9,6 +9,29 @@ use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
 
+my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+
+my %bp_numeric2 = (
+  'a' => 0, 
+  'c' => 1,
+  'g' => 2,
+  't' => 3
+    ); 
+
+my @RevcTable;
+foreach my $x (0 .. 255) {
+  my $bp;
+  my $x_rc; 
+  for (my $i = 6 ; $i >= 0; $i-=2) { 
+    $bp .= $numeric2_bp[($x>>$i)&3];
+  }
+  $bp =~ tr/acgt/tgca/;
+  my $bp_rc = reverse $bp; 
+  while ($bp_rc =~ m/(.)/g) {
+    $x_rc = ($x_rc)<<2|$bp_numeric2{$1}; 
+  }
+  $RevcTable[$x]=$x_rc; 
+}
 
 my $manifestkey = $ENV{MR_INPUT0};
 
@@ -73,9 +96,21 @@ elsif ($ENV{MR_LEVEL} == 1)
 				  $reads[$i+1] >> 16,
 				  $reads[$i+1] & 0xFFFF,
 				  $id_16, 
-	                          $reads[$i+2]);
+	                          $reads[$i+2]);	  
 	  $count++; 
 	}
+	if ( $RevcTable[$reads[$i+1]&0xFF] == $prefix ) {	  
+	  $outstream->write_data (pack "SSSSSN", 
+				  $revc($reads[$i+1]) >>16, 
+				  $revc($reads[$i+1]) & 0xFFFF, 
+				  $revc($reads[$i]) >> 16,
+				  $revc($reads[$i]) & 0xFFFF,
+				  $id_16, 
+	                          $reads[$i+2]);	  
+	  $count++; 
+	}
+
+
       }
     }
   }
@@ -88,4 +123,14 @@ elsif ($ENV{MR_LEVEL} == 1)
   print STDERR $whc->iostats;
  
   exit 0;  
+}
+
+sub revc {
+  my ($read_numeric) = @_; 
+  
+  return ($RevcTable[$read_numeric & 0xff] << 24) | 
+      ($RevcTable[($read_numeric >> 8) & 0xff] << 16) | 
+      ($RevcTable[($read_numeric >> 16) & 0xff] << 8) | 
+      ($RevcTable[($read_numeric >> 24) & 0xff]);
+  
 }
