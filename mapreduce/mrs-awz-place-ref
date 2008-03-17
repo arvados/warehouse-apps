@@ -178,11 +178,14 @@ sub place0 {
 	    }
 	    $count++;
 	  }
+	  my $id_16 = vec($buf,$j+2,16)&0x0FFF;
+	  my $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16); 
+	  
 	  if ($pos2) {
 	    my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
 
 	    if ($count_mer2 < 7) {
-	      print convert_mers($mer3)." ".($pos2+9)."\n";
+	      print convert_mers($mer3)." ".($pos2+9)." $id_16 $id_32\n";
 	    } 
 	    if ($count_mer2 < 31) {
 	      vec($buf, $j+3, 16)+=2048;
@@ -192,7 +195,7 @@ sub place0 {
 	    my $count_mer3 = (vec ($buf, $j+3, 16) >> 6) & 0x1F;
 
 	    if ($count_mer3 < 7) {
-	      print convert_mers($mer2)." ".($pos3-9)."\n";
+	      print convert_mers($mer2)." ".($pos3-9)." $id_16 $id_32\n";
 	    }
 	    if ($count_mer3 < 31) {
 	      vec($buf, $j+3, 16)+=64;
