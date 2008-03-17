@@ -101,16 +101,14 @@ elsif ($ENV{MR_LEVEL} == 1)
 	}
 	if ( $RevcTable[$reads[$i+1]&0xFF] == $prefix ) {	  
 	  $outstream->write_data (pack "SSSSSN", 
-				  $revc($reads[$i+1]) >>16, 
-				  $revc($reads[$i+1]) & 0xFFFF, 
-				  $revc($reads[$i]) >> 16,
-				  $revc($reads[$i]) & 0xFFFF,
+				  revc($reads[$i+1]) >>16, 
+				  revc($reads[$i+1]) & 0xFFFF, 
+				  revc($reads[$i]) >> 16,
+				  revc($reads[$i]) & 0xFFFF,
 				  $id_16, 
 	                          $reads[$i+2]);	  
 	  $count++; 
 	}
-
-
       }
     }
   }
