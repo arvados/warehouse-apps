@@ -13,7 +13,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-#include <tiffio.h>
 #include <unistd.h>
 
 #define MAX_FILESIZE 2252800 //2200KB
@@ -26,7 +25,6 @@
 void read_raw_image_from_stdin(short unsigned int*, int);
 void read_raw_image_from_file(short unsigned int* img, int size, char* fn);
 double sum_pixels(short unsigned int* img);
-short unsigned int* load_tiff_image(char* FILENAME);
 void print_summary_stats(short unsigned int* image, int* level_table);
 int count_objects(short unsigned int* image, int cutoff); 
 double focus(short unsigned int* img);
@@ -40,7 +38,6 @@ int main(int argc, char *argv[]){
   int ch;
   extern char *optarg;
   extern int optind, optopt, opterr;
-  int tiff_in = 0; 
   int raw_stdin = 0;
   int just_sum = 0;
   int stat_info = 0;
@@ -56,7 +53,6 @@ int main(int argc, char *argv[]){
   if (argc < 2) {
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "./levels -r image.raw\n");
-    fprintf(stderr, "./levels -t image.tiff\n");
     fprintf(stderr, "cat image.raw | ./levels -s\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "By default the program produces a tab-delimited table for each intensity level in the image:\n");
@@ -77,9 +73,6 @@ int main(int argc, char *argv[]){
 
   while ((ch = getopt(argc, argv, "igsr:t:T:")) != -1) {
       switch (ch) {
-        case 't':
-          image = load_tiff_image(optarg);
-          break;
         case 'r':
           read_raw_image_from_file(image, PIXEL_COUNT, optarg);
           break;
@@ -273,47 +266,3 @@ void read_raw_image_from_file(short unsigned int* img, int size, char* fn) {
     }
     fclose(raw);
 }
-
-
-short unsigned int* load_tiff_image(char* FILENAME){
-  TIFF *image;
-  tsize_t stripSize;
-  unsigned long imageOffset, result;
-  int stripMax, stripCount;
-  unsigned long count;
-  char* buffer;
-  
-  if((buffer = (char*) malloc(MAX_FILESIZE)) == NULL){
-    fprintf(stderr, "Could not allocate enough memory for the image.\n");
-    exit(42);
-  }
-  
-  // Open the TIFF image
-  if((image = TIFFOpen(FILENAME, "r")) == NULL){
-    fprintf(stderr, "Could not open image %s\n", FILENAME);
-    exit(42);
-  }
-  
-  stripSize = TIFFStripSize (image);
-  stripMax = TIFFNumberOfStrips (image);
-  //STRIPSIZE = stripSize;
-  //STRIPMAX = stripMax;
-  imageOffset = 0;
-  
-  // Load data to buffer
-  for (stripCount = 0; stripCount < stripMax; stripCount++){
-    if((result = TIFFReadEncodedStrip (image, stripCount,
-				       buffer + imageOffset,
-				       stripSize)) == -1){
-      fprintf(stderr, "Read error on input strip number %d\n", stripCount);
-      exit(42);
-    }
-    
-    imageOffset += result;
-  }
-  
-  // Close image
-  TIFFClose(image);   
-  return (short unsigned int*) buffer;
-}
-
