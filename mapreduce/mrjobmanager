@@ -116,6 +116,13 @@ foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 
 
 
+# Ensure that we get one jobstep running on each allocated node before
+# we start overloading nodes with concurrent steps
+
+@slot = sort { $a->{cpu} <=> $b->{cpu} } @slot;
+
+
+
 # Claim this job, and make sure nobody else does
 
 $sth = $dbh->prepare ("insert into mrjobmanager
