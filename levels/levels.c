@@ -71,7 +71,7 @@ int main(int argc, char *argv[]){
     exit(42);
   }
 
-  while ((ch = getopt(argc, argv, "igsr:t:T:")) != -1) {
+  while ((ch = getopt(argc, argv, "igsr:T:")) != -1) {
       switch (ch) {
         case 'r':
           read_raw_image_from_file(image, PIXEL_COUNT, optarg);
