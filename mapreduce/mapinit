@@ -100,7 +100,7 @@ while (!$main::DRAIN || $main::children > 0)
       undef $sth;
 
       my @nodes_arg;
-      $job_nodes =~ s/\&.*//;
+      $job_nodes =~ s/\&.*//;	# legacy stepspernode syntax
       if ($job_nodes =~ /^\d+$/)
       {
 	@nodes_arg = ("--nodes", $job_nodes);
@@ -155,6 +155,7 @@ create table if not exists mrjob (
  mrfunction varchar(64),
  nprocs int,
  nodes text,
+ stepspernode int,
  knobs text,
  input0 text,
  submittime datetime,
@@ -215,6 +216,9 @@ alter table mrjob add frozentokey text after metakey
   },
 	   qq{
 alter table mrjob add thawedfromkey text after frozentokey
+  },
+	   qq{
+alter table mrjob add stepspernode int after nodes
   })
   {
     my $sth = $dbh->prepare ($_);

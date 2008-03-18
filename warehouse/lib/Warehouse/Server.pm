@@ -356,14 +356,15 @@ sub run
 		}
 		my $ok = $self->{dbh}->do
 		    ("insert into $mrdb.mrjob
-		      (jobmanager_id, mrfunction, revision, nodes,
+		      (jobmanager_id, mrfunction, revision, nodes, stepspernode,
 		       input0, knobs, thawedfromkey, submittime)
-		      values (?, ?, ?, ?, ?, ?, ?, now())",
+		      values (?, ?, ?, ?, ?, ?, ?, ?, now())",
 		     undef,
 		     -1,
 		     $jobspec{mrfunction},
 		     $jobspec{revision},
 		     $jobspec{nodes},
+		     $jobspec{stepspernode},
 		     $jobspec{inputkey},
 		     $jobspec{knobs},
 		     $jobspec{thawedfromkey});
