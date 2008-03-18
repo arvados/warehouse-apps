@@ -261,7 +261,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
-    my $execstr = "srun --nodelist='$childnode' -n1 -c1 -N1 -D /tmp --job-name='$job_id.$id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && svn export '$main::svn_repos/installrevision' && sh installrevision && $ENV{MR_REVISION_INSTALLDIR}/src/mapreduce/mrtaskmanager'";
+    my $execstr = "srun --nodelist='$childnode' -n1 -c1 -N1 -D /tmp --job-name='$job_id.$id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && svn export '$main::svn_repos/installrevision' && ./installrevision && $ENV{MR_REVISION_INSTALLDIR}/src/mapreduce/mrtaskmanager'";
     print STDERR ("$execstr\n") if $ENV{MR_DEBUG};
     exec($execstr);
     exit(1);
