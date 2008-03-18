@@ -23,7 +23,7 @@ if ($ENV{MR_LEVEL} == 0)
 elsif ($ENV{MR_LEVEL} == 1)
 {
   # map
-  $ENV{PATH} .= ":/usr/local/polony-tools/$ENV{MR_REVISION}/src/align-call";
+  $ENV{PATH} .= ":$ENV{MR_REVISION_INSTALLDIR}/src/align-call";
 
   my (@hybrid) = split (",", $ENV{KNOB_HYBRID});
   my (@baseorder) = split (",", $ENV{KNOB_BASEORDER});

@@ -7,7 +7,7 @@ maybe_install_revision ($ENV{INSTALL_REVISION}, $ENV{INSTALL_REPOS});
 sub maybe_install_revision
 {
   my ($revision, $repos) = @_;
-  my $revdir = "/usr/local/polony-tools/$revision";
+  my $revdir = $ENV{"MR_REVISION_INSTALLDIR"};
   if (mkdir $revdir)
   {
     if (fork() == 0)

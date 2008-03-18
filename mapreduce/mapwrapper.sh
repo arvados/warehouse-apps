@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export REVISIONDIR="/usr/local/polony-tools/$REVISION"
+export REVISIONDIR="$MR_REVISION_INSTALLDIR"
 export PATH="$REVISIONDIR/install/bin:$PATH"
 
 export FOCUSPIXELS="${USER_FOCUSPIXELS-$FOCUSPIXELS}"

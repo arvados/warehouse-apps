@@ -13,10 +13,9 @@ Install perl module prerequisites:
  perl -MCPAN -e 'install MogileFS::Client'
  perl -MCPAN -e 'install Digest::MD5'
 
-Create /usr/local/polony-tools so that www-data can install stuff:
+Make sure /tmp is writable by www-data:
 
- sudo mkdir /usr/local/polony-tools
- sudo chown www-data /usr/local/polony-tools
+ sudo chmod a+w,+t /tmp
 
 Install the revision-installer:
 
