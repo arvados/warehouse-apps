@@ -1022,10 +1022,12 @@ sub job_freeze
 			    inputkey => "f171d0aa385d601d13d3f5292a4ed4c5",
 			    knobs => "GZIP=yes\nFOO=bar",
 			    nodes => 20,
+			    stepspernode => 4,
 			    photons => 1);
 
     my $id = $whc->job_new (thaw => 1234,
 			    nodes => 10,
+			    stepspernode => 3,
 			    photons => 1);
 
 =cut
