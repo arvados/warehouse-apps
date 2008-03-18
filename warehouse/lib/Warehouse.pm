@@ -746,7 +746,7 @@ sub _hash_keeps
     $warehouse_id = 0 if !$keeps && !defined $warehouse_id;
     $keeps = $warehouses->[$warehouse_id]->{keeps} if defined $warehouse_id;
 
-    map { s/$/:25107/ unless /:/ } @$keeps;
+    map { s{$}{:25107} unless m{:} } @$keeps;
 
     return ($keeps, 0) if $#$keeps < 1;
 
