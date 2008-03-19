@@ -164,7 +164,11 @@ sub place0 {
 	  
 	  my $wobble23 = $pos3-$pos2; 
 	  my $exact = 0;
-	  my $print = 0; 
+	  my $print = 0;
+
+	  my $id_16 = vec($buf,$j+2,16)&0x0FFF;
+	  my $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16); 
+ 
 	  if ( $wobble23 == 9 || $wobble23 == 10) {	    
 	    $exact = 1; 
 	    my $count_exact = vec ($buf, $j+2, 16) >> 12;
@@ -182,10 +186,7 @@ sub place0 {
 	    if ($count_exact  < 15) {
 	      vec($buf, $j+2, 16)+=4096; 
 	    }
-	  }
-	  my $id_16 = vec($buf,$j+2,16)&0x0FFF;
-	  my $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16); 
-	  
+	  }	  
 	  if  (!exact && $pos2) {
 	    my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
 	    
