@@ -163,7 +163,6 @@ $SIG{'TSTP'} = sub { $main::please_freeze = 1; };
 $SIG{'ALRM'} = sub { $main::please_info = 1; };
 $main::please_freeze = 0;
 $main::please_info = 0;
-my $time_slowest_success = 60;	# always reasonable to allow this long
 my $jobsteps_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 
@@ -382,11 +381,6 @@ if (@jobstep_tomerge && !@jobstep_todo)
 
 
 
-# this should ensure that we terminate even if some jobs really
-# do take many times longer
-
-$time_slowest_success = $time_slowest_success * 2;
-
 if ($thisround_succeeded > 0 || ($thisround_failed > 0 && $thisround_failed < 5))
 {
   goto ONELEVEL if @jobstep_todo;
@@ -512,8 +506,6 @@ sub reapchildren
   else
   {
     ++$thisround_succeeded;
-    $time_slowest_success = $elapsed
-	if $time_slowest_success < $elapsed;
     push @jobstep_done, $jobstepid;
     Log ($jobstepid, "success in $elapsed seconds");
   }
