@@ -195,7 +195,7 @@ sub place0 {
 	    if (!$count_mer2) {
 	      print convert_mers($mer2)." ".$pos2.
 		  " $id_16 $id_32 $exact\n";
-	      print convert_mers($mer3)." ".$pos2+9.
+	      print convert_mers($mer3)." ".($pos2+9).
 		  " $id_16 $id_32 $exact\n";
 	      $print = 1; 
 	    } 
@@ -209,7 +209,7 @@ sub place0 {
 	    #only print the first match like MAQ
 	    #but reads sorted by position cause undesirable behavior 
 	    if (!$count_mer3) {
-	      print convert_mers($mer2)." ".$pos3-9.
+	      print convert_mers($mer2)." ".($pos3-9).
 		  " $id_16 $id_32 $exact\n";
 	      print convert_mers($mer3)." ".$pos3.
 		  " $id_16 $id_32 $exact\n";
