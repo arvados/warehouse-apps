@@ -328,7 +328,8 @@ sub run
 				knobs);
 		if ($jobspec{thawedfromkey})
 		{
-		    @fields = ();
+		    for (@fields) { $jobspec{$_} = ""; };
+		    $jobspec{revision} = -1;
 		}
 		elsif ($jobspec{thaw})
 		{
