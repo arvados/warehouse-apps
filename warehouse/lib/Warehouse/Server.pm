@@ -326,7 +326,11 @@ sub run
 				revision
 				inputkey
 				knobs);
-		if ($jobspec{thaw})
+		if ($jobspec{thawedfromkey})
+		{
+		    @fields = ();
+		}
+		elsif ($jobspec{thaw})
 		{
 		    # XXX fixme -- should have more error checking here
 		    my $sth = $self->{dbh}->prepare ("select * from $mrdb.mrjob where id=?");

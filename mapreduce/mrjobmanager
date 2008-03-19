@@ -779,6 +779,7 @@ sub thaw
   @jobstep_todo = ();
   @jobstep_tomerge = ();
   $jobstep_tomerge_level = 0;
+  my $frozenjob = {};
 
   my $stream = new Warehouse::Stream ( whc => $whc,
 				       hash => [split (",", $key)] );
@@ -787,26 +788,11 @@ sub thaw
   {
     if ($$dataref =~ /^job /)
     {
-      my $frozenjob = {};
       foreach (split ("\n", $$dataref))
       {
 	my ($k, $v) = split ("=", $_, 2);
 	$frozenjob->{$k} = freezeunquote ($v);
       }
-      foreach (qw (mrfunction revision inputkey knobs))
-      {
-	$Job->{$_} = $frozenjob->{$_};
-      }
-      $dbh->do ("update mrjob
-		 set mrfunction=?, revision=?, input0=?, knobs=?
-		 where id=?",
-		undef,
-		$Job->{mrfunction},
-		$Job->{revision},
-		$Job->{inputkey},
-		$Job->{knobs},
-		$Job->{id},
-		);
       next;
     }
 
@@ -836,6 +822,21 @@ sub thaw
       push @jobstep_todo, $#jobstep;
     }
   }
+
+  foreach (qw (mrfunction revision inputkey knobs))
+  {
+    $Job->{$_} = $frozenjob->{$_};
+  }
+  $dbh->do ("update mrjob
+		 set mrfunction=?, revision=?, input0=?, knobs=?
+		 where id=?",
+	    undef,
+	    $Job->{mrfunction},
+	    $Job->{revision},
+	    $Job->{inputkey},
+	    $Job->{knobs},
+	    $Job->{id},
+	    );
 }
 
 
