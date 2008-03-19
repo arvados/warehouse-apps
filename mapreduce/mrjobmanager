@@ -52,8 +52,8 @@ $metastream->write_start ("log.txt");
 my $sth = $dbh->prepare ("select * from mrjob where id=?");
 $sth->execute ($job_id) or die $dbh->errstr;
 my $Job = $sth->fetchrow_hashref or die $sth->errstr;
-Log (undef,
-     "rev $$Job{revision} function $$Job{mrfunction} knobs $$Job{knobs}");
+$Job->{inputkey} = $Job->{input0} if !exists $Job->{inputkey};
+delete $Job->{input0};
 
 
 
@@ -169,11 +169,7 @@ my $jobsteps_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 
 my @jobstep;
-push @jobstep, { input => $Job->{input0},
-		 level => 0,
-		 attempts => 0,
-	       };
-my @jobstep_todo = (0);
+my @jobstep_todo = ();
 my @jobstep_done = ();
 my @jobstep_tomerge = ();
 my $jobstep_tomerge_level = 0;
@@ -183,6 +179,25 @@ my $jobstep_tomerge_level = 0;
 if (defined $Job->{thawedfromkey})
 {
   thaw ($Job->{thawedfromkey});
+}
+else
+{
+  push @jobstep, { input => $Job->{inputkey},
+		   level => 0,
+		   attempts => 0,
+		 };
+  push @jobstep_todo, 0;
+}
+
+
+
+foreach (qw (mrfunction revision nodes stepspernode inputkey))
+{
+  Log (undef, $_ . " " . $Job->{$_});
+}
+foreach (split (/\n/, $Job->{knobs}))
+{
+  Log (undef, "knob " . $_);
 }
 
 
@@ -260,7 +275,8 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
     $ENV{"MR_LEVEL"} = $level;
     $ENV{"MR_FUNCTION"} = $Job->{mrfunction};
-    $ENV{"MR_INPUT0"} = $Job->{input0};
+    $ENV{"MR_INPUT0"} = $Job->{inputkey};
+    $ENV{"MR_INPUTKEY"} = $Job->{inputkey};
     $ENV{"MR_OUTPUTKEY"} = "mrjobstep/$job_id/$level/$id";
     $ENV{"MR_SLOT"} = $childslotname;
     $ENV{"INSTALL_REPOS"} = $main::svn_repos;
@@ -717,6 +733,13 @@ sub freeze
   $freezer->name (".");
   $freezer->write_start ("state.txt");
 
+  $freezer->write_data (join ("\n",
+			      "job $Job->{id}",
+			      map
+			      {
+				$_ . "=" . freezequote($Job->{$_})
+			      } grep { $_ ne "id" } keys %$Job) . "\n\n");
+
   foreach my $Jobstep (@jobstep)
   {
     my $str = join ("\n",
@@ -764,6 +787,26 @@ sub thaw
   {
     if ($$dataref =~ /^job /)
     {
+      my $frozenjob = {};
+      foreach (split ("\n", $$dataref))
+      {
+	my ($k, $v) = split ("=", $_, 2);
+	$frozenjob->{$k} = freezeunquote ($v);
+      }
+      foreach (qw (mrfunction revision inputkey knobs))
+      {
+	$Job->{$_} = $frozenjob->{$_};
+      }
+      $dbh->do ("update mrjob
+		 set mrfunction=?, revision=?, input0=?, knobs=?
+		 where id=?",
+		undef,
+		$Job->{mrfunction},
+		$Job->{revision},
+		$Job->{inputkey},
+		$Job->{knobs},
+		$Job->{id},
+		);
       next;
     }
 
@@ -781,6 +824,7 @@ sub thaw
       my ($k, $v) = split ("=", $_, 2);
       $Jobstep->{$k} = freezeunquote ($v) if $k;
     }
+    $Jobstep->{attempts} = 0;
     push @jobstep, $Jobstep;
 
     if ($Jobstep->{exitcode} eq "0")
