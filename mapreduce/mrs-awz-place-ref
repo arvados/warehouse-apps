@@ -160,70 +160,61 @@ sub place0 {
 	  my $mer2 = vec ($buf, $j, 16);  
 	  my $mer3 = vec ($buf, $j+1, 16);
 	  my $pos2 = $hash_mers[$mer2];
-	  my $pos3 = $hash_mers[$mer3]; 
-	  
+	  my $pos3 = $hash_mers[$mer3]; 	  
 	  my $wobble23 = $pos3-$pos2; 
-	  my $exact = 0;
-	  my $print = 0;
+   
+	  my $print = 0; 
+	  my $id_16;
+	  my $id_32; 
 
-	  my $id_16 = vec($buf,$j+2,16)&0x0FFF;
-	  my $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16); 
- 
 	  if ( $wobble23 == 9 || $wobble23 == 10) {	    
-	    $exact = 1; 
 	    my $count_exact = vec ($buf, $j+2, 16) >> 12;
 	    
-	    #only print the first match like MAQ
-	    #but reads sorted by position cause undesirable behavior
 	    if (!$count_exact) {
-	      print convert_mers($mer2)." ".$pos2.
-		  " $id_16 $id_32 $exact\n";
-	      print convert_mers($mer3)." ".$pos3.
-		  " $id_16 $id_32 $exact\n";	     
+	      my $id_16 = vec($buf,$j+2,16)&0x0FFF;
+	      my $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
 	      $print = 1;
+	      print_mer_ascii($mer2, $pos2, $dataref, $id_16, $id_32); 
+	      print_mer_ascii($mer3, $pos3, $dataref, $id_16, $id_32);	     
 	      $count++; 
 	    }	    
 	    if ($count_exact  < 15) {
 	      vec($buf, $j+2, 16)+=4096; 
 	    }
-	  }	  
-	  if  (!$exact && $pos2) {
-	    my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
-	    
-	    #only print the first match like MAQ
-	    #but reads sorted by position cause undesirable behavior 
-	    if (!$count_mer2) {
-	      print convert_mers($mer2)." ".$pos2.
-		  " $id_16 $id_32 $exact\n";
-	      print convert_mers($mer3)." ".($pos2+9).
-		  " $id_16 $id_32 $exact\n";
-	      $print = 1; 
-	    } 
-	    if ($count_mer2 < 31) {
-	      vec($buf, $j+3, 16)+=2048;
-	    } 	  
 	  }
-	  if (!$exact && $pos3) {
-	    my $count_mer3 = (vec ($buf, $j+3, 16) >> 6) & 0x1F;
-
-	    #only print the first match like MAQ
-	    #but reads sorted by position cause undesirable behavior 
-	    if (!$count_mer3) {
-	      print convert_mers($mer2)." ".($pos3-9).
-		  " $id_16 $id_32 $exact\n";
-	      print convert_mers($mer3)." ".$pos3.
-		  " $id_16 $id_32 $exact\n";
-	      $print = 1;
+	  else {
+	    if  ($pos2) {
+	      my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
+	      
+	      if (!$count_mer2) {
+		my $id_16 = vec($buf,$j+2,16)&0x0FFF;
+		my $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+		$print = 1;
+		print_mer_ascii($mer2, $pos2, $dataref, $id_16, $id_32); 
+		print_mer_ascii($mer3, $pos2+9, $dataref, $id_16, $id_32);
+	      } 
+	      if ($count_mer2 < 31) {
+		vec($buf, $j+3, 16)+=2048;
+	      } 	  
 	    }
-	    if ($count_mer3 < 31) {
-	      vec($buf, $j+3, 16)+=64;
+	    if ($pos3) {
+	      my $count_mer3 = (vec ($buf, $j+3, 16) >> 6) & 0x1F;
+	      
+	      if (!$count_mer3) {
+		my $id_16 = vec($buf,$j+2,16)&0x0FFF;
+		my $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+		$print = 1; 
+		print_mer_ascii($mer2, $pos3-9, $dataref, $id_16, $id_32); 
+		print_mer_ascii($mer3, $pos3, $dataref, $id_16, $id_32);
+	      }
+	      if ($count_mer3 < 31) {
+		vec($buf, $j+3, 16)+=64;
+	      }
 	    }
 	  }
-	  if ($print) {	    
-	    print convert_mers($mer0)." ".$i.
-		" $id_16 $id_32 $exact\n";
-	    print convert_mers($mer1)." ".($i+$wobble01).
-		" $id_16 $id_32 $exact\n";	    
+	  if ($print) {	
+	    print_mer_ascii($mer0, $i, $dataref, $id_16, $id_32); 
+	    print_mer_ascii($mer1, $i+wobble01, $dataref, $id_16, $id_32); 
 	  }	  
 	}
       }	
@@ -249,7 +240,6 @@ sub place1 {
   return $count; 
 }
 
-
 sub convert_mers {
 
   my @mers = @_;
@@ -262,4 +252,30 @@ sub convert_mers {
     } 
   }
   return $read; 
+}
+
+sub print_mer_ascii {
+  my ($mer, $pos, $ref, $id_16, $id_32) = @_; 
+
+  my $mer_ascii = ""; 
+  my $ref_mer = vec($$ref, $pos, 16); 
+
+  if ($ref_mer == $mer) {
+    for (my $i = 14; $i >= 0; $i-=2) {
+      $mer_ascii .= $numeric2_bp[($mer>>$i)&3];
+    }    
+  }
+  else {
+    for (my $i = 14; $i >= 0; $i-=2) {
+      my $ref_bp = ($ref_mer>>$i)&3; 
+      my $mer_bp = ($mer>>$i)&3; 
+      if ( $ref_bp == $mer_bp ) {
+	$mer_ascii .= $numeric2_bp[$mer_bp];
+      }
+      else {
+	$mer_ascii .= uc($numeric2_bp[$mer_bp]);
+      }
+    }
+  }
+  print "$mer_ascii $pos $id_16 $id_32\n"; 
 }
