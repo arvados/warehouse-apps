@@ -187,7 +187,7 @@ sub place0 {
 	      vec($buf, $j+2, 16)+=4096; 
 	    }
 	  }	  
-	  if  (!exact && $pos2) {
+	  if  (!$exact && $pos2) {
 	    my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
 	    
 	    #only print the first match like MAQ
@@ -203,7 +203,7 @@ sub place0 {
 	      vec($buf, $j+3, 16)+=2048;
 	    } 	  
 	  }
-	  if (!exact && $pos3) {
+	  if (!$exact && $pos3) {
 	    my $count_mer3 = (vec ($buf, $j+3, 16) >> 6) & 0x1F;
 
 	    #only print the first match like MAQ
