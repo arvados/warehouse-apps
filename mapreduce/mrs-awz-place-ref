@@ -174,8 +174,8 @@ sub place0 {
 	      $id_16 = vec($buf,$j+2,16)&0x0FFF;
 	      $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
 	      $print = 1;
-	      print_mer_ascii($mer2, $pos2, $dataref, $id_16, $id_32); 
-	      print_mer_ascii($mer3, $pos3, $dataref, $id_16, $id_32);	     
+	      print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
+	      print_mer_ascii($mer3, $pos3, $id_16, $id_32);	     
 	      $count++; 
 	    }	    
 	    if ($count_exact  < 15) {
@@ -190,8 +190,8 @@ sub place0 {
 		$id_16 = vec($buf,$j+2,16)&0x0FFF;
 		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
 		$print = 1;
-		print_mer_ascii($mer2, $pos2, $dataref, $id_16, $id_32); 
-		print_mer_ascii($mer3, $pos2+9, $dataref, $id_16, $id_32);
+		print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
+		diff_mer_ref_ascii($mer3, $pos2+9, $dataref, $id_16, $id_32);
 	      } 
 	      if ($count_mer2 < 31) {
 		vec($buf, $j+3, 16)+=2048;
@@ -204,8 +204,8 @@ sub place0 {
 		$id_16 = vec($buf,$j+2,16)&0x0FFF;
 		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
 		$print = 1; 
-		print_mer_ascii($mer2, $pos3-9, $dataref, $id_16, $id_32); 
-		print_mer_ascii($mer3, $pos3, $dataref, $id_16, $id_32);
+		diff_mer_ref_ascii($mer2, $pos3-10, $dataref, $id_16, $id_32); 
+		print_mer_ascii($mer3, $pos3, $id_16, $id_32);
 	      }
 	      if ($count_mer3 < 31) {
 		vec($buf, $j+3, 16)+=64;
@@ -213,8 +213,8 @@ sub place0 {
 	    }
 	  }
 	  if ($print) {	
-	    print_mer_ascii($mer0, $i, $dataref, $id_16, $id_32); 
-	    print_mer_ascii($mer1, $i+$wobble01, $dataref, $id_16, $id_32); 
+	    print_mer_ascii($mer0, $i, $id_16, $id_32); 
+	    print_mer_ascii($mer1, $i+$wobble01, $id_16, $id_32); 
 	  }	  
 	}
       }	
@@ -255,25 +255,61 @@ sub convert_mers {
 }
 
 sub print_mer_ascii {
+  my ($mer, $pos, $id_16, $id_32) = @_; 
+
+  my $mer_ascii = ""; 
+  for (my $i = 14; $i >= 0; $i-=2) {
+    $mer_ascii .= $numeric2_bp[($mer>>$i)&3];
+  } 
+  print "$mer_ascii $pos $id_16 $id_32\n"; 
+}
+
+sub diff_mer_ref_ascii {
   my ($mer, $pos, $ref, $id_16, $id_32) = @_; 
 
   my $mer_ascii = ""; 
   my $ref_mer = vec($$ref, $pos, 16); 
+  my $refW_mer = vec($$ref, $pos+1, 16); 
 
   if ($ref_mer == $mer) {
     for (my $i = 14; $i >= 0; $i-=2) {
       $mer_ascii .= $numeric2_bp[($mer>>$i)&3];
     }    
   }
-  else {
+  elsif ($refW_mer == $mer) {
     for (my $i = 14; $i >= 0; $i-=2) {
-      my $ref_bp = ($ref_mer>>$i)&3; 
+      $mer_ascii .= $numeric2_bp[($mer>>$i)&3];
+    }
+    $pos++; 
+  }
+  else {
+    my $ref_count = 0; 
+    my $refW_count = 0;
+    
+    my $merW_ascii = ""; 
+
+    for (my $i = 14; $i >= 0; $i-=2) {
+      my $ref_bp = ($ref_mer>>$i)&3;
+      my $refW_bp = ($refW_mer>>$i)&3; 
+
       my $mer_bp = ($mer>>$i)&3; 
       if ( $ref_bp == $mer_bp ) {
 	$mer_ascii .= $numeric2_bp[$mer_bp];
+	$ref_count++; 
       }
       else {
 	$mer_ascii .= uc($numeric2_bp[$mer_bp]);
+      }
+      if ( $refW_bp == $mer_bp ) {
+	$merW_ascii .= $numeric2_bp[$mer_bp];
+	$refW_count++; 
+      }
+      else {
+	$merW_ascii .= uc($numeric2_bp[$mer_bp]);
+      }
+      if ($refW_count > $ref_count) {
+	$mer_ascii = $merW_ascii;
+	$pos++; 
       }
     }
   }
