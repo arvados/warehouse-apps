@@ -147,15 +147,15 @@ sub place0 {
     
 
     if ( $mer0>>8 == $prefix) {
-        
+          
       foreach my $wobble01 (9..10) {
-
+	
   	my $mer1 = vec($$dataref, $i+$wobble01, 16);
 	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
-		  
+	
 	my $start = vec ($index, $suffix, 32);
 	my $stop = vec ($index, $suffix+1, 32); 
-
+	
 	for (my $j = $start; $j < $stop; $j+=5) {
 	  my $mer2 = vec ($buf, $j, 16);  
 	  my $mer3 = vec ($buf, $j+1, 16);
@@ -163,46 +163,69 @@ sub place0 {
 	  my $pos3 = $hash_mers[$mer3]; 
 	  
 	  my $wobble23 = $pos3-$pos2; 
+	  my $exact = 0;
+	  my $print = 0; 
 	  if ( $wobble23 == 9 || $wobble23 == 10) {	    
-#	    my $read = convert_mers($mer0, $mer1, $mer2, $mer3); 
+	    $exact = 1; 
+	    my $count_exact = vec ($buf, $j+2, 16) >> 12;
 	    
-#	    my $ref = convert_mers (vec($$dataref, $i, 16),
-#				    vec($$dataref, $i+$wobble01, 16),
-#				    vec($$dataref, $pos2, 16), 
-#				    vec($$dataref, $pos3, 16)); 
-	    
-#	    print "$read $i ".($i+$wobble01)." $pos2 $pos3\n";
-	   
-	    if ((vec ($buf, $j+2, 16) >> 12)  < 15) {
+	    #only print the first match like MAQ
+	    #but reads sorted by position cause undesirable behavior
+	    if (!$count_exact) {
+	      print convert_mers($mer2)." ".$pos2.
+		  " $id_16 $id_32 $exact\n";
+	      print convert_mers($mer3)." ".$pos3.
+		  " $id_16 $id_32 $exact\n";	     
+	      $print = 1;
+	      $count++; 
+	    }	    
+	    if ($count_exact  < 15) {
 	      vec($buf, $j+2, 16)+=4096; 
 	    }
-	    $count++;
 	  }
 	  my $id_16 = vec($buf,$j+2,16)&0x0FFF;
 	  my $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16); 
 	  
-	  if ($pos2) {
+	  if  (!exact && $pos2) {
 	    my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
-
-	    if ($count_mer2 < 7) {
-	      print convert_mers($mer3)." ".($pos2+9)." $id_16 $id_32 $prefix $i $j\n";
+	    
+	    #only print the first match like MAQ
+	    #but reads sorted by position cause undesirable behavior 
+	    if (!$count_mer2) {
+	      print convert_mers($mer2)." ".$pos2.
+		  " $id_16 $id_32 $exact\n";
+	      print convert_mers($mer3)." ".$pos2+9.
+		  " $id_16 $id_32 $exact\n";
+	      $print = 1; 
 	    } 
 	    if ($count_mer2 < 31) {
 	      vec($buf, $j+3, 16)+=2048;
 	    } 	  
 	  }
-	  if ($pos3) {
+	  if (!exact && $pos3) {
 	    my $count_mer3 = (vec ($buf, $j+3, 16) >> 6) & 0x1F;
 
-	    if ($count_mer3 < 7) {
-	      print convert_mers($mer2)." ".($pos3-9)." $id_16 $id_32 $prefix $i $j\n";
+	    #only print the first match like MAQ
+	    #but reads sorted by position cause undesirable behavior 
+	    if (!$count_mer3) {
+	      print convert_mers($mer2)." ".$pos3-9.
+		  " $id_16 $id_32 $exact\n";
+	      print convert_mers($mer3)." ".$pos3.
+		  " $id_16 $id_32 $exact\n";
+	      $print = 1;
 	    }
 	    if ($count_mer3 < 31) {
 	      vec($buf, $j+3, 16)+=64;
 	    }
 	  }
+	  if ($print) {	    
+	    print convert_mers($mer0)." ".$i.
+		" $id_16 $id_32 $exact\n";
+	    print convert_mers($mer1)." ".($i+$wobble01).
+		" $id_16 $id_32 $exact\n";	    
+	  }	  
 	}
-      }
+      }	
     }
     $hash_mers[vec($$dataref, $i+750, 16)] = 0; 
     $hash_mers[vec($$dataref, $i+1256, 16)] = $i+1256;
