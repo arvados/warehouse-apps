@@ -307,10 +307,10 @@ sub diff_mer_ref_ascii {
       else {
 	$merW_ascii .= uc($numeric2_bp[$mer_bp]);
       }
-      if ($refW_count > $ref_count) {
-	$mer_ascii = $merW_ascii;
-	$pos++; 
-      }
+    }
+    if ($refW_count > $ref_count) {
+      $mer_ascii = $merW_ascii;
+      $pos++; 
     }
   }
   print "$mer_ascii $pos $id_16 $id_32\n"; 
