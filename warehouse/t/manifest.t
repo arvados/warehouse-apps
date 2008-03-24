@@ -9,11 +9,11 @@ use Warehouse;
 use Warehouse::Manifest;
 use Digest::MD5;
 
-my $whc = new Warehouse;
-
-my $check;
-
 SKIP: {
+    skip "warehouse client not configured on this machine", 6 if (! -f "/etc/warehouse/warehouse-client.conf");
+    my $whc = new Warehouse;
+
+    my $check;
 
     #skip "something about 'perl -T' makes fetches hang", 8 if ${^TAINT};
 

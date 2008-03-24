@@ -9,11 +9,13 @@ use LWP::UserAgent;
 use HTTP::Request::Common;
 
 $memcached_max_data = 1000000;
+$no_warehouse_client_conf = 0;
+$no_memcached_conf = 0;
 
 do '/etc/warehouse/warehouse-client.conf'
-    or die "Failed to load /etc/warehouse/warehouse-client.conf";
+    or $no_warehouse_client_conf = 1;
 do '/etc/warehouse/memcached.conf.pl'
-    or die "Failed to load /etc/warehouse/memcached.conf.pl";
+    or $no_memcached_conf = 1;
 
 =head1 NAME
 
@@ -142,6 +144,9 @@ sub _init
 {
     my Warehouse $self = shift;
     my $attempts = 0;
+
+		die "Failed to load /etc/warehouse/warehouse-client.conf" if $no_warehouse_client_conf;
+		die "Failed to load /etc/warehouse/memcached.conf.pl" if $no_memcached_conf;
 
     if (defined $self->{warehouse_name})
     {

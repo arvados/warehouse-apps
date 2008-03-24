@@ -5,14 +5,15 @@ use warnings;
 use Test::More tests => 6*4*3;
 use Warehouse;
 
-my $whc = new Warehouse
-    (memcached_size_threshold => $Warehouse::blocksize,
-     debug_memcached => 1,
-     );
-
-my $check;
-
 SKIP: {
+    skip "warehouse client not configured on this machine", 72 if (! -f "/etc/warehouse/warehouse-client.conf");
+    my $whc = new Warehouse
+        (memcached_size_threshold => $Warehouse::blocksize,
+         debug_memcached => 1,
+         );
+
+    my $check;
+
 
     skip "something about 'perl -T' makes fetches hang", 6*4*3 if ${^TAINT};
 

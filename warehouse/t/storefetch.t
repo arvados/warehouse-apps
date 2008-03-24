@@ -10,11 +10,11 @@ my $content4M = "abcdefghijklmnop" x 262144;
 my $content64M = "abcdefghijklmnop" x 4194304;
 my $content128M = $content64M x 2;
 
-my $whc = new Warehouse (debug_mogilefs_paths => 1);
-
-my $check;
-
 SKIP: {
+    skip "warehouse client not configured on this machine", 8 if (! -f "/etc/warehouse/warehouse-client.conf");
+    my $whc = new Warehouse (debug_mogilefs_paths => 1);
+
+    my $check;
 
     skip "something about 'perl -T' makes fetches hang", 8 if ${^TAINT};
 
