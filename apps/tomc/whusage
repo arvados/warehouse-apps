@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+
+use POSIX;
+
+my $nodeseconds;
+my %interval_nodeseconds;
+while(<>)
+{
+    my %job;
+    foreach (split (/, /))
+    {
+	my ($k, $v) = split (/=/, $_, 2);
+	$job{$k} = $v;
+    }
+    my $starttime = parsetime ($job{"starttime"});
+    my $finishtime = parsetime ($job{"finishtime"});
+    if ($starttime && $finishtime)
+    {
+	my $nnodes = countnodes ($job{"nodes"});
+	my $elapsed = $finishtime - $starttime;
+	for (my $interval = $starttime - ($starttime % 3600);
+	     $interval < $finishtime;
+	     $interval += 3600)
+	{
+	    my $seconds_this_interval = 3600; # XXX it isn't really!
+	    $interval_nodeseconds{$interval} +=
+		$seconds_this_interval * $nnodes;
+	}
+	$nodeseconds += $nnodes * $elapsed;
+    }
+}
+for (sort { $a <=> $b } keys %interval_nodeseconds)
+{
+    # ...
+}
+print "$nodeseconds total seconds * nodes\n";
+exit;
+
+
+sub parsetime
+{
+    my $str = shift @_;
+    return undef if $str !~ /\S/;
+    my @ymdhms = split (/[- :]/, $str);
+    my $t = mktime (@ymdhms[5,4,3,2], $ymdhms[1]-1, $ymdhms[0]-1900);
+    return $t;
+}
+
+
+sub countnodes
+{
+    my $str = shift @_;
+    if ($str !~ /\D/) { return $str; }
+    my $n = 0;
+    while ($str =~ s/^[^\[,]+(\[([-\d,]+)\])?,?//)
+    {
+	if ($2)
+	{
+	    foreach (split (/,/, $2))
+	    {
+		my ($a, $b) = split /-/;
+		if ($b) { $n += 1+$b-$a; }
+		else { $n++; }
+	    }
+	}
+	else { $n++; }
+    }
+    $n;
+}
