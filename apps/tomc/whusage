@@ -2,6 +2,8 @@
 
 use POSIX;
 
+my $summary_from;
+my $summary_to;
 my $nodeseconds;
 my %interval_nodeseconds;
 while(<>)
@@ -16,13 +18,24 @@ while(<>)
     my $finishtime = parsetime ($job{"finishtime"});
     if ($starttime && $finishtime)
     {
+	$summary_from = $starttime
+	    if !defined $summary_from || $summary_from > $starttime;
+	$summary_to = $finishtime
+	    if !defined $summary_to || $summary_to < $finishtime;
 	my $nnodes = countnodes ($job{"nodes"});
 	my $elapsed = $finishtime - $starttime;
+
+	next unless $nnodes > 0;
+
 	for (my $interval = $starttime - ($starttime % 3600);
 	     $interval < $finishtime;
 	     $interval += 3600)
 	{
-	    my $seconds_this_interval = 3600; # XXX it isn't really!
+	    my $segment_start = $interval;
+	    my $segment_end = $interval + 3600;
+	    $segment_start = $starttime if $segment_start < $starttime;
+	    $segment_end = $finishtime if $segment_end > $finishtime;
+	    my $seconds_this_interval = $segment_end - $segment_start;
 	    $interval_nodeseconds{$interval} +=
 		$seconds_this_interval * $nnodes;
 	}
@@ -31,9 +44,15 @@ while(<>)
 }
 for (sort { $a <=> $b } keys %interval_nodeseconds)
 {
-    # ...
+    print ($interval_nodeseconds{$_}, "\t", scalar localtime($_), "\n");
 }
-print "$nodeseconds total seconds * nodes\n";
+print ($summary_to - $summary_from,
+       "\tinterval: ",
+       scalar localtime ($summary_from),
+       " to ",
+       scalar localtime ($summary_to),
+       "\n");
+print "$nodeseconds\ttotal seconds * nodes\n";
 exit;
 
 
