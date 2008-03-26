@@ -118,7 +118,7 @@ sub numeric {
 sub id_32 {
     use Math::BigInt;
     my ($id) = @_; 
-    my $id = Math::BigInt->new($id); 
+    $id = Math::BigInt->new($id); 
     $id->band(READ_ID_MASK); 
     return $id->numify();
 }	
