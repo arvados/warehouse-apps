@@ -131,12 +131,8 @@ sub place0 {
 
   my $count = 0; 
   
-  my $bp = length ($$dataref); 
-  if ($bp % 2) {
-    print STDERR "!!! expected even number of bytes; got $bp !!!\n";
-    return 0;
-  }
-  $bp /= 2; 
+  my $bp = length ($$dataref)/2; 
+  print STDERR "entering place0...\n"; 
 
   my @hash_mers; 
   for (my $i = 750; $i < 1256; $i++) {
@@ -232,12 +228,8 @@ sub place1 {
 
   my $count = 0; 
   
-  my $bp = length ($$dataref); 
-  if ($bp % 2) {
-    print STDERR "!!! expected even number of bytes; got $bp !!!\n";
-    return 0;
-  }
-  $bp /= 2; 
+  my $bp = length ($$dataref)/2; 
+  print STDERR "entering place1...\n"; 
 
   my @hash_mers; 
   for (my $i = 750; $i < 1256; $i++) {
