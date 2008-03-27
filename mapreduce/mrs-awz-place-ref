@@ -226,14 +226,15 @@ sub place1 {
 
   my ($dataref) = @_; 
 
-  my $count = 0; 
-  for (my $i = 0; $i < 512; $i++) {
-    $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
-  } 
   my $bp = length ($$dataref)/2; 
   print STDERR "entering place1...\n"; 
 
+  my $count = 0; 
+
   my @hash_mers; 
+  for (my $i = 0; $i < 512; $i++) {
+    $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
+  } 
   for (my $i = 1256; $i < $bp-20; $i++){
     my $mer0 = vec($$dataref, $i, 16); 
     
