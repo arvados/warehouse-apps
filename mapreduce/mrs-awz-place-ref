@@ -13,7 +13,7 @@ my $ref_key = $ENV{KNOB_REFERENCE};
 my $prefix = $ENV{MR_ID}-1; 
 my $cutoff = 2**$ENV{KNOB_CUTBITS}; 
 my $place_ref = \&place0;
-$place_ref = \&place1 if $ENV{KNOB_VARIANT};
+$place_ref = \&place1 if $ENV{KNOB_SWAP};
 
 print STDERR "PREFIX *** $prefix ***\n"; 
 
@@ -229,16 +229,103 @@ sub place0 {
 sub place1 {
 
   my ($dataref) = @_; 
- 
-  my $count; 
-  for (my $i = 0; $i < length ($$dataref); $i+=2){
-    if ( vec($$dataref, $i+1, 16) == $prefix) {
 
-
-    }	
+  my $count = 0; 
+  
+  my $bp = length ($$dataref); 
+  if ($bp % 2) {
+    print STDERR "!!! expected even number of bytes; got $bp !!!\n";
+    return 0;
   }
+  $bp /= 2; 
+
+  my @hash_mers; 
+  for (my $i = 750; $i < 1256; $i++) {
+    $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
+  }
+  for (my $i = 0; $i < $bp-1400; $i++){
+    my $mer0 = vec($$dataref, $i, 16); 
+    
+
+    if ( $mer0>>8 == $prefix) {
+          
+      foreach my $wobble01 (9..10) {
+	
+  	my $mer1 = vec($$dataref, $i+$wobble01, 16);
+	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
+	
+	my $start = vec ($index, $suffix, 32);
+	my $stop = vec ($index, $suffix+1, 32); 
+	
+	for (my $j = $start; $j < $stop; $j+=5) {
+	  my $mer2 = vec ($buf, $j, 16);  
+	  my $mer3 = vec ($buf, $j+1, 16);
+	  my $pos2 = $hash_mers[$mer2];
+	  my $pos3 = $hash_mers[$mer3]; 	  
+	  my $wobble23 = $pos3-$pos2; 
+   
+	  my $print = 0; 
+	  my $id_16;
+	  my $id_32; 
+
+	  if ( $wobble23 == 9 || $wobble23 == 10) {	    
+	    my $count_exact = vec ($buf, $j+2, 16) >> 12;
+	    
+	    if (!$count_exact) {
+	      $id_16 = vec($buf,$j+2,16)&0x0FFF;
+	      $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+	      $print = 1;
+	      print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
+	      print_mer_ascii($mer3, $pos3, $id_16, $id_32);	     
+	      $count++; 
+	    }	    
+	    if ($count_exact  < 15) {
+	      vec($buf, $j+2, 16)+=4096; 
+	    }
+	  }
+	  else {
+	    if  ($pos2) {
+	      my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
+	      
+	      if (!$count_mer2) {
+		$id_16 = vec($buf,$j+2,16)&0x0FFF;
+		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+		$print = 1;
+		print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
+		diff_mer_ref_ascii($mer3, $pos2+9, $dataref, $id_16, $id_32);
+	      } 
+	      if ($count_mer2 < 31) {
+		vec($buf, $j+3, 16)+=2048;
+	      } 	  
+	    }
+	    if ($pos3) {
+	      my $count_mer3 = (vec ($buf, $j+3, 16) >> 6) & 0x1F;
+	      
+	      if (!$count_mer3) {
+		$id_16 = vec($buf,$j+2,16)&0x0FFF;
+		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+		$print = 1; 
+		diff_mer_ref_ascii($mer2, $pos3-10, $dataref, $id_16, $id_32); 
+		print_mer_ascii($mer3, $pos3, $id_16, $id_32);
+	      }
+	      if ($count_mer3 < 31) {
+		vec($buf, $j+3, 16)+=64;
+	      }
+	    }
+	  }
+	  if ($print) {	
+	    print_mer_ascii($mer0, $i, $id_16, $id_32); 
+	    print_mer_ascii($mer1, $i+$wobble01, $id_16, $id_32); 
+	  }	  
+	}
+      }	
+    }
+    $hash_mers[vec($$dataref, $i+750, 16)] = 0; 
+    $hash_mers[vec($$dataref, $i+1256, 16)] = $i+1256;
+  }  
   return $count; 
 }
+
 
 sub convert_mers {
 
