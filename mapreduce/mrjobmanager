@@ -427,18 +427,10 @@ else
 
 
 
-# XXX shouldn't have to reconnect here??? XXX
-$dbh = DBI->connect($main::mapreduce_dsn,
-		    $main::mrcontrol_mysql_username,
-		    $main::mrcontrol_mysql_password);
-croak ($DBI::errstr) if !$dbh;
-
-
-
 if ($key)
 {
-    $dbh->do ("update mrjob set output=? where id=?", undef,
-	      $key, $job_id)
+    dbh_do ("update mrjob set output=? where id=?", undef,
+	    $key, $job_id)
 	or croak ($dbh->errstr);
 
     $whc->store_manifest_by_name ($key, undef, "/job$job_id")
@@ -448,9 +440,9 @@ if ($key)
 
 Log (undef, "finish");
 
-$sth = $dbh->prepare ("update mrjob set finishtime=now(), success=?
-                       where id=? and jobmanager_id=?");
-$sth->execute ($success, $job_id, $jobmanager_id)
+dbh_do ("update mrjob set finishtime=now(), success=?
+         where id=? and jobmanager_id=?", undef,
+	$success, $job_id, $jobmanager_id)
     or croak ($dbh->errstr);
 
 save_meta();
@@ -464,7 +456,7 @@ sub update_progress_stats
   my ($todo, $done, $running) = (scalar @jobstep_todo,
 				 scalar @jobstep_done,
 				 scalar @slot - scalar @freeslot);
-  $dbh->do
+  dbh_do
       ("update mrjob set steps_todo=?,steps_done=?,steps_running=? where id=?",
        undef,
        $todo, $done, $running, $job_id);
@@ -648,6 +640,31 @@ sub Log				# ($jobstep_id, $logmessage)
 }
 
 
+sub reconnect_database
+{
+  return if ($dbh && $dbh->do ("select now()"));
+  for (1..16)
+  {
+    $dbh = DBI->connect($main::mapreduce_dsn,
+			$main::mrcontrol_mysql_username,
+			$main::mrcontrol_mysql_password);
+    return if $dbh;
+    warn ($DBI::errstr);
+    sleep $_;
+  }
+  croak ($DBI::errstr) if !$dbh;
+}
+
+
+sub dbh_do
+{
+  my $ret = $dbh->do (@_);
+  return $ret unless (!$ret && $DBI::errstr =~ /server has gone away/);
+  reconnect_database();
+  return $dbh->do (@_);
+}
+
+
 sub croak
 {
   my ($package, $file, $line) = caller;
@@ -661,6 +678,7 @@ sub croak
 
 sub cleanup
 {
+  reconnect_database();
   my $sth;
   $sth = $dbh->prepare ("update mrjobmanager set finishtime=now() where id=?");
   $sth->execute ($jobmanager_id);
@@ -671,6 +689,7 @@ sub cleanup
 
 sub save_meta
 {
+  reconnect_database();
   my $justcheckpoint = shift; # false if this will be the last meta saved
   my $m = $metastream;
   $m = $m->copy if $justcheckpoint;
@@ -722,9 +741,8 @@ sub freeze
   my $frozentokey = $freezer->as_key;
   undef $freezer;
   Log (undef, "frozento key is $frozentokey");
-  $dbh->do ("update mrjob set frozentokey=? where id=?",
-	    undef,
-	    $frozentokey, $job_id);
+  dbh_do ("update mrjob set frozentokey=? where id=?", undef,
+	  $frozentokey, $job_id);
   return $frozentokey;
 }
 
@@ -787,16 +805,16 @@ sub thaw
   {
     $Job->{$_} = $frozenjob->{$_};
   }
-  $dbh->do ("update mrjob
-		 set mrfunction=?, revision=?, input0=?, knobs=?
-		 where id=?",
-	    undef,
-	    $Job->{mrfunction},
-	    $Job->{revision},
-	    $Job->{inputkey},
-	    $Job->{knobs},
-	    $Job->{id},
-	    );
+  dbh_do
+      ("update mrjob
+	set mrfunction=?, revision=?, input0=?, knobs=?
+	where id=?", undef,
+       $Job->{mrfunction},
+       $Job->{revision},
+       $Job->{inputkey},
+       $Job->{knobs},
+       $Job->{id},
+      );
 }
 
 
