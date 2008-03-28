@@ -1201,6 +1201,28 @@ sub _get_file_data
 }
 
 
+=head2 block_might_exist
+
+ foreach my $hash (@hashes)
+ {
+     $whc->block_might_exist ($hash) or print "block is missing: $hash";
+ }
+
+Returns 1 if it seems likely that the specified block exists in the
+cache.
+
+=cut
+
+
+sub block_might_exist
+{
+    my $self = shift;
+    my $hash = shift;
+    my @paths = $self->{mogc}->get_paths ($hash, { noverify => 1 });
+    return @paths ? 1 : 0;
+}
+
+
 
 sub errstr
 {
