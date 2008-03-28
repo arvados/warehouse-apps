@@ -129,7 +129,7 @@ foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 $sth = $dbh->prepare ("insert into mrjobmanager
                        (pid, revision, starttime)
                        values (?, ?, now())");
-my $rev = q/$Revision: 184 $/;
+my $rev = q/$Revision$/;
 $rev =~ /\d+/;
 $sth->execute ($$, $&) or die $dbh->errstr;
 
