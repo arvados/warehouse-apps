@@ -1,0 +1,184 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:place reads on reference genome using mer-nfa
+###MR_INPUT:manifest
+###MR_KNOBS:REFERENCE=88f0fab736bdf704a559ae48ade5a423
+###MR_KNOBS:MERS_AND_GAPS=16,250-761,16
+###MR_KNOBS:SNPS=1
+###MR_KNOBS:ALL=1
+###MR_KNOBS:SMALLGAPMIN=1
+###MR_KNOBS:SMALLGAPMAX=2
+###MR_KNOBS:SMALLGAPPOS=8
+###MR_KNOBS:BATCHSIZE=100000
+###MR_KNOBS:CHECKANSWERKEY=1
+###MR_KNOBS:STEPSPERNODE=4
+###MR_KNOBS:MAXBATCHES=0
+###MR_KNOBS:MAXOUTPUTSPERSAMPLE=63
+###MR_KNOBS:SKIPDEGENERATES=0
+###MR_KNOBS:SKIPNOSNPS=0
+###MR_KNOBS:INPUTSTREAM=./0
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+
+# level 0:
+#  read sample and reference manifests
+#  queue jobstep(s) for each chromosome:
+#   input = {sample range, chromosome}
+
+my $manifestkey = $ENV{MR_INPUT0};
+$ENV{KNOB_BATCHSIZE} += 0;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my $whc = new Warehouse;
+  my $ref = new Warehouse::Manifest (whc => $whc,
+				     key => $ENV{KNOB_REFERENCE});
+  $ref->rewind;
+  while (my $s = $ref->subdir_next)
+  {
+    my $ref_subdir = $s->name;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      next if $filename =~ /hap|rand/;
+      if ($ENV{KNOB_MAXBATCHES} > 0)
+      {
+	for (0..$ENV{KNOB_MAXBATCHES}-1)
+	{
+	  my $start_at = $ENV{KNOB_BATCHSIZE} * $_;
+	  print STDERR "+++mrjobstep 1 $ref_subdir $filename $start_at+++\n";
+	}
+      }
+      else
+      {
+	print STDERR "+++mrjobstep 1 $ref_subdir $filename+++\n";
+      }
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
+my ($ref_subdir, $ref_filename, $start_at) = split (/ /, $ENV{MR_INPUT});
+
+if ($ENV{MR_LEVEL} == 1 && !defined $start_at)
+{
+  # no maxbatches specified, so we have to read the samples and queue
+  # the appropriate number of worker jobsteps
+
+  my @steps;
+  Safepipe::readfrom ("main::SAMPLES",
+		      "mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'",
+		      "mrs-select-reads")
+      or die "pipe failed: $!";
+  my $n_samples = 0;
+  while (defined ($_ = <SAMPLES>))
+  {
+    if (($n_samples % $ENV{KNOB_BATCHSIZE}) == 0)
+    {
+      push @steps, "+++mrjobstep 1 $ENV{MR_INPUT} $n_samples+++\n";
+    }
+    ++$n_samples;
+  }
+  close SAMPLES or die "Pipe failed: $!";
+  print STDERR @steps;
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
+if ($ENV{MR_LEVEL} == 1)
+{
+  # worker jobstep: process $ENV{KNOB_BATCHSIZE} reads starting at
+  # $start_at against reference data in $ref_subdir/$ref_filename
+
+  my ($ref_label) = $ref_filename =~ /(\w+)/; # XXX hope subdir is irrelevant
+  $start_at += 0;
+
+  my $posperref = 1 + $ENV{KNOB_SMALLGAPMAX} - $ENV{KNOB_SMALLGAPMIN};
+
+  my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
+  my @mersize = shift @mers_and_gaps;
+  my $mer_nfa_opts = "--m0 $mersize[0]";
+  while (@mers_and_gaps >= 2)
+  {
+    my (@gaps) = split ("-", $mers_and_gaps[0]);
+    if (@gaps < 2) { $gaps[1] = $gaps[0]; }
+    if ($posperref > 1)
+    {
+      $gaps[0] = (($gaps[0] + $ENV{KNOB_SMALLGAPMIN} + $mersize[-1])
+		  * $posperref
+		  - $mersize[-1]
+		  - 1);
+      $gaps[0] = 0 if $gaps[0] < 0;
+      $gaps[1] = (($gaps[1] + $ENV{KNOB_SMALLGAPMAX} + $mersize[-1])
+		  * $posperref
+		  - $mersize[-1]
+		  + 1);
+    }
+    $mer_nfa_opts .= " --gmin$#mersize $gaps[0] --gmax$#mersize $gaps[1]";
+    push @mersize, $mers_and_gaps[1];
+    $mer_nfa_opts .= " --m$#mersize $mersize[-1]";
+    splice @mers_and_gaps, 0, 2;
+  }
+  $mer_nfa_opts .= " --snps" if $ENV{KNOB_SNPS};
+  $mer_nfa_opts .= " --all" if $ENV{KNOB_ALL};
+  $mer_nfa_opts .= " --max-outputs-per-sample $ENV{KNOB_MAXOUTPUTSPERSAMPLE}"
+      if $ENV{KNOB_MAXOUTPUTSPERSAMPLE};
+  my $complement_mers_args = "";
+  for (0..$#mersize)
+  {
+    $complement_mers_args .= " --mer$_-col mer$_";
+  }
+  my $mercount = $#mersize + 1;
+
+  my $ref_tempfile = "/tmp/$ENV{MR_SLOT}-reference.dat";
+  my $samples_tempfile = "/tmp/$ENV{MR_SLOT}-samples.dat";
+
+  open REPORTREFERENCE, "+>", $ref_tempfile;
+  open REPORTSAMPLES, "+>", $samples_tempfile;
+
+  Safepipe::readfrom ("main::SAMPLES",
+		      "mrs-fetch -h '$manifestkey' '$ENV{KNOB_INPUTSTREAM}'",
+		      "mrs-select-reads",
+		      "perl -ne 'print if \$. > $start_at && \$. <= $start_at + $ENV{KNOB_BATCHSIZE}'",
+		      "perl $src/apps/tomc/simreads-to-mers-dat.pl @mersize",
+		      "tee -a $samples_tempfile",
+		      "complement-mers $complement_mers_args")
+      or die "samples pipe failed: $!";
+
+  Safepipe::readfrom ("main::REFERENCE",
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' '$ref_subdir' '$ref_filename'",
+		      "perl $src/madeleine/chr-to-dat.pl -n $mersize[0] >$ref_tempfile; cat $ref_tempfile")
+      or die "reference pipe failed: $!";
+
+  my $s_fileno = fileno("SAMPLES");
+  my $r_fileno = fileno("REFERENCE");
+  my $rr_fileno = fileno("REPORTREFERENCE");
+  my $rs_fileno = fileno("REPORTSAMPLES");
+  Safepipe::readfrom ("main::PLACED",
+		      ["main::REFERENCE", "all-mers -m mer0 -n $mersize[0] <&$r_fileno"],
+		      "all-mers-gap -n $mersize[0] --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}",
+		      ["main::SAMPLES", "mer-nfa $mer_nfa_opts -r - -s \@$s_fileno -o -"],
+		      "gprint",
+		      "mrs-tsort -n --buffer-size=400M",
+		      "gread",
+		      "mrs-store '$ref_subdir/$ref_filename-$start_at' mer-nfa-report.txt",
+		      "mrs-output")
+      or die "mer-nfa pipe failed: $!";
+  close "SAMPLES" or die "close SAMPLES: $!";
+  close "REFERENCE" or die "close REFERENCE: $!";
+  close "REPORTREFERENCE" or die "close REPORTREFERENCE: $!";
+  close "REPORTSAMPLES" or die "close REPORTSAMPLES: $!";
+
+  close "PLACED" or die "close PLACED: $!";
+
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+  exit 0;
+}
