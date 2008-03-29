@@ -167,7 +167,7 @@ if ($ENV{MR_LEVEL} == 1)
 		      "gprint",
 		      "mrs-tsort -n --buffer-size=400M",
 		      "gread",
-		      "mrs-store '$ref_subdir/$ref_filename-$start_at' mer-nfa-report.txt",
+		      "mrs-store '$ref_subdir/$ref_filename-$start_at' mer-nfa-report.dat",
 		      "mrs-output")
       or die "mer-nfa pipe failed: $!";
   close "SAMPLES" or die "close SAMPLES: $!";
