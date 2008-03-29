@@ -55,6 +55,7 @@ else
 	$s->seek ($pos);
 	++$n;
 	$taql_header = $s->read_until (undef, "\n#.\n");
+	$taql_header = $$taql_header;
 	open TMP, qq{|gprint |egrep -v '^#' |sed -e 's/^/"$chr"\\t/' >$ENV{MR_JOBSTEP_TMP}/merge-$n};
 	print TMP $taql_header;
 	while (my $data = $s->read_until ($pos + $size))
