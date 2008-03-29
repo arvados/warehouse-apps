@@ -35,7 +35,11 @@ while (<>)
 	die "No sample number in second field";
     }
 }
-print $buf if $count_this_id <= $ENV{KNOB_MAXOUTPUTSPERSAMPLE};
+if ($buf ne "")
+{
+    $buf =~ s/^/$count_this_id /gm;
+    print $buf;
+}
 
 __END__
 
