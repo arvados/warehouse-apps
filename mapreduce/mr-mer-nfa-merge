@@ -56,7 +56,7 @@ else
 	++$n;
 	$taql_header = $s->read_until (undef, "\n#.\n");
 	$taql_header = $$taql_header;
-	open TMP, qq{|gprint |egrep -v '^#' |sed -e 's/^/"$chr"\\t/' >$ENV{MR_JOBSTEP_TMP}/merge-$n};
+	open TMP, qq{|gprint |egrep -v '^#' |sed -e 's/^/"$chr" /' >$ENV{MR_JOBSTEP_TMP}/merge-$n};
 	print TMP $taql_header;
 	while (my $data = $s->read_until ($pos + $size))
 	{
@@ -67,6 +67,8 @@ else
     }
   }
 
+  $taql_header =~ s{^#: taql-0.1\n}{#: taql-0.1/text\n}
+    or die "broken taql header: \"$taql_header\"";
   $taql_header =~ s/\n/\n# field "ref" "sym"\n/;
   open H, ">$ENV{MR_JOBSTEP_TMP}/header";
   print H $taql_header;
