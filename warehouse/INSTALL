@@ -79,3 +79,4 @@ Test and install the Warehouse API:
  make
  make test
  make install
+
