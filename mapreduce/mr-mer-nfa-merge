@@ -19,7 +19,7 @@ $m->rewind;
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  my %batch_has_chr;
+  my %batch_subdirs;
   while (my $s = $m->subdir_next)
   {
     if ($s->name =~ /^(.*)-(\d+)$/)
