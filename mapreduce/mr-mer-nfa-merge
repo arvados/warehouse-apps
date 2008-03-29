@@ -47,6 +47,7 @@ else
     if ($s->name eq $subdirs[0])
     {
       shift @subdirs;
+      my ($chr) = $s->name =~ /\/(.*)-\d+$/;
       $s->rewind;
       while (my ($pos, $size, $filename) = $s->file_next)
       {
@@ -54,7 +55,7 @@ else
 	$s->seek ($pos);
 	++$n;
 	$taql_header = $s->read_until (undef, "\n#.\n");
-	open TMP, "|gprint |egrep -v '^#' |sed -e 's/^/"$chr"\\t/' >$ENV{MR_JOBSTEP_TMP}/merge-$n";
+	open TMP, qq{|gprint |egrep -v '^#' |sed -e 's/^/"$chr"\\t/' >$ENV{MR_JOBSTEP_TMP}/merge-$n};
 	print TMP $taql_header;
 	while (my $data = $s->read_until ($pos + $size))
 	{
