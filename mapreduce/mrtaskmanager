@@ -9,6 +9,10 @@ $ENV{PATH} .= ":$ENV{MR_REVISION_INSTALLDIR}/bin";
 $ENV{PATH} .= ":$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce";
 $ENV{PERLLIB} .= "$ENV{MR_REVISION_INSTALLDIR}/src/warehouse/lib:$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce";
 
+$ENV{MR_JOBSTEP_TMP} = "/tmp/$ENV{MR_SLOT}";
+system "rm -rf '$ENV{MR_JOBSTEP_TMP}'";
+mkdir $ENV{MR_JOBSTEP_TMP};
+
 foreach (split ("\n", $ENV{MR_KNOBS}))
 {
   my ($k, $v) = split ("=", $_, 2);
