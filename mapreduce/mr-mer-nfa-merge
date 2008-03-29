@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:collate output of mr-mer-nfa, removing samples with too many placements
+###MR_INPUT:manifest
+###MR_KNOBS:MAXOUTPUTSPERSAMPLE=63
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+my $manifestkey = $ENV{MR_INPUT0};
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc,
+				 key => $manifestkey);
+$m->rewind;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my %batch_has_chr;
+  while (my $s = $m->subdir_next)
+  {
+    if ($s->name =~ /^(.*)-(\d+)$/)
+    {
+      $batch_subdirs{$2} = [] if !exists $batch_subdirs{$2};
+      my $subdirs = $batch_subdirs{$2};
+      push @$subdirs, $s->name;
+    }
+  }
+  foreach my $batch (sort keys %batch_subdirs)
+  {
+    my $subdirs = $batch_subdirs{$batch};
+    print STDERR "+++mrjobstep 1 $batch @$subdirs+++\n";
+  }
+  print "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+else
+{
+  my $n = 0;
+  my ($batch, @subdirs) = split (/ /, $ENV{MR_INPUT});
+  my $taql_header;
+  while (my $s = $m->subdir_next)
+  {
+    if ($s->name eq $subdirs[0])
+    {
+      shift @subdirs;
+      $s->rewind;
+      while (my ($pos, $size, $filename) = $s->file_next)
+      {
+	last if !defined $pos;
+	$s->seek ($pos);
+	++$n;
+	$taql_header = $s->read_until (undef, "\n#.\n");
+	open TMP, "|gprint |egrep -v '^#' |sed -e 's/^/"$chr"\\t/' >$ENV{MR_JOBSTEP_TMP}/merge-$n";
+	print TMP $taql_header;
+	while (my $data = $s->read_until ($pos + $size))
+	{
+	  print TMP $$data;
+	}
+	close TMP;
+      }
+    }
+  }
+
+  $taql_header =~ s/\n/\n# field "ref" "sym"\n/;
+  open H, ">$ENV{MR_JOBSTEP_TMP}/header";
+  print H $taql_header;
+  close H;
+
+  Safepipe::readfrom
+      ("STDIN",
+       "sort -n --merge +1 '$ENV{MR_JOBSTEP_TMP}'/merge-*",
+       "cat $ENV{MR_JOBSTEP_TMP}/header -",
+       "mrs-mer-nfa-select",
+       "gread",
+       "mrs-store './all-$batch' mer-nfa-placed.dat",
+       "mrs-output",
+      )
+      or die "Safepipe failed: $!";
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+  system "rm -rf $ENV{MR_JOBSTEP_TMP}/merge-*";
+  system "rm -rf $ENV{MR_JOBSTEP_TMP}/header";
+  exit 0;
+}

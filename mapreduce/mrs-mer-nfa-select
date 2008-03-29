@@ -1,0 +1,78 @@
+#!/usr/bin/perl
+
+my $buf = "";
+my $count_this_id = 0;
+my $lastid = -1;
+while (<>)
+{
+    if (/^\#: taql/) { print; print qq{# field "places" "uint32"\n}; }
+    elsif (/^\#/) { print; }
+    elsif (/^\S+\s(\d+)\s/)
+    {
+	my $id = $1 >> 1;
+	if ($id != $lastid)
+	{
+	    if ($buf ne "")
+	    {
+		$buf =~ s/^/$count_this_id /gm;
+		print $buf;
+		$buf = "";
+	    }
+	    $count_this_id = 0;
+	}
+	if (++$count_this_id > $ENV{KNOB_MAXOUTPUTSPERSAMPLE})
+	{
+	    $buf = "";
+	}
+	else
+	{
+	    $buf .= $_;
+	}
+	$lastid = $id;
+    }
+    else
+    {
+	die "No sample number in second field";
+    }
+}
+print $buf if $count_this_id <= $ENV{KNOB_MAXOUTPUTSPERSAMPLE};
+
+__END__
+
+Sample usage:
+
+KNOB_MAXOUTPUTSPERSAMPLE=3 mrs-mer-nfa-select
+
+Sample input:
+
+#: taql-0.1/text
+# field "ref" "sym"
+# field "sample" "uint32"
+# field "flags" "uint32"
+# field "pos0" "uint32"
+# field "pos1" "uint32"
+#.
+"chr1" 10 4294967295 60014 62224
+"chr1" 15 4294967295 92966 95429
+"chr1" 18 4294967295 122810 124744
+"chr1" 19 4294967295 122810 124745
+"chr1" 20 4294967295 126957042 126958694
+"chr1" 20 4294967295 128480 130804
+"chr1" 20 4294967295 315523984 315526112
+"chr1" 20 4294967295 321097056 321098714
+"chr1" 21 4294967295 328923618 328925998
+
+Sample output:
+
+#: taql-0.1/text
+# field "places" "uint32"
+# field "ref" "sym"
+# field "sample" "uint32"
+# field "flags" "uint32"
+# field "pos0" "uint32"
+# field "pos1" "uint32"
+#.
+1 "chr1" 10 4294967295 60014 62224
+1 "chr1" 15 4294967295 92966 95429
+2 "chr1" 18 4294967295 122810 124744
+2 "chr1" 19 4294967295 122810 124745
