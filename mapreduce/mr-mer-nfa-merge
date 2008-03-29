@@ -47,7 +47,7 @@ else
     if ($s->name eq $subdirs[0])
     {
       shift @subdirs;
-      my ($chr) = $s->name =~ /\/(.*)-\d+$/;
+      my ($chr) = $s->name =~ /\/(.{1,7}?)(\.fa)?-\d+$/;
       $s->rewind;
       while (my ($pos, $size, $filename) = $s->file_next)
       {
