@@ -59,7 +59,6 @@ sub flush
 	{
 	    out ($1, $count_this_id." ".$2);
 	}
-	print $buf;
 	$buf = "";
     }
 }
