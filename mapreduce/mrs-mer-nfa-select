@@ -100,6 +100,8 @@ sub out
 	    exit 0;
 	}
 	close "reader";
+	my $fh = $pipes{$chr};
+	print $fh $taqlheader;
     }
     my $fh = $pipes{$chr};
     print $fh $dat;
