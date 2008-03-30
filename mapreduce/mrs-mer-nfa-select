@@ -9,7 +9,6 @@ my $lastid = -1;
 my $taqlheader;
 my %pipes;
 
-my $whc = new Warehouse or die;
 open STDOUT, "|mrs-output" or die "pipe to mrs-output: $!";
 
 my $batch = shift @ARGV;
@@ -89,6 +88,7 @@ sub out
 	    open STDIN, "<&reader" or die "dup: $!";
 	    close "reader";
 	    open STDIN, "gread |" or die "gread: $!";
+	    my $whc = new Warehouse or die;
 	    my $stream = new Warehouse::Stream (whc => $whc);
 	    $stream->clear;
 	    $stream->name ("./".$chr."-".$batch);
