@@ -12,6 +12,8 @@ my %pipes;
 my $whc = new Warehouse or die;
 open STDOUT, "|mrs-output" or die "pipe to mrs-output: $!";
 
+my $batch = shift @ARGV;
+
 while (<>)
 {
     if (/^\#: taql/)
@@ -81,13 +83,13 @@ sub out
 	die "fork failed: $!" if !defined $child;
 	if ($child == 0)
 	{
-	    close $pipes{$chr};
+	    foreach (keys %pipes) { close $pipes{$_}; }
 	    open STDIN, "<&reader";
 	    close "reader";
 	    open STDIN, "gread |";
 	    my $stream = new Warehouse::Stream (whc => $whc);
 	    $stream->clear;
-	    $stream->name ("./".$chr);
+	    $stream->name ("./".$chr."-".$batch);
 	    $stream->write_start ("mer-nfa-placed.dat");
 	    while (read STDIN, $_, 2**16)
 	    {
