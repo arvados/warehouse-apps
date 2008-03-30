@@ -1,0 +1,111 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:collate output of mr-mer-nfa-merge, output one stream per chromosome
+###MR_INPUT:manifest
+###MR_KNOBS:REFERENCE=88f0fab736bdf704a559ae48ade5a423
+###MR_KNOBS:MERS_AND_GAPS=16,250-761,16
+###MR_KNOBS:SMALLGAPMIN=1
+###MR_KNOBS:SMALLGAPMAX=2
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+my $manifestkey = $ENV{MR_INPUT0};
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc,
+				 key => $manifestkey);
+$m->rewind;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my %chr_subdirs;
+  while (my $s = $m->subdir_next)
+  {
+    if ($s->name =~ /^(.*)-(\d+)$/)
+    {
+      $chr_subdirs{$1} = [] if !exists $chr_subdirs{$1};
+      my $subdirs = $chr_subdirs{$1};
+      push @$subdirs, $s->name;
+    }
+  }
+  foreach my $chr (sort keys %chr_subdirs)
+  {
+    my $subdirs = $chr_subdirs{$chr};
+    print STDERR "+++mrjobstep 1 $chr @$subdirs+++\n";
+  }
+  print "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+else
+{
+  my $n = 0;
+  my ($chr, @subdirs) = split (/ /, $ENV{MR_INPUT});
+
+  # read all placements for this chromosome, sort by pos0, output to
+  # tmp/places.txt
+
+  open SORT, "|gprint |egrep -v '^#' |sort -n +3 --buffer-size=400M >$ENV{MR_JOBSTEP_TMP}/places.txt";
+
+  my $taql_header_saved = 0;
+  while (my $s = $m->subdir_next)
+  {
+    if ($s->name eq $subdirs[0])
+    {
+      shift @subdirs;
+      my ($chr) = $s->name =~ /\/(.{1,7}?)(\.fa)?-\d+$/;
+      $s->rewind;
+      while (my ($pos, $size, $filename) = $s->file_next)
+      {
+	last if !defined $pos;
+	$s->seek ($pos);
+	++$n;
+	my $taql_header = $s->read_until (undef, "\n#.\n");
+	if (!$taql_header_saved)
+	{
+	  $taql_header = $$taql_header;
+	  print SORT $taql_header;
+	  $taql_header =~ s{^#: taql-0.1\n}{#: taql-0.1/text\n}
+	    or die "broken taql header: \"$taql_header\"";
+	  open H, ">$ENV{MR_JOBSTEP_TMP}/header";
+	  print H $taql_header;
+	  close H;
+	  $taql_header_saved = 1;
+	}
+	while (my $data = $s->read_until ($pos + $size))
+	{
+	  print SORT $$data;
+	}
+      }
+    }
+  }
+
+  close SORT or die "close SORT: $!";
+
+  # run place-report -c ... on the sorted placements
+
+  my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
+  my @mersize = shift @mers_and_gaps;
+  Safepipe::readfrom ("main::REFERENCE",
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' './' '$chr.fa'",
+		      "perl $src/madeleine/chr-to-dat.pl -n $mersize[0]")
+      or die "reference pipe failed: $!";
+
+  my $r_fileno = fileno("REFERENCE");
+  Safepipe::readfrom
+      ("main:VOTES",
+       "cat $ENV{MR_JOBSTEP_TMP}/header $ENV{MR_JOBSTEP_TMP}/places.txt",
+       "gread",
+       [ "main::REFERENCE", "place-report -p - -c - -r \@$r_fileno --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX}" ],
+       "mrs-store './$chr' place-report-c.dat",
+       "mrs-output",
+      );
+  close REFERENCE or die "close REFERENCE: $!";
+  close VOTES or die "close VOTES: $!";
+
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+  exit 0;
+}
