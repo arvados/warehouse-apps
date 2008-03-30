@@ -90,7 +90,7 @@ else
   my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
   my @mersize = shift @mers_and_gaps;
   Safepipe::readfrom ("main::REFERENCE",
-		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' './' '$chr.fa'",
+		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$chr.fa'",
 		      "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0]")
       or die "reference pipe failed: $!";
 
