@@ -91,19 +91,18 @@ else
   my @mersize = shift @mers_and_gaps;
   Safepipe::readfrom ("main::REFERENCE",
 		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$chr.fa'",
-		      "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0]")
+		      "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0] >$ENV{MR_JOBSTEP_TMP}/ref.dat")
       or die "reference pipe failed: $!";
+  close REFERENCE or die "close REFERENCE: $!";
 
-  my $r_fileno = fileno("REFERENCE");
   Safepipe::readfrom
       ("main:VOTES",
        "cat $ENV{MR_JOBSTEP_TMP}/header $ENV{MR_JOBSTEP_TMP}/places.txt",
        "gread",
-       [ "main::REFERENCE", "place-report -p - -c - -r \@$r_fileno --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}" ],
+       [ "main::REFERENCE", "place-report -p - -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}" ],
        "mrs-store './$chr' place-report-c.dat",
        "mrs-output",
       );
-  close REFERENCE or die "close REFERENCE: $!";
   close VOTES or die "close VOTES: $!";
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
