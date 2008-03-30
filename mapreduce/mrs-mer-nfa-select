@@ -76,7 +76,7 @@ sub finish
 
 sub out
 {
-    my ($chr, $dat) = shift @_;
+    my ($chr, $dat) = @_;
     if (!exists ($pipes{$chr}))
     {
 	open $pipes{$chr}, "|gread |mrs-store ./$chr-$batch mer-nfa-placed.dat"
