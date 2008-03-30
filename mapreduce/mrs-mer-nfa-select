@@ -70,6 +70,8 @@ sub finish
     for (keys %pipes)
     {
 	close $pipes{$_} or die "close pipes{$_}: $!";
+	my $pid = wait;
+	die "child $pid exited $?" if $?;
     }
 }
 
@@ -84,9 +86,9 @@ sub out
 	if ($child == 0)
 	{
 	    foreach (keys %pipes) { close $pipes{$_}; }
-	    open STDIN, "<&reader";
+	    open STDIN, "<&reader" or die "dup: $!";
 	    close "reader";
-	    open STDIN, "gread |";
+	    open STDIN, "gread |" or die "gread: $!";
 	    my $stream = new Warehouse::Stream (whc => $whc);
 	    $stream->clear;
 	    $stream->name ("./".$chr."-".$batch);
