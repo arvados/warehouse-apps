@@ -26,7 +26,7 @@ if ($ENV{MR_LEVEL} == 0)
   my %chr_subdirs;
   while (my $s = $m->subdir_next)
   {
-    if ($s->name =~ /^(.*)-(\d+)$/)
+    if ($s->name =~ /^.\/(.*)-(\d+)$/)
     {
       $chr_subdirs{$1} = [] if !exists $chr_subdirs{$1};
       my $subdirs = $chr_subdirs{$1};
@@ -57,7 +57,6 @@ else
     if ($s->name eq $subdirs[0])
     {
       shift @subdirs;
-      my ($chr) = $s->name =~ /\/(.{1,7}?)(\.fa)?-\d+$/;
       $s->rewind;
       while (my ($pos, $size, $filename) = $s->file_next)
       {
