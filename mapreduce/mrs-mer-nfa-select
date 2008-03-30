@@ -90,7 +90,7 @@ sub out
 	    $stream->clear;
 	    $stream->name ("./".$chr);
 	    $stream->write_start ("mer-nfa-placed.dat");
-	    while (read "reader", $_, 2**16)
+	    while (read STDIN, $_, 2**16)
 	    {
 		$stream->write_data (\$_);
 	    }
