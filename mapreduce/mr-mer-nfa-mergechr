@@ -7,6 +7,7 @@
 ###MR_KNOBS:MERS_AND_GAPS=16,250-761,16
 ###MR_KNOBS:SMALLGAPMIN=1
 ###MR_KNOBS:SMALLGAPMAX=2
+###MR_KNOBS:SMALLGAPPOS=8
 
 use strict; 
 use Warehouse;
@@ -99,7 +100,7 @@ else
       ("main:VOTES",
        "cat $ENV{MR_JOBSTEP_TMP}/header $ENV{MR_JOBSTEP_TMP}/places.txt",
        "gread",
-       [ "main::REFERENCE", "place-report -p - -c - -r \@$r_fileno --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX}" ],
+       [ "main::REFERENCE", "place-report -p - -c - -r \@$r_fileno --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}" ],
        "mrs-store './$chr' place-report-c.dat",
        "mrs-output",
       );
