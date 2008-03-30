@@ -8,6 +8,7 @@ my $count_this_id = 0;
 my $lastid = -1;
 my $taqlheader;
 my %pipes;
+my %records;
 
 open STDOUT, "|mrs-output" or die "pipe to mrs-output: $!";
 
@@ -69,6 +70,7 @@ sub finish
     for (keys %pipes)
     {
 	close $pipes{$_} or die "close pipes{$_}: $!";
+	print STDERR "$_: ".$records{$_}." records\n";
     }
 }
 
@@ -84,6 +86,7 @@ sub out
     }
     my $fh = $pipes{$chr};
     print $fh $dat;
+    ++$records{$chr};
 }
 
 __END__
