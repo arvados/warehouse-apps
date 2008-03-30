@@ -4,10 +4,14 @@
 ###MR_DESCRIPTION:collate output of mr-mer-nfa-merge, output one stream per chromosome
 ###MR_INPUT:manifest
 ###MR_KNOBS:REFERENCE=88f0fab736bdf704a559ae48ade5a423
+###MR_KNOBS:INPUTSAMPLES=f3864330c9d4315b8fac14fa7ad4b583
+###MR_KNOBS:INPUTSTREAM=./0
 ###MR_KNOBS:MERS_AND_GAPS=16,250-761,16
 ###MR_KNOBS:SMALLGAPMIN=1
 ###MR_KNOBS:SMALLGAPMAX=2
 ###MR_KNOBS:SMALLGAPPOS=8
+###MR_KNOBS:SKIPDEGENERATES=0
+###MR_KNOBS:SKIPNOSNPS=0
 
 use strict; 
 use Warehouse;
@@ -89,17 +93,34 @@ else
 
   my @mers_and_gaps = split (",", $ENV{KNOB_MERS_AND_GAPS});
   my @mersize = shift @mers_and_gaps;
-  Safepipe::readfrom ("main::REFERENCE",
-		      "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$chr.fa'",
-		      "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0] >$ENV{MR_JOBSTEP_TMP}/ref.dat")
+  while (@mers_and_gaps)
+  {
+    push @mersize, $mers_and_gaps[1];
+    splice @mers_and_gaps, 0, 2;
+  }
+
+  Safepipe::readfrom
+      ("main::REFERENCE",
+       "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$chr.fa'",
+       "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0] >$ENV{MR_JOBSTEP_TMP}/ref.dat",
+      )
       or die "reference pipe failed: $!";
   close REFERENCE or die "close REFERENCE: $!";
+
+  Safepipe::readfrom
+      ("main::SAMPLES",
+       "mrs-fetch -h '$ENV{KNOB_INPUTSAMPLES}' '$ENV{KNOB_INPUTSTREAM}'",
+       "mrs-select-reads",
+       "perl $ENV{MR_REVISION_INSTALLDIR}/src/apps/tomc/simreads-to-mers-dat.pl @mersize >$ENV{MR_JOBSTEP_TMP}/samples.dat",
+      )
+      or die "samples pipe failed: $!";
+  close SAMPLES or die "close SAMPLES: $!";
 
   Safepipe::readfrom
       ("main:VOTES",
        "cat $ENV{MR_JOBSTEP_TMP}/header $ENV{MR_JOBSTEP_TMP}/places.txt",
        "gread",
-       [ "main::REFERENCE", "place-report -p - -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}" ],
+       [ "main::REFERENCE", "place-report -p - -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat -s $ENV{MR_JOBSTEP_TMP}/samples.dat --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}" ],
        "mrs-store './$chr' place-report-c.dat",
        "mrs-output",
       );
