@@ -79,30 +79,8 @@ sub out
     my ($chr, $dat) = shift @_;
     if (!exists ($pipes{$chr}))
     {
-	pipe "reader", $pipes{$chr} or die "pipe failed: $!";
-	my $child = fork();
-	die "fork failed: $!" if !defined $child;
-	if ($child == 0)
-	{
-	    foreach (keys %pipes) { close $pipes{$_}; }
-	    open STDIN, "<&reader" or die "dup: $!";
-	    close "reader";
-	    open STDIN, "gread |" or die "gread: $!";
-	    my $whc = new Warehouse or die;
-	    my $stream = new Warehouse::Stream (whc => $whc);
-	    $stream->clear;
-	    $stream->name ("./".$chr."-".$batch);
-	    $stream->write_start ("mer-nfa-placed.dat");
-	    while (read STDIN, $_, 2**16)
-	    {
-		$stream->write_data (\$_);
-	    }
-	    close STDIN or die "close STDIN: $!";
-	    $stream->write_finish;
-	    print $stream->as_string;
-	    exit 0;
-	}
-	close "reader";
+	open $pipes{$chr}, "|gread |mrs-store ./$chr-$batch mer-nfa-placed.dat"
+	    or die "open: $!";
 	my $fh = $pipes{$chr};
 	print $fh $taqlheader;
     }
