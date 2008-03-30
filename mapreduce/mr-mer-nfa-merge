@@ -75,15 +75,13 @@ else
   close H;
 
   Safepipe::readfrom
-      ("STDIN",
+      ("main::X",
        "sort -n --merge +1 '$ENV{MR_JOBSTEP_TMP}'/merge-*",
        "cat $ENV{MR_JOBSTEP_TMP}/header -",
        "mrs-mer-nfa-select",
-       "gread",
-       "mrs-store './all-$batch' mer-nfa-placed.dat",
-       "mrs-output",
       )
       or die "Safepipe failed: $!";
+  close X or die "close X: $!";
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
   system "rm -rf $ENV{MR_JOBSTEP_TMP}/merge-*";
   system "rm -rf $ENV{MR_JOBSTEP_TMP}/header";
