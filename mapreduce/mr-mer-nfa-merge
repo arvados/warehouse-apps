@@ -78,7 +78,7 @@ else
       ("main::X",
        "sort -n --merge +1 '$ENV{MR_JOBSTEP_TMP}'/merge-*",
        "cat $ENV{MR_JOBSTEP_TMP}/header -",
-       "mrs-mer-nfa-select",
+       "mrs-mer-nfa-select $batch",
       )
       or die "Safepipe failed: $!";
   close X or die "close X: $!";
