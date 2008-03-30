@@ -1,11 +1,15 @@
 #!/usr/bin/perl
 
+use Warehouse;
+use Warehouse::Stream;
+
 my $buf = "";
 my $count_this_id = 0;
 my $lastid = -1;
 my $taqlheader;
 my %pipes;
 
+my $whc = new Warehouse or die;
 open STDOUT, "|mrs-output" or die "pipe to mrs-output: $!";
 
 while (<>)
