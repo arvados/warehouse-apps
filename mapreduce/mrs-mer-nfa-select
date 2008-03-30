@@ -69,8 +69,6 @@ sub finish
     for (keys %pipes)
     {
 	close $pipes{$_} or die "close pipes{$_}: $!";
-	my $pid = wait;
-	die "child $pid exited $?" if $?;
     }
 }
 
