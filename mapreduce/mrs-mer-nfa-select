@@ -57,9 +57,9 @@ sub flush
 {
     if ($buf ne "")
     {
-	while ($buf =~ /^"(.*?)" (.*\n)/gm)
+	while ($buf =~ /^"(.*?)" (\d+) (.*\n)/gm)
 	{
-	    out ($1, $count_this_id." ".$2);
+	    out ($1, $count_this_id." ".($2+$batch)." ".$3);
 	}
 	$buf = "";
     }
@@ -93,7 +93,7 @@ __END__
 
 Sample usage:
 
-KNOB_MAXOUTPUTSPERSAMPLE=3 mrs-mer-nfa-select
+KNOB_MAXOUTPUTSPERSAMPLE=3 mrs-mer-nfa-select 200000
 
 Sample input:
 
@@ -123,6 +123,6 @@ Sample output for chr1:
 # field "pos0" "uint32"
 # field "pos1" "uint32"
 #.
-1 10 4294967295 60014 62224
-1 15 4294967295 92966 95429
-2 18 4294967295 122810 124744
+1 200010 4294967295 60014 62224
+1 200015 4294967295 92966 95429
+2 200018 4294967295 122810 124744
