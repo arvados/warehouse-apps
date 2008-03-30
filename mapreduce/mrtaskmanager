@@ -13,6 +13,8 @@ $ENV{MR_JOBSTEP_TMP} = "/tmp/$ENV{MR_SLOT}";
 system "rm -rf '$ENV{MR_JOBSTEP_TMP}'";
 mkdir $ENV{MR_JOBSTEP_TMP};
 
+$ENV{TMPDIR} = $ENV{MR_JOBSTEP_TMP};
+
 foreach (split ("\n", $ENV{MR_KNOBS}))
 {
   my ($k, $v) = split ("=", $_, 2);
