@@ -117,7 +117,7 @@ else
 
   Safepipe::readfrom
       ("main:VOTES",
-       "place-report -o /dev/null -p $ENV{MR_JOBSTEP_TMP}/places.dat -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat -s $ENV{MR_JOBSTEP_TMP}/samples.dat --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}",
+       "place-report -o $ENV{MR_JOBSTEP_TMP}/pr.dat -p $ENV{MR_JOBSTEP_TMP}/places.dat -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat -s $ENV{MR_JOBSTEP_TMP}/samples.dat --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}",
        "mrs-store './$chr' place-report-c.dat",
        "mrs-output",
       );
