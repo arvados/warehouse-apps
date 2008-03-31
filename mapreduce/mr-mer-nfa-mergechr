@@ -101,7 +101,7 @@ else
   Safepipe::readfrom
       ("main::REFERENCE",
        "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$chr.fa'",
-       "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0] | gread >$ENV{MR_JOBSTEP_TMP}/ref.dat",
+       "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0] >$ENV{MR_JOBSTEP_TMP}/ref.dat",
       )
       or die "reference pipe failed: $!";
   close REFERENCE or die "close REFERENCE: $!";
