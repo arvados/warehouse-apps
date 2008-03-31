@@ -53,9 +53,7 @@ else
   # read all placements for this chromosome, sort by pos0, output to
   # tmp/places.txt
 
-  open SORT, "|gprint |egrep -v '^#' |sort -n +3 --buffer-size=400M >$ENV{MR_JOBSTEP_TMP}/places.txt";
-
-  my $taql_header_saved = 0;
+  my $sort_started = 0;
   while (my $s = $m->subdir_next)
   {
     if ($s->name eq $subdirs[0])
@@ -68,7 +66,7 @@ else
 	$s->seek ($pos);
 	++$n;
 	my $taql_header = $s->read_until (undef, "\n#.\n");
-	if (!$taql_header_saved)
+	if (!$sort_started)
 	{
 	  $taql_header = $$taql_header;
 	  print SORT $taql_header;
@@ -77,7 +75,8 @@ else
 	  open H, ">$ENV{MR_JOBSTEP_TMP}/header";
 	  print H $taql_header;
 	  close H;
-	  $taql_header_saved = 1;
+	  open SORT, "|gprint |egrep -v '^#' |sort -n +3 --buffer-size=400M |cat $ENV{MR_JOBSTEP_TMP}/header - |gread >$ENV{MR_JOBSTEP_TMP}/places.dat";
+	  $sort_started = 1;
 	}
 	while (my $data = $s->read_until ($pos + $size))
 	{
@@ -118,9 +117,7 @@ else
 
   Safepipe::readfrom
       ("main:VOTES",
-       "cat $ENV{MR_JOBSTEP_TMP}/header $ENV{MR_JOBSTEP_TMP}/places.txt",
-       "gread",
-       "place-report -p - -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat -s $ENV{MR_JOBSTEP_TMP}/samples.dat --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}",
+       "place-report -p $ENV{MR_JOBSTEP_TMP}/places.dat -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat -s $ENV{MR_JOBSTEP_TMP}/samples.dat --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}",
        "mrs-store './$chr' place-report-c.dat",
        "mrs-output",
       );
