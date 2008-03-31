@@ -97,6 +97,7 @@ else
     push @mersize, $mers_and_gaps[1];
     splice @mers_and_gaps, 0, 2;
   }
+  my $mercount = 1 + $#mersize;
 
   Safepipe::readfrom
       ("main::REFERENCE",
@@ -117,7 +118,7 @@ else
 
   Safepipe::readfrom
       ("main:VOTES",
-       "place-report -o $ENV{MR_JOBSTEP_TMP}/pr.dat -p $ENV{MR_JOBSTEP_TMP}/places.dat -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat -s $ENV{MR_JOBSTEP_TMP}/samples.dat --two-inrecs-per-sample --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS}",
+       "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS} -o $ENV{MR_JOBSTEP_TMP}/pr.dat -p $ENV{MR_JOBSTEP_TMP}/places.dat -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat -s $ENV{MR_JOBSTEP_TMP}/samples.dat",
        "mrs-store './$chr' place-report-c.dat",
        "mrs-output",
       )
