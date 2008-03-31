@@ -59,7 +59,7 @@ sub flush
     {
 	while ($buf =~ /^"(.*?)" (\d+) (.*\n)/gm)
 	{
-	    out ($1, $count_this_id." ".($2+$batch)." ".$3);
+	    out ($1, $count_this_id." ".($2+2*$batch)." ".$3);
 	}
 	$buf = "";
     }
