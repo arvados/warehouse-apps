@@ -23,17 +23,6 @@ print STDERR "PREFIX *** $prefix ***\n";
 
 my $index; 
 my $buf; 
-
-
-my $whc = new Warehouse
-    (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
-
-my $outstream = new Warehouse::Stream (whc => $whc);
-$outstream->name (".");
-$outstream->clear;
-$outstream->write_start ("position0.txt");
-
-
 read(STDIN, $index, (2**24+1)*4);
 my $count = vec ($index, 2**24, 32); 
 
@@ -54,6 +43,14 @@ while (<>) {};
 
 print STDERR "read index, count = $count, recount = $recount, t = $t\n"; 
 
+
+my $whc = new Warehouse
+    (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
+
+my $outstream = new Warehouse::Stream (whc => $whc);
+$outstream->name (".");
+$outstream->clear;
+
 if ($dump_f) {
   dump_freq();
 }
@@ -61,9 +58,6 @@ else {
   place_reads (); 
   dump_placements(); 
 }
-
-$outstream->write_finish;
-
 my $fragkey = $whc->store_block ($outstream->as_string)
     or die "store_block failed: ".$whc->errstr;
 print STDERR "+++mrout ".$fragkey."+++\n";
@@ -130,13 +124,18 @@ sub place_reads {
   while (my $instream = $manifest->subdir_next ) {
     while (my ($pos, $size, $filename) = $instream->file_next) {
       last if !defined $pos; 
-      $instream->seek ($pos); 
+      $instream->seek ($pos);
+
+      my $position = 0; 
       while (my $dataref = $instream->read_until($pos+$size)) {
-	if ($max_blocks>0){ 
-	  print STDERR $place_ref->($dataref)." "
-	      .length($$dataref)." $filename $max_blocks\n";
-	}
-	$max_blocks--;
+
+	$outstream->write_start ("$position.txt");
+
+	print STDERR $place_ref->($dataref)." $filename\n";
+	
+	$outstream->write_finish;
+
+	$position += length($$dataref);
       } 
     }  
   }
@@ -409,6 +408,6 @@ sub diff_mer_ref_ascii {
       $mer_ascii = $merW_ascii;
       $pos++; 
     }
+    $outstream->write_data ("$mer_ascii $pos $id_16 $id_32\n");     
   }
-  $outstream->write_data ("$mer_ascii $pos $id_16 $id_32\n"); 
 }
