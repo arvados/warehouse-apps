@@ -128,11 +128,12 @@ sub place_reads {
       while (my $dataref = $instream->read_until($pos+$size)) {
 
 	my $i=0; 
+	my $bp_pos = 0; 
 	for ($i=0; $i < length ($$dataref)-$chunksize+1; $i+=$chunksize) {
-	  $outstream->write_start ("$position.$i.txt");
-	  print STDERR "writing $position.$i.txt\n";
+	  $outstream->write_start ("prefix:$prefix $bp_pos$position.$i.txt");
+	  print STDERR "placing $prefix.$position.$i.txt\n";
 
-	  #print STDERR $place_ref->(\substr($$dataref, $i, $chunksize))." $i\n";
+	  print STDERR $place_ref->(\substr($$dataref, $i, $chunksize))." $i\n";
 	  
 	  $outstream->write_finish;
 	  
@@ -148,12 +149,15 @@ sub place_reads {
 sub place0 {
 
   my ($dataref) = @_; 
-
-  my $count = 0; 
   
   my $bp = length ($$dataref)/2; 
   print STDERR "entering place0...$bp\n"; 
+  print STDERR "first mer: ".convert_mers (vec($$dataref, 0, 16))."\n";
+  print STDERR "last mer: ".convert_mers (vec($$dataref, $bp-1, 16))."\n";
 
+  my $count = 0; 
+  return $count;
+ 
   my @hash_mers; 
   for (my $i = 750; $i < 1256; $i++) {
     $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
@@ -248,9 +252,12 @@ sub place1 {
 
   my $bp = length ($$dataref)/2; 
   print STDERR "entering place1...$bp\n"; 
+  print STDERR "first mer: ".convert_mers (vec($$dataref, 0, 16))."\n";
+  print STDERR "last mer: ".convert_mers (vec($$dataref, $bp-1, 16))."\n";
 
   my $count = 0; 
-
+  return $count;
+ 
   my @hash_mers; 
   for (my $i = 0; $i < 512; $i++) {
     $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
@@ -346,7 +353,7 @@ sub convert_mers {
   my $read = ""; 
   
   foreach my $mer (@mers) {  
-    for (my $j = 14 ; $j >= 0; $j-=2) { 
+    for (my $j = 14; $j >= 0; $j-=2) { 
       $read .= $numeric2_bp[($mer>>$j)&3];
     } 
   }
