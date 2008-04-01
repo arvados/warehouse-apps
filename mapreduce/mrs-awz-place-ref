@@ -137,7 +137,7 @@ sub place_reads {
 
 	  my $foo = substr($$dataref, $i, $bp_len*2);
 
-	  print STDERR "$place_ref->(\$foo) $prefix $bp_pos $bp_len\n";
+	  print STDERR $place_ref->(\$foo)." $prefix $bp_pos $bp_len\n";
 	  
 	  $outstream->write_finish;
 	  $bp_pos += $bp_len;	    
