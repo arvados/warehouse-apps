@@ -130,6 +130,7 @@ sub place_reads {
 	while (my $dataref = $instream->read_until($i)) {
 	  $chunk .= $$dataref;
 	}
+	$instream->seek ($i);  
 
 	$outstream->write_start ("$i.txt");
 
