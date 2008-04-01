@@ -9,9 +9,7 @@ use Warehouse::Stream;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
-my $max_blocks = 1000000; 
-$max_blocks = $ENV{KNOB_MAX_BLOCKS} if $ENV{KNOB_MAX_BLOCKS};
- 
+my $chunksize = 2**$ENV{KNOB_CHUNKBITS};
 my $dump_f = $ENV{KNOB_DUMP};
 my $ref_key = $ENV{KNOB_REFERENCE}; 
 my $prefix = $ENV{MR_ID}-1; 
@@ -130,16 +128,16 @@ sub place_reads {
       while (my $dataref = $instream->read_until($pos+$size)) {
 
 	my $i=0; 
-	for ($i=0; $i < length ($$dataref)-2**21; $i+=2**21) {
+	for ($i=0; $i < length ($$dataref)-$chunksize+1; $i+=$chunksize) {
 	  $outstream->write_start ("$position.$i.txt");
 
-	  print STDERR $place_ref->(\substr($$dataref, $i, 2**21))." $i\n";
+	  print STDERR $place_ref->(\substr($$dataref, $i, $chunksize))." $i\n";
 	  
 	  $outstream->write_finish;
 	  
 	}
-	print STDERR "$position $filename\n"; 
 	$position += length($$dataref);
+	print STDERR "$filename ends at $position\n"; 
       } 
     }  
   }
