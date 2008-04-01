@@ -129,7 +129,7 @@ sub place_reads {
 
 	$outstream->write_start ("$position.txt");
 
-	print STDERR $place_ref->(\substr($$dataref,0,length($$dataref))).
+	print STDERR $place_ref->(\(substr($$dataref,0,length($$dataref)))).
 	    " $filename\n";
 	
 	$outstream->write_finish;
