@@ -1,0 +1,419 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+
+my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
+ 
+my $max_blocks = 1000000; 
+$max_blocks = $ENV{KNOB_MAX_BLOCKS} if $ENV{KNOB_MAX_BLOCKS};
+ 
+my $dump_f = $ENV{KNOB_DUMP};
+my $ref_key = $ENV{KNOB_REFERENCE}; 
+my $prefix = $ENV{MR_ID}-1; 
+my $cutoff = 2**$ENV{KNOB_CUTBITS}; 
+my $place_ref = \&place0;
+$place_ref = \&place1 if $ENV{KNOB_SWAP};
+
+print STDERR "PREFIX *** $prefix ***\n"; 
+
+my $index; 
+my $buf; 
+read(STDIN, $index, (2**24+1)*4);
+my $count = vec ($index, 2**24, 32); 
+
+#truncate reads to avoid perl vec() bug. 
+my $t;   
+my $recount;
+for ($t=0; $t <= 2**24; $t++) {
+  $recount = vec($index, $t, 32); 
+  if ($recount > $cutoff)  {
+    last;
+  }  
+}
+for (my $j = $t; $j <= 2**24; $j++) {
+  vec($index, $j, 32) = $recount; 
+} 
+read(STDIN, $buf, $recount*2);
+while (<>) {}; 
+
+print STDERR "read index, count = $count, recount = $recount, t = $t\n"; 
+
+
+my $whc = new Warehouse
+    (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
+
+my $outstream = new Warehouse::Stream (whc => $whc);
+$outstream->name (".");
+$outstream->clear;
+
+if ($dump_f) {
+  dump_freq();
+}
+else {
+  place_reads (); 
+  dump_placements(); 
+}
+my $fragkey = $whc->store_block ($outstream->as_string)
+    or die "store_block failed: ".$whc->errstr;
+print STDERR "+++mrout ".$fragkey."+++\n";
+print STDERR $whc->iostats;
+exit 0;
+
+
+sub dump_freq {
+  my %hash; 
+
+  print STDERR "entering dump frequencies...\n";
+
+  for (my $i = 0; $i < 2**24; $i++ ) {
+    my $start = vec($index, $i, 32);
+    my $len = vec ($index, $i+1, 32) - $start; 
+    $hash{$len}++;
+  }
+  print "\nFrequencies:\n";
+  while ( my ($k, $v) = each %hash ) {  
+    $k/=5;
+    print "$v $k\n"; 
+  }
+}
+
+sub dump_placements {
+  my %hash_exact;
+  my %hash_mer2;
+  my %hash_mer3;
+
+  print STDERR "entering dump placements...\n";
+
+  for (my $i = 0; $i < 2**24; $i++ ) {
+    my $start = vec($index, $i, 32);
+    my $stop = vec ($index, $i+1, 32); 
+
+    for (my $j = $start; $j < $stop; $j+=5) {
+      $hash_exact{vec($buf, $j+2, 16)>>12}++;  
+      $hash_mer2{vec($buf, $j+3, 16)>>11}++;  
+      $hash_mer3{(vec($buf, $j+3, 16)>>6)&0x1F}++;        
+    }
+  }
+  while ( my ($k, $v) = each %hash_exact ) {  
+    print STDERR "exact $v $k\n"; 
+  }
+  while ( my ($k, $v) = each %hash_mer2 ) {  
+    print STDERR "mer2 $v $k\n"; 
+  }
+  while ( my ($k, $v) = each %hash_mer3 ) {  
+    print STDERR "mer3 $v $k\n"; 
+  }
+}
+
+
+sub place_reads {
+
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $ref_key);
+
+  $manifest->rewind; 
+
+  print STDERR "entering place reads... opened $ref_key for input...\n";  
+  
+  while (my $instream = $manifest->subdir_next ) {
+    while (my ($pos, $size, $filename) = $instream->file_next) {
+      last if !defined $pos; 
+      $instream->seek ($pos);
+
+      my $position = 0; 
+      while (my $dataref = $instream->read_until($pos+$size)) {
+
+	$outstream->write_start ("$position.txt");
+
+	print STDERR $place_ref->($dataref)." $filename\n";
+	
+	$outstream->write_finish;
+
+	$position += length($$dataref);
+      } 
+    }  
+  }
+  print STDERR $whc->iostats; 
+}
+
+sub place0 {
+
+  my ($dataref) = @_; 
+
+  my $bp = length ($$dataref)/2; 
+  print STDERR "entering place0...$bp\n"; 
+  print STDERR "first mer: ".convert_mers (vec($$dataref, 0, 16))."\n";
+  print STDERR "last mer: ".convert_mers (vec($$dataref, $bp-1, 16))."\n";
+
+  my $count = 0; 
+  #return $count;
+ 
+  my @hash_mers; 
+  for (my $i = 750; $i < 1256; $i++) {
+    $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
+  }
+  for (my $i = 0; $i < $bp-1400; $i++){
+    my $mer0 = vec($$dataref, $i, 16); 
+    
+
+    if ( $mer0>>8 == $prefix) {
+          
+      foreach my $wobble01 (9..10) {
+	
+  	my $mer1 = vec($$dataref, $i+$wobble01, 16);
+	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
+	
+	my $start = vec ($index, $suffix, 32);
+	my $stop = vec ($index, $suffix+1, 32); 
+	
+	for (my $j = $start; $j < $stop; $j+=5) {
+	  my $mer2 = vec ($buf, $j, 16);  
+	  my $mer3 = vec ($buf, $j+1, 16);
+	  my $pos2 = $hash_mers[$mer2];
+	  my $pos3 = $hash_mers[$mer3]; 	  
+	  my $wobble23 = $pos3-$pos2; 
+   
+	  my $print = 0; 
+	  my $id_16;
+	  my $id_32; 
+
+	  if ( $wobble23 == 9 || $wobble23 == 10) {	    
+	    my $count_exact = vec ($buf, $j+2, 16) >> 12;
+	    
+	    if (!$count_exact) {
+	      $id_16 = vec($buf,$j+2,16)&0x0FFF;
+	      $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+	      $print = 1;
+	      #print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
+	      #print_mer_ascii($mer3, $pos3, $id_16, $id_32);	     
+	      $count++; 
+	    }	    
+	    if ($count_exact  < 15) {
+	      vec($buf, $j+2, 16)+=4096; 
+	    }
+	  }
+	  else {
+	    if  ($pos2) {
+	      my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
+	      
+	      if (!$count_mer2) {
+		$id_16 = vec($buf,$j+2,16)&0x0FFF;
+		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+		$print = 1;
+		#print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
+		diff_mer_ref_ascii($mer3, $pos2+9, $dataref, $id_16, $id_32);
+	      } 
+	      if ($count_mer2 < 31) {
+		vec($buf, $j+3, 16)+=2048;
+	      } 	  
+	    }
+	    if ($pos3) {
+	      my $count_mer3 = (vec ($buf, $j+3, 16) >> 6) & 0x1F;
+	      
+	      if (!$count_mer3) {
+		$id_16 = vec($buf,$j+2,16)&0x0FFF;
+		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+		$print = 1; 
+		diff_mer_ref_ascii($mer2, $pos3-10, $dataref, $id_16, $id_32); 
+		#print_mer_ascii($mer3, $pos3, $id_16, $id_32);
+	      }
+	      if ($count_mer3 < 31) {
+		vec($buf, $j+3, 16)+=64;
+	      }
+	    }
+	  }
+	  if ($print) {	
+	    #print_mer_ascii($mer0, $i, $id_16, $id_32); 
+	    #print_mer_ascii($mer1, $i+$wobble01, $id_16, $id_32); 
+	  }	  
+	}
+      }	
+    }
+    $hash_mers[vec($$dataref, $i+750, 16)] = 0; 
+    $hash_mers[vec($$dataref, $i+1256, 16)] = $i+1256;
+  }  
+  return $count; 
+}
+
+
+sub place1 {
+
+  my ($dataref) = @_; 
+
+  my $bp = length ($$dataref)/2; 
+  print STDERR "entering place1...$bp\n"; 
+  print STDERR "first mer: ".convert_mers (vec($$dataref, 0, 16))."\n";
+  print STDERR "last mer: ".convert_mers (vec($$dataref, $bp-1, 16))."\n";
+  
+  my $count = 0; 
+  #return $count;
+ 
+  my @hash_mers; 
+  for (my $i = 0; $i < 512; $i++) {
+    $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
+  } 
+  for (my $i = 1256; $i < $bp-20; $i++){
+    my $mer0 = vec($$dataref, $i, 16); 
+    
+
+    if ( $mer0>>8 == $prefix) {
+          
+      foreach my $wobble01 (9..10) {
+	
+  	my $mer1 = vec($$dataref, $i+$wobble01, 16);
+	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
+	
+	my $start = vec ($index, $suffix, 32);
+	my $stop = vec ($index, $suffix+1, 32); 
+	
+	for (my $j = $start; $j < $stop; $j+=5) {
+	  my $mer2 = vec ($buf, $j, 16);  
+	  my $mer3 = vec ($buf, $j+1, 16);
+	  my $pos2 = $hash_mers[$mer2];
+	  my $pos3 = $hash_mers[$mer3]; 	  
+	  my $wobble23 = $pos3-$pos2; 
+   
+	  my $print = 0; 
+	  my $id_16;
+	  my $id_32; 
+
+	  if ( $wobble23 == 9 || $wobble23 == 10) {	    
+	    my $count_exact = vec ($buf, $j+2, 16) >> 12;
+	    
+	    if (!$count_exact) {
+	      $id_16 = vec($buf,$j+2,16)&0x0FFF;
+	      $id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+	      $print = 1;
+	      #print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
+	      #print_mer_ascii($mer3, $pos3, $id_16, $id_32);	     
+	      $count++; 
+	    }	    
+	    if ($count_exact  < 15) {
+	      vec($buf, $j+2, 16)+=4096; 
+	    }
+	  }
+	  else {
+	    if  ($pos2) {
+	      my $count_mer2 = vec ($buf, $j+3, 16) >> 11;
+	      
+	      if (!$count_mer2) {
+		$id_16 = vec($buf,$j+2,16)&0x0FFF;
+		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+		$print = 1;
+		#print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
+		diff_mer_ref_ascii($mer3, $pos2+9, $dataref, $id_16, $id_32);
+	      } 
+	      if ($count_mer2 < 31) {
+		vec($buf, $j+3, 16)+=2048;
+	      } 	  
+	    }
+	    if ($pos3) {
+	      my $count_mer3 = (vec ($buf, $j+3, 16) >> 6) & 0x1F;
+	      
+	      if (!$count_mer3) {
+		$id_16 = vec($buf,$j+2,16)&0x0FFF;
+		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
+		$print = 1; 
+		diff_mer_ref_ascii($mer2, $pos3-10, $dataref, $id_16, $id_32); 
+		#print_mer_ascii($mer3, $pos3, $id_16, $id_32);
+	      }
+	      if ($count_mer3 < 31) {
+		vec($buf, $j+3, 16)+=64;
+	      }
+	    }
+	  }
+	  if ($print) {	
+	    #print_mer_ascii($mer0, $i, $id_16, $id_32); 
+	    #print_mer_ascii($mer1, $i+$wobble01, $id_16, $id_32); 
+	  }	  
+	}
+      }	
+    }
+    $hash_mers[vec($$dataref, $i-750, 16)] = $i-750; 
+    $hash_mers[vec($$dataref, $i-1256, 16)] = 0;
+  }  
+  return $count; 
+}
+
+
+sub convert_mers {
+
+  my @mers = @_;
+
+  my $read = ""; 
+  
+  foreach my $mer (@mers) {  
+    for (my $j = 14 ; $j >= 0; $j-=2) { 
+      $read .= $numeric2_bp[($mer>>$j)&3];
+    } 
+  }
+  return $read; 
+}
+
+sub print_mer_ascii {
+  my ($mer, $pos, $id_16, $id_32) = @_; 
+
+  my $mer_ascii = ""; 
+  for (my $i = 14; $i >= 0; $i-=2) {
+    $mer_ascii .= $numeric2_bp[($mer>>$i)&3];
+  } 
+  print "$mer_ascii $pos $id_16 $id_32\n"; 
+}
+
+sub diff_mer_ref_ascii {
+  my ($mer, $pos, $ref, $id_16, $id_32) = @_; 
+
+  my $mer_ascii = ""; 
+  my $ref_mer = vec($$ref, $pos, 16); 
+  my $refW_mer = vec($$ref, $pos+1, 16); 
+
+  if ($ref_mer == $mer) {
+    for (my $i = 14; $i >= 0; $i-=2) {
+      $mer_ascii .= $numeric2_bp[($mer>>$i)&3];
+    }    
+  }
+  elsif ($refW_mer == $mer) {
+    for (my $i = 14; $i >= 0; $i-=2) {
+      $mer_ascii .= $numeric2_bp[($mer>>$i)&3];
+    }
+    $pos++; 
+  }
+  else {
+    my $ref_count = 0; 
+    my $refW_count = 0;
+    
+    my $merW_ascii = ""; 
+
+    for (my $i = 14; $i >= 0; $i-=2) {
+      my $ref_bp = ($ref_mer>>$i)&3;
+      my $refW_bp = ($refW_mer>>$i)&3; 
+
+      my $mer_bp = ($mer>>$i)&3; 
+      if ( $ref_bp == $mer_bp ) {
+	$mer_ascii .= $numeric2_bp[$mer_bp];
+	$ref_count++; 
+      }
+      else {
+	$mer_ascii .= uc($numeric2_bp[$mer_bp]);
+      }
+      if ( $refW_bp == $mer_bp ) {
+	$merW_ascii .= $numeric2_bp[$mer_bp];
+	$refW_count++; 
+      }
+      else {
+	$merW_ascii .= uc($numeric2_bp[$mer_bp]);
+      }
+    }
+    if ($refW_count > $ref_count) {
+      $mer_ascii = $merW_ascii;
+      $pos++; 
+    }
+    $outstream->write_data ("$mer_ascii $pos $id_16 $id_32\n");     
+  }
+}
