@@ -133,7 +133,7 @@ sub place_reads {
 	for ($i=0; $i < length ($$dataref)-2**21; $i+=2**21) {
 	  $outstream->write_start ("$position.$i.txt");
 
-	  print STDERR $place_ref->(substr($$dataref, $i, 2**21))." $i\n";
+	  print STDERR $place_ref->(\substr($$dataref, $i, 2**21))." $i\n";
 	  
 	  $outstream->write_finish;
 	  
