@@ -133,7 +133,8 @@ sub place_reads {
 
 	$outstream->write_start ("$i.txt");
 
-	print STDERR $place_ref->(\$chunk)." $i.txt\n";
+	print STDERR "0 $i.txt\n"; 
+	#print STDERR $place_ref->(\$chunk)." $i.txt\n";
 	
 	$outstream->write_finish;
       } 
