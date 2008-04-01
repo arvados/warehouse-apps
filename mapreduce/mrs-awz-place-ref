@@ -151,7 +151,7 @@ sub place0 {
   my $count = 0; 
   
   my $bp = length ($$dataref)/2; 
-  print STDERR "entering place0...\n"; 
+  print STDERR "entering place0...$bp\n"; 
 
   my @hash_mers; 
   for (my $i = 750; $i < 1256; $i++) {
@@ -246,7 +246,7 @@ sub place1 {
   my ($dataref) = @_; 
 
   my $bp = length ($$dataref)/2; 
-  print STDERR "entering place1...\n"; 
+  print STDERR "entering place1...$bp\n"; 
 
   my $count = 0; 
 
