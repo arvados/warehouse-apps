@@ -8,6 +8,12 @@ sub maybe_install_revision
 {
   my ($revision, $repos) = @_;
   my $revdir = $ENV{"MR_REVISION_INSTALLDIR"};
+  if ($ENV{INSTALLREVISION_NOLOCK} &&
+      -d $revdir &&
+      !-e "$revdir/.tested")
+  {
+      system "rm -rf '$revdir'";
+  }
   if (mkdir $revdir)
   {
     if (fork() == 0)

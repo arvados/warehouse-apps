@@ -190,6 +190,15 @@ else
 
 
 
+Log (undef, "Install revision ".$Job->{revision});
+my $nodelist = join(",", @nodelist);
+my $execstr = "srun --nodelist='$nodelist' -D /tmp --job-name='$job_id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision'";
+print STDERR "$execstr\n" if $ENV{MR_DEBUG};
+my $ret = system ($execstr);
+Log (undef, "Install exited $ret");
+
+
+
 foreach (qw (mrfunction revision nodes stepspernode inputkey))
 {
   Log (undef, $_ . " " . $Job->{$_});
