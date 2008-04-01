@@ -130,6 +130,7 @@ sub place_reads {
 	my $i=0; 
 	for ($i=0; $i < length ($$dataref)-$chunksize+1; $i+=$chunksize) {
 	  $outstream->write_start ("$position.$i.txt");
+	  print STDERR "writing $position.$i.txt\n";
 
 	  print STDERR $place_ref->(\substr($$dataref, $i, $chunksize))." $i\n";
 	  
