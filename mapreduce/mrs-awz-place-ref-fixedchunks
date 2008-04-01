@@ -143,29 +143,29 @@ sub place_reads {
 
 sub place0 {
 
-  my ($dataref) = @_; 
+  my ($data_ref) = @_; 
 
-  my $bp = length ($$dataref)/2; 
+  my $bp = length ($$data_ref)/2; 
   print STDERR "entering place0...$bp\n"; 
-  print STDERR "first mer: ".convert_mers (vec($$dataref, 0, 16))."\n";
-  print STDERR "last mer: ".convert_mers (vec($$dataref, $bp-1, 16))."\n";
+  print STDERR "first mer: ".convert_mers (vec($$data_ref, 0, 16))."\n";
+  print STDERR "last mer: ".convert_mers (vec($$data_ref, $bp-1, 16))."\n";
 
   my $count = 0; 
   #return $count;
  
   my @hash_mers; 
   for (my $i = 750; $i < 1256; $i++) {
-    $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
+    $hash_mers[vec($$data_ref, $i, 16)] = $i; #doesn't handle collisions -- fix!
   }
   for (my $i = 0; $i < $bp-1400; $i++){
-    my $mer0 = vec($$dataref, $i, 16); 
+    my $mer0 = vec($$data_ref, $i, 16); 
     
 
     if ( $mer0>>8 == $prefix) {
           
       foreach my $wobble01 (9..10) {
 	
-  	my $mer1 = vec($$dataref, $i+$wobble01, 16);
+  	my $mer1 = vec($$data_ref, $i+$wobble01, 16);
 	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
 	
 	my $start = vec ($index, $suffix, 32);
@@ -206,7 +206,7 @@ sub place0 {
 		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
 		$print = 1;
 		#print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
-		diff_mer_ref_ascii($mer3, $pos2+9, $dataref, $id_16, $id_32);
+		diff_mer_ref_ascii($mer3, $pos2+9, $data_ref, $id_16, $id_32);
 	      } 
 	      if ($count_mer2 < 31) {
 		vec($buf, $j+3, 16)+=2048;
@@ -219,7 +219,7 @@ sub place0 {
 		$id_16 = vec($buf,$j+2,16)&0x0FFF;
 		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
 		$print = 1; 
-		diff_mer_ref_ascii($mer2, $pos3-10, $dataref, $id_16, $id_32); 
+		diff_mer_ref_ascii($mer2, $pos3-10, $data_ref, $id_16, $id_32); 
 		#print_mer_ascii($mer3, $pos3, $id_16, $id_32);
 	      }
 	      if ($count_mer3 < 31) {
@@ -234,8 +234,8 @@ sub place0 {
 	}
       }	
     }
-    $hash_mers[vec($$dataref, $i+750, 16)] = 0; 
-    $hash_mers[vec($$dataref, $i+1256, 16)] = $i+1256;
+    $hash_mers[vec($$data_ref, $i+750, 16)] = 0; 
+    $hash_mers[vec($$data_ref, $i+1256, 16)] = $i+1256;
   }  
   return $count; 
 }
@@ -243,29 +243,29 @@ sub place0 {
 
 sub place1 {
 
-  my ($dataref) = @_; 
+  my ($data_ref) = @_; 
 
-  my $bp = length ($$dataref)/2; 
+  my $bp = length ($$data_ref)/2; 
   print STDERR "entering place1...$bp\n"; 
-  print STDERR "first mer: ".convert_mers (vec($$dataref, 0, 16))."\n";
-  print STDERR "last mer: ".convert_mers (vec($$dataref, $bp-1, 16))."\n";
+  print STDERR "first mer: ".convert_mers (vec($$data_ref, 0, 16))."\n";
+  print STDERR "last mer: ".convert_mers (vec($$data_ref, $bp-1, 16))."\n";
   
   my $count = 0; 
   #return $count;
  
   my @hash_mers; 
   for (my $i = 0; $i < 512; $i++) {
-    $hash_mers[vec($$dataref, $i, 16)] = $i; #doesn't handle collisions -- fix!
+    $hash_mers[vec($$data_ref, $i, 16)] = $i; #doesn't handle collisions -- fix!
   } 
   for (my $i = 1256; $i < $bp-20; $i++){
-    my $mer0 = vec($$dataref, $i, 16); 
+    my $mer0 = vec($$data_ref, $i, 16); 
     
 
     if ( $mer0>>8 == $prefix) {
           
       foreach my $wobble01 (9..10) {
 	
-  	my $mer1 = vec($$dataref, $i+$wobble01, 16);
+  	my $mer1 = vec($$data_ref, $i+$wobble01, 16);
 	my $suffix = ($mer0 << 16 | $mer1) & 0xFFFFFF; 
 	
 	my $start = vec ($index, $suffix, 32);
@@ -306,7 +306,7 @@ sub place1 {
 		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
 		$print = 1;
 		#print_mer_ascii($mer2, $pos2, $id_16, $id_32); 
-		diff_mer_ref_ascii($mer3, $pos2+9, $dataref, $id_16, $id_32);
+		diff_mer_ref_ascii($mer3, $pos2+9, $data_ref, $id_16, $id_32);
 	      } 
 	      if ($count_mer2 < 31) {
 		vec($buf, $j+3, 16)+=2048;
@@ -319,7 +319,7 @@ sub place1 {
 		$id_16 = vec($buf,$j+2,16)&0x0FFF;
 		$id_32 = (vec($buf,$j+3,16)&0x3F)<<16|vec($buf,$j+4,16);
 		$print = 1; 
-		diff_mer_ref_ascii($mer2, $pos3-10, $dataref, $id_16, $id_32); 
+		diff_mer_ref_ascii($mer2, $pos3-10, $data_ref, $id_16, $id_32); 
 		#print_mer_ascii($mer3, $pos3, $id_16, $id_32);
 	      }
 	      if ($count_mer3 < 31) {
@@ -334,8 +334,8 @@ sub place1 {
 	}
       }	
     }
-    $hash_mers[vec($$dataref, $i-750, 16)] = $i-750; 
-    $hash_mers[vec($$dataref, $i-1256, 16)] = 0;
+    $hash_mers[vec($$data_ref, $i-750, 16)] = $i-750; 
+    $hash_mers[vec($$data_ref, $i-1256, 16)] = 0;
   }  
   return $count; 
 }
