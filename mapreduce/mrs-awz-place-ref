@@ -125,7 +125,7 @@ sub place_reads {
       $instream->seek ($pos);
 
       my $i; 
-      while (my $i = $pos+$chunksize; $i < $pos+$size; $i+=$chunksize){
+      for ($i = $pos+$chunksize; $i < $pos+$size; $i+=$chunksize){
 	my $chunk;
 	while (my $dataref = $instream->read_until($i)) {
 	  $chunk .= $$dataref;
