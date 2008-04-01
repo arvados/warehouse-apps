@@ -8,10 +8,8 @@ use Warehouse::Stream;
 
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
- 
-my $max_blocks = 1000000; 
-$max_blocks = $ENV{KNOB_MAX_BLOCKS} if $ENV{KNOB_MAX_BLOCKS};
- 
+  
+my $chunksize = 2**($ENV{KNOB_CHUNKBITS});
 my $dump_f = $ENV{KNOB_DUMP};
 my $ref_key = $ENV{KNOB_REFERENCE}; 
 my $prefix = $ENV{MR_ID}-1; 
@@ -131,7 +129,8 @@ sub place_reads {
 
 	$outstream->write_start ("$position.txt");
 
-	print STDERR $place_ref->($dataref)." $filename\n";
+	print STDERR $place_ref->(\substr($$dataref,0,length($$dataref))).
+	    " $filename\n";
 	
 	$outstream->write_finish;
 
