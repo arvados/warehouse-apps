@@ -9,9 +9,7 @@ use Warehouse::Stream;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
-my $max_blocks = 1000000; 
-$max_blocks = $ENV{KNOB_MAX_BLOCKS} if $ENV{KNOB_MAX_BLOCKS};
- 
+my $chunksize = $ENV{CHUNKSIZE};  
 my $dump_f = $ENV{KNOB_DUMP};
 my $ref_key = $ENV{KNOB_REFERENCE}; 
 my $prefix = $ENV{MR_ID}-1; 
@@ -126,17 +124,20 @@ sub place_reads {
       last if !defined $pos; 
       $instream->seek ($pos);
 
-      my $position = 0; 
-      while (my $dataref = $instream->read_until($pos+$size)) {
+      my $i; 
+      while (my $i = $pos+$chunksize; $i < $pos+$size; $i+=$chunksize){
+	my $chunk;
+	while (my $dataref = $instream->read_until($i)) {
+	  $chunk .= $$dataref;
+	}
 
-	$outstream->write_start ("$position.txt");
+	$outstream->write_start ("$i.txt");
 
-	print STDERR $place_ref->($dataref)." $filename\n";
+	print STDERR $place_ref->(\$chunk)." $i.txt\n";
 	
 	$outstream->write_finish;
-
-	$position += length($$dataref);
       } 
+      print STDERR "exiting place_ref $i $pos $size $filename\n"; 
     }  
   }
   print STDERR $whc->iostats; 
