@@ -9,7 +9,7 @@ use Warehouse::Stream;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
-my $chunksize = 2**$ENV{KNOB_CHUNKBITS};
+my $chunksize = 2**($ENV{KNOB_CHUNKBITS}+1);
 my $dump_f = $ENV{KNOB_DUMP};
 my $ref_key = $ENV{KNOB_REFERENCE}; 
 my $prefix = $ENV{MR_ID}-1; 
