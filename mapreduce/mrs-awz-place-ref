@@ -9,7 +9,7 @@ use Warehouse::Stream;
 
 my @numeric2_bp = ( 'a', 'c', 'g', 't'); 
  
-my $chunksize = 2**($ENV{KNOB_CHUNKBITS}+1);
+my $chunksize = 2**($ENV{KNOB_CHUNKBITS});
 my $dump_f = $ENV{KNOB_DUMP};
 my $ref_key = $ENV{KNOB_REFERENCE}; 
 my $prefix = $ENV{MR_ID}-1; 
@@ -124,26 +124,28 @@ sub place_reads {
       last if !defined $pos; 
       $instream->seek ($pos);
 
-      my $position = 0; 
+      my $bp_pos = 0; 
       while (my $dataref = $instream->read_until($pos+$size)) {
+	
+	my $i=0;
+	while ($i < length($$dataref)){
 
-	my $i=0; 
-	my $bp_pos = 0; 
-	for ($i=0; $i < length ($$dataref)-$chunksize+1; $i+=$chunksize) {
-	  $outstream->write_start ("prefix:$prefix $bp_pos$position.$i.txt");
-	  print STDERR "placing $prefix.$position.$i.txt\n";
+	  my $bp_len = ((length($$dataref) - $i) > $chunksize*2 ) ? 
+	      $chunksize : (length($$dataref)/2)%$chunksize; 
 
-	  print STDERR $place_ref->(\substr($$dataref, $i, $chunksize))." $i\n";
+	  $outstream->write_start ("$prefix.$bp_pos.$bp_len.txt");
+
+	  print STDERR $place_ref->(\substr($$dataref, $i, 2*$bp_len)).
+	      " $prefix $bp_pos $bp_len\n";
 	  
 	  $outstream->write_finish;
-	  
+	  $bp_pos += $bp_len;
+	  $i += $chunksize; 					    
 	}
-	$position += length($$dataref);
-	print STDERR "$filename ends at $position\n"; 
       } 
+      print STDERR "$filename done\n"; 
     }  
   }
-  print STDERR $whc->iostats; 
 }
 
 sub place0 {
