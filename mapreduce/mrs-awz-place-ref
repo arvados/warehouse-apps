@@ -157,7 +157,7 @@ sub place0 {
   print STDERR "last mer: ".convert_mers (vec($$dataref, $bp-1, 16))."\n";
 
   my $count = 0; 
-  return $count;
+  #return $count;
  
   my @hash_mers; 
   for (my $i = 750; $i < 1256; $i++) {
@@ -257,7 +257,7 @@ sub place1 {
   print STDERR "last mer: ".convert_mers (vec($$dataref, $bp-1, 16))."\n";
 
   my $count = 0; 
-  return $count;
+  #return $count;
  
   my @hash_mers; 
   for (my $i = 0; $i < 512; $i++) {
