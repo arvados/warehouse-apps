@@ -132,7 +132,7 @@ sub place_reads {
 	  $outstream->write_start ("$position.$i.txt");
 	  print STDERR "writing $position.$i.txt\n";
 
-	  print STDERR $place_ref->(\substr($$dataref, $i, $chunksize))." $i\n";
+	  #print STDERR $place_ref->(\substr($$dataref, $i, $chunksize))." $i\n";
 	  
 	  $outstream->write_finish;
 	  
