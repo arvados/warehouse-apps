@@ -128,19 +128,18 @@ sub place_reads {
       while (my $dataref = $instream->read_until($pos+$size)) {
 	
 	my $i=0;
-	while ($i < length($$dataref)){
+	for (my $i=0; $i < length($$dataref); $i+=$chunksize*2){
 
-	  my $bp_len = ((length($$dataref) - $i) > $chunksize*2 ) ? 
-	      $chunksize : (length($$dataref)/2)%$chunksize; 
+	  my $bp_len = ((length($$dataref) - $i)/2 > $chunksize ) ? 
+	      $chunksize : (length($$dataref) - $i)/2; 
 
 	  $outstream->write_start ("$prefix.$bp_pos.$bp_len.txt");
 
-	  print STDERR $place_ref->(\substr($$dataref, $i, 2*$bp_len)).
+	  print STDERR $place_ref->(\substr($$dataref, $i, $bp_len*2)).
 	      " $prefix $bp_pos $bp_len\n";
 	  
 	  $outstream->write_finish;
-	  $bp_pos += $bp_len;
-	  $i += $chunksize; 					    
+	  $bp_pos += $bp_len;	    
 	}
       } 
       print STDERR "$filename done\n"; 
