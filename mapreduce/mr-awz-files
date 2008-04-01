@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:stream all subdirs, apply mrs-* function, store 
+###MR_INPUT:manifest
+###MR_KNOBS:FUNCTION=mrs-awz-expand-degeneracies
+###MR_KNOBS:OUTPUTNAME=reads.bin
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuesubdirs"; 
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantsubdir = $ENV{MR_INPUT};
+  Safepipe::readfrom ("main::S",
+		      "mrs-fetch -h '$manifestkey' '$wantsubdir'",
+		      "$ENV{KNOB_FUNCTION}");
+  close "S" or die "close S: $!";
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+}
