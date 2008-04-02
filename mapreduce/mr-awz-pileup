@@ -1,13 +1,16 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
+###MR_DESCRIPTION:pivot input and output consensus placements 
+###MR_INPUT:manifest
+###MR_KNOBS:PLACEDMERS=311a8dbd3245489695c813eea548d829 
+###MR_KNOBS:PLACEDMERS1=2fde523db9b7b911acef9dacb070827a 
+###MR_KNOBS:FILENAME=0:chr1:0 
+###MR_KNOBS:CHUNKNUM=235
+###MR_KNOBS:CHUNKBITS=20
+###MR_KNBOS:CUTOFF=3 
+
 use strict; 
-
-use Getopt::Std;
-
-my %args;
-getopts ("m:n:r:s:t:", \%args);
-
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
@@ -15,84 +18,104 @@ use Warehouse::Stream;
 my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
  
-my $m = $args{'m'};
-my $n = $args{'n'};
-my $r = $args{'r'}; 
+my $m = $ENV{KNOB_PLACEDMERS};
+my $n = $ENV{KNOB_PLACEDMERS1}
+my $r = $ENV{KNOB_CUTOFF}; 
 
-my $want_chr_pos = $args{'s'}*(2**$args{'t'}); 
+my $manifestkey = $ENV{MR_INPUT0}; 
 
-my %pileup; 
+if ($ENV{MR_LEVEL} == 0) {
+  $ENV{MR_INPUT} = $manifestkey; 
+  for (0..$ENV{KNOB_CHUNKNUM}) {
+    print STDERR "+++mrjobstep 1 $_+++\n"; 
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+elsif ($ENV{MR_LEVEL} == 1) {
 
-foreach my $manifest_key (($m, $n)) {
-  
-  print STDERR "Reading manifest: $manifest_key\n";
-  
-  my $manifest = new Warehouse::Manifest (whc => $whc,
-					  key => $manifest_key);
-  $manifest->rewind; 
+  my %pileup;
 
-  my @placements; 
+  my $want_chr_position = $ENV{MR_INPUT}*(2**$ENV{KNOB_CHUNKBITS});
 
-  while (my $instream = $manifest->subdir_next ) {
-    while (my ($pos, $size, $filename) = $instream->file_next) {
-      last if !defined $pos; 
-      
-      my ($prefix, $chr_pos, $chunk_length) = split /\./, $filename;
-      if ($chr_pos != $want_chr_pos) {
-        #print STDERR "skipping $filename\n";
-        next; 
-      }
-      $instream->seek ($pos); 
-      
-      print STDERR ".";
-      while (my $placement = $instream->read_until($pos+$size, "\n")) {
-        my ($mer, $position, $id_16, $id_32) = split ' ', $$placement; 
+  foreach my $manifest_key (($m, $n)) {
+    
+    print STDERR "Reading manifest: $manifest_key\n";
+    
+    my $manifest = new Warehouse::Manifest (whc => $whc,
+					    key => $manifest_key);
+    $manifest->rewind;   
+    my $want_chr_pos = 0; 
+    
+    my @placements; 
+    
+    while (my $instream = $manifest->subdir_next ) {
+      while (my ($pos, $size, $filename) = $instream->file_next) {
+	last if !defined $pos; 
 	
-	my $bp; 
-	my $count = 0; 	
-	while ($mer =~ m/[acgt]*([ACGT])/g) {
-	  $position += (pos($mer)-1);
-	  $bp = $1; 
-	  $count++;
-	}  
-	if ($count == 1) {
-	  my $id = $id_16<<22|$id_32; 
-	  if (!exists ($pileup{$position}{$id})) {
-	    $pileup{$position}{$id}=$bp;
-	    #print "$position $id $pileup{$position}{$id}\n";
+	my ($prefix, $chr_pos, $chunk_length) = split (/\./, $filename);
+	if ($chr_pos != $want_chr_position) {
+	  #print STDERR "skipping $filename\n";
+	  next; 
+	}
+	$instream->seek ($pos); 
+	
+	print STDERR ".";
+	while (my $placement = $instream->read_until($pos+$size, "\n")) {
+	  my ($mer, $position, $id_16, $id_32) = split ' ', $$placement; 
+	  
+	  my $bp; 
+	  my $count = 0; 	
+	  while ($mer =~ m/[acgt]*([ACGT])/g) {
+	    $position += (pos($mer)-1);
+	    $bp = $1; 
+	    $count++;
+	  }  
+	  if ($count == 1) {
+	    my $id = $id_16<<22|$id_32; 
+	    if (!exists ($pileup{$position}{$id})) {
+	      $pileup{$position}{$id}=$bp;
+	      #print "$position $id $pileup{$position}{$id}\n";
+	    }
+	    elsif ( $pileup{$position}{$id} !~ m/($bp)/) { 
+	      $pileup{$position}{$id}.=$bp; 
+	      #print "$position $id $pileup{$position}{$id}\n";
+	    }
 	  }
-	  elsif ( $pileup{$position}{$id} !~ m/($bp)/) { 
-	    $pileup{$position}{$id}.=$bp; 
-	    #print "$position $id $pileup{$position}{$id}\n";
-	  }
-        }
+	}	
       }
-    }
+    } 
   } 
   print STDERR $whc->iostats; 
-}
-for (my $i=0; $i<2**20; $i++){
-  my %hash; 
-  my @ids; 
-  for my $id (keys %{$pileup{$i}}) {
-    my $bp = $pileup{$i}{$id}; 
-    if (length($bp)==1){
-      $hash{$bp}++; #degenerates don't vote 
-    } 
-    push @ids, "$bp$id"; 
-  }
-  if (@ids) {
-    my @votes;
-    push @votes, "$hash{'A'}A";
-    push @votes, "$hash{'C'}C";
-    push @votes, "$hash{'G'}G";
-    push @votes, "$hash{'T'}T";
-    my @call = sort { $b <=> $a } @votes;  
-    
-    my $ratio = $hash{substr($call[0],-1,1)}/
-	(1+$hash{substr($call[1],-1,1)}+$hash{substr($call[2],-1,1)});   
-    if ($ratio >= $r) {
-      print "$i $ratio @call @ids\n"; 	
+  
+  my $count; 
+
+  for (my $i=0; $i<2**$ENV{KNOB_CHUNKBITS}; $i++){
+    my %hash; 
+    my @ids; 
+    for my $id (keys %{$pileup{$i}}) {
+      my $bp = $pileup{$i}{$id}; 
+      if (length($bp)==1){
+	$hash{$bp}++; #degenerates don't vote 
+      } 
+      push @ids, "$bp$id"; 
+    }
+    if (@ids) {
+      my @votes;
+      push @votes, "$hash{'A'}A";
+      push @votes, "$hash{'C'}C";
+      push @votes, "$hash{'G'}G";
+      push @votes, "$hash{'T'}T";
+      my @call = sort { $b <=> $a } @votes;  
+      
+      my $ratio = $hash{substr($call[0],-1,1)}/
+	  (1+$hash{substr($call[1],-1,1)}+$hash{substr($call[2],-1,1)});   
+      if ($ratio >= $r) {
+	#$print "$i $ratio @call @ids\n"; 	
+	$count++; 
+      }
     }
   }
+  print STDERR "Found $count variants at $want_chr_position on ".
+      "$ENV{KNOB_FILENAME}\n"; 
 }
