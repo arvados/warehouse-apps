@@ -245,7 +245,7 @@ cons_poke (t_taql_uint64 pos,
     {
       t_taql_uint64 bp = mer >> (x*4);
       if (x == gappos)
-	cons_pos += gapsize;
+	cons_x += gapsize;
       if (bp & 1) cons[cons_x].a++;
       if (bp & 2) cons[cons_x].c++;
       if (bp & 4) cons[cons_x].g++;
