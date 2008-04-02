@@ -681,6 +681,7 @@ sub croak
   my ($package, $file, $line) = caller;
   my $message = "@_ at $file line $line\n";
   Log (undef, $message);
+  freeze() if @jobstep_todo;
   cleanup() if $dbh;
   save_meta() if $metastream;
   die;
