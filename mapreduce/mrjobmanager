@@ -194,6 +194,10 @@ else
 
 Log (undef, "Install revision ".$Job->{revision});
 my $nodelist = join(",", @node);
+$ENV{"MR_REVISION"} = $Job->{revision};
+$ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
+$ENV{"INSTALL_REPOS"} = $main::svn_repos;
+$ENV{"INSTALL_REVISION"} = $Job->{revision};
 my $execstr = "srun --nodelist='$nodelist' -D /tmp --job-name='$job_id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision'";
 print STDERR "$execstr\n" if $ENV{MR_DEBUG};
 my $ret = system ($execstr);
@@ -281,16 +285,12 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MR_JOB_ID"} = $job_id;
     $ENV{"MR_INPUT"} = $Jobstep->{input};
     $ENV{"MR_KNOBS"} = $Job->{knobs};
-    $ENV{"MR_REVISION"} = $Job->{revision};
-    $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
     $ENV{"MR_LEVEL"} = $level;
     $ENV{"MR_FUNCTION"} = $Job->{mrfunction};
     $ENV{"MR_INPUT0"} = $Job->{inputkey};
     $ENV{"MR_INPUTKEY"} = $Job->{inputkey};
     $ENV{"MR_OUTPUTKEY"} = "mrjobstep/$job_id/$level/$id";
     $ENV{"MR_SLOT"} = $childslotname;
-    $ENV{"INSTALL_REPOS"} = $main::svn_repos;
-    $ENV{"INSTALL_REVISION"} = $Job->{revision};
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
