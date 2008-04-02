@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+
+use Getopt::Std;
+
+my %args;
+getopts ("m:n:r:s:t:", \%args);
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
+ 
+my $m = $args{'m'};
+my $n = $args{'n'};
+my $r = $args{'r'}; 
+
+my $want_chr_pos = $args{'s'}*(2**$args{'t'}); 
+
+my %pileup; 
+
+foreach my $manifest_key (($m, $n)) {
+  
+  print STDERR "Reading manifest: $manifest_key\n";
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifest_key);
+  $manifest->rewind; 
+
+  my @placements; 
+
+  while (my $instream = $manifest->subdir_next ) {
+    while (my ($pos, $size, $filename) = $instream->file_next) {
+      last if !defined $pos; 
+      
+      my ($prefix, $chr_pos, $chunk_length) = split /\./, $filename;
+      if ($chr_pos != $want_chr_pos) {
+        #print STDERR "skipping $filename\n";
+        next; 
+      }
+      $instream->seek ($pos); 
+      
+      print STDERR ".";
+      while (my $placement = $instream->read_until($pos+$size, "\n")) {
+        my ($mer, $position, $id_16, $id_32) = split ' ', $$placement; 
+	
+	my $bp; 
+	my $count = 0; 	
+	while ($mer =~ m/[acgt]*([ACGT])/g) {
+	  $position += (pos($mer)-1);
+	  $bp = $1; 
+	  $count++;
+	}  
+	if ($count == 1) {
+	  my $id = $id_16<<22|$id_32; 
+	  if (!exists ($pileup{$position}{$id})) {
+	    $pileup{$position}{$id}=$bp;
+	    #print "$position $id $pileup{$position}{$id}\n";
+	  }
+	  elsif ( $pileup{$position}{$id} !~ m/($bp)/) { 
+	    $pileup{$position}{$id}.=$bp; 
+	    #print "$position $id $pileup{$position}{$id}\n";
+	  }
+        }
+      }
+    }
+  } 
+  print STDERR $whc->iostats; 
+}
+for (my $i=0; $i<2**20; $i++){
+  my %hash; 
+  my @ids; 
+  for my $id (keys %{$pileup{$i}}) {
+    my $bp = $pileup{$i}{$id}; 
+    if (length($bp)==1){
+      $hash{$bp}++; #degenerates don't vote 
+    } 
+    push @ids, "$bp$id"; 
+  }
+  if (@ids) {
+    my @votes;
+    push @votes, "$hash{'A'}A";
+    push @votes, "$hash{'C'}C";
+    push @votes, "$hash{'G'}G";
+    push @votes, "$hash{'T'}T";
+    my @call = sort { $b <=> $a } @votes;  
+    
+    my $ratio = $hash{substr($call[0],-1,1)}/
+	(1+$hash{substr($call[1],-1,1)}+$hash{substr($call[2],-1,1)});   
+    if ($ratio >= $r) {
+      print "$i $ratio @call @ids\n"; 	
+    }
+  }
+}
