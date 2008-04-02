@@ -71,10 +71,10 @@ else
 	  my $taql_header_text = $$taql_header;
 	  $taql_header_text =~ s{^#: taql-0.1\n}{#: taql-0.1/text\n}
 	    or die "broken taql header: \"$taql_header\"";
-	  open H, ">$ENV{MR_JOBSTEP_TMP}/header";
+	  open H, ">$ENV{TMPDIR}/header";
 	  print H $taql_header_text;
 	  close H;
-	  open SORT, "|gprint |egrep -v '^#' |sort -n +3 --buffer-size=400M |cat $ENV{MR_JOBSTEP_TMP}/header - |gread >$ENV{MR_JOBSTEP_TMP}/places.dat";
+	  open SORT, "|gprint |egrep -v '^#' |sort -n +3 --buffer-size=400M |cat $ENV{TMPDIR}/header - |gread >$ENV{TMPDIR}/places.dat";
 	  print SORT $$taql_header;
 	  $sort_started = 1;
 	}
@@ -102,7 +102,7 @@ else
   Safepipe::readfrom
       ("main::REFERENCE",
        "mrs-fetch -h '$ENV{KNOB_REFERENCE}' . '$chr.fa'",
-       "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0] >$ENV{MR_JOBSTEP_TMP}/ref.dat",
+       "perl $ENV{MR_REVISION_INSTALLDIR}/src/madeleine/chr-to-dat.pl -n $mersize[0] >$ENV{TMPDIR}/ref.dat",
       )
       or die "reference pipe failed: $!";
   close REFERENCE or die "close REFERENCE: $!";
@@ -111,14 +111,14 @@ else
       ("main::SAMPLES",
        "mrs-fetch -h '$ENV{KNOB_INPUTSAMPLES}' '$ENV{KNOB_INPUTSTREAM}'",
        "mrs-select-reads",
-       "perl $ENV{MR_REVISION_INSTALLDIR}/src/apps/tomc/simreads-to-mers-dat.pl @mersize >$ENV{MR_JOBSTEP_TMP}/samples.dat",
+       "perl $ENV{MR_REVISION_INSTALLDIR}/src/apps/tomc/simreads-to-mers-dat.pl @mersize >$ENV{TMPDIR}/samples.dat",
       )
       or die "samples pipe failed: $!";
   close SAMPLES or die "close SAMPLES: $!";
 
   Safepipe::readfrom
       ("main::VOTES",
-       "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS} -o $ENV{MR_JOBSTEP_TMP}/pr.dat -p $ENV{MR_JOBSTEP_TMP}/places.dat -c - -r $ENV{MR_JOBSTEP_TMP}/ref.dat -s $ENV{MR_JOBSTEP_TMP}/samples.dat",
+       "place-report --mercount $mercount --two-inrecs-per-sample -n $mersize[0] --mer0-col mer0 --mer1-col mer1 --gap-min $ENV{KNOB_SMALLGAPMIN} --gap-max $ENV{KNOB_SMALLGAPMAX} --gap-pos $ENV{KNOB_SMALLGAPPOS} -o $ENV{TMPDIR}/pr.dat -p $ENV{TMPDIR}/places.dat -c - -r $ENV{TMPDIR}/ref.dat -s $ENV{TMPDIR}/samples.dat",
        "mrs-store './$chr' place-report-c.dat",
        "mrs-output",
       )
@@ -126,5 +126,7 @@ else
   close VOTES or die "close VOTES: $!";
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+
+  print STDERR `ls -al $ENV{TMPDIR}`;
   exit 0;
 }

@@ -83,7 +83,7 @@ else
       or die "Safepipe failed: $!";
   close X or die "close X: $!";
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
-  system "rm -rf $ENV{MR_JOBSTEP_TMP}/merge-*";
-  system "rm -rf $ENV{MR_JOBSTEP_TMP}/header";
+
+  print STDERR `ls -al $ENV{TMPDIR}`;
   exit 0;
 }

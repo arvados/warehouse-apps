@@ -136,8 +136,8 @@ if ($ENV{MR_LEVEL} == 1)
   }
   my $mercount = $#mersize + 1;
 
-  my $ref_tempfile = "/tmp/$ENV{MR_SLOT}-reference.dat";
-  my $samples_tempfile = "/tmp/$ENV{MR_SLOT}-samples.dat";
+  my $ref_tempfile = "$ENV{TMPDIR}/$ENV{MR_SLOT}-reference.dat";
+  my $samples_tempfile = "$ENV{TMPDIR}/$ENV{MR_SLOT}-samples.dat";
 
   open REPORTREFERENCE, "+>", $ref_tempfile;
   open REPORTSAMPLES, "+>", $samples_tempfile;
@@ -176,6 +176,8 @@ if ($ENV{MR_LEVEL} == 1)
   close "REPORTSAMPLES" or die "close REPORTSAMPLES: $!";
 
   close "PLACED" or die "close PLACED: $!";
+
+  print STDERR `ls -al $ENV{TMPDIR}`;
 
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
   exit 0;
