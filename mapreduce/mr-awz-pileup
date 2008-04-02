@@ -118,4 +118,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
   }
   print STDERR "Found $count variants at $want_chr_position on ".
       "$ENV{KNOB_FILENAME}\n"; 
+
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
 }
