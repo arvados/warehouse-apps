@@ -19,7 +19,7 @@ my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
  
 my $m = $ENV{KNOB_PLACEDMERS};
-my $n = $ENV{KNOB_PLACEDMERS1}
+my $n = $ENV{KNOB_PLACEDMERS1};
 my $r = $ENV{KNOB_CUTOFF}; 
 
 my $manifestkey = $ENV{MR_INPUT0}; 
