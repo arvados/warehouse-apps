@@ -3,7 +3,6 @@
 # mrtaskmanager: run a map or reduce function on one input.
 
 use strict;
-use MogileFS::Client;
 
 $ENV{PATH} .= ":$ENV{MR_REVISION_INSTALLDIR}/bin";
 $ENV{PATH} .= ":$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce";
