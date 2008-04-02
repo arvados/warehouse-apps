@@ -202,6 +202,7 @@ my $execstr = "srun --nodelist='$nodelist' -D /tmp --job-name='$job_id' sh -c 'm
 print STDERR "$execstr\n" if $ENV{MR_DEBUG};
 my $ret = system ($execstr);
 Log (undef, "Install exited $ret");
+system ("srun --nodelist='$nodelist' -D /tmp rm -rf /tmp/mrcompute/work");
 
 
 
