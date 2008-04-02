@@ -66,6 +66,7 @@ $max_ncpus = $$Job{stepspernode} if $$Job{stepspernode};
 
 Log (undef, "check slurm allocation");
 my @slot;
+my @node;
 # Should use $ENV{SLURM_TASKS_PER_NODE} instead of sinfo? (eg. "4(x3),2,4(x2)")
 foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 {
@@ -113,6 +114,7 @@ foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 		    cpu => $cpu };
     }
   }
+  push @node, @nodelist;
 }
 
 
@@ -191,7 +193,7 @@ else
 
 
 Log (undef, "Install revision ".$Job->{revision});
-my $nodelist = join(",", @nodelist);
+my $nodelist = join(",", @node);
 my $execstr = "srun --nodelist='$nodelist' -D /tmp --job-name='$job_id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision'";
 print STDERR "$execstr\n" if $ENV{MR_DEBUG};
 my $ret = system ($execstr);
