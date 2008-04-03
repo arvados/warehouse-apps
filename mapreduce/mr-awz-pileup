@@ -44,8 +44,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
     my $manifest = new Warehouse::Manifest (whc => $whc,
 					    key => $current_key);
     $manifest->rewind;   
-    my $want_chr_pos = 0; 
-    
+
     my @placements; 
     
     while (my $instream = $manifest->subdir_next ) {
@@ -89,7 +88,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
   $outstream->clear;
   $outstream->write_start ("$want_chr_position.txt"); 
  
-  my $count; 4
+  my $count; 
 
   for (my $i=0; $i<2**$ENV{KNOB_CHUNKBITS}; $i++){
     my %hash; 
