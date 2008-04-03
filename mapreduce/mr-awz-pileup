@@ -3,8 +3,7 @@
 
 ###MR_DESCRIPTION:pivot input and output consensus placements 
 ###MR_INPUT:manifest
-###MR_KNOBS:PLACEDMERS=311a8dbd3245489695c813eea548d829 
-###MR_KNOBS:PLACEDMERS1=2fde523db9b7b911acef9dacb070827a 
+###MR_KNOBS:MERGEKEYS= 
 ###MR_KNOBS:FILENAME=0:chr1:0 
 ###MR_KNOBS:CHUNKNUM=235
 ###MR_KNOBS:CHUNKBITS=20
@@ -18,11 +17,11 @@ use Warehouse::Stream;
 my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
  
-my $m = $ENV{KNOB_PLACEDMERS};
-my $n = $ENV{KNOB_PLACEDMERS1};
-my $r = $ENV{KNOB_CUTOFF}; 
-
 my $manifestkey = $ENV{MR_INPUT0}; 
+my @mergekeys = split /:/, $ENV{KNOB_MERGEKEYS};
+push @mergekeys, $manifestkey; 
+
+my $r = $ENV{KNOB_CUTOFF}; 
 
 if ($ENV{MR_LEVEL} == 0) {
   $ENV{MR_INPUT} = $manifestkey; 
@@ -38,12 +37,12 @@ elsif ($ENV{MR_LEVEL} == 1) {
 
   my $want_chr_position = $ENV{MR_INPUT}*(2**$ENV{KNOB_CHUNKBITS});
 
-  foreach my $manifest_key (($m, $n)) {
+  foreach my $current_key (@mergekeys) {
     
-    print STDERR "Reading manifest: $manifest_key\n";
+    print STDERR "Reading manifest: $current_key\n";
     
     my $manifest = new Warehouse::Manifest (whc => $whc,
-					    key => $manifest_key);
+					    key => $current_key);
     $manifest->rewind;   
     my $want_chr_pos = 0; 
     
@@ -59,8 +58,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	  next; 
 	}
 	$instream->seek ($pos); 
-	
-	print STDERR ".";
+       
 	while (my $placement = $instream->read_until($pos+$size, "\n")) {
 	  my ($mer, $position, $id_16, $id_32) = split ' ', $$placement; 
 	  
@@ -89,9 +87,9 @@ elsif ($ENV{MR_LEVEL} == 1) {
   my $outstream = new Warehouse::Stream (whc => $whc);
   $outstream->name ("./$ENV{KNOB_FILENAME}");
   $outstream->clear;
-  $outstream->write_start ($want_chr_position); 
+  $outstream->write_start ("$want_chr_position.txt"); 
  
-  my $count; 
+  my $count; 4
 
   for (my $i=0; $i<2**$ENV{KNOB_CHUNKBITS}; $i++){
     my %hash; 
