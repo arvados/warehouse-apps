@@ -86,8 +86,11 @@ elsif ($ENV{MR_LEVEL} == 1) {
       }
     } 
   } 
-  print STDERR $whc->iostats; 
-  
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  $outstream->name ("./$ENV{KNOB_FILENAME}");
+  $outstream->clear;
+  $outstream->write_start ($want_chr_position); 
+ 
   my $count; 
 
   for (my $i=0; $i<2**$ENV{KNOB_CHUNKBITS}; $i++){
@@ -111,14 +114,19 @@ elsif ($ENV{MR_LEVEL} == 1) {
       my $ratio = $hash{substr($call[0],-1,1)}/
 	  (1+$hash{substr($call[1],-1,1)}+$hash{substr($call[2],-1,1)});   
       if ($ratio >= $r) {
-	#$print "$i $ratio @call @ids\n"; 	
+	$outstream->write_data("$i $ratio @call @ids\n"); 	
 	$count++; 
       }
     }
   }
+  $outstream->write_finish; 
+
   print STDERR "Found $count variants at $want_chr_position on ".
       "$ENV{KNOB_FILENAME}\n"; 
 
-  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  my $fragkey = $whc->store_block ($outstream->as_string)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout ".$fragkey."+++\n";
+  print STDERR $whc->iostats;
   exit 0;
 }
