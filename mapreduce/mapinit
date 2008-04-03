@@ -7,7 +7,7 @@ use POSIX ':sys_wait_h';
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 
 do '/etc/polony-tools/config.pl';
-my $max_njobs = 32;		# max "big job" concurrency
+my $max_njobs = 48;		# max "big job" concurrency
 
 
 
