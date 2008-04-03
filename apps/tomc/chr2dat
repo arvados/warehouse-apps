@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+
+use strict;
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $n_mers = shift @ARGV;
+my $key = shift @ARGV or die "usage: $0 mersize key-of-fasta-genome";
+my $whc = new Warehouse;
+my $manifest_in = new Warehouse::Manifest (whc => $whc,
+					   key => $key);
+$manifest_in->rewind;
+
+my $stream_out = new Warehouse::Stream (whc => $whc);
+$stream_out->clear;
+
+while (my $stream_in = $manifest_in->subdir_next)
+{
+    $stream_in->rewind;
+    while (my ($pos, $size, $filename) = $stream_in->file_next)
+    {
+	last if !defined $pos;
+	open (STDIN, "-|") || convert ($stream_in->as_string, $pos, $size);
+	$filename =~ s/\.fa//i;
+	$filename =~ s/$/.dat/;
+	$stream_out->name ($stream_in->name);
+	$stream_out->write_start ($filename);
+	printf STDERR "%10d %s\n", $size, $filename;
+	my $buf;
+	while (read STDIN, $buf, 2**20)
+	{
+	    $stream_out->write_data (\$buf);
+	}
+	$stream_out->write_finish;
+	close STDIN or die "close STDIN: $!";
+    }
+    my @key = $whc->store_block ($stream_out->as_string);
+    print "@key\n";
+}
+
+
+sub convert
+{
+    my $stream_as_string = shift;
+    my $pos = shift;
+    my $size = shift;
+    open (STDIN, "-|") || fetchfile ($stream_as_string, $pos, $size);
+    open (STDOUT, "|gread")
+	or die "gread: $!";
+    open (STDIN, "grep -v '^>' | tr -d '\r\n' | fold -w '$n_mers' |")
+	or die "grep|tr|fold: $!";
+    print <<HERE;
+#: taql-0.1/text
+# field "mer0" "uint64"
+#.
+HERE
+    while (defined ($_ = <STDIN>))
+    {
+	print;
+	print "\n" if !/\n$/;
+    }
+    exit 0;
+}
+
+
+sub fetchfile
+{
+    my $stream_as_string = shift;
+    my $pos = shift;
+    my $size = shift;
+
+    my $whc = new Warehouse;
+    my $stream_in = new Warehouse::Stream
+	(whc => $whc, subdir => $stream_as_string);
+    $stream_in->seek ($pos);
+    while (my $dataref = $stream_in->read_until ($pos+$size))
+    {
+	print $$dataref;
+    }
+    exit 0;
+}
