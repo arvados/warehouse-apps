@@ -5,6 +5,7 @@ use strict;
 open STDIN, "wh job list |";
 my %revision_min = ( expand => 1700,
 		     bin_deg => 1750,
+		     place_ref => 1888,
 		     );
 
 my %trialkey;
