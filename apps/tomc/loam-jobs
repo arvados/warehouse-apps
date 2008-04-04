@@ -3,7 +3,9 @@
 use strict;
 
 open STDIN, "wh job list |";
-my %revision_min = { expand => 1700 };
+my %revision_min = ( expand => 1700,
+		     bin_deg => 1750,
+		     );
 
 my %trialkey;
 my %expand;
@@ -34,10 +36,12 @@ for (@jobs)
 for (@jobs)
 {
     if ((my ($trial) = /mrfunction=awz-bin-degeneracies(\d),/)
+	&& (my ($revision) = / revision=(\d+)/)
 	&& (my ($id) = / id=([^,]*)/)
 	&& (my ($inputkey) = / inputkey=([^,]*)/)
 	&& (my ($outputkey) = / outputkey=([^,]*)/))
     {
+	next if $revision < $revision_min{bin_deg};
 	my $trialkey = $trialkey{$inputkey}.".".$trial;
 	next if $bin_deg{$trialkey} && $bin_deg{$trialkey}->{outputkey};
 	$bin_deg{$trialkey} = { id => $id,
@@ -49,10 +53,12 @@ for (@jobs)
 for (@jobs)
 {
     if (/knobs=COLLISION_BITS=14\\nFUNCTION=mrs-awz-place\\nOUTPUTNAME=partition2?\.bin/
+	&& (my ($revision) = /revision=(\d+)/)
 	&& (my ($id) = / id=([^,]*)/)
 	&& (my ($inputkey) = / inputkey=([^,]*)/)
 	&& (my ($outputkey) = / outputkey=([^,]*)/))
     {
+	next if $revision < $revision_min{place};
 	my $trialkey = $trialkey{$inputkey};
 	next if $place{$trialkey} && $place{$trialkey}->{outputkey};
 	$place{$trialkey} = { id => $id,
@@ -64,10 +70,12 @@ for (@jobs)
 for (@jobs)
 {
     if (/knobs=CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=e664497797390604fe1a4b5a8f57680e(\\nSWAP=1)?/
+	&& (my ($revision) = /revision=(\d+)/)
 	&& (my ($id) = / id=([^,]*)/)
 	&& (my ($inputkey) = / inputkey=([^,]*)/)
 	&& (my ($outputkey) = / outputkey=([^,]*)/))
     {
+	next if $revision < $revision_min{place_ref};
 	my $trialkey = $trialkey{$inputkey};
 	next if $place_ref{$trialkey} && $place_ref{$trialkey}->{outputkey};
 	$place_ref{$trialkey} = { id => $id,
@@ -79,10 +87,12 @@ for (@jobs)
 for (@jobs)
 {
     if (/knobs=CHUNKBITS=20\\nCHUNKNUM=235\\nCUTOFF=3\\nFILENAME=0:chr..?:0\\nMERGEKEYS=23fbf07d9f011619dfea3dc0e4d397e9/
+	&& (my ($revision) = /revision=(\d+)/)
 	&& (my ($id) = / id=([^,]*)/)
 	&& (my ($inputkey) = / inputkey=([^,]*)/)
 	&& (my ($outputkey) = / outputkey=([^,]*)/))
     {
+	next if $revision < $revision_min{pileup};
 	my $trialkey = $trialkey{$inputkey};
 	next if $pileup{$trialkey} && $pileup{$trialkey}->{outputkey};
 	$pileup{$trialkey} = { id => $id,
