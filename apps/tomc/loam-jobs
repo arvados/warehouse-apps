@@ -2,8 +2,8 @@
 
 use strict;
 
-open STDIN, "</tmp/joblist";
-my $revision_min = 1700;
+open STDIN, "wh job list |";
+my %revision_min = { expand => 1700 };
 
 my %trialkey;
 my %expand;
@@ -22,7 +22,7 @@ for (@jobs)
 	&& (my ($id) = / id=(\d+)/)
 	&& (my ($outputkey) = / outputkey=([^,]*)/))
     {
-	next if $revision < $revision_min;
+	next if $revision < $revision_min{expand};
 	my $trialkey = $chr.".".$ploidy;
 	next if $expand{$trialkey} && $expand{$trialkey}->{outputkey};
 	$expand{$trialkey} = { id => $id,
