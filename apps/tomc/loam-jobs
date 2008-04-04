@@ -1,0 +1,119 @@
+#!/usr/bin/perl
+
+use strict;
+
+open STDIN, "</tmp/joblist";
+my $revision_min = 1700;
+
+my %trialkey;
+my %expand;
+my %bin_deg;
+my %place;
+my %place_ref;
+my %pileup;
+
+my @jobs = <STDIN>;
+
+for (@jobs)
+{
+    if (/mrfunction=awz-stream,/
+	&& (my ($chr, $ploidy) = /knobs=CHROMOSOME=(chr[0-9XYM]+)\\nFUNCTION=mrs-awz-expand-degeneracies\\nINDIVIDUAL=0\\nOUTPUTNAME=reads.bin\\nPLOIDY=(\d)/)
+	&& (my ($revision) = /revision=(\d+)/)
+	&& (my ($id) = / id=(\d+)/)
+	&& (my ($outputkey) = / outputkey=([^,]*)/))
+    {
+	next if $revision < $revision_min;
+	my $trialkey = $chr.".".$ploidy;
+	next if $expand{$trialkey} && $expand{$trialkey}->{outputkey};
+	$expand{$trialkey} = { id => $id,
+			       outputkey => $outputkey };
+	$trialkey{$outputkey} = $trialkey;
+    }
+}
+
+for (@jobs)
+{
+    if ((my ($trial) = /mrfunction=awz-bin-degeneracies(\d),/)
+	&& (my ($id) = / id=([^,]*)/)
+	&& (my ($inputkey) = / inputkey=([^,]*)/)
+	&& (my ($outputkey) = / outputkey=([^,]*)/))
+    {
+	my $trialkey = $trialkey{$inputkey}.".".$trial;
+	next if $bin_deg{$trialkey} && $bin_deg{$trialkey}->{outputkey};
+	$bin_deg{$trialkey} = { id => $id,
+				outputkey => $outputkey };
+	$trialkey{$outputkey} = $trialkey;
+    }
+}
+
+for (@jobs)
+{
+    if (/knobs=COLLISION_BITS=14\\nFUNCTION=mrs-awz-place\\nOUTPUTNAME=partition2?\.bin/
+	&& (my ($id) = / id=([^,]*)/)
+	&& (my ($inputkey) = / inputkey=([^,]*)/)
+	&& (my ($outputkey) = / outputkey=([^,]*)/))
+    {
+	my $trialkey = $trialkey{$inputkey};
+	next if $place{$trialkey} && $place{$trialkey}->{outputkey};
+	$place{$trialkey} = { id => $id,
+			      outputkey => $outputkey };
+	$trialkey{$outputkey} = $trialkey;
+    }
+}
+
+for (@jobs)
+{
+    if (/knobs=CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=e664497797390604fe1a4b5a8f57680e(\\nSWAP=1)?/
+	&& (my ($id) = / id=([^,]*)/)
+	&& (my ($inputkey) = / inputkey=([^,]*)/)
+	&& (my ($outputkey) = / outputkey=([^,]*)/))
+    {
+	my $trialkey = $trialkey{$inputkey};
+	next if $place_ref{$trialkey} && $place_ref{$trialkey}->{outputkey};
+	$place_ref{$trialkey} = { id => $id,
+				  outputkey => $outputkey };
+	$trialkey{$outputkey} = $trialkey;
+    }
+}
+
+for (@jobs)
+{
+    if (/knobs=CHUNKBITS=20\\nCHUNKNUM=235\\nCUTOFF=3\\nFILENAME=0:chr..?:0\\nMERGEKEYS=23fbf07d9f011619dfea3dc0e4d397e9/
+	&& (my ($id) = / id=([^,]*)/)
+	&& (my ($inputkey) = / inputkey=([^,]*)/)
+	&& (my ($outputkey) = / outputkey=([^,]*)/))
+    {
+	my $trialkey = $trialkey{$inputkey};
+	next if $pileup{$trialkey} && $pileup{$trialkey}->{outputkey};
+	$pileup{$trialkey} = { id => $id,
+			       outputkey => $outputkey };
+	$trialkey{$outputkey} = $trialkey;
+    }
+}
+
+printf ("        %-32s %-32s %-32s %-32s %-32s\n",
+	qw(expand-degeneracies bin-degeneracies place place-ref pileup));
+foreach my $chrN (1..22, qw(X Y M))
+{
+    foreach my $ploidy (0,1)
+    {
+	last if $ploidy && $chrN !~ /\d/;
+	$_ = "chr$chrN.$ploidy";
+	printf ("chr%-2s %1d %-32s %-32s %-32s %-32s %-32s\n",
+		$chrN,
+		$ploidy,
+		$expand{$_}->{outputkey} || $expand{$_}->{id},
+		$bin_deg{$_.".1"}->{outputkey} || $bin_deg{$_.".1"}->{id},
+		$place{$_.".1"}->{outputkey} || $place{$_.".1"}->{id},
+		$place_ref{$_.".1"}->{outputkey} || $place_ref{$_.".1"}->{id},
+		$pileup{$_.".1"}->{outputkey} || $pileup{$_.".1"}->{id},
+		);
+	printf ("        %-32s %-32s %-32s %-32s %-32s\n",
+		"",
+		$bin_deg{$_.".2"}->{outputkey} || $bin_deg{$_.".2"}->{id},
+		$place{$_.".2"}->{outputkey} || $place{$_.".2"}->{id},
+		$place_ref{$_.".2"}->{outputkey} || $place_ref{$_.".2"}->{id},
+		$pileup{$_.".2"}->{outputkey} || $pileup{$_.".2"}->{id},
+		);
+    }
+}
