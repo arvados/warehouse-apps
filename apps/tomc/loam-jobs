@@ -2,10 +2,12 @@
 
 use strict;
 
+my ($revision_default) = @ARGV or die "usage: $0 default-revision\n";
+
 open STDIN, "wh job list |";
 my %revision_min = ( expand => 1700,
 		     bin_deg => 1750,
-		     place_ref => 1888,
+		     place_ref => 1872,
 		     );
 
 my %trialkey;
@@ -14,8 +16,18 @@ my %bin_deg;
 my %place;
 my %place_ref;
 my %pileup;
+my %Job;
+my @Job;
 
 my @jobs = <STDIN>;
+for (@jobs)
+{
+    my %have;
+    chomp;
+    map { /(.*?)=(.*)/; $have{$1} = $2; } split (/, /);
+    $Job{$have{id}} = \%have;
+}
+@Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
 for (@jobs)
 {
@@ -102,15 +114,67 @@ for (@jobs)
     }
 }
 
-printf ("        %-32s %-32s %-32s %-32s %-32s\n",
+printf ("         %-32s %-32s %-32s %-32s %-32s\n",
 	qw(expand-degeneracies bin-degeneracies place place-ref pileup));
 foreach my $chrN (1..22, qw(X Y M))
 {
+    foreach my $ploidy (0, 1)
+    {
+	next if $chrN !~ /\d/ && $ploidy;
+
+	my $expand;
+	my @bin_deg;
+	my @place;
+	my @place_ref;
+	$expand = findjob ( { mrfunction => "awz-stream",
+			      revision => [1649, ],
+			      inputkey => "f3864330c9d4315b8fac14fa7ad4b583",
+			      knobs => "CHROMOSOME=chr$chrN\\nFUNCTION=mrs-awz-expand-degeneracies\\nINDIVIDUAL=0\\nOUTPUTNAME=reads.bin\\nPLOIDY=$ploidy",
+			  } );
+	if ($expand && $expand->{outputkey})
+	{
+	    foreach my $degen (1, 2)
+	    {
+		$bin_deg[$degen] = findjob ( { mrfunction => "awz-bin-degeneracies$degen",
+					       revision => [1750, ],
+					       inputkey => $expand->{outputkey},
+					       knobs => ""
+					       } );
+		if ($bin_deg[$degen] && $bin_deg[$degen]->{outputkey})
+		{
+		    my $P = $degen==2 ? "2" : "";
+		    $place[$degen] = findjob ( { mrfunction => "awz-stream",
+						 revision => [1751, ],
+						 inputkey => $bin_deg[$degen]->{outputkey},
+						 knobs => "COLLISION_BITS=14\\nFUNCTION=mrs-awz-place\\nOUTPUTNAME=partition$P.bin",
+					     } );
+		}
+		if ($place[$degen] && $place[$degen]->{outputkey})
+		{
+		    my $SWAP = $degen==2 ? "\\nSWAP=1" : "";
+		    $place_ref[$degen] = findjob ( { mrfunction => "awz-files",
+						     revision => [1872, ],
+						     inputkey => $place[$degen]->{outputkey},
+						     knobs => "CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=e664497797390604fe1a4b5a8f57680e$SWAP",
+						 } );
+		}
+	    }
+	}
+	if ($place_ref[1] && $place_ref[1]->{outputkey} &&
+	    $place_ref[2] && $place_ref[2]->{outputkey})
+	{
+	    my $pileup = findjob ( { mrfunction => "awz-pileup",
+				     revision => [ 1890, ],
+				     inputkey => $place_ref[2]->{outputkey},
+				     knobs => "CHUNKBITS=20\\nCHUNKNUM=235\\nCUTOFF=3\\nFILENAME=0:chr$chrN:0\\nMERGEKEYS=".$place_ref[1]->{outputkey},
+				 } );
+	}
+    }
     foreach my $ploidy (0,1)
     {
 	last if $ploidy && $chrN !~ /\d/;
 	$_ = "chr$chrN.$ploidy";
-	printf ("chr%-2s %1d %-32s %-32s %-32s %-32s %-32s\n",
+	printf (" chr%-2s %1d %-32s %-32s %-32s %-32s %-32s\n",
 		$chrN,
 		$ploidy,
 		$expand{$_}->{outputkey} || $expand{$_}->{id},
@@ -119,7 +183,7 @@ foreach my $chrN (1..22, qw(X Y M))
 		$place_ref{$_.".1"}->{outputkey} || $place_ref{$_.".1"}->{id},
 		$pileup{$_.".1"}->{outputkey} || $pileup{$_.".1"}->{id},
 		);
-	printf ("        %-32s %-32s %-32s %-32s %-32s\n",
+	printf ("         %-32s %-32s %-32s %-32s %-32s\n",
 		"",
 		$bin_deg{$_.".2"}->{outputkey} || $bin_deg{$_.".2"}->{id},
 		$place{$_.".2"}->{outputkey} || $place{$_.".2"}->{id},
@@ -127,4 +191,32 @@ foreach my $chrN (1..22, qw(X Y M))
 		$pileup{$_.".2"}->{outputkey} || $pileup{$_.".2"}->{id},
 		);
     }
+}
+
+sub findjob
+{
+    my $want = shift;
+    my $queued;
+    for (@Job)
+    {
+#	print $_->{mrfunction}." ".$_->{revision}." ".$_->{knobs}."\n";
+	if ($_->{revision} >= $want->{revision}->[0]
+	    && ($_->{revision} <= $want->{revision}->[1] || !$want->{revision}->[1])
+	    && $_->{mrfunction} eq $want->{mrfunction}
+	    && $_->{knobs} eq $want->{knobs}
+	    && $_->{inputkey} eq $want->{inputkey})
+	{
+	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
+	    return $_ if $_->{outputkey};
+	}
+    }
+    suggest_new_job ($want) if !$queued;
+    return $queued;
+}
+
+sub suggest_new_job
+{
+    my $want = shift;
+    my $revision = $want->{revision}->[1] || $revision_default;
+    print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' knobs='".$want->{knobs}."'\n";
 }
