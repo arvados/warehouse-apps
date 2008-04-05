@@ -1,14 +1,18 @@
 #!/usr/bin/perl
 
+# suggest jobs to start:
+#
+#  loam-jobs 1903 | egrep ^wh
+#
+# print table of output keys and scheduled job ids:
+#
+#  loam-jobs 1903 | egrep '^ '
+
 use strict;
 
 my ($revision_default) = @ARGV or die "usage: $0 default-revision\n";
 
 open STDIN, "wh job list |";
-my %revision_min = ( expand => 1750,
-		     bin_deg => 1751,
-		     place_ref => 1872,
-		     );
 
 my %trialkey;
 my %expand;
@@ -29,90 +33,6 @@ for (@jobs)
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
-for (@jobs)
-{
-    if (/mrfunction=awz-stream,/
-	&& (my ($chr, $ploidy) = /knobs=CHROMOSOME=(chr[0-9XYM]+)\\nFUNCTION=mrs-awz-expand-degeneracies\\nINDIVIDUAL=0\\nOUTPUTNAME=reads.bin\\nPLOIDY=(\d)/)
-	&& (my ($revision) = /revision=(\d+)/)
-	&& (my ($id) = / id=(\d+)/)
-	&& (my ($outputkey) = / outputkey=([^,]*)/))
-    {
-	next if $revision < $revision_min{expand};
-	my $trialkey = $chr.".".$ploidy;
-	next if $expand{$trialkey} && $expand{$trialkey}->{outputkey};
-	$expand{$trialkey} = { id => $id,
-			       outputkey => $outputkey };
-	$trialkey{$outputkey} = $trialkey;
-    }
-}
-
-for (@jobs)
-{
-    if ((my ($trial) = /mrfunction=awz-bin-degeneracies(\d),/)
-	&& (my ($revision) = / revision=(\d+)/)
-	&& (my ($id) = / id=([^,]*)/)
-	&& (my ($inputkey) = / inputkey=([^,]*)/)
-	&& (my ($outputkey) = / outputkey=([^,]*)/))
-    {
-	next if $revision < $revision_min{bin_deg};
-	my $trialkey = $trialkey{$inputkey}.".".$trial;
-	next if $bin_deg{$trialkey} && $bin_deg{$trialkey}->{outputkey};
-	$bin_deg{$trialkey} = { id => $id,
-				outputkey => $outputkey };
-	$trialkey{$outputkey} = $trialkey;
-    }
-}
-
-for (@jobs)
-{
-    if (/knobs=COLLISION_BITS=14\\nFUNCTION=mrs-awz-place\\nOUTPUTNAME=partition2?\.bin/
-	&& (my ($revision) = /revision=(\d+)/)
-	&& (my ($id) = / id=([^,]*)/)
-	&& (my ($inputkey) = / inputkey=([^,]*)/)
-	&& (my ($outputkey) = / outputkey=([^,]*)/))
-    {
-	next if $revision < $revision_min{place};
-	my $trialkey = $trialkey{$inputkey};
-	next if $place{$trialkey} && $place{$trialkey}->{outputkey};
-	$place{$trialkey} = { id => $id,
-			      outputkey => $outputkey };
-	$trialkey{$outputkey} = $trialkey;
-    }
-}
-
-for (@jobs)
-{
-    if (/knobs=CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=7ae664a687be4b62c455eb5a0587fcce(\\nSWAP=1)?/
-	&& (my ($revision) = /revision=(\d+)/)
-	&& (my ($id) = / id=([^,]*)/)
-	&& (my ($inputkey) = / inputkey=([^,]*)/)
-	&& (my ($outputkey) = / outputkey=([^,]*)/))
-    {
-	next if $revision < $revision_min{place_ref};
-	my $trialkey = $trialkey{$inputkey};
-	next if $place_ref{$trialkey} && $place_ref{$trialkey}->{outputkey};
-	$place_ref{$trialkey} = { id => $id,
-				  outputkey => $outputkey };
-	$trialkey{$outputkey} = $trialkey;
-    }
-}
-
-for (@jobs)
-{
-    if (/knobs=CHUNKBITS=20\\nCHUNKNUM=235\\nCUTOFF=3\\nFILENAME=0:chr..?:0\\nMERGEKEYS=23fbf07d9f011619dfea3dc0e4d397e9/
-	&& (my ($revision) = /revision=(\d+)/)
-	&& (my ($id) = / id=([^,]*)/)
-	&& (my ($inputkey) = / inputkey=([^,]*)/)
-	&& (my ($outputkey) = / outputkey=([^,]*)/))
-    {
-	next if $revision < $revision_min{pileup};
-	my $trialkey = $trialkey{$inputkey};
-	next if $pileup{$trialkey} && $pileup{$trialkey}->{outputkey};
-	$pileup{$trialkey} = { id => $id,
-			       outputkey => $outputkey };
-	$trialkey{$outputkey} = $trialkey;
-    }
-}
 
 printf ("         %-32s %-32s %-32s %-32s %-32s\n",
 	qw(expand-degeneracies bin-degeneracies place place-ref pileup));
@@ -126,6 +46,7 @@ foreach my $chrN (1..22, qw(X Y M))
 	my @bin_deg;
 	my @place;
 	my @place_ref;
+	my $pileup;
 	$expand = findjob ( { mrfunction => "awz-stream",
 			      revision => [1649, ],
 			      inputkey => "f3864330c9d4315b8fac14fa7ad4b583",
@@ -153,7 +74,7 @@ foreach my $chrN (1..22, qw(X Y M))
 		{
 		    my $SWAP = $degen==2 ? "\\nSWAP=1" : "";
 		    $place_ref[$degen] = findjob ( { mrfunction => "awz-files",
-						     revision => [1872, ],
+						     revision => [1899, ],
 						     inputkey => $place[$degen]->{outputkey},
 						     knobs => "CHROMOSOME=chr$chrN.fa.16bit\\nCHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=7ae664a687be4b62c455eb5a0587fcce$SWAP",
 						 } );
@@ -163,34 +84,32 @@ foreach my $chrN (1..22, qw(X Y M))
 	if ($place_ref[1] && $place_ref[1]->{outputkey} &&
 	    $place_ref[2] && $place_ref[2]->{outputkey})
 	{
-	    my $pileup = findjob ( { mrfunction => "awz-pileup",
-				     revision => [ 1890, ],
-				     inputkey => $place_ref[2]->{outputkey},
-				     knobs => "CHUNKBITS=20\\nCHUNKNUM=235\\nCUTOFF=3\\nFILENAME=0:chr$chrN:0\\nMERGEKEYS=".$place_ref[1]->{outputkey},
-				 } );
+	    $pileup = findjob ( { mrfunction => "awz-pileup",
+				  revision => [ 1890, ],
+				  inputkey => $place_ref[2]->{outputkey},
+				  knobs => "CHUNKBITS=20\\nCHUNKNUM=235\\nCUTOFF=3\\nFILENAME=0:chr$chrN:0\\nMERGEKEYS=".$place_ref[1]->{outputkey},
+			      } );
+	}
+	foreach my $degen (1, 2)
+	{
+	    printf (" %-5s %1d %-32s %-32s %-32s %-32s %s\n",
+		    $degen>1 ? "" : "chr$chrN",
+		    $degen>1 ? "" : $ploidy,
+		    $degen>1 ? "" : id_or_output ($expand),
+		    map { id_or_output ($_) } ($bin_deg[$degen], $place[$degen], $place_ref[$degen], $degen>1 ? $pileup : undef),
+		    );
 	}
     }
-    foreach my $ploidy (0,1)
-    {
-	last if $ploidy && $chrN !~ /\d/;
-	$_ = "chr$chrN.$ploidy";
-	printf (" chr%-2s %1d %-32s %-32s %-32s %-32s %-32s\n",
-		$chrN,
-		$ploidy,
-		$expand{$_}->{outputkey} || $expand{$_}->{id},
-		$bin_deg{$_.".1"}->{outputkey} || $bin_deg{$_.".1"}->{id},
-		$place{$_.".1"}->{outputkey} || $place{$_.".1"}->{id},
-		$place_ref{$_.".1"}->{outputkey} || $place_ref{$_.".1"}->{id},
-		$pileup{$_.".1"}->{outputkey} || $pileup{$_.".1"}->{id},
-		);
-	printf ("         %-32s %-32s %-32s %-32s %-32s\n",
-		"",
-		$bin_deg{$_.".2"}->{outputkey} || $bin_deg{$_.".2"}->{id},
-		$place{$_.".2"}->{outputkey} || $place{$_.".2"}->{id},
-		$place_ref{$_.".2"}->{outputkey} || $place_ref{$_.".2"}->{id},
-		$pileup{$_.".2"}->{outputkey} || $pileup{$_.".2"}->{id},
-		);
-    }
+}
+
+sub id_or_output
+{
+    my $job = shift;
+    return "" if !$job;
+    return $job->{outputkey} if $job->{outputkey};
+    my $steps = $job->{steps_done} + $job->{steps_running} + $job->{steps_todo};
+    my $pct = $steps==0 ? "" : " (".int(100*$job->{steps_done}/$steps)."%)";
+    return $job->{id}.$pct;
 }
 
 sub findjob
