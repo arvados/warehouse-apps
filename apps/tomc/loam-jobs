@@ -82,7 +82,7 @@ for (@jobs)
 
 for (@jobs)
 {
-    if (/knobs=CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE==7ae664a687be4b62c455eb5a0587fcce(\\nSWAP=1)?/
+    if (/knobs=CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=7ae664a687be4b62c455eb5a0587fcce(\\nSWAP=1)?/
 	&& (my ($revision) = /revision=(\d+)/)
 	&& (my ($id) = / id=([^,]*)/)
 	&& (my ($inputkey) = / inputkey=([^,]*)/)
