@@ -155,7 +155,7 @@ foreach my $chrN (1..22, qw(X Y M))
 		    $place_ref[$degen] = findjob ( { mrfunction => "awz-files",
 						     revision => [1872, ],
 						     inputkey => $place[$degen]->{outputkey},
-						     knobs => "CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=7ae664a687be4b62c455eb5a0587fcce$SWAP",
+						     knobs => "CHROMOSOME=chr$chrN.fa.16bit\\nCHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=7ae664a687be4b62c455eb5a0587fcce$SWAP",
 						 } );
 		}
 	    }
