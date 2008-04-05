@@ -5,8 +5,8 @@ use strict;
 my ($revision_default) = @ARGV or die "usage: $0 default-revision\n";
 
 open STDIN, "wh job list |";
-my %revision_min = ( expand => 1700,
-		     bin_deg => 1750,
+my %revision_min = ( expand => 1750,
+		     bin_deg => 1751,
 		     place_ref => 1872,
 		     );
 
@@ -218,5 +218,7 @@ sub suggest_new_job
 {
     my $want = shift;
     my $revision = $want->{revision}->[1] || $revision_default;
-    print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' knobs='".$want->{knobs}."'\n";
+    my $knobs = $want->{knobs};
+    $knobs =~ s/=(.*?)\\n/='$1' /g;
+    print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' $knobs\n";
 }
