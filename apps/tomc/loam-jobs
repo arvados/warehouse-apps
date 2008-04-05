@@ -219,6 +219,6 @@ sub suggest_new_job
     my $want = shift;
     my $revision = $want->{revision}->[1] || $revision_default;
     my $knobs = $want->{knobs};
-    $knobs =~ s/=(.*?)\\n/='$1' /g;
+    $knobs =~ s/=(.*?)(\\n|$)/='$1' /g;
     print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' $knobs\n";
 }
