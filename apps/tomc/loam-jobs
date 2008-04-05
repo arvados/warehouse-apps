@@ -82,7 +82,7 @@ for (@jobs)
 
 for (@jobs)
 {
-    if (/knobs=CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=e664497797390604fe1a4b5a8f57680e(\\nSWAP=1)?/
+    if (/knobs=CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE==7ae664a687be4b62c455eb5a0587fcce(\\nSWAP=1)?/
 	&& (my ($revision) = /revision=(\d+)/)
 	&& (my ($id) = / id=([^,]*)/)
 	&& (my ($inputkey) = / inputkey=([^,]*)/)
@@ -155,7 +155,7 @@ foreach my $chrN (1..22, qw(X Y M))
 		    $place_ref[$degen] = findjob ( { mrfunction => "awz-files",
 						     revision => [1872, ],
 						     inputkey => $place[$degen]->{outputkey},
-						     knobs => "CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=e664497797390604fe1a4b5a8f57680e$SWAP",
+						     knobs => "CHUNKBITS=20\\nCUTBITS=26\\nFUNCTION=mrs-awz-place-ref\\nREFERENCE=7ae664a687be4b62c455eb5a0587fcce$SWAP",
 						 } );
 		}
 	    }
