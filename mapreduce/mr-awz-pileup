@@ -4,8 +4,8 @@
 ###MR_DESCRIPTION:pivot input and output consensus placements 
 ###MR_INPUT:manifest
 ###MR_KNOBS:MERGEKEYS= 
-###MR_KNOBS:FILENAME=0:chr1:0 
-###MR_KNOBS:REFERENCE=7ae664a687be4b62c455eb5a0587fcce
+###MR_KNOBS:FILENAME=0:chr1:0.fa
+###MR_KNOBS:REFERENCE=1fa612ebec2c6e95d4df83614878f731
 ###MR_KNBOS:CUTOFF=3 
 
 use strict; 
@@ -62,13 +62,12 @@ elsif ($ENV{MR_LEVEL} == 1) {
       my $chunknum  = 0;
       while (my ($pos, $size, $filename) = $instream->file_next) {
 	last if !defined $pos; 
-	$chunknum++; 
-	if ($chunknum != $ENV{MR_INPUT}) {
+	if ($chunknum++ != $ENV{MR_INPUT}) {
 	  next; 
 	} 
 	my ($prefix, $chr_pos, $chunk_length) = split (/\./, $filename);
-	$want_chunk_pos = $chr_pos; #same for every chunk at the same pos 
-	$want_chunk_length = $chunk_length #same for every chunk at the same pos
+	$want_chunk_pos = $chr_pos; #invariant at the same pos 
+	$want_chunk_length = $chunk_length; #invariant at the same pos
 	$instream->seek ($pos); 
        
 	while (my $placement = $instream->read_until($pos+$size, "\n")) {
