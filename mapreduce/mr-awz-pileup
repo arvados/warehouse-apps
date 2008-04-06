@@ -26,7 +26,7 @@ if ($ENV{MR_LEVEL} == 0) {
   $ENV{MR_INPUT} = $manifestkey;
   
   my $manifest = new Warehouse::Manifest (whc => $whc,
-					  key => $current_key);
+					  key => $manifestkey);
   $manifest->rewind;   
 
   my $instream = $manifest->subdir_next;
@@ -130,7 +130,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
   }
   $outstream->write_finish; 
 
-  print STDERR "Found $count variants at $want_chr_position on ".
+  print STDERR "Found $count variants at $want_chunk_position on ".
       "$ENV{KNOB_FILENAME}\n"; 
 
   my $fragkey = $whc->store_block ($outstream->as_string)
