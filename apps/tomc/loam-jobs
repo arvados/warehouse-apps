@@ -96,9 +96,9 @@ foreach my $chrN (1..22, qw(X Y M))
 	    $place_ref[2] && $place_ref[2]->{outputkey})
 	{
 	    $pileup = findjob ( { mrfunction => "awz-pileup",
-				  revision => [ 1890, ],
+				  revision => [ 1912, ],
 				  inputkey => $place_ref[2]->{outputkey},
-				  knobs => "CHUNKBITS=20\\nCHUNKNUM=235\\nCUTOFF=3\\nFILENAME=0:chr$chrN:0\\nMERGEKEYS=".$place_ref[1]->{outputkey},
+				  knobs => "CUTOFF=3\\nFILENAME=0:chr$chrN:1.fa\\nMERGEKEYS=".$place_ref[1]->{outputkey}."\\nREFERENCE=1fa612ebec2c6e95d4df83614878f731",
 			      } );
 	}
 	foreach my $degen (1, 2)
