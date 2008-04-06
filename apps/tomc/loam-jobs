@@ -99,7 +99,14 @@ foreach my $chrN (1..22, qw(X Y M))
 				  revision => [ 1912, ],
 				  inputkey => $place_ref[2]->{outputkey},
 				  knobs => "CUTOFF=3\\nFILENAME=0:chr$chrN:$ploidy.fa\\nMERGEKEYS=".$place_ref[1]->{outputkey}."\\nREFERENCE=1fa612ebec2c6e95d4df83614878f731",
+				  quiet => 1,
 			      } );
+	    $pileup = findjob ( { mrfunction => "awz-pileup",
+				  revision => [ 1912, ],
+				  inputkey => $place_ref[1]->{outputkey},
+				  knobs => "CUTOFF=3\\nFILENAME=0:chr$chrN:$ploidy.fa\\nMERGEKEYS=".$place_ref[2]->{outputkey}."\\nREFERENCE=1fa612ebec2c6e95d4df83614878f731",
+			      } )
+		if !$pileup;
 	}
 	foreach my $degen (1, 2)
 	{
@@ -140,7 +147,7 @@ sub findjob
 	    return $_ if $_->{outputkey};
 	}
     }
-    suggest_new_job ($want) if !$queued;
+    suggest_new_job ($want) if !$queued && !$want->{quiet};
     return $queued;
 }
 
