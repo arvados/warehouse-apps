@@ -5,7 +5,6 @@
 ###MR_INPUT:manifest
 ###MR_KNOBS:MERGEKEYS= 
 ###MR_KNOBS:FILENAME=0:chr1:0 
-###MR_KNOBS:CHUNKNUM=235
 ###MR_KNOBS:CHUNKBITS=20
 ###MR_KNBOS:CUTOFF=3 
 
@@ -15,18 +14,29 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 
 my $whc = new Warehouse
-      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
- 
+    (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});  #needed? 
+
 my $manifestkey = $ENV{MR_INPUT0}; 
-my @mergekeys = split /:/, $ENV{KNOB_MERGEKEYS};
+my @mergekeys = split (/:/, $ENV{KNOB_MERGEKEYS});
 push @mergekeys, $manifestkey; 
 
 my $r = $ENV{KNOB_CUTOFF}; 
 
 if ($ENV{MR_LEVEL} == 0) {
-  $ENV{MR_INPUT} = $manifestkey; 
-  for (0..$ENV{KNOB_CHUNKNUM}) {
-    print STDERR "+++mrjobstep 1 $_+++\n"; 
+  $ENV{MR_INPUT} = $manifestkey;
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $current_key);
+  $manifest->rewind;   
+
+  my $instream = $manifest->subdir_next;
+  
+  my $chunknum = 0; 
+  
+  while (my ($pos, $size, $filename) = $instream->file_next) {
+    last if !defined $pos;
+    $chunknum++; 
+    print STDERR "+++mrjobstep 1 $chunknum+++\n"; 
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   exit 0;
