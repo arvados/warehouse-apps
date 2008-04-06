@@ -110,7 +110,7 @@ foreach my $chrN (1..22, qw(X Y M))
 	}
 	foreach my $degen (1, 2)
 	{
-	    printf (" %-5s %1d %-32s %-32s %-32s %-32s %s\n",
+	    printf (" %-5s %1s %-32s %-32s %-32s %-32s %s\n",
 		    $degen>1 ? "" : "chr$chrN",
 		    $degen>1 ? "" : $ploidy,
 		    $degen>1 ? "" : id_or_output ($expand),
