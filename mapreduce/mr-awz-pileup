@@ -5,7 +5,6 @@
 ###MR_INPUT:manifest
 ###MR_KNOBS:MERGEKEYS= 
 ###MR_KNOBS:FILENAME=0:chr1:0.fa
-###MR_KNOBS:REFERENCE=1fa612ebec2c6e95d4df83614878f731
 ###MR_KNBOS:CUTOFF=3 
 
 use strict; 
@@ -35,8 +34,8 @@ if ($ENV{MR_LEVEL} == 0) {
   
   while (my ($pos, $size, $filename) = $instream->file_next) {
     last if !defined $pos;
+    print STDERR "+++mrjobstep 1 $chunknum+++\n";     
     $chunknum++; 
-    print STDERR "+++mrjobstep 1 $chunknum+++\n"; 
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   exit 0;
