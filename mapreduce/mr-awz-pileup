@@ -103,7 +103,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
  
   my $count; 
 
-  for (my $i=$want_chunk_pos; $i<$want_chunk_length; $i++){
+  for (my $i=$want_chunk_pos; $i<$want_chunk_pos+$want_chunk_length; $i++){
     my %hash; 
     my @ids; 
     for my $id (keys %{$pileup{$i}}) {
