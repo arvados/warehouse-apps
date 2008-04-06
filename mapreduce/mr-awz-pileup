@@ -5,7 +5,7 @@
 ###MR_INPUT:manifest
 ###MR_KNOBS:MERGEKEYS= 
 ###MR_KNOBS:FILENAME=0:chr1:0 
-###MR_KNOBS:CHUNKBITS=20
+###MR_KNOBS:REFERENCE=7ae664a687be4b62c455eb5a0587fcce
 ###MR_KNBOS:CUTOFF=3 
 
 use strict; 
@@ -45,7 +45,8 @@ elsif ($ENV{MR_LEVEL} == 1) {
 
   my %pileup;
 
-  my $want_chr_position = $ENV{MR_INPUT}*(2**$ENV{KNOB_CHUNKBITS});
+  my $want_chunk_pos;
+  my $want_chunk_length; 
 
   foreach my $current_key (@mergekeys) {
     
@@ -58,14 +59,16 @@ elsif ($ENV{MR_LEVEL} == 1) {
     my @placements; 
     
     while (my $instream = $manifest->subdir_next ) {
+      my $chunknum  = 0;
       while (my ($pos, $size, $filename) = $instream->file_next) {
 	last if !defined $pos; 
-	
-	my ($prefix, $chr_pos, $chunk_length) = split (/\./, $filename);
-	if ($chr_pos != $want_chr_position) {
-	  #print STDERR "skipping $filename\n";
+	$chunknum++; 
+	if ($chunknum != $ENV{MR_INPUT}) {
 	  next; 
-	}
+	} 
+	my ($prefix, $chr_pos, $chunk_length) = split (/\./, $filename);
+	$want_chunk_pos = $chr_pos; #same for every chunk at the same pos 
+	$want_chunk_length = $chunk_length #same for every chunk at the same pos
 	$instream->seek ($pos); 
        
 	while (my $placement = $instream->read_until($pos+$size, "\n")) {
@@ -74,7 +77,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	  my $bp; 
 	  my $count = 0; 	
 	  while ($mer =~ m/[acgt]*([ACGT])/g) {
-	    $position += (pos($mer)-1);
+	    $position += (pos($mer)+$chr_pos-1);
 	    $bp = $1; 
 	    $count++;
 	  }  
@@ -96,11 +99,11 @@ elsif ($ENV{MR_LEVEL} == 1) {
   my $outstream = new Warehouse::Stream (whc => $whc);
   $outstream->name ("./$ENV{KNOB_FILENAME}");
   $outstream->clear;
-  $outstream->write_start ("$want_chr_position.txt"); 
+  $outstream->write_start ("$want_chunk_pos.txt"); 
  
   my $count; 
 
-  for (my $i=0; $i<2**$ENV{KNOB_CHUNKBITS}; $i++){
+  for (my $i=$want_chunk_pos; $i<$want_chunk_length; $i++){
     my %hash; 
     my @ids; 
     for my $id (keys %{$pileup{$i}}) {
