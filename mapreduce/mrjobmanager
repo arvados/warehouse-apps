@@ -248,7 +248,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   {
     next;
   }
-  if ($Jobstep->{attempts} > 4)
+  if ($Jobstep->{attempts} > 9)
   {
     croak ("jobstep $id failed $$Jobstep{attempts} times -- giving up");
   }
