@@ -28,10 +28,10 @@ if ($joblist) {
       
       my $metahints = "";
       my $total_length = 0; 
+      my $id = $j->{"id"};
       
-      foreach $metablock (@metablocks) {
-	my $data = $whc->fetch_block($metablock);
-	my $id = $j->{"id"}; 
+      foreach my $metablock (@metablocks) {
+	my $data = $whc->fetch_block($metablock); 
 	my $meta_length = length ($data); 
 	$total_length += $meta_length; 
 	$metahints .= "$metablock+$meta_length ";  
