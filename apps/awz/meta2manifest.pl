@@ -16,11 +16,9 @@ my $joblist = $whc->job_list ();
 if ($joblist) {
     foreach my $j (@$joblist) {
 
-	foreach $k (keys %$j) {
-	    print "$k $j->{$k}\n";
+	if ($j->{"metakey"}) {
+	    print $j->{"metakey"}; 
 	}
-	print join (", ", map { $_ . "=" . $j->{$_} } sort keys %$j) . "\n";
-    }
 }
 else { 
     warn ($whc->errstr . "\n"); 
