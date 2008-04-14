@@ -20,7 +20,7 @@ if ($joblist) {
     if ($j->{"metakey"}) {
       my $data = $whc->fetch_block($j->{"metakey"});
       while ($data =~ m/success in ([0-9]+)/g) {
-	print $1 
+	print "$1\n";
       } 
     }
   }
