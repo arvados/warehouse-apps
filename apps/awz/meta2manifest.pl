@@ -57,3 +57,4 @@ else {
   warn ($whc->errstr . "\n"); 
 }
 
+print STDERR $whc->iostats; 
