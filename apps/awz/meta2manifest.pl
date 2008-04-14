@@ -29,7 +29,7 @@ if ($joblist) {
       $manifest .= 
 	  "./meta/$id $metakey+$meta_length 0:$meta_length:meta.txt\n"; 
 
-      print STDERR "grabbed $metakey\n"; 
+      print STDERR "grabbed $metakey $id\n"; 
     }
   }
   $whc->write_start;
