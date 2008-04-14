@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+
+my $success = 0; 
+my $failure = 0;
+
+while (my $tok = <>) {
+  if ($tok =~ m/success in ([0-9]+)/) {
+    $success += $1; 
+  }
+  elsif ($tok =~ m/failure in ([0-9]+)/) {
+    $failure += $1; 
+  }
+}
+print "$success $failure\n"; 
