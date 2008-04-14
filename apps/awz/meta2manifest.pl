@@ -20,8 +20,10 @@ my $joblist = $whc->job_list ();
 if ($joblist) {
   foreach my $j (@$joblist) {
     
-    if ($j->{"metakey"}) {
-      my $data = $whc->fetch_block($j->{"metakey"});
+    my $metakey = $j->{"metakey"}; 
+
+    if ($metakey) {
+      my $data = $whc->fetch_block($metakey);
       my $id = $j->{"id"}; 
       my $meta_length = length ($data); 
       $manifest .= 
