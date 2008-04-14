@@ -14,13 +14,14 @@ $whc = new Warehouse ($args{'m'} ? (warehouse_name => $args{'m'}) : ());
 
 my $joblist = $whc->job_list ();
 if ($joblist) {
-    foreach my $j (@$joblist) {
-
-	if ($j->{"metakey"}) {
-	    print $j->{"metakey"}; 
-	}
+  foreach my $j (@$joblist) {
+    
+    if ($j->{"metakey"}) {
+      print $j->{"metakey"}; 
+    }
+  }
 }
 else { 
-    warn ($whc->errstr . "\n"); 
+  warn ($whc->errstr . "\n"); 
 }
 
