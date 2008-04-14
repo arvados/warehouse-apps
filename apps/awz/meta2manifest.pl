@@ -6,7 +6,7 @@ use Warehouse;
 use Getopt::Std;
 
 my %args;
-getopts "m:", \%args);
+getopts ("m:", \%args);
 
 
 my $whc;
