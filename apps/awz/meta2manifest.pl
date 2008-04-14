@@ -15,6 +15,10 @@ $whc = new Warehouse ($args{'m'} ? (warehouse_name => $args{'m'}) : ());
 my $joblist = $whc->job_list ();
 if ($joblist) {
     foreach my $j (@$joblist) {
+
+	foreach $k (keys %$j) {
+	    print "$k $j->{$k}\n";
+	}
 	print join (", ", map { $_ . "=" . $j->{$_} } sort keys %$j) . "\n";
     }
 }
