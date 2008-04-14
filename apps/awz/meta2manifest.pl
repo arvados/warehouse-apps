@@ -23,14 +23,23 @@ if ($joblist) {
     my $metakey = $j->{"metakey"}; 
 
     if ($metakey) {
-      my $data = $whc->fetch_block($metakey);
-      my $id = $j->{"id"}; 
-      my $meta_length = length ($data); 
-      $manifest .= 
-	  "./meta/$id $metakey+$meta_length 0:$meta_length:meta.txt\n"; 
-
-      print STDERR "grabbed $metakey $id\n"; 
-    }
+      
+      my @metablocks = split ",", $metakey; 
+      
+      my $metahints = "";
+      my $total_length = 0; 
+      
+      foreach $metablock (@metablocks) {
+	my $data = $whc->fetch_block($metablock);
+	my $id = $j->{"id"}; 
+	my $meta_length = length ($data); 
+	$total_length += $meta_length; 
+	$metahints .= "$metablock+$meta_length ";  
+	
+	print STDERR "grabbed $metakey $id\n"; 
+      }
+      $manifest .= "./meta/$id $metahints 0:$total_length:meta.txt\n";   
+    }   
   }
   $whc->write_start;
   $whc->write_data ($manifest);
