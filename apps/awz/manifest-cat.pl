@@ -34,8 +34,8 @@ while (my $instream = $manifest->subdir_next ) {
     last if !defined $pos;
     print STDERR "."; 
     $instream->seek ($pos);    
-    while (my $inputline = $instream->read_until($pos+$size, "\n")) {
-      print $$inputline;
+    while (my $buf = $instream->read_until($pos+$size)) {
+      print $$buf;
     }
   }
 }
