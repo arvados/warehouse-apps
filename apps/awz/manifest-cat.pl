@@ -32,9 +32,9 @@ $manifest->rewind;
 while (my $instream = $manifest->subdir_next ) {
   while (my ($pos, $size, $filename) = $instream->file_next) {
     last if !defined $pos;
-    print STDERR "$filename\n"; 
+    print STDERR "."; 
     while (my $inputline = $instream->read_until($pos+$size, "\n")) {
-      print $inputline;
+      print $$inputline;
     }
   }
 }
