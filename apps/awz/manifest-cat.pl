@@ -3,6 +3,9 @@
 
 use strict;
 use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
 use Getopt::Std;
 
 my %args;
