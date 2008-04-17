@@ -22,7 +22,7 @@ my %place_ref;
 my %pileup;
 my %Job;
 my @Job;
-my @pileup_stats;  
+my $pileup_stats;  
 
 my @jobs = <STDIN>;
 for (@jobs)
@@ -109,7 +109,7 @@ foreach my $chrN (1..22, qw(X Y M))
 			      } )
 		if !$pileup;
 	    if (exists $pileup->{outputkey}) {
-		push @pileup_stats, $pileup->{outputkey};
+	        $pileup_stats .= "$chr$chrN:$ploidy:$pileup->{outputkey} ";
 	    } 
 	}
 	foreach my $degen (1, 2)
@@ -124,7 +124,7 @@ foreach my $chrN (1..22, qw(X Y M))
     }
 }
 
-print "wh @pileup_stats"; 
+print "wh $pileup_stats"; 
 
 sub id_or_output
 {
