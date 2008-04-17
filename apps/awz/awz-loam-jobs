@@ -22,6 +22,7 @@ my %place_ref;
 my %pileup;
 my %Job;
 my @Job;
+my @stats;  
 
 my @jobs = <STDIN>;
 for (@jobs)
@@ -107,6 +108,7 @@ foreach my $chrN (1..22, qw(X Y M))
 				  knobs => "CUTOFF=3\\nFILENAME=0:chr$chrN:$ploidy.fa\\nMERGEKEYS=".$place_ref[2]->{outputkey}."\\nREFERENCE=1fa612ebec2c6e95d4df83614878f731",
 			      } )
 		if !$pileup;
+	    push @stats, $pileup; 
 	}
 	foreach my $degen (1, 2)
 	{
@@ -119,6 +121,8 @@ foreach my $chrN (1..22, qw(X Y M))
 	}
     }
 }
+
+print "wh @list"; 
 
 sub id_or_output
 {
