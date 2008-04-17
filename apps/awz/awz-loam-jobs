@@ -22,7 +22,7 @@ my %place_ref;
 my %pileup;
 my %Job;
 my @Job;
-my @stats;  
+my @pileup_stats;  
 
 my @jobs = <STDIN>;
 for (@jobs)
@@ -122,7 +122,7 @@ foreach my $chrN (1..22, qw(X Y M))
     }
 }
 
-print "wh @list"; 
+print "wh @pileup_stats"; 
 
 sub id_or_output
 {
