@@ -108,7 +108,7 @@ foreach my $chrN (1..22, qw(X Y M))
 				  knobs => "CUTOFF=3\\nFILENAME=0:chr$chrN:$ploidy.fa\\nMERGEKEYS=".$place_ref[2]->{outputkey}."\\nREFERENCE=1fa612ebec2c6e95d4df83614878f731",
 			      } )
 		if !$pileup;
-	    push @stats, $pileup; 
+	    push @pileup_stats, $pileup; 
 	}
 	foreach my $degen (1, 2)
 	{
