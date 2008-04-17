@@ -109,7 +109,7 @@ foreach my $chrN (1..22, qw(X Y M))
 			      } )
 		if !$pileup;
 	    if (exists $pileup->{outputkey}) {
-	        $pileup_stats .= "$chr$chrN:$ploidy:$pileup->{outputkey} ";
+	        $pileup_stats .= "chr$chrN:$ploidy:$pileup->{outputkey} ";
 	    } 
 	}
 	foreach my $degen (1, 2)
