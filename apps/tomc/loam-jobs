@@ -73,7 +73,7 @@ foreach my $chrN (1..22, qw(X Y M))
 		if ($place[$degen] && $place[$degen]->{outputkey})
 		{
 		    my $SWAP = $degen==2 ? "\\nSWAP=1" : "";
-		    if ($chrN eq "1")
+		    if ($chrN eq "99")
 		    {
 			$place_ref[$degen] = findjob ( { mrfunction => "awz-files",
 							 revision => [1872, ],
