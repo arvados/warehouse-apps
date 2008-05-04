@@ -2,7 +2,10 @@
 # -*- mode: perl; perl-indent-level: 2; -*-
 
 use strict;
+use Getopt::Std; 
 
+my %args;
+getopts ("n:", \%args); 
 
 my $query; 
 my $chr;
@@ -12,6 +15,7 @@ my @pos_query;
 my @bp_query;
 my @pos_ref;
 my @bp_ref;
+
 
 while (<>) {
   
@@ -40,16 +44,16 @@ while (<>) {
 	}
 	elsif ($x ne $y) {
 	  if ($pos_query+$i < $pos_var) {
-	    print "$query ; $chr ; $variants\n";
+	    print_variant ($query, $chr, $variants); 
 	    $variants = "";
 	  }
 	  $pos_var = $pos_query+$i; 
-	  $variants .= " $x $y ".($pos_ref+$i)." $pos_var ;"; 
+	  $variants .= "$x$y ".($pos_ref+$i)." $pos_var;"; 
 	}
       }
     }
     if ($variants) {
-      print "$query ; $chr ; $variants\n"; 
+       print_variant ($query, $chr, $variants); 
     }
     $query = $1;
 
@@ -70,3 +74,29 @@ while (<>) {
   } 
 }  
 
+sub print_variant{
+  my ($query, $chr, $variant_strings) = @_; 
+
+  my $variant_summary = "";
+
+  my @variants = split (/;/, $variant_strings);  
+
+  my %hash; 
+
+  foreach my $variant (@variants) {
+    my ($snp, $ref_pos, $query_pos) = split (/ /, $variant);
+    $hash{$snp}++;
+  }
+  
+
+  my $flag = 0; 
+  foreach my $k (sort {$hash{$b} cmp $hash{$a}} keys %hash) { 
+    if ($hash{$k} >= $args{'n'}) {
+      $flag  = 1;
+    }
+    $variant_summary .= "$k ".$hash{$k}." ";
+  }
+  if ($flag) {
+    print "$query; $chr; $variant_summary; $variant_strings\n"; 
+  }
+}
