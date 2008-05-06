@@ -10,7 +10,13 @@
 
 use strict;
 
-my ($revision_default) = @ARGV or die "usage: $0 default-revision\n";
+my ($revision_default, $inputkey, $individual) = @ARGV
+    or die qq{
+usage: $0 default-revision inputkey individual
+
+example: $0 1890 f3864330c9d4315b8fac14fa7ad4b583 0
+
+};
 
 open STDIN, "wh job list |";
 
@@ -49,8 +55,8 @@ foreach my $chrN (1..22, qw(X Y M))
 	my $pileup;
 	$expand = findjob ( { mrfunction => "awz-stream",
 			      revision => [1649, ],
-			      inputkey => "f3864330c9d4315b8fac14fa7ad4b583",
-			      knobs => "CHROMOSOME=chr$chrN\\nFUNCTION=mrs-awz-expand-degeneracies\\nINDIVIDUAL=0\\nOUTPUTNAME=reads.bin\\nPLOIDY=$ploidy",
+			      inputkey => $inputkey,
+			      knobs => "CHROMOSOME=chr$chrN\\nFUNCTION=mrs-awz-expand-degeneracies\\nINDIVIDUAL=$individual\\nOUTPUTNAME=reads.bin\\nPLOIDY=$ploidy",
 			  } );
 	if ($expand && $expand->{outputkey})
 	{
