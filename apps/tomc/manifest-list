@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+
+use Warehouse;
+my $whc = new Warehouse;
+my %manifest;
+
+my @manifest = $whc->list_manifests;
+map { $manifest{$_->[0]} = 1 } @manifest;
+
+my $jobs = $whc->job_list;
+map { $manifest{$_->{inputkey}} = 1 } @$jobs;
+map { $manifest{$_->{outputkey}} = 1 } @$jobs;
+
+foreach (sort keys %manifest)
+{
+    print "$_\n" if /^[a-f0-9]{32}/;
+}
