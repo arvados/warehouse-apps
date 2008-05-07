@@ -52,7 +52,9 @@ while (<>)
                     ++$nblocks;
                     if (($nblocks) % 1000 == 0)
                     {
-                        print STDERR "\r".commas($bytes_in_blocks)." bytes in ".commas($nblocks)." blocks";
+                        printf STDERR ("\r%20s bytes in %s blocks",
+				       commas($bytes_in_blocks),
+				       commas($nblocks));
                     }
                     $saw{$block} = 1;
                     if ($s[0] =~ /\+(\d+)/)
@@ -87,18 +89,18 @@ while (<>)
     }
 }
 
-foreach (sort { $dev_block{$a} <=> $dev_block{$b} } keys %dev_block)
-{
-    printf "%d %d\n", $dev_block{$_}, $_;
-}
-
-print STDERR "\n";
+print STDERR "\n\n";
 printf "%20s blocks\n", commas($nblocks);
 printf "%20s bytes in blocks\n", commas($bytes_in_blocks);
 printf "%20s bytes in keep\n", commas($bytes_in_keep);
 printf "%20s average block size\n", commas(int($bytes_in_blocks/$nblocks));
 printf "%20s manifests\n", commas($manifestcount);
 printf "%20s bytes in manifests\n", commas($bytes_in_manifests);
+
+foreach (sort { $dev_block{$a} <=> $dev_block{$b} } keys %dev_block)
+{
+    printf "%d %d\n", $dev_block{$_}, $_;
+}
 
 sub commas
 {
