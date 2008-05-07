@@ -15,7 +15,7 @@ my @pos_query;
 my @bp_query;
 my @pos_ref;
 my @bp_ref;
-
+my $strand; 
 
 while (<>) {
   
@@ -71,7 +71,10 @@ while (<>) {
       push @pos_query, $1;
       push @bp_query, $2;
     } 
-  } 
+  }
+  elsif ($input =~ m/Strand = Plus \/ (.)/) {
+    $strand = $1; 
+  }
 }  
 
 sub print_variant{
@@ -97,6 +100,6 @@ sub print_variant{
     $variant_summary .= "$k ".$hash{$k}." ";
   }
   if ($flag) {
-    print "$query; $chr; $variant_summary; $variant_strings\n"; 
+    print "$query; $chr; $strand; $variant_summary; $variant_strings\n"; 
   }
 }
