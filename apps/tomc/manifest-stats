@@ -1,0 +1,118 @@
+#!/usr/bin/perl
+
+use MogileFS::Client;
+my $mogc = MogileFS::Client->new (domain => "warehouse",
+                                  hosts => [ 'templeton-controller.oxf.freelogy.org:6001' ]);
+
+my %opt;
+while ($ARGV[0] =~ /^--(.*?)(?:=(.*))?/)
+{
+    $opt{$1} = defined ($2) ? $3 : 1;
+}
+
+use Warehouse;
+my $whc = new Warehouse;
+
+my %dev_block;
+my $manifestcount = 0;
+my $bytecount = 0;
+my $blockcount = 0;
+my $unknown_blocksizes = 0;
+my $bytes_in_keep = 0;
+
+while (<>)
+{
+    chomp;
+    my $key = $_;
+    next if $key !~ /^[0-9a-f]{32}/;
+
+    my $i = 0;
+    my $manifest = "";
+    ++$manifestcount;
+    foreach my $hash (split (",", $key))
+    {
+        $manifest = substr $manifest, $i;
+        $i = 0;
+        my $manifest_next .= $whc->fetch_block ($hash);
+        $bytes_in_manifests += length $manifest_next;
+        $manifest .= $manifest_next;
+        undef $manifest_next;
+        my $j;
+        while ($i < length $manifest && 0 <= ($j = index $manifest, "\n", $i))
+        {
+            my $s = substr $manifest, $i, $j-$i;
+            $i = $j + 1;
+            my @s = split / /, $s;
+            shift @s;
+            while ($s[0] =~ /^([0-9a-f]{32})/)
+            {
+                my $block = $1;
+                if (!exists $saw{$block})
+                {
+                    ++$nblocks;
+                    if (($nblocks) % 1000 == 0)
+                    {
+                        print STDERR "\r".commas($bytes_in_blocks)." bytes in ".commas($nblocks)." blocks";
+                    }
+                    $saw{$block} = 1;
+                    if ($s[0] =~ /\+(\d+)/)
+                    {
+                        $bytes_in_blocks += $1;
+                    }
+                    elsif ($s[0] =~ /-(\d+)/)
+                    {
+                        $bytes_in_blocks += (2**26 - $1);
+                    }
+		    else
+		    {
+			$unknown_blocksizes ++;
+		    }
+		    getpaths ($s[0]) if $opt{"devices"};
+                }
+                if ($s[0] =~ /\+K/ && !exists $keep{$block})
+                {
+                    $keep{$block} = 1;
+                    if ($s[0] =~ /\+(\d+)/)
+                    {
+                        $bytes_in_keep += $1;
+                    }
+                    elsif ($s[0] =~ /-(\d+)/)
+                    {
+                        $bytes_in_keep += (2**26 - $1);
+                    }
+                }
+                shift @s;
+            }
+        }
+    }
+}
+
+foreach (sort { $dev_block{$a} <=> $dev_block{$b} } keys %dev_block)
+{
+    printf "%d %d\n", $dev_block{$_}, $_;
+}
+
+print STDERR "\n";
+printf "%20s blocks\n", commas($nblocks);
+printf "%20s bytes in blocks\n", commas($bytes_in_blocks);
+printf "%20s bytes in keep\n", commas($bytes_in_keep);
+printf "%20s average block size\n", commas(int($bytes_in_blocks/$nblocks));
+printf "%20s manifests\n", commas($manifestcount);
+printf "%20s bytes in manifests\n", commas($bytes_in_manifests);
+
+sub commas
+{
+    my $x = shift;
+    while ($x =~ s/(\d)(\d\d\d\b)/$1,$2/) { }
+    return $x;
+}
+
+sub getpaths
+{
+    my $key = shift @_;
+    my @urls = $mogc->get_paths ($key, { noverify => 1 });
+    foreach (@urls)
+    {
+        ++$dev_block{$1} if m|/dev(\d+)/|;
+    }
+}
