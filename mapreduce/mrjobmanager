@@ -174,6 +174,8 @@ my @jobstep_todo = ();
 my @jobstep_done = ();
 my @jobstep_tomerge = ();
 my $jobstep_tomerge_level = 0;
+my $squeue_checked;
+my $squeue_kill_checked;
 
 
 
@@ -296,7 +298,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
-    my $execstr = "srun --nodelist='$childnode' -n1 -c1 -N1 -D /tmp --job-name='$job_id.$id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && svn export --quiet '$main::svn_repos/installrevision' && ./installrevision && $ENV{MR_REVISION_INSTALLDIR}/src/mapreduce/mrtaskmanager'";
+    my $execstr = "srun --nodelist='$childnode' -n1 -c1 -N1 -D /tmp --job-name='$job_id.$id.$$' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && svn export --quiet '$main::svn_repos/installrevision' && ./installrevision && $ENV{MR_REVISION_INSTALLDIR}/src/mapreduce/mrtaskmanager'";
     print STDERR ("$execstr\n") if $ENV{MR_DEBUG};
     exec($execstr);
     exit(1);
@@ -312,6 +314,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   $proc{$childpid} = { jobstep => $id,
 		       time => time,
 		       slot => $childslot,
+		       jobstepname => "$job_id.$id.$childpid",
 		     };
   die "assert failed" if exists $slot[$childslot]->{pid};
   $slot[$childslot]->{pid} = $childpid;
@@ -340,6 +343,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	+ reapchildren ();
     if (!$gotsome)
     {
+      check_squeue();
       update_progress_stats();
       select (undef, undef, undef, 0.1);
     }
@@ -363,6 +367,7 @@ while (%proc)
   readfrompipes ();
   if (!reapchildren())
   {
+    check_squeue();
     update_progress_stats();
     select (undef, undef, undef, 0.1);
     killem (keys %proc) if $main::please_freeze;
@@ -526,6 +531,68 @@ sub reapchildren
 
   $progress_is_dirty = 1;
   1;
+}
+
+
+sub check_squeue
+{
+  # return if the kill list was checked <4 seconds ago
+  if (defined $squeue_kill_checked && $squeue_kill_checked > time - 4)
+  {
+    return;
+  }
+  $squeue_kill_checked = time;
+
+  # use killem() on procs whose killtime is reached
+  for (keys %proc)
+  {
+    if (exists $proc{$_}->{killtime}
+	&& $proc{$_}->{killtime} <= time)
+    {
+      killem ($_);
+    }
+  }
+
+  # return if the squeue was checked <60 seconds ago
+  if (defiend $squeue_checked && $squeue_checked > time - 60)
+  {
+    return;
+  }
+  $squeue_checked = time;
+
+  # get a list of steps still running
+  my @squeue = `squeue -s -h -o '%i %j' && echo ok`;
+  chop @squeue;
+  if ($squeue[-1] ne "ok")
+  {
+    return;
+  }
+  pop @squeue;
+
+  # which of my jobsteps are running, according to squeue?
+  my %ok;
+  foreach (@squeue)
+  {
+    if (/^(\d+)\.(\d+) (\S+)/)
+    {
+      if ($1 eq $ENV{SLURM_JOBID})
+      {
+	$ok{$3} = 1;
+      }
+    }
+  }
+
+  # which of my active child procs (>60s old) were not mentioned by squeue?
+  foreach (keys %proc)
+  {
+    if ($proc{$_}->{time} < time - 60
+	&& !exists $ok{$proc{$_}->{jobstepname}}
+	&& !exists $proc{$_}->{killtime})
+    {
+      # kill this proc if it hasn't exited in 30 seconds
+      $proc{$_}->{killtime} = time + 30;
+    }
+  }
 }
 
 
