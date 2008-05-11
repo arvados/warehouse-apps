@@ -554,7 +554,7 @@ sub check_squeue
   }
 
   # return if the squeue was checked <60 seconds ago
-  if (defiend $squeue_checked && $squeue_checked > time - 60)
+  if (defined $squeue_checked && $squeue_checked > time - 60)
   {
     return;
   }
