@@ -462,6 +462,7 @@ dbh_do ("update mrjob set finishtime=now(), success=?
 	$success, $job_id, $jobmanager_id)
     or croak ($dbh->errstr);
 
+freeze();
 save_meta();
 exit 0;
 
