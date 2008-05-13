@@ -56,9 +56,6 @@ while (<>) {
        print_variant ($query, $chr, $variants); 
     }
     $query = $1;
-
-    $input =~ m/chr(.*?)[.]s400/;
-    $chr = $1;
   }
   elsif ($input =~ m/([0-9]+)\s+?([acgtn\-]+)/) { 
     if ($alt) {
@@ -74,6 +71,9 @@ while (<>) {
   }
   elsif ($input =~ m/Strand = Plus \/ (.)/) {
     $strand = $1; 
+  }
+  elsif ($input =~ m/^>(.*)/) {
+    $chr = $1; 
   }
 }  
 
