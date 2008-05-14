@@ -12,6 +12,7 @@ my $commands = {
     "job freeze" => \&job_freeze,
     "job list" => \&job_list,
     "job new" => \&job_new,
+    "job show" => \&job_show,
 };
 
 my $cmd = shift @ARGV;
@@ -61,12 +62,41 @@ sub job_freeze
 
 sub job_list
 {
+    if ($opt{id} && !$opt{id_min} && !$opt{id_max})
+    {
+	$opt{id_min} = $opt{id_max} = $opt{id};
+    }
     my $joblist = $whc->job_list (%opt);
     if ($joblist)
     {
 	foreach my $j (@$joblist)
 	{
 	    print join (", ", map { $_ . "=" . $j->{$_} } sort keys %$j) . "\n";
+	}
+    }
+    else { warn ($whc->errstr . "\n"); }
+}
+
+sub job_show
+{
+    my $joblist = $whc->job_list (id_min => $opt{id}+0,
+				  id_max => $opt{id}+0);
+    if ($joblist)
+    {
+	foreach my $j (@$joblist)
+	{
+	    foreach (qw(inputkey revision mrfunction nprocs))
+	    {
+		my $arg = $j->{$_};
+		$arg = "\"$arg\"" if $arg =~ /[^-\.\w=]/;
+		print "$_=$arg ";
+	    }
+	    foreach (split (/\n/, freezeunquote ($j->{knobs})))
+	    {
+		$_ = "\"$_\"" if /[^-\.\w=]/;
+		print "$_ ";
+	    }
+	    print "\n";
 	}
     }
     else { warn ($whc->errstr . "\n"); }
@@ -88,4 +118,21 @@ sub job_new
     my $jobid = $whc->job_new (%opt);
     if ($jobid) { print ($jobid . "\n"); }
     else { warn ($whc->errstr . "\n"); }
+}
+
+
+sub freezequote
+{
+  my $s = shift;
+  $s =~ s/\\/\\\\/g;
+  $s =~ s/\n/\\n/g;
+  return $s;
+}
+
+
+sub freezeunquote
+{
+  my $s = shift;
+  $s =~ s{\\(.)}{$1 eq "n" ? "\n" : $1}ge;
+  return $s;
 }
