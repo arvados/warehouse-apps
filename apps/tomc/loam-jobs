@@ -139,6 +139,7 @@ sub id_or_output
 sub findjob
 {
     my $want = shift;
+    my $failed;
     my $queued;
     for (@Job)
     {
@@ -150,10 +151,12 @@ sub findjob
 	    && $_->{inputkey} eq $want->{inputkey})
 	{
 	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
+	    $failed = $_ if !$failed && $_->{success} eq '0';
 	    return $_ if $_->{outputkey};
 	}
     }
     suggest_new_job ($want) if !$queued && !$want->{quiet};
+    mention_failed_job ($failed) if $failed;
     return $queued;
 }
 
@@ -164,4 +167,10 @@ sub suggest_new_job
     my $knobs = $want->{knobs};
     $knobs =~ s/=(.*?)(\\n|$)/='$1' /g;
     print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' $knobs\n";
+}
+
+sub mention_failed_job
+{
+    my $job = shift;
+    print "# suggest investigating job id=".$job->{id}." -- failed with frozentokey=".$job->{frozentokey}." metakey=".$job->{metakey}."\n";
 }
