@@ -50,7 +50,7 @@ while (<>)
                 if (!exists $saw{$block})
                 {
                     ++$nblocks;
-                    if (($nblocks) % 1000 == 0)
+                    if (($nblocks) % 1000 == 0 && $opt{"v"})
                     {
                         printf STDERR ("\r%20s bytes in %s blocks",
 				       commas($bytes_in_blocks),
