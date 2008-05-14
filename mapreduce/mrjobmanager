@@ -301,7 +301,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     my @execargs = ("srun",
 		    "--nodelist=".$childnode,
 		    qw(-n1 -c1 -N1 -D /tmp),
-		    "--job-name=".$job_id.$id.$$,
+		    "--job-name=$job_id.$id.$$",
 		    "sh",
 		    "-c",
 		    "mkdir -p /tmp/mrcompute/revision "
