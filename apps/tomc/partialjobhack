@@ -1,0 +1,162 @@
+#!/usr/bin/perl
+
+# Input:
+#
+## metakey from the a successful job
+## frozentokey from a new (presumably failed) job with the same specs
+#
+# Output:
+#
+## a synthetic frozentokey that lists all of the output keys.
+#
+# Purpose:
+#
+## make a "succeeding frozentokey" for a job that succeeded before
+## mrjobmanager got the idea of freezing successful jobs just before
+## exiting.  This resulting frozenkey can then be given to
+## "unsucceedjob" to mark jobsteps as "failed" if their output is no
+## longer available.
+
+use Warehouse;
+use Warehouse::Stream;
+
+my %opt = ( v => 0,
+	  );
+while ($ARGV[0] =~ /^-/)
+{
+    if ($ARGV[0] =~ /^--(.*?)(?:=(.*))?$/ || $ARGV[0] =~ /^-(.)$/)
+    {
+	die "unsupported option \"$ARGV[0]\"" if !exists $opt{$1};
+	$opt{$1} = defined($2) ? $2 : 1;
+    }
+    shift @ARGV;
+}
+
+if (@ARGV != 2)
+{
+    die "usage: $0 oldjobid newjobid\n";
+}
+
+my $whc = new Warehouse;
+my ($oldid, $newid) = @ARGV;
+
+if ($whc->job_freeze (id => $newid)) { sleep (1); }
+
+my $oldjob = $whc->job_list(id_min => $oldid, id_max => $oldid)->[0];
+my $newjob = $whc->job_list(id_min => $newid, id_max => $newid)->[0];
+
+for (qw (inputkey knobs mrfunction revision))
+{
+    if ($oldjob->{$_} ne $newjob->{$_})
+    {
+	die "Job $oldid and $newid have different $_.  Stopping.\n";
+    }
+}
+
+my $metakey = $oldjob->{metakey} or die "Job $oldid has no metakey";
+my $frozenkey = $newjob->{frozentokey} or die "Job $newid has no frozentokey";
+
+warn "Using $metakey from oldjob $oldid meta key\n" if $opt{v};
+warn "Using $frozenkey from newjob $newid frozen key\n" if $opt{v};
+
+
+my @metablocks = split (/,/, $metakey);
+my $stream = new Warehouse::Stream (whc => $whc,
+				    hash => \@metablocks);
+$stream->rewind;
+my @jobstep;
+while (my $dataref = $stream->read_until (undef, "\n"))
+{
+    my ($timestamp, $job_id, $jobmanager_pid, $jobstep_id, $message)
+	= $$dataref =~ /^(\S+) (\d+) (\d+) (\d*) (.*)\n/;
+
+    next if $jobstep_id !~ /\d/;
+
+    $jobstep[$jobstep_id] = {} if !defined $jobstep[$jobstep_id];
+
+    if ($message =~ /^output (\S*)/)
+    {
+	$jobstep[$jobstep_id]->{output} = $1;
+    }
+    elsif ($message =~ /^child \d+ on \S+ exit (\d+)/)
+    {
+	$jobstep[$jobstep_id]->{exitcode} = $1;
+    }
+    elsif ($message =~ /^success/)
+    {
+	$jobstep[$jobstep_id]->{success} = 1;
+    }
+    elsif ($message =~ /^failure/)
+    {
+	$jobstep[$jobstep_id]->{success} = 0;
+    }
+}
+
+my @frozenblocks = split (/,/, $frozenkey);
+my $stream = new Warehouse::Stream (whc => $whc,
+				    hash => \@frozenblocks);
+$stream->rewind;
+my $stepid = -2;
+my $count_forged = 0;
+my $count_agree = 0;
+my $count_disagree = 0;
+my $count_no_new = 0;
+my $count_no_old = 0;
+while (my $dataref = $stream->read_until (undef, "\n\n"))
+{
+    ++$stepid;
+    if ($stepid < 0)
+    {
+	# the first step is the job info (revision etc.)
+	$$dataref =~ s{^output=$}{"output=".$oldjob->{outputkey}}me
+	    or die "Could not find empty output= field to fill in. Stopping";
+    }
+    elsif ($$dataref =~ /^exitcode=0$/m &&
+	   $$dataref =~ /^output=(.*)$/m)
+    {
+	if ($jobstep[$stepid]->{success} == 1)
+	{
+	    if ($1 eq $jobstep[$stepid]->{output})
+	    {
+		++$count_agree;
+	    }
+	    else
+	    {
+		++$count_disagree;
+		warn "Outputs disagree:\n";
+		warn " $oldid.$stepid = ".$jobstep[$stepid]->{output}."\n";
+		warn " $newid.$stepid = $1\n";
+	    }
+	}
+	else
+	{
+	    ++$count_no_old;
+	}
+    }
+    elsif ($jobstep[$stepid]->{success} == 1 &&
+	   $jobstep[$stepid]->{exitcode} == 0)
+    {
+	$$dataref =~ s/^exitcode=.*?\n//m;
+	$$dataref =~ s/^output=.*?\n//m;
+	$whc->write_data ("exitcode=0\n");
+	$whc->write_data ("output=".$jobstep[$stepid]->{output}."\n");
+	warn "Using output=".$jobstep[$stepid]->{output}." for step $stepid\n"
+	    if $opt{v} > 1;
+	++$count_forged;
+    }
+    else
+    {
+	++$count_no_new;
+    }
+    $whc->write_data ($dataref);
+}
+
+printf "%10d steps\n", $stepid+1;
+printf "%10d left alone, old output = new output\n", $count_agree;
+printf "%10d left alone, old output != new output (!)\n", $count_disagree;
+printf "%10d left alone, old output missing, new output present\n", $count_no_old;
+printf "%10d left alone, no output available in old or new\n", $count_no_new;
+printf "%10d substituted old output for missing new output\n", $count_forged;
+
+my $newfrozenkey = $whc->write_finish;
+print "$newfrozenkey\n";
