@@ -45,7 +45,12 @@ if ($whc->job_freeze (id => $newid)) { sleep (1); }
 my $oldjob = $whc->job_list(id_min => $oldid, id_max => $oldid)->[0];
 my $newjob = $whc->job_list(id_min => $newid, id_max => $newid)->[0];
 
-for (qw (inputkey knobs mrfunction revision))
+for ($oldjob, $newjob)
+{
+    $_->{number_of_steps} = $_->{steps_todo} + $_->{steps_done} + $_->{steps_running};
+}
+
+for (qw (inputkey knobs mrfunction revision number_of_steps))
 {
     if ($oldjob->{$_} ne $newjob->{$_})
     {
