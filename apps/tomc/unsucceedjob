@@ -41,6 +41,9 @@ die "usage: $0 [-v] [-n] [--verify] frozentokey [outputkey]\n"
 my ($frozentokey, $outputkey) = @ARGV;
 
 
+$frozentokey = "" if $frozentokey eq ".";
+
+
 my $frozen = join ("",
 		   map
 		   { $whc->fetch_block ($_) or die $whc->errstr }
@@ -101,7 +104,7 @@ while (my $s = $manifest->subdir_next)
 }
 print STDERR "\n" if $opt{v} && $opt{verify};
 
-exit($blocks_missing ? 1 : 0) if $frozentokey eq ".";
+exit($blocks_missing ? 1 : 0) if $frozentokey eq "";
 
 
 my $unsuccess = 0;		# is anything missing?
