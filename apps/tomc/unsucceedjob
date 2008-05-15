@@ -1,0 +1,149 @@
+#!/usr/bin/perl
+
+# Input:
+#
+## frozentokey of a succesful job; and
+## an outputkey with some or all of the outputs mentioned in the frozentokey
+##
+## (if "--verify" is specified, we'll fetch every block in the
+## outputkey and drop the lines with missing data)
+#
+# Output:
+#
+## thawedfromkey that will re-run some of the steps in frozentokey, in
+## order to regenerate the data that is missing from the provided
+## outputkey, and produce the same output
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Digest::MD5 qw(md5_hex);
+
+
+my %opt = ( verify => 0,
+	    v => 0,
+	    n => 0,
+	  );
+while ($ARGV[0] =~ /^-/)
+{
+    if ($ARGV[0] =~ /^--(.*?)(?:=(.*))?$/ || $ARGV[0] =~ /^-(.)$/)
+    {
+	die "unsupported option \"$ARGV[0]\"" if !exists $opt{$1};
+	$opt{$1} = defined($2) ? $2 : 1;
+    }
+    shift @ARGV;
+}
+
+my $whc = new Warehouse;
+
+die "usage: $0 [-v] [-n] [--verify] frozentokey [outputkey]\n"
+    if @ARGV < 1 || @ARGV > 2;
+my ($frozentokey, $outputkey) = @ARGV;
+
+
+my $frozen = join ("",
+		   map
+		   { $whc->fetch_block ($_) or die $whc->errstr }
+		   split (",", $frozentokey));
+my @frozen = split (/\n\n/, $frozen);
+if (!defined ($outputkey) &&
+    $frozen[0] =~ m{^output=(.*?)$}m)
+{
+    $outputkey = $1;
+    warn "Using output key from frozenkey: $outputkey\n" if $opt{v};
+}
+
+
+# Make a list of available outputs, and while we're there, store each
+# one in its own object in the cache, so that mrjobmanager can
+# retrieve it when it's time to assemble the new output.
+
+my %have_output;
+my $bytes_verified = 0;
+my $blocks_missing = 0;
+my $manifest = new Warehouse::Manifest (whc => $whc,
+					key => $outputkey);
+$manifest->rewind;
+while (my $s = $manifest->subdir_next)
+{
+    if ($opt{verify})
+    {
+	my $verified = 1;
+	my $str = $s->as_string;
+	chop $str;
+	my @hash = split (/ /, $str);
+	shift @hash;
+	while ($hash[0] =~ /^([0-9a-f]{32})/)
+	{
+	    my $dataref = $whc->fetch_block_ref ($1);
+	    if (!defined $dataref)
+	    {
+		++$blocks_missing;
+		$verified = 0;
+	    }
+	    $bytes_verified += length $$dataref;
+	    shift @hash;
+	}
+	print STDERR "\r".commas($bytes_verified)." bytes verified, $blocks_missing blocks missing"
+	    if $opt{v};
+	next if !$verified;
+    }
+    my $stephash;
+    if ($opt{n})
+    {
+	$stephash = md5_hex ($s->as_string) . "+" . length ($s->as_string);
+    }
+    else
+    {
+	$stephash = $whc->store_block ($s->as_string);
+    }
+    $have_output{$stephash} = 1;
+}
+print STDERR "\n" if $opt{v} && $opt{verify};
+
+exit($blocks_missing ? 1 : 0) if $frozentokey eq ".";
+
+
+my $unsuccess = 0;		# is anything missing?
+for my $jobstep (1..$#frozen)
+{
+    my %step;
+    for (split (/\n/, $frozen[$jobstep]))
+    {
+	$step{$1} = $2 if /^(.*?)=(.*)/;
+    }
+    if ($step{exitcode} eq 0 &&
+	exists $step{output} &&
+	$step{output} ne "d41d8cd98f00b204e9800998ecf8427e" &&
+	($step{output} !~ /\S/ || !exists $have_output{$step{output}}))
+    {
+	# Output no longer available -- need to re-run this step
+
+	my %newstep = (level => $step{level},
+		       input => $step{input},
+		       attempts => $step{attempts});
+	$frozen[$jobstep] = join ("\n",
+				  map { $_."=".$newstep{$_} } keys %newstep);
+	warn "Output missing for step ".($jobstep-1)." -- unsucceeding\n"
+	    if $opt{v};
+	$unsuccess = 1;
+    }
+}
+if ($unsuccess)
+{
+    $frozen[0] =~ s{^output=.*?$}{output=}m;
+}
+$frozen = join ("\n\n", @frozen);
+
+if (!$opt{n})
+{
+    my $thawedfromkey = $whc->store_block ($frozen);
+    print "$thawedfromkey\n";
+}
+
+sub commas
+{
+    my $x = shift;
+    while ($x =~ s/(\d)(\d\d\d\b)/$1,$2/) { }
+    return $x;
+}
