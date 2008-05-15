@@ -115,6 +115,12 @@ while (my $dataref = $stream->read_until (undef, "\n\n"))
 	# the first step is the job info (revision etc.)
 	$$dataref =~ s{^output=$}{"output=".$oldjob->{outputkey}}me
 	    or die "Could not find empty output= field to fill in. Stopping";
+
+	$$dataref =~ s{\nthawedfromkey=.*}{}m;
+	$$dataref =~ s{\n}{\nthawedfromkey=$frozenkey\n};
+
+	$$dataref =~ s{\ngeneratedby=.*}{}m;
+	$$dataref =~ s{\n}{\ngeneratedby=partialjobhack oldid=$oldid metakey=$metakey\n};
     }
     elsif ($$dataref =~ /^exitcode=0$/m &&
 	   $$dataref =~ /^output=(.*)$/m)
