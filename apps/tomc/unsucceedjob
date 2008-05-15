@@ -135,6 +135,12 @@ for my $jobstep (1..$#frozen)
 if ($unsuccess)
 {
     $frozen[0] =~ s{^output=.*?$}{output=}m;
+
+    $frozen[0] =~ s{\nthawedfromkey=.*}{}m;
+    $frozen[0] =~ s{\n}{\nthawedfromkey=$frozentokey\n};
+
+    $frozen[0] =~ s{\ngeneratedby=.*}{}m;
+    $frozen[0] =~ s{\n}{\ngeneratedby=unsucceedjob\n};
 }
 $frozen = join ("\n\n", @frozen);
 
