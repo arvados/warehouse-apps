@@ -529,8 +529,12 @@ sub read_until
     my $dataref = $self->{whc}->fetch_block_ref (shift @{$self->{nexthashes}})
 	or die "fetch_block_ref failed";
     $self->{buf} .= $$dataref;
+
+    $dpos = undef;
   }
-  if (defined $dpos && $wantbytes > $dpos + length $delimiter) # only need bytes up to end of delimiter
+  if (defined $dpos &&
+      $dpos >= 0 &&
+      $wantbytes > $dpos + length $delimiter) # only need bytes up to end of delimiter
   {
     $wantbytes = $dpos + length $delimiter;
   }
@@ -538,7 +542,7 @@ sub read_until
   {
     $wantbytes = length $self->{buf};
   }
-  if ($wantbytes == 0)
+  if ($wantbytes <= $self->{bufcursor})
   {
     return undef;
   }
