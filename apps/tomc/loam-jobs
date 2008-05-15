@@ -143,7 +143,6 @@ sub findjob
     my $queued;
     for (@Job)
     {
-#	print $_->{mrfunction}." ".$_->{revision}." ".$_->{knobs}."\n";
 	if ($_->{revision} >= $want->{revision}->[0]
 	    && ($_->{revision} <= $want->{revision}->[1] || !$want->{revision}->[1])
 	    && $_->{mrfunction} eq $want->{mrfunction}
