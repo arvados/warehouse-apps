@@ -431,7 +431,8 @@ Log (undef, "reduce");
 $whc->write_start (1);
 for (@jobstep)
 {
-  my $output = $_->{output} or next;
+  next if !exists $_->{output};
+  my $output = $_->{output};
   if (defined (my $outblock = $whc->fetch_block ($output)))
   {
     $whc->write_data ($outblock);
@@ -511,7 +512,8 @@ sub reapchildren
 
   my $exitcode = $?;
   my $exitinfo = "exit $exitcode";
-  if (!exists $Jobstep->{output})
+  if (!exists $Jobstep->{output} ||
+      $Jobstep->{output} !~ /^[0-9a-f]{32}/)
   {
     $exitinfo .= " with no output key";
     $exitcode = -1 if $exitcode == 0 && $jobsteps_must_output_keys;
