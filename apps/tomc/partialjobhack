@@ -70,12 +70,26 @@ my $stream = new Warehouse::Stream (whc => $whc,
 				    hash => \@metablocks);
 $stream->rewind;
 my @jobstep;
+my $saidjobid = 0;
 while (my $dataref = $stream->read_until (undef, "\n"))
 {
     my ($timestamp, $job_id, $jobmanager_pid, $jobstep_id, $message)
 	= $$dataref =~ /^(\S+) (\d+) (\d+) (\d*) (.*)\n/;
 
-    next if $jobstep_id !~ /\d/;
+    if ($jobstep_id !~ /\d/)
+    {
+	if ($message =~ /^thaw from (\S+)/)
+	{
+	    readfrozen ($1);
+	}
+	next;
+    }
+
+    if (!$saidjobid)
+    {
+	warn "Processing $metakey meta from job $job_id\n" if $opt{v};
+	$saidjobid = 1;
+    }
 
     $jobstep[$jobstep_id] = {} if !defined $jobstep[$jobstep_id];
 
@@ -94,6 +108,34 @@ while (my $dataref = $stream->read_until (undef, "\n"))
     elsif ($message =~ /^failure/)
     {
 	$jobstep[$jobstep_id]->{success} = 0;
+    }
+}
+
+sub readfrozen
+{
+    my $frozenkey = shift;
+    my @frozenblocks = split (/,/, $frozenkey);
+    my $stream = new Warehouse::Stream (whc => $whc,
+					hash => \@frozenblocks);
+    $stream->rewind;
+    my $stepid = -2;
+    while (my $dataref = $stream->read_until (undef, "\n\n"))
+    {
+	++$stepid;
+	if ($stepid >= 0)
+	{
+	    if ($$dataref =~ /^exitcode=0$/m &&
+		$$dataref =~ /^output=(.+?)$/m)
+	    {
+		$jobstep[$stepid]->{output} = $1;
+		$jobstep[$stepid]->{success} = 1;
+		$jobstep[$stepid]->{exitcode} = 0;
+	    }
+	}
+	elsif ($$dataref =~ /^job (\d+)$/m)
+	{
+	    warn "Processing $frozenkey frozen from job $1\n" if $opt{v};
+	}
     }
 }
 
