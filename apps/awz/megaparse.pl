@@ -57,7 +57,7 @@ while (<>) {
     }
     $query = $1;
   }
-  elsif ($input =~ m/([0-9]+)\s+?([acgtn\-]+)/) { 
+  elsif ($input =~ /^.....: ([0-9]+)\s+(.+) [0-9]+/ ) { 
     if ($alt) {
       $alt = 0;
       push @pos_ref, $1;
