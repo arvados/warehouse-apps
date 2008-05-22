@@ -27,40 +27,39 @@ sub parse_variants() {
     my $length_q = length ($bp_q);
 
     if ($length_r == $length_q) {
-      
-      my %variants; 
-      my $variants_string; 
-      my $variants_summary;
-      
+       
+      my $summary; 
+
+      my $run = 0; 
+      my @run_string = (""); 
+      my @run_length = (0);
+
       for (my $i = $m; $i < $length_q-$m; $i++) {
 	my $x = substr($bp_r, $i-$m, 1+2*$m);
 	my $y = substr($bp_q, $i-$m, 1+2*$m);
 	
-	if ($x =~ m/[^acgt]/ || $y=~ m/[^acgt]/) {
-	  #print "- ::: $x ::: $y :::\n"; 	  
-	}
-	elsif (substr($x,$m,1) ne substr($y, $m, 1)) {
-	  my $edit = $x."->".$y;
-	  $variants{$edit}++;
-	  $variants_string .= "$edit ";
-	}
-      }
-      if ($variants_string) {
-     
-	my $flag=0; 
-	foreach my $k (sort 
-		       {$variants{$b} cmp $variants{$a}} keys %variants) { 
-
-	  $variants_summary .= "$k ".$variants{$k}." ";
+	if (substr($x,$m,1) ne substr($y, $m, 1)) {
+	  my $edit = $x."}".$y;
 	  
-	  if ($variants{$k} >= $n) {
-	    $flag=1; 
+	  if ($edit eq $run_string[$run]) {
+	    $run_length[$run]++; 	    
+	  }
+	  else {
+	    $run++;
+	    $run_string[$run] = $edit; 
+	    $run_length[$run] = 1; 
 	  }
 	}
-	if ($flag) {
-	  print "$query; $chr; $strand; $pos_r; $pos_q; ".
-	      "$variants_summary; $variants_string; $bp_r; $bp_q\n";
+      }
+      for (my $i=1; $i <=$run; $i++) {
+	if ($run_length[$i] >= $n) {
+
+	  $summary .= "$run_string[$i] $run_length[$i], ";
 	}
+      }
+      if ($summary) {
+	print "$query; $summary; $chr; $strand; $pos_r; $pos_q;". 
+	    "$bp_r; $bp_q\n";
       }
       $bp_r = ""; 
       $bp_q = ""; 
