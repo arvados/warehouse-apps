@@ -78,7 +78,7 @@ while (<>) {
   
   my $input  = $_; 
 
-  if ($input =~ m/Query= (.*)$/) { 
+  if ($input =~ m/^Query= (.*)$/) { 
     parse_variants();
     $query = $1;
   }
@@ -100,7 +100,7 @@ while (<>) {
       $bp_q .= $2;
     } 
   }
-  elsif ($input =~ m/Strand = Plus \/ (.)/) {
+  elsif ($input =~ m/^ Strand = Plus \/ (.)/) {
     parse_variants();
     $strand = $1;     
   }
