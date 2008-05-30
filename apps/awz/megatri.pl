@@ -20,9 +20,12 @@ my $alt = 0;
 my $n = $args{'n'};
 my $m = $args{'m'}; 
 
+my %hits; 
+
 sub parse_variants() {
   
   if ($bp_r && $bp_q) {
+
     my $length_r = length ($bp_r);
     my $length_q = length ($bp_q);
 
@@ -57,9 +60,15 @@ sub parse_variants() {
 	  $summary .= "$run_string[$i] $run_length[$i], ";
 	}
       }
-      if ($summary) {
-	print "$query; $summary; $chr; $strand; $pos_r; $pos_q;". 
-	    "$bp_r; $bp_q\n";
+      if ($hits{$query} ne "EMPTY") {
+	$hits {$query} = "REDUNDANT"; 
+      }
+      elsif ($summary) {
+	$hits {$query} = "$summary; $chr; $strand; $pos_r; $pos_q;". 
+	    "$bp_r; $bp_q";
+      }
+      else {
+	$hits {$query} = "UNIQUE"; 
       }
       $bp_r = ""; 
       $bp_q = ""; 
@@ -79,8 +88,11 @@ while (<>) {
   my $input  = $_; 
 
   if ($input =~ m/^Query= (.*)$/) { 
-    parse_variants();
+    parse_variants();    
     $query = $1;
+    if ( !$hits {$query}) {
+      $hits {$query} = "EMPTY"; 
+    }
   }
   elsif ($input =~ m/^.....: ([0-9]+)\s+(.+) [0-9]+/ ) { 
     if ($alt) {
@@ -108,4 +120,26 @@ while (<>) {
     $chr = $1; 
   }
 }  
+parse_variants(); 
 
+my $unique_hits;
+my $unique_miss; 
+my $empty_hits;
+my $redundant_hits; 
+
+while ( my ($key, $value) = each(%hits) ) {
+  if ($value eq "EMPTY") {
+    $empty_hits++;
+  }
+  elsif ($value eq "REDUNDANT" ) {
+    $redundant_hits++; 
+  }
+  elsif ($value eq "UNIQUE") {
+    $unique_miss++; 
+  }
+  else {
+    $unique_hits++; 
+    print "$key; $value\n";   
+  }
+}
+print STDERR "$unique_hits $unique_miss $redundant_hits $empty_hits\n";
