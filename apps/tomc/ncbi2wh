@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+
+use strict;
+use Warehouse;
+use IO::Compress::Gzip qw(gzip $GzipError);
+
+my $opt = { v => 1 };
+
+
+my $whc = new Warehouse;
+my $manifest = "";
+my $uncompressed = "";
+my $infilename;
+my $filenames = "";
+my $inpos_start;
+my $inpos;
+my $outpos;
+
+foreach my $dir (@ARGV)
+{
+    opendir D, $dir or next;
+
+    $filenames = "";
+    $manifest .= ($dir eq "." ? "." : "./$dir");
+
+    foreach (sort readdir D)
+    {
+	$infilename = $_;
+	my $N = 0;
+	next if !-f $dir."/".$infilename || !-s $dir."/".$infilename;
+	open (F, "-|", ("zcat", $dir."/".$infilename))
+	    or die "zcat $dir/$infilename: $!";
+	$inpos_start = 0;
+	$inpos = 0;
+	$outpos = 0;
+	while (defined ($_ = <F>))
+	{
+	    if (/^>/)
+	    {
+		flush() if (++$N % 10000 == 1);
+	    }
+	    $uncompressed .= $_;
+	    $inpos += length ($_);
+	}
+	close F;
+	flush();
+    }
+
+    $manifest .= $filenames;
+    $manifest .= "\n";
+
+    closedir D;
+
+    $whc->write_start;
+    $whc->write_data ($manifest);
+    my $manifestkey = $whc->write_finish;
+    print "$manifestkey\n";
+}
+
+sub flush
+{
+    if (length $uncompressed)
+    {
+	my $compressed;
+	my $status = gzip \$uncompressed => \$compressed, Minimal => 1
+	    or die "gzip failed: $GzipError";
+
+	$whc->write_start;
+	$whc->write_data (\$compressed)
+	    or die "write_data failed: ".$whc->errstr;
+	my @hashes = $whc->write_finish
+	    or die "write_finish: ".$whc->errstr;
+	$manifest .= " @hashes";
+
+	my $outfilename = $infilename . "-" . $inpos_start . "-" . ($inpos-1) . ".gz";
+	my $size = length ($compressed);
+	$filenames .= " " . $outpos . ":" . $size . ":" . $outfilename;
+	$outpos += $size;
+	$inpos_start = $inpos;
+	$uncompressed = "";
+
+	print STDERR "@hashes $outfilename\n" if $opt->{v};
+    }
+}
