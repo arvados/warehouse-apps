@@ -1,0 +1,130 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:run megablast against reference db
+###MR_INPUT:manifest
+###MR_KNOBS:REFERENCE=f4c53b5ea8ed51077c46116b5c591fae
+###MR_KNOBS:REFERENCEDIR=homo_sapiens
+###MR_KNOBS:BATCHSIZE=1000
+###MR_KNOBS:MAXBATCHES=0
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+
+my $traces_manifest_key = $ENV{MR_INPUT0};
+my $reference_manifest_key = $ENV{MR_REFERENCE};
+my $reference_manifest_dir = $ENV{MR_REFERENCEDIR};
+$ENV{KNOB_MAXBATCHES} += 0;
+$ENV{KNOB_BATCHSIZE} += 0;
+$ENV{KNOB_BATCHSIZE} ||= 1000;
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # queue a level 1 jobstep for each file in the input manifest
+
+  my $ref = new Warehouse::Manifest (whc => $whc,
+				     key => $traces_manifest_key);
+  $ref->rewind;
+  while (my $s = $ref->subdir_next)
+  {
+    my $subdir = $s->name;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      print STDERR "+++mrjobstep 1 $subdir $filename+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
+if ($ENV{MR_LEVEL} == 1)
+{
+  # queue a level 2 jobstep for each batch of traces in the specified file
+
+  my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
+  Safepipe::readfrom
+      ("main::TRACES",
+       "mrs-fetch -h '$traces_manifest_key' '$subdir' '$filename'")
+      or die "pipe failed: $!";
+
+  my $nbatches = 0;
+  my $ntraces = 0;
+  my $batchstart = 0;
+  my $batchend = 0;
+
+  while (defined ($_ = <TRACES>))
+  {
+    if (/^>/)
+    {
+      ++$ntraces;
+      if ($ntraces % $ENV{KNOB_BATCHSIZE} == 1)
+      {
+	print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n"
+	    if $batchend > $batchstart;
+	$batchstart = $batchend;
+	++$nbatches;
+	last if $nbatches == $ENV{KNOB_MAXBATCHES};
+      }
+    }
+    $batchend += length;
+  }
+  print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n"
+      if $batchend > $batchstart;
+  close TRACES or die "Pipe failed: $!";
+
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
+if ($ENV{MR_LEVEL} == 2)
+{
+  my ($batchstart, $batchend, $subdir, $filename)
+      = split (/ /, $ENV{MR_INPUT}, 4);
+
+  my $tmp = $ENV{MR_JOB_TMP};
+  my $refdir = "$tmp/$reference_manifest_key";
+  for (1..5,0)
+  {
+    last if (-d "$refdir");
+    if (mkdir "$refdir.tmp")
+    {
+      if (0 != system "whget '$reference_manifest_key/$reference_manifest_dir/' '$refdir.tmp/'")
+      {
+	system "rm -rf '$refdir.tmp'";
+	sleep $_;
+	next;
+      }
+      rename "$refdir.tmp", $refdir;
+      system "rm -rf '$refdir.tmp'";
+      last;
+    }
+    sleep $_;
+  }
+  die "Failed to whget reference data" if !-d $refdir;
+
+  opendir D, $refdir or die "opendir failed";
+  my $reffilename;
+  map { $reffilename = $1 if /^(\S+)\.nsq$/ } readdir D;
+  closedir D;
+  die "Failed to find *.nsq in reference data" if !defined $reffilename;
+
+  Safepipe::readfrom
+      ("main::MEGABLAST",
+       "mrs-fetch -h '$traces_manifest_key' '$subdir' '$filename'",
+       "tail -c +".($batchstart+1),
+       "head -c ".($batchend-$batchstart),
+       "megablast -i stdin -d $refdir/$reffilename -f -s 400 -p 97 -F F -G25 -E10 -W60",
+       "gzip -1",
+       "mrs-store '$subdir/$filename-$batchstart-$batchend'")
+      or die "pipe failed: $!";
+  close MEGABLAST or die "Pipe failed: $!";
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
