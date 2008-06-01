@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+
+my ($start, $end) = @ARGV;
+
+my $buf;
+my $inpos;
+
+while ($start > $inpos)
+{
+    my $b = read (STDIN, $buf,
+		  ($start - $inpos > 2**20 ? 2**20 : $start - $inpos));
+    last if $b < 1;
+    $inpos += $b;
+}
+
+die if $inpos < $start;
+
+while ($end > $inpos)
+{
+    my $b = read (STDIN, $buf,
+		  ($end - $inpos > 2**20 ? 2**20 : $end - $inpos));
+    last if $b < 1;
+    print $buf;
+    $inpos += $b;
+}
+
+die if $inpos < $end;
+
+exit 0;
