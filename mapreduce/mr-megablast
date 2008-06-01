@@ -124,6 +124,7 @@ if ($ENV{MR_LEVEL} == 2)
        "megablast -i stdin -d $refdir/$reffilename -f -s 400 -p 97 -F F -G25 -E10 -W60",
        "gzip -1",
        "mrs-store '$subdir/$filename-$batchstart-$batchend' '$filename-$batchstart-$batchend.mega.gz'",
+       "mrs-output",
       )
       or die "pipe failed: $!";
   close MEGABLAST or die "Pipe failed: $!";
