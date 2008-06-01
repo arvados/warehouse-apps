@@ -66,6 +66,7 @@ sub readfrom
     while (@children)
     {
 	my $pid = wait;
+	die "wait returned $pid" if $pid <= 0;
 	die "@caller: $pid exited $?, command was ".$command{$pid} if $? != 0;
 	pop @children;
 	delete $command{$pid};
