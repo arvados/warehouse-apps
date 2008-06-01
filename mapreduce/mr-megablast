@@ -121,9 +121,11 @@ if ($ENV{MR_LEVEL} == 2)
        "mrs-fetch -h '$traces_manifest_key' '$subdir' '$filename'",
        "tail --bytes=+".($batchstart+1),
        "head --bytes=".($batchend-$batchstart),
-       "megablast -i stdin -d $refdir/$reffilename -f -s 400 -p 97 -F F -G25 -E10 -W60",
-       "gzip -1",
-       "mrs-store '$subdir/$filename-$batchstart-$batchend' '$filename-$batchstart-$batchend.mega.gz'")
+       "wc",
+#       "megablast -i stdin -d $refdir/$reffilename -f -s 400 -p 97 -F F -G25 -E10 -W60",
+#       "gzip -1",
+#       "mrs-store '$subdir/$filename-$batchstart-$batchend' '$filename-$batchstart-$batchend.mega.gz'",
+      )
       or die "pipe failed: $!";
   close MEGABLAST or die "Pipe failed: $!";
   exit 0;
