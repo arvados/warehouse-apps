@@ -13,6 +13,7 @@ use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
 use Safepipe;
+use Fcntl ':flock';
 
 
 my $traces_manifest_key = $ENV{MR_INPUT0};
@@ -91,23 +92,21 @@ if ($ENV{MR_LEVEL} == 2)
 
   my $tmp = $ENV{MR_JOB_TMP};
   my $refdir = "$tmp/$reference_manifest_key";
-  for (1..5,0)
+  if (open (L, "+>>", "$refdir.lock") &&
+      flock (L, LOCK_EX) &&
+      !-d ($refdir) &&
+      mkdir ("$refdir.tmp"))
   {
-    last if (-d "$refdir");
-    if (mkdir "$refdir.tmp")
+    if (0 != system "whget '$reference_manifest_key/$reference_manifest_dir/' '$refdir.tmp/'")
     {
-      if (0 != system "whget '$reference_manifest_key/$reference_manifest_dir/' '$refdir.tmp/'")
-      {
-	system "rm -rf '$refdir.tmp'";
-	sleep $_;
-	next;
-      }
-      rename "$refdir.tmp", $refdir;
       system "rm -rf '$refdir.tmp'";
-      last;
+      close L;
+      die "whget exited $?";
     }
-    sleep $_;
+    rename "$refdir.tmp", $refdir;
+    system "rm -rf '$refdir.tmp'";
   }
+  close L;
   die "Failed to whget reference data" if !-d $refdir;
 
   opendir D, $refdir or die "opendir failed";
