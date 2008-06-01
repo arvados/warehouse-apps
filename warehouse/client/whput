@@ -116,8 +116,10 @@ sub traverse
 
     printf STDERR ("$remotedir: stored %d files in %d blocks\n",
 		   scalar @file_positions,
-		   scalar @stream_hashes);
-    printf STDERR $whc->iostats;
+		   scalar @stream_hashes)
+	if $opt->{v} >= 1;
+    printf STDERR $whc->iostats
+	if $opt->{v} >= 2;
 
     foreach my $subdir (@subdir)
     {
