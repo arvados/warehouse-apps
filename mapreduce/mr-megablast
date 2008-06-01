@@ -119,7 +119,7 @@ if ($ENV{MR_LEVEL} == 2)
   Safepipe::readfrom
       ("main::MEGABLAST",
        "mrs-fetch -h '$traces_manifest_key' '$subdir' '$filename'",
-       "tail -c +".($batchstart+1),
+       "tail --bytes=+".($batchstart+1),
        "head -c ".($batchend-$batchstart),
        "megablast -i stdin -d $refdir/$reffilename -f -s 400 -p 97 -F F -G25 -E10 -W60",
        "gzip -1",
