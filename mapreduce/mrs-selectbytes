@@ -3,7 +3,7 @@
 my ($start, $end) = @ARGV;
 
 my $buf;
-my $inpos;
+my $inpos = 0;
 
 while ($start > $inpos)
 {
@@ -25,5 +25,9 @@ while ($end > $inpos)
 }
 
 die if $inpos < $end;
+
+close STDOUT;
+while (read STDIN, $buf, 2**20) { }
+close STDIN;
 
 exit 0;
