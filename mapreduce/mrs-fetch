@@ -30,9 +30,11 @@ usage:
        mrs-fetch [options] manifestkey * [filename]
 options:
    -h           suppress one-line stream header (subdir - pos:size:filename ...)
-   --no-gunzip  don't automatically uncompress .gz files
+   --no-gunzip  don\'t automatically uncompress .gz files
 
 EOF
+
+STDOUT->autoflush (1);
 
 my $manifestkey = shift @ARGV;
 my $subdir = shift @ARGV;
@@ -90,8 +92,8 @@ sub out
     }
     elsif (!$gunzip_pipe_open && $want_gunzip)
     {
-      local $| = 1;
-      open GUNZIP_PIPE, "|gunzip -c" or die "open gunzip pipe: $!";
+      open GUNZIP_PIPE, "|-", "gunzip", "-c" or die "open gunzip pipe: $!";
+      GUNZIP_PIPE->autoflush (1);
       $gunzip_pipe_open = 1;
     }
     if ($gunzip_pipe_open)
