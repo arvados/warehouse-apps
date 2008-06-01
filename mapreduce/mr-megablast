@@ -126,6 +126,5 @@ if ($ENV{MR_LEVEL} == 2)
        "mrs-store '$subdir/$filename-$batchstart-$batchend' '$filename-$batchstart-$batchend.mega.gz'")
       or die "pipe failed: $!";
   close MEGABLAST or die "Pipe failed: $!";
-  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   exit 0;
 }
