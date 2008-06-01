@@ -16,8 +16,8 @@ use Safepipe;
 
 
 my $traces_manifest_key = $ENV{MR_INPUT0};
-my $reference_manifest_key = $ENV{MR_REFERENCE};
-my $reference_manifest_dir = $ENV{MR_REFERENCEDIR};
+my $reference_manifest_key = $ENV{KNOB_REFERENCE};
+my $reference_manifest_dir = $ENV{KNOB_REFERENCEDIR};
 $ENV{KNOB_MAXBATCHES} += 0;
 $ENV{KNOB_BATCHSIZE} += 0;
 $ENV{KNOB_BATCHSIZE} ||= 1000;
