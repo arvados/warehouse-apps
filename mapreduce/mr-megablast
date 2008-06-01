@@ -66,11 +66,12 @@ if ($ENV{MR_LEVEL} == 1)
       ++$ntraces;
       if ($ntraces % $ENV{KNOB_BATCHSIZE} == 1)
       {
-	print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n"
-	    if $batchend > $batchstart;
+	if ($batchend > $batchstart)
+	{
+	  print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n";
+	  last if ++$nbatches == $ENV{KNOB_MAXBATCHES};
+	}
 	$batchstart = $batchend;
-	++$nbatches;
-	last if $nbatches == $ENV{KNOB_MAXBATCHES};
       }
     }
     $batchend += length;
