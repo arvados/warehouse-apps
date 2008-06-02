@@ -104,18 +104,16 @@ if ($ENV{MR_LEVEL} == 1)
 	--$ntraces;
 	$batchstart = $batchend if !$have_good_reads;
       }
-      elsif ($ntraces % $ENV{KNOB_BATCHSIZE} == 1)
+      elsif ($ntraces > 1 &&
+	     $ntraces % $ENV{KNOB_BATCHSIZE} == 1)
       {
-	if ($batchend > $batchstart)
+	print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n";
+	$batchstart = $batchend;
+	$have_good_reads = 0;
+	if (++$nbatches == $maxbatches)
 	{
-	  print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n";
-	  $batchstart = $batchend;
-	  $have_good_reads = 0;
-	  if (++$nbatches == $maxbatches)
-	  {
-	    while (<TRACES>) { }
-	    last;
-	  }
+	  while (<TRACES>) { }
+	  last;
 	}
       }
       $bpcount = 0;
