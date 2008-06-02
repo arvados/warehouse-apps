@@ -7,6 +7,9 @@ $nmax ||= $nmin;
 my ($mmin, $mmax) = split (/-/, $ENV{KNOB_M});
 $mmax ||= $mmin;
 
+open MEGABLAST, "<&STDIN";
+close STDIN;
+
 my $npipes = 0;
 for my $m ($mmin..$mmax)
 {
@@ -14,9 +17,9 @@ for my $m ($mmin..$mmax)
   {
     open ("pipe$npipes", "|-") || do
 	{
-	  open STDIN, "-|", "../apps/awz/megatri.pl", "-n", $n, "-m", $m;
+	  open MEGATRI, "-|", "../apps/awz/megatri.pl", "-n", $n, "-m", $m;
 	  my %mismatch;
-	  while (<STDIN>)
+	  while (<MEGATRI>)
 	  {
 	    if (/(\S+)\}(\S+)/)
 	    {
@@ -26,9 +29,9 @@ for my $m ($mmin..$mmax)
 	      ++$mismatch{$x.$y};
 	    }
 	  }
-	  close STDIN;
 	  print STDERR map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch
-	      if $ENV{MR_DEBUG};
+	      if $ENV{KNOB_DEBUG};
+	  close MEGATRI;
 	  print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
 	  close STDOUT;
 	  exit 0;
@@ -36,18 +39,13 @@ for my $m ($mmin..$mmax)
     ++$npipes;
   }
 }
+close STDOUT;
 
-while(<STDIN>)
+while(<MEGABLAST>)
 {
   for (my $p=0; $p<$npipes; $p++)
   {
     print { "pipe$p" } $_;
   }
 }
-
-for (my $p=0; $p<$npipes; $p++)
-{
-  close "pipe$p" or die "close pipe$p: exit=$? error=$!";
-}
-close STDOUT;
-close STDIN;
+close MEGABLAST;
