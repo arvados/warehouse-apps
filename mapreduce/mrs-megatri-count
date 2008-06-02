@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+my ($nmin, $nmax) = split (/-/, $ENV{KNOB_N});
+$nmax ||= $nmin;
+
+my ($mmin, $mmax) = split (/-/, $ENV{KNOB_M});
+$mmax ||= $mmin;
+
+my $npipes = 0;
+for my $m ($mmin..$mmax)
+{
+  for my $n ($nmin..$nmax)
+  {
+    open "pipe$npipes", "|-" || do
+	{
+	  open STDIN, "-|", "../apps/awz/megatri.pl", "-n", $n, "-m", $m;
+	  my %mismatch;
+	  while (<STDIN>)
+	  {
+	    if (/(\S+)\}(\S+)/)
+	    {
+	      my ($xxx, $yyy) = ($1, $2);
+	      my $x = substr $xxx, $m, 1;
+	      my $y = substr $yyy, $m, 1;
+	      ++$mismatch{$x.$y};
+	    }
+	  }
+	  print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
+	  exit 0;
+	};
+    ++$npipes;
+  }
+}
+
+while(<STDIN>)
+{
+  for (my $p=0; $p<$npipes; $p++)
+  {
+    print "pipe$p" $_;
+  }
+}
+
+for (my $p=0; $p<$npipes; $p++)
+{
+  close "pipe$p" or die "close pipe$p: exit=$? error=$!";
+}
