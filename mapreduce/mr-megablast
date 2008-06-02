@@ -111,7 +111,11 @@ if ($ENV{MR_LEVEL} == 1)
 	  print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n";
 	  $batchstart = $batchend;
 	  $have_good_reads = 0;
-	  last if ++$nbatches == $maxbatches;
+	  if (++$nbatches == $maxbatches)
+	  {
+	    while (<>) { }
+	    last;
+	  }
 	}
       }
       $bpcount = 0;
@@ -125,7 +129,7 @@ if ($ENV{MR_LEVEL} == 1)
   }
   print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n"
       if $batchend > $batchstart;
-  close TRACES or die "Pipe failed: $!";
+  close TRACES or die "Pipe failed: $!, exited $?";
 
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   exit 0;
