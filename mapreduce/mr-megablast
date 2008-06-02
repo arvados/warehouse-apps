@@ -80,7 +80,10 @@ if ($ENV{MR_LEVEL} == 1)
   {
     $maxbatches = int($ENV{MAXBATCHESPERJOB} / $nfiles);
     $maxbatches++ if $ENV{MR_ID} <= $ENV{MAXBATCHESPERJOB} % $nfiles;
-    $maxbatches = $ENV{KNOB_MAXBATCHES} if $maxbatches > $ENV{KNOB_MAXBATCHES};
+    if ($ENV{KNOB_MAXBATCHES} > 0 && $maxbatches > $ENV{KNOB_MAXBATCHES})
+    {
+      $maxbatches = $ENV{KNOB_MAXBATCHES};
+    }
   }
   else
   {
