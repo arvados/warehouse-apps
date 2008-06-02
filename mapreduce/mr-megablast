@@ -8,6 +8,7 @@
 ###MR_KNOBS:BATCHSIZE=1000
 ###MR_KNOBS:MAXBATCHES=0
 ###MR_KNOBS:MAXBATCHESPERJOB=0
+###MR_KNOBS:FILTER400BP=1
 
 use strict; 
 use Warehouse;
@@ -92,20 +93,36 @@ if ($ENV{MR_LEVEL} == 1)
   print STDERR "id=$ENV{MR_ID} maxbatches=$maxbatches input=$ENV{MR_INPUT}\n"
       if $ENV{KNOB_DEBUG};
 
+  my $have_good_reads = 0;
   while (defined ($_ = <TRACES>))
   {
     if (/^>/)
     {
       ++$ntraces;
+      if ($ENV{KNOB_FILTER400BP} && $bpcount < 400)
+      {
+	--$ntraces;
+	$bpcount = 0;
+	$batchstart = $batchend if !$have_good_reads;
+	$batchend += length;
+	next;
+      }
       if ($ntraces % $ENV{KNOB_BATCHSIZE} == 1)
       {
 	if ($batchend > $batchstart)
 	{
 	  print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n";
 	  $batchstart = $batchend;
+	  $have_good_reads = 0;
 	  last if ++$nbatches == $maxbatches;
 	}
       }
+      $bpcount = 0;
+    }
+    else
+    {
+      $bpcount += tr/acgtACGT/acgtACGT/;
+      $have_good_reads = 1 if $bpcount >= 400;
     }
     $batchend += length;
   }
