@@ -122,10 +122,10 @@ while (<>) {
 }  
 parse_variants(); 
 
-my $unique_hits;
-my $unique_miss; 
-my $empty_hits;
-my $redundant_hits; 
+my $unique_hits = 0;
+my $unique_miss = 0; 
+my $empty_hits = 0;
+my $redundant_hits = 0; 
 
 while ( my ($key, $value) = each(%hits) ) {
   if ($value eq "EMPTY") {
