@@ -27,8 +27,8 @@ for my $m ($mmin..$mmax)
 	    }
 	  }
 	  print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
-	  close STDIN;
 	  close STDOUT;
+	  close STDIN;
 	  exit 0;
 	};
     ++$npipes;
