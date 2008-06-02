@@ -21,7 +21,8 @@ for my $m ($mmin..$mmax)
     if (!$child)
     {
       close "pipe$npipes";
-      open MEGATRI, "-|", "../apps/awz/megatri.pl", "-n", $n, "-m", $m;
+      open (MEGATRI, "-|", "$ENV{MR_REVISION_INSTALLDIR}/src/apps/awz/megatri.pl", "-n", $n, "-m", $m)
+	  or die "open pipe megatri: $!";
       close STDIN;
 
       my %mismatch;
@@ -37,7 +38,7 @@ for my $m ($mmin..$mmax)
       }
       print STDERR map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch
 	  if $ENV{KNOB_DEBUG};
-      close MEGATRI;
+      close MEGATRI or die "close MEGATRI: exit=$? error=$!";
       print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
       exit 0;
     }
