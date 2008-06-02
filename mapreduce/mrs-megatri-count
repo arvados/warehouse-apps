@@ -15,27 +15,33 @@ for my $m ($mmin..$mmax)
 {
   for my $n ($nmin..$nmax)
   {
-    open ("pipe$npipes", "|-") || do
+    pipe STDIN, "pipe$npipes" or die "pipe failed: $!";
+    my $child = fork();
+    die "fork failed: $!" if !defined $child;
+    if (!$child)
+    {
+      close "pipe$npipes";
+      open MEGATRI, "-|", "../apps/awz/megatri.pl", "-n", $n, "-m", $m;
+      close STDIN;
+
+      my %mismatch;
+      while (<MEGATRI>)
+      {
+	if (/(\S+)\}(\S+)/)
 	{
-	  open MEGATRI, "-|", "../apps/awz/megatri.pl", "-n", $n, "-m", $m;
-	  my %mismatch;
-	  while (<MEGATRI>)
-	  {
-	    if (/(\S+)\}(\S+)/)
-	    {
-	      my ($xxx, $yyy) = ($1, $2);
-	      my $x = substr $xxx, $m, 1;
-	      my $y = substr $yyy, $m, 1;
-	      ++$mismatch{$x.$y};
-	    }
-	  }
-	  print STDERR map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch
-	      if $ENV{KNOB_DEBUG};
-	  close MEGATRI;
-	  print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
-	  close STDOUT;
-	  exit 0;
-	};
+	  my ($xxx, $yyy) = ($1, $2);
+	  my $x = substr $xxx, $m, 1;
+	  my $y = substr $yyy, $m, 1;
+	  ++$mismatch{$x.$y};
+	}
+      }
+      print STDERR map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch
+	  if $ENV{KNOB_DEBUG};
+      close MEGATRI;
+      print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
+      exit 0;
+    }
+    close STDIN;
     ++$npipes;
   }
 }
@@ -49,3 +55,12 @@ while(<MEGABLAST>)
   }
 }
 close MEGABLAST;
+
+for (my $p=0; $p<$npipes; $p++)
+{
+  close "pipe$p";
+}
+
+while (wait() > 0) { }
+
+exit 0;
