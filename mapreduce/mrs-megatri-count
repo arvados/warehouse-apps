@@ -37,7 +37,7 @@ while(<STDIN>)
 {
   for (my $p=0; $p<$npipes; $p++)
   {
-    print "pipe$p" ($_);
+    print { "pipe$p" } $_;
   }
 }
 
