@@ -42,10 +42,10 @@ while(<STDIN>)
     print { "pipe$p" } $_;
   }
 }
-close STDIN;
 
 for (my $p=0; $p<$npipes; $p++)
 {
   close "pipe$p" or die "close pipe$p: exit=$? error=$!";
 }
 close STDOUT;
+close STDIN;
