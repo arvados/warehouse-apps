@@ -71,12 +71,7 @@ if ($ENV{MR_LEVEL} == 1)
        "mrs-fetch -h '$traces_manifest_key' '$subdir' '$filename'")
       or die "pipe failed: $!";
 
-  my $nbatches = 0;
-  my $ntraces = 0;
-  my $batchstart = 0;
-  my $batchend = 0;
-
-  my $maxbatches;
+  my $maxbatches;		# stop after queueing this many jobs
   if ($ENV{KNOB_MAXBATCHESPERJOB} > 0 && $nfiles > 0)
   {
     $maxbatches = int($ENV{KNOB_MAXBATCHESPERJOB} / $nfiles);
@@ -93,8 +88,12 @@ if ($ENV{MR_LEVEL} == 1)
   print STDERR "id=$ENV{MR_ID} maxbatches=$maxbatches input=$ENV{MR_INPUT}\n"
       if $ENV{KNOB_DEBUG};
 
-  my $bpcount = 0;
-  my $have_good_reads = 0;
+  my $nbatches = 0;		# batches queued so far (not incl. current)
+  my $ntraces = 0;		# traces seen in input so far (incl. current)
+  my $batchstart = 0;		# byte pos in input file of current batch start
+  my $batchend = 0;		# byte pos in input file of current batch end
+  my $bpcount = 0;		# ACGT base pairs counted in current trace
+  my $have_good_reads = 0;	# any traces seen yet in this batch?
   while (defined ($_ = <TRACES>))
   {
     if (/^>/)
