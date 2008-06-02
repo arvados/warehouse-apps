@@ -12,7 +12,7 @@ for my $m ($mmin..$mmax)
 {
   for my $n ($nmin..$nmax)
   {
-    open "pipe$npipes", "|-" || do
+    open ("pipe$npipes", "|-") || do
 	{
 	  open STDIN, "-|", "../apps/awz/megatri.pl", "-n", $n, "-m", $m;
 	  my %mismatch;
