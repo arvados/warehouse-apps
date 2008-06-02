@@ -34,7 +34,8 @@ sub parse_variants() {
       my $summary; 
 
       my $run = 0; 
-      my @run_string = (""); 
+      my @run_string = ("");
+      my @run_pos_string = (""); 
       my @run_length = (0);
 
       for (my $i = $m; $i < $length_q-$m; $i++) {
@@ -42,22 +43,27 @@ sub parse_variants() {
 	my $y = substr($bp_q, $i-$m, 1+2*$m);
 	
 	if (substr($x,$m,1) ne substr($y, $m, 1)) {
+     
 	  my $edit = $x."}".$y;
 	  
 	  if ($edit eq $run_string[$run]) {
-	    $run_length[$run]++; 	    
+	    $run_length[$run]++; 	
+	    $run_pos_string[$run] .= " $i"; 
 	  }
 	  else {
 	    $run++;
-	    $run_string[$run] = $edit; 
-	    $run_length[$run] = 1; 
+	    $run_string[$run] = $edit;
+	    $run_pos_string[$run] .= "$i"; 
+	    $run_length[$run] = 1;
 	  }
 	}
       }
       for (my $i=1; $i <=$run; $i++) {
 	if ($run_length[$i] >= $n) {
 
-	  $summary .= "$run_string[$i] $run_length[$i], ";
+	  $summary .= "$run_string[$i] $run_length[$i] ".
+	      span($run_pos_string[$i]). 
+	      " ($run_pos_string[$i]), ";
 	}
       }
       if ($hits{$query} ne "EMPTY") {
@@ -143,3 +149,25 @@ while ( my ($key, $value) = each(%hits) ) {
   }
 }
 print STDERR "$unique_hits $unique_miss $redundant_hits $empty_hits\n";
+
+sub median {
+  my ($input) = @_;
+  my @array = split (/ /, $input);  
+  for (my $i = 1; $i < @array; $i++) {
+    $array[$i-1] = $array[$i]-$array[$i-1]; 
+  }
+  pop (@array);
+  
+  @array = sort {$a<=>$b} @array; 
+
+  if (@array % 2) {
+    return $array[int(@array/2)];
+  } else {
+    return ($array[@array/2] + $array[@array/2 - 1]) / 2;
+  }
+} 
+sub span {
+  my ($input) = @_;
+  my @array = split (/ /, $input);
+  return ($array[-1]-$array[0]);
+}
