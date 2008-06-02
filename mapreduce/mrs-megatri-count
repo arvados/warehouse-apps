@@ -26,9 +26,11 @@ for my $m ($mmin..$mmax)
 	      ++$mismatch{$x.$y};
 	    }
 	  }
+	  close STDIN;
+	  print STDERR map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch
+	      if $ENV{MR_DEBUG};
 	  print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
 	  close STDOUT;
-	  close STDIN;
 	  exit 0;
 	};
     ++$npipes;
