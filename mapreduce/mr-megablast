@@ -7,6 +7,7 @@
 ###MR_KNOBS:REFERENCEDIR=homo_sapiens
 ###MR_KNOBS:BATCHSIZE=1000
 ###MR_KNOBS:MAXBATCHES=0
+###MR_KNOBS:MAXBATCHESPERJOB=0
 
 use strict; 
 use Warehouse;
@@ -19,6 +20,7 @@ use Fcntl ':flock';
 my $traces_manifest_key = $ENV{MR_INPUT0};
 my $reference_manifest_key = $ENV{KNOB_REFERENCE};
 my $reference_manifest_dir = $ENV{KNOB_REFERENCEDIR};
+$ENV{KNOB_MAXBATCHESPERJOB} += 0;
 $ENV{KNOB_MAXBATCHES} += 0;
 $ENV{KNOB_BATCHSIZE} += 0;
 $ENV{KNOB_BATCHSIZE} ||= 1000;
@@ -31,6 +33,19 @@ if ($ENV{MR_LEVEL} == 0)
 
   my $ref = new Warehouse::Manifest (whc => $whc,
 				     key => $traces_manifest_key);
+  my $nfiles = 0;
+  if ($ENV{KNOB_MAXBATCHESPERJOB} > 0)
+  {
+    $ref->rewind;
+    while (my $s = $ref->subdir_next)
+    {
+      while (my ($pos, $size, $filename) = $s->file_next)
+      {
+	last if !defined $pos;
+	++$nfiles;
+      }
+    }
+  }
   $ref->rewind;
   while (my $s = $ref->subdir_next)
   {
@@ -38,7 +53,7 @@ if ($ENV{MR_LEVEL} == 0)
     while (my ($pos, $size, $filename) = $s->file_next)
     {
       last if !defined $pos;
-      print STDERR "+++mrjobstep 1 $subdir $filename+++\n";
+      print STDERR "+++mrjobstep 1 $nfiles $subdir $filename+++\n";
     }
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
@@ -49,7 +64,7 @@ if ($ENV{MR_LEVEL} == 1)
 {
   # queue a level 2 jobstep for each batch of traces in the specified file
 
-  my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
+  my ($nfiles, $subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 3);
   Safepipe::readfrom
       ("main::TRACES",
        "mrs-fetch -h '$traces_manifest_key' '$subdir' '$filename'")
@@ -59,6 +74,20 @@ if ($ENV{MR_LEVEL} == 1)
   my $ntraces = 0;
   my $batchstart = 0;
   my $batchend = 0;
+
+  my $maxbatches;
+  if ($ENV{KNOB_MAXBATCHESPERJOB} > 0 && $nfiles > 0)
+  {
+    $maxbatches = int($ENV{MAXBATCHESPERJOB} / $nfiles);
+    $maxbatches++ if $ENV{MR_ID} <= $ENV{MAXBATCHESPERJOB} % $nfiles;
+    $maxbatches = $ENV{KNOB_MAXBATCHES} if $maxbatches > $ENV{KNOB_MAXBATCHES};
+  }
+  else
+  {
+    $maxbatches = $ENV{KNOB_MAXBATCHES};
+  }
+  print STDERR "id=$ENV{MR_ID} maxbatches=$maxbatches input=$ENV{MR_INPUT}\n"
+      if $ENV{KNOB_DEBUG};
 
   while (defined ($_ = <TRACES>))
   {
@@ -71,7 +100,7 @@ if ($ENV{MR_LEVEL} == 1)
 	{
 	  print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n";
 	  $batchstart = $batchend;
-	  last if ++$nbatches == $ENV{KNOB_MAXBATCHES};
+	  last if ++$nbatches == $maxbatches;
 	}
       }
     }
