@@ -113,7 +113,7 @@ if ($ENV{MR_LEVEL} == 1)
 	  $have_good_reads = 0;
 	  if (++$nbatches == $maxbatches)
 	  {
-	    while (<>) { }
+	    while (<TRACES>) { }
 	    last;
 	  }
 	}
