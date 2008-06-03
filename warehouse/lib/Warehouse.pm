@@ -675,7 +675,6 @@ sub fetch_from_keep
     my $hash = shift;
     my ($md5, @hints);
     ($md5, @hints) = split (/[-\+]/, $hash);
-
     return \qq{} if $md5 eq "d41d8cd98f00b204e9800998ecf8427e";
 
     my ($kbits, $kwhid);
