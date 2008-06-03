@@ -28,7 +28,7 @@ for my $m ($mmin..$mmax)
       my %mismatch;
       while (<MEGATRI>)
       {
-	if (/(\S+)\}(\S+)/)
+	while (/(\S+)\}(\S+)/g)
 	{
 	  my ($xxx, $yyy) = ($1, $2);
 	  my $x = substr $xxx, $m, 1;
