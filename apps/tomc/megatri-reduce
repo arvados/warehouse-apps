@@ -22,9 +22,23 @@ while (my $s = $m->subdir_next)
   }
 }
 
-print "m n xy N\n";
+my @xy = qw(ac ag at ca cg ct ga gc gt ta tc tg);
+my %m;
+my %n;
+
+print (join ("\t", qw(m n), @xy), "\n");
+
 foreach (sort keys %sum)
 {
   my ($m, $n, $xy) = split (/,/);
-  print "$m $n $xy $sum{$_}\n";
+  $m{$m} = 1;
+  $n{$n} = 1;
+}
+for my $m (sort { $a <=> $b } keys %m)
+{
+  for my $n (sort { $a <=> $b } keys %n)
+  {
+    my @N = map { $sum{"$m,$n,$_"} + 0 } @xy;
+    print (join ("\t", $m, $n, @N), "\n");
+  }
 }
