@@ -1,0 +1,30 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+use Warehouse;
+use Warehouse::Stream;
+use Warehouse::Manifest;
+
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc,
+				 key => $ARGV[0]);
+my %sum;
+while (my $s = $m->subdir_next)
+{
+  $s->rewind;
+  while (my $dataref = $s->read_until (undef, "\n"))
+  {
+    if ($$dataref =~ /^m=(\d+) n=(\d+) (..)=(\d+)$/)
+    {
+      $sum{"$1,$2,$3"} += $4;
+    }
+  }
+}
+
+print "m n xy N\n";
+foreach (sort keys %sum)
+{
+  my ($m, $n, $xy) = split (/,/);
+  print "$m $n $xy $sum{$_}\n";
+}
