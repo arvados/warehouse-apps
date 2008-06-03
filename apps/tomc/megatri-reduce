@@ -13,10 +13,10 @@ my %sum;
 while (my $s = $m->subdir_next)
 {
   $s->rewind;
-  while (my ($pos, $size, $filename) = $stream->file_next)
+  while (my ($pos, $size, $filename) = $->file_next)
   {
     last if !defined $pos;
-    $stream->seek ($pos);    
+    $s->seek ($pos);    
     while (my $dataref = $s->read_until (undef, "\n"))
     {
       if ($$dataref =~ /^m=(\d+) n=(\d+) (..)=(\d+)$/)
