@@ -13,7 +13,7 @@ my %sum;
 while (my $s = $m->subdir_next)
 {
   $s->rewind;
-  while (my ($pos, $size, $filename) = $->file_next)
+  while (my ($pos, $size, $filename) = $s->file_next)
   {
     last if !defined $pos;
     $s->seek ($pos);    
