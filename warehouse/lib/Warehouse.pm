@@ -490,8 +490,6 @@ sub fetch_block_ref
     $verifyflag = 1 if !defined $verifyflag;
     my $nowarnflag = shift;
 
-    return \qq{} if $hash eq "d41d8cd98f00b204e9800998ecf8427e";
-
     if ($hash =~ /\+K/)
     {
 	my $dataref = $self->fetch_from_keep ($hash);
@@ -517,6 +515,7 @@ sub fetch_block_ref
 	}
     }
     my $md5 = $hash;
+    return \qq{} if $md5 eq "d41d8cd98f00b204e9800998ecf8427e";
 
     my $data;
     if ((defined $sizehint ? $sizehint : 1)
@@ -569,8 +568,6 @@ sub fetch_block_ref
 	{
 	    $self->{memc}->delete ($md5.".".$chunk);
 	}
-	warn "Memcached get($md5) failed verify; deleted"
-	    unless $nowarnflag;
     }
 
     $self->{stats_read_attempts} ++;
@@ -678,6 +675,9 @@ sub fetch_from_keep
     my $hash = shift;
     my ($md5, @hints);
     ($md5, @hints) = split (/[-\+]/, $hash);
+
+    return \qq{} if $md5 eq "d41d8cd98f00b204e9800998ecf8427e";
+
     my ($kbits, $kwhid);
     foreach (@hints)
     {
