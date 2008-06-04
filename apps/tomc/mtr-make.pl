@@ -13,6 +13,11 @@ my %mtcount = qw{
     xenopus_tropicalis fa10371ac4ecbc0d1898e946a3bfcc38
 };
 
+if (!-d $ARGV[0])
+{
+    die "usage: $0 output-directory\n";
+}
+
 my $mtrsum = $0;
 $mtrsum =~ s{mtr-make.pl}{mtr-sum.pl};
 
@@ -21,7 +26,7 @@ for my $species (keys %mtcount)
     my $mtcount = $mtcount{$species};
     if ($mtcount ne '.')
     {
-	my $mtrfile = "/tmp/mtr-" . $species . ".txt";
+	my $mtrfile = $ARGV[0]. "/" . $species . ".txt";
 	if (!-s $mtrfile)
 	{
 	    print STDERR "$mtrsum $mtcount > $mtrfile\n";
