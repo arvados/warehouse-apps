@@ -31,7 +31,11 @@ for my $species (keys %mtcount)
 	{
 	    print STDERR "$mtrsum $mtcount > $mtrfile\n";
 	    system "$mtrsum $mtcount > $mtrfile";
-	    die "$mtrsum exit status $?\n" if $?;
+	    if ($? != 0)
+	    {
+		unlink $mtrfile;
+		die "$mtrsum exit status $?\n";
+	    }
 	}
     }
 }
