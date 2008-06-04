@@ -95,7 +95,7 @@ foreach my $species (sort keys %traces)
 	    die "$symlink is not a symlink";
 	}
 	unlink ($symlink) if -l $symlink;
-	symlink ("$outputdir/mtr-sum-$hash.txt", $symlink)
+	symlink ("mtr-sum-$hash.txt", $symlink)
 	    or die "$symlink: $!";
 
 	my $mtrnormalize = $0;
