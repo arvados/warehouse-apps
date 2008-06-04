@@ -25,8 +25,12 @@ for (@jobs)
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
-printf (" %-25s %-38s %-38s %-38s\n",
-	qw(species traces megablast megatri-count));
+my $header = sprintf (" %-25s %-38s %-38s %-38s\n",
+		      qw(species traces megablast megatri-count));
+print $header;
+
+my $html = "";
+my $all_species_jobs = $header;
 
 my %traces = qw{
     anopheles_gambiae       8acd9332f0b7c299bd435d91cecf7f1e
@@ -73,7 +77,7 @@ foreach my $species (sort keys %traces)
     if ($megatri_count && $megatri_count->{outputkey})
     {
 	my $mtrsum = $0;
-	$mtrsum =~ s{[^/]*$}{mtr-sum.pl};
+	$mtrsum =~ s/[^\/]*$/mtr-sum.pl/;
 	my $hash = $megatri_count->{outputkey};
 	my $sumfile = "$outputdir/mtr-sum-$hash.txt";
 	if (!-s $sumfile)
@@ -95,25 +99,49 @@ foreach my $species (sort keys %traces)
 	    or die "$symlink: $!";
 
 	my $mtrnormalize = $0;
-	$mtrnormalize =~ s{[^/]*$}{mtr-normalize.pl};
+	$mtrnormalize =~ s/[^\/]*$/mtr-normalize.pl/;
 	for my $m (0, 1)
 	{
 	    my $mskip = 1 - $m;
-	    system "egrep -v ^$mskip < $symlink | $mtrnormalize > mtr-normalized-$species-m$m.txt";
+	    system "egrep -v ^$mskip < $symlink | $mtrnormalize > $outputdir/mtr-normalized-$species-m$m.txt";
 	    if ($?)
 	    {
 		die "$mtrnormalize pipe exit $?";
 	    }
+
+	    my $mtrgraph = $0;
+	    $mtrgraph =~ s/[^\/]*$/mtr-graph.r/;
+
+	    my $Species = $species;
+	    $Species =~ s/_/ /;
+	    $Species =~ s/\b([a-z])/uc $1/eg;
+
+	    system "R --slave --vanilla --args imagefile='$outputdir/mtr-normalized-$species-m$m.png' infile='$outputdir/mtr-normalized-$species-m$m.txt' organism='$Species' m='$m' < $mtrgraph >/dev/null";
+	    if ($?)
+	    {
+		die "R exit $?";
+	    }
+	    $html .= "<img src=\"mtr-normalized-$species-m$m.png\">";
 	}
+	$html .= "<br />\n";
     }
-    printf (" %-25s %-38s %-38s %-38s %s\n",
-	    $species,
-	    $traces{$species},
-	    id_and_output($megablast),
-	    id_and_output($megatri_count),
-	    $symlink,
-	);
+    my $species_jobs = sprintf (" %-25s %-38s %-38s %-38s %s\n",
+				$species,
+				$traces{$species},
+				id_and_output($megablast),
+				id_and_output($megatri_count),
+				);
+    $all_species_jobs .= $species_jobs;
+    print $species_jobs;
 }
+
+$html .= "<pre>";
+$html .= $all_species_jobs;
+$html .= "</pre>";
+
+open HTML, ">", $outputdir."/mtr-index.html" or die "create mtr-index.html: $!";
+print HTML $html;
+close HTML or die "close mtr-index.html: $!";
 
 sub id_and_output
 {
