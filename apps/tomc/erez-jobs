@@ -1,0 +1,164 @@
+#!/usr/bin/perl
+
+use strict;
+
+my ($revision_default, $reference, $batchesperjob, $outputdir) = @ARGV
+    or die qq{
+usage: $0 default-revision reference batchesperjob outputdir
+
+example: $0 2036 f4c53b5ea8ed51077c46116b5c591fae 600 .
+
+};
+
+open STDIN, "wh job list |";
+
+my %Job;
+my @Job;
+
+my @jobs = <STDIN>;
+for (@jobs)
+{
+    my %have;
+    chomp;
+    map { /(.*?)=(.*)/; $have{$1} = $2; } split (/, /);
+    $Job{$have{id}} = \%have;
+}
+@Job = sort { $b->{id} <=> $a->{id} } values %Job;
+
+printf (" %-25s %-38s %-38s %-38s\n",
+	qw(species traces megablast megatri-count));
+
+my %traces = qw{
+    anopheles_gambiae       8acd9332f0b7c299bd435d91cecf7f1e
+    callithrix_jacchus      503333295028639b6644654b15e44e4a
+    drosophila_melanogaster a1552c0998ae3a6a303502007a623c25
+    canis_familiaris        070a9a97d6d4163d554fdd2212b90288
+    gallus_gallus           6a8c30801a63c460f01b7fece00bda0e
+    homo_sapiens            309cb0a70f3fb773b2d2228c668de767
+    mus_musculus            3375774d2b79c637aa514ae7d0bd7784
+    pan_troglodytes         79c134434ba2bbc987ec7be7f91e43aa
+    takifugu_rubripes       1ab5d567801169762428c444ee7ad2b9
+    xenopus_tropicalis      cc2468dc5d437f6c4bd1773f9307704e
+};
+
+foreach my $species (sort keys %traces)
+{
+    my $megablast;
+    my $megatri_count;
+    my $symlink;
+    $megablast = findjob ( { mrfunction => "megablast",
+			     revision => [ 2014, ],
+			     inputkey => $traces{$species},
+			     knobs => join ("\\n",
+					    "BATCHSIZE=1000",
+					    "FILTER400BP=1",
+					    "MAXBATCHESPERJOB=$batchesperjob",
+					    "REFERENCE=$reference",
+					    "REFERENCEDIR=$species",
+					    ),
+			   } );
+    if ($megablast && $megablast->{outputkey})
+    {
+	$megatri_count = findjob ( { mrfunction => "awz-stream",
+				     revision => [ 2036, ],
+				     inputkey => $megablast->{outputkey},
+				     knobs => join ("\\n",
+						    "FUNCTION=mrs-megatri-count",
+						    "M=0-1",
+						    "N=1-5",
+						    "OUTPUTNAME=megatri-count.txt",
+						    ),
+				   } );
+    }
+    if ($megatri_count && $megatri_count->{outputkey})
+    {
+	my $mtrsum = $0;
+	$mtrsum =~ s{[^/]*$}{mtr-sum.pl};
+	my $hash = $megatri_count->{outputkey};
+	my $sumfile = "$outputdir/mtr-sum-$hash.txt";
+	if (!-s $sumfile)
+	{
+	    system "$mtrsum $hash > $sumfile";
+	    if ($?)
+	    {
+		unlink ("$outputdir/mtr-sum-$hash.txt");
+		die "$mtrsum $hash failed: exit $?";
+	    }
+	}
+	$symlink = "$outputdir/mtr-symlink-$species.txt";
+	if (-e $symlink && !-l $symlink)
+	{
+	    die "$symlink is not a symlink";
+	}
+	unlink ($symlink) if -l $symlink;
+	symlink ("$outputdir/mtr-sum-$hash.txt", $symlink)
+	    or die "$symlink: $!";
+
+	my $mtrnormalize = $0;
+	$mtrnormalize =~ s{[^/]*$}{mtr-normalize.pl};
+	for my $m (0, 1)
+	{
+	    my $mskip = 1 - $m;
+	    system "egrep -v ^$mskip < $symlink | $mtrnormalize > mtr-normalized-$species-m$m.txt";
+	    if ($?)
+	    {
+		die "$mtrnormalize pipe exit $?";
+	    }
+	}
+    }
+    printf (" %-25s %-38s %-38s %-38s %s\n",
+	    $species,
+	    $traces{$species},
+	    id_and_output($megablast),
+	    id_and_output($megatri_count),
+	    $symlink,
+	);
+}
+
+sub id_and_output
+{
+    my $job = shift;
+    return "" if !$job;
+    return $job->{id}."/".$job->{outputkey} if $job->{outputkey};
+    my $steps = $job->{steps_done} + $job->{steps_running} + $job->{steps_todo};
+    my $pct = $steps==0 ? "" : " (".int(100*$job->{steps_done}/$steps)."%)";
+    return $job->{id}."/".$pct;
+}
+
+sub findjob
+{
+    my $want = shift;
+    my $failed;
+    my $queued;
+    for (@Job)
+    {
+	if ($_->{revision} >= $want->{revision}->[0]
+	    && ($_->{revision} <= $want->{revision}->[1] || !$want->{revision}->[1])
+	    && $_->{mrfunction} eq $want->{mrfunction}
+	    && $_->{knobs} eq $want->{knobs}
+	    && $_->{inputkey} eq $want->{inputkey})
+	{
+	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
+	    $failed = $_ if !$failed && $_->{success} eq '0';
+	    return $_ if $_->{outputkey};
+	}
+    }
+    mention_failed_job ($failed) if !$queued && $failed;
+    suggest_new_job ($want) if !$queued && !$want->{quiet};
+    return $queued;
+}
+
+sub suggest_new_job
+{
+    my $want = shift;
+    my $revision = $want->{revision}->[1] || $revision_default;
+    my $knobs = $want->{knobs};
+    $knobs =~ s/=(.*?)(\\n|$)/='$1' /g;
+    print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' $knobs\n";
+}
+
+sub mention_failed_job
+{
+    my $job = shift;
+    print "# suggest investigating job id=".$job->{id}." -- failed with frozentokey=".$job->{frozentokey}." metakey=".$job->{metakey}."\n";
+}
