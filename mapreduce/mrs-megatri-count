@@ -39,7 +39,7 @@ for my $m ($mmin..$mmax)
 	  {
 	    if (!$used_as_example)
 	    {
-	      $examples .= "#example: $x$y ".$_;
+	      $examples .= "#example: m=$m n=$n $x$y ".$_;
 	      $used_as_example = 1;
 	    }
 	  }
@@ -50,7 +50,7 @@ for my $m ($mmin..$mmax)
 	  if $ENV{KNOB_DEBUG};
       close MEGATRI or die "close MEGATRI: exit=$? error=$!";
       print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
-      print "#summary: $summary\n";
+      print "#summary: m=$m n=$n $summary\n";
       print $examples;
       exit 0;
     }
