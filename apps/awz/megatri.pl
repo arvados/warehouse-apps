@@ -148,7 +148,7 @@ while ( my ($key, $value) = each(%hits) ) {
     print "$key; $value\n";   
   }
 }
-print STDERR "$unique_hits $unique_miss $redundant_hits $empty_hits\n";
+print "#summary: unique_hits=$unique_hits unique_misses=$unique_miss redundant_hits=$redundant_hits empty_hits=$empty_hits\n";
 
 sub median {
   my ($input) = @_;

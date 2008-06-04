@@ -26,20 +26,32 @@ for my $m ($mmin..$mmax)
       close STDIN;
 
       my %mismatch;
+      my $examples = "";
       while (<MEGATRI>)
       {
+	my $used_as_example = 0;
 	while (/(\S+)\}(\S+)/g)
 	{
 	  my ($xxx, $yyy) = ($1, $2);
 	  my $x = substr $xxx, $m, 1;
 	  my $y = substr $yyy, $m, 1;
-	  ++$mismatch{$x.$y};
+	  if (++$mismatch{$x.$y} <= $ENV{KNOB_EXAMPLES})
+	  {
+	    if (!$used_as_example)
+	    {
+	      $examples .= "#example: $x$y ".$_;
+	      $used_as_example = 1;
+	    }
+	  }
 	}
+	$summary = $1 if /^\#summary: (\S+=\d* .*)/;
       }
       print STDERR map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch
 	  if $ENV{KNOB_DEBUG};
       close MEGATRI or die "close MEGATRI: exit=$? error=$!";
       print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
+      print "#summary: $summary\n";
+      print $examples;
       exit 0;
     }
     close STDIN;
