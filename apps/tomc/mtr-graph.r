@@ -6,7 +6,7 @@ for(x in commandArgs()) {
   }	
 }
 
-postscript(paste("|convert ps:- -rotate 90 ",imagefile,sep=""), width=5, height=3, onefile=F);
+postscript(paste("|convert ps:- -rotate 90 ",imagefile,sep=""), width=6, height=3, onefile=F);
 T <- read.delim(infile,header=TRUE);
 
 # Split the data into 2 for the 0 and 1 for m
