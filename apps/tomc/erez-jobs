@@ -105,8 +105,12 @@ foreach my $species (sort keys %traces)
 	$mtrnormalize =~ s/[^\/]*$/mtr-normalize.pl/;
 	for my $m (0, 1)
 	{
-	    my $mskip = 1 - $m;
-	    system "egrep -v ^$mskip < $symlink | $mtrnormalize > $outputdir/mtr-normalized-$species-m$m.txt";
+	    if (-M "$outputdir/mtr-normalized-$species-m$m.png" < -M "$outputdir/mtr-sum-$hash.txt")
+	    {
+		next;
+	    }
+
+	    system "$mtrnormalize $m < $symlink > $outputdir/mtr-normalized-$species-m$m.txt";
 	    if ($?)
 	    {
 		die "$mtrnormalize pipe exit $?";
