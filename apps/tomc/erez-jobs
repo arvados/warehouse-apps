@@ -2,13 +2,15 @@
 
 use strict;
 
-my ($revision_default, $reference, $batchesperjob, $outputdir) = @ARGV
+@ARGV == 4
     or die qq{
 usage: $0 default-revision reference batchesperjob outputdir
 
 example: $0 2036 f4c53b5ea8ed51077c46116b5c591fae 600 .
 
 };
+
+my ($revision_default, $reference, $batchesperjob, $outputdir) = @ARGV;
 
 open STDIN, "wh job list |";
 
