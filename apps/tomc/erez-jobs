@@ -67,10 +67,10 @@ foreach my $species (sort keys %traces)
 				     revision => [ 2046, ],
 				     inputkey => $megablast->{outputkey},
 				     knobs => join ("\\n",
+						    "EXAMPLES=5",
 						    "FUNCTION=mrs-megatri-count",
 						    "M=0-1",
 						    "N=1-5",
-						    "EXAMPLES=5",
 						    "OUTPUTNAME=megatri-count.txt",
 						    ),
 				   } );
