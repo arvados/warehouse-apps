@@ -64,7 +64,7 @@ foreach my $species (sort keys %traces)
     if ($megablast && $megablast->{outputkey})
     {
 	$megatri_count = findjob ( { mrfunction => "awz-stream",
-				     revision => [ 2036, ],
+				     revision => [ 2046, ],
 				     inputkey => $megablast->{outputkey},
 				     knobs => join ("\\n",
 						    "FUNCTION=mrs-megatri-count",
