@@ -70,6 +70,7 @@ foreach my $species (sort keys %traces)
 						    "FUNCTION=mrs-megatri-count",
 						    "M=0-1",
 						    "N=1-5",
+						    "EXAMPLES=5",
 						    "OUTPUTNAME=megatri-count.txt",
 						    ),
 				   } );
