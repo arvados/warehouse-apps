@@ -128,6 +128,9 @@ foreach my $species (sort keys %traces)
 	    {
 		die "R exit $?";
 	    }
+	}
+	for my $m (0, 1)
+	{
 	    $html .= "<img src=\"mtr-normalized-$species-m$m.png\">";
 	}
 	$html .= "<br />\n";
