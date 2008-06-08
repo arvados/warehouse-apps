@@ -200,7 +200,7 @@ $ENV{"MR_REVISION"} = $Job->{revision};
 $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
 $ENV{"INSTALL_REPOS"} = $main::svn_repos;
 $ENV{"INSTALL_REVISION"} = $Job->{revision};
-my $execstr = "srun --nodelist='$nodelist' -D /tmp --job-name='$job_id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision'";
+my $execstr = "srun --nodelist='$nodelist' -D /tmp --job-name='$job_id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )'";
 print STDERR "$execstr\n" if $ENV{MR_DEBUG};
 my $ret = system ($execstr);
 Log (undef, "Install exited $ret");
@@ -306,8 +306,14 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 		    "-c",
 		    "mkdir -p /tmp/mrcompute/revision "
 		    ."&& cd /tmp/mrcompute "
-		    ."&& svn export --quiet '$main::svn_repos/installrevision' "
-		    ."&& ./installrevision "
+		    ."&& "
+		    ."( "
+		    ."  [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] "
+		    ."|| "
+		    ."  ( svn export --quiet '$main::svn_repos/installrevision' "
+		    ."    && ./installrevision "
+		    ."  ) "
+		    .") "
 		    ."&& exec $ENV{MR_REVISION_INSTALLDIR}/src/mapreduce/mrtaskmanager");
     print STDERR (join (" ", map { / / ? "'$_'" : $_ } @execargs), "\n")
 	if $ENV{MR_DEBUG};
