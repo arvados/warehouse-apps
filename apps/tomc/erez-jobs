@@ -2,6 +2,13 @@
 
 use strict;
 
+my %substitute_output;
+while ($ARGV[0] =~ /^(.*?)=(.*)$/)
+{
+    $substitute_output{$1} = { "id" => "none", "outputkey" => $2 };
+    shift @ARGV;
+}
+
 @ARGV == 4
     or die qq{
 usage: $0 default-revision reference batchesperjob outputdir
@@ -63,7 +70,9 @@ foreach my $species (sort keys %traces)
 					    "REFERENCE=$reference",
 					    "REFERENCEDIR=$species",
 					    ),
-			   } );
+			 } )
+	unless ($megablast = $substitute_output{"$species/megablast"});
+
     if ($megablast && $megablast->{outputkey})
     {
 	$megatri_count = findjob ( { mrfunction => "awz-stream",
@@ -76,7 +85,8 @@ foreach my $species (sort keys %traces)
 						    "N=1-5",
 						    "OUTPUTNAME=megatri-count.txt",
 						    ),
-				   } );
+				   } )
+	    unless ($megatri_count = $substitute_output{"$species/megatri-count"});
     }
     if ($megatri_count && $megatri_count->{outputkey})
     {
