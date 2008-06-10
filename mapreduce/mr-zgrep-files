@@ -46,19 +46,30 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	  my $inblob;
 	  gunzip \$zblob => \$inblob
 	      or die $GunzipError;
-	  
+
+	  print STDERR "gunzip ok.\n" if $ENV{KNOB_DEBUG};
+
 	  my %hash; 
 	  while ($inblob =~ m/<([^<>\n]*)>([^<>\n]*)<\/([^<>\n]*)>/g) { 
 	    if ($1 eq "CENTER_NAME" && $1 eq $3) {
 	      $hash{"$1 $2"}++;
 	    }
 	  }
+
+	  print STDERR "buildhash ok.\n" if $ENV{KNOB_DEBUG};
+
 	  while ( my ($key, $value) = each(%hash) ) {
 	    $outstream->write_data ("$key => $value\n");
 	  }  
+
+	  print STDERR "writehash ok.\n" if $ENV{KNOB_DEBUG};
+
 	  $outstream->write_data ($wantfile." ".length($inblob)." \n");
 	}
 	$outstream->write_finish;
+
+	print STDERR "write_finish ok.\n" if $ENV{KNOB_DEBUG};
+
 	my $fragkey = $whc->store_block ($outstream->as_string)
 	    or die "store_block failed: ".$whc->errstr;
 	print STDERR "+++mrout ".$fragkey."+++\n";
