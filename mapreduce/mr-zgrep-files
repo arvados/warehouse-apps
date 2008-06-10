@@ -57,8 +57,8 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	    $outstream->write_data ("$key => $value\n");
 	  }  
 	  $outstream->write_data ($wantfile." ".length($inblob)." \n");
-	  $outstream->write_finish;
 	}
+	$outstream->write_finish;
 	my $fragkey = $whc->store_block ($outstream->as_string)
 	    or die "store_block failed: ".$whc->errstr;
 	print STDERR "+++mrout ".$fragkey."+++\n";
