@@ -66,6 +66,7 @@ foreach (sort keys %sum)
   $n{$n} = 1;
 }
 
+my $wantallexamples = 0;
 my %wantexamples;
 my %examplefiles;
 for my $m (sort { $a <=> $b } keys %m)
@@ -83,8 +84,15 @@ for my $m (sort { $a <=> $b } keys %m)
 
     # how many examples should we save? max { 1000, total # satisfying reads }
 
-    my $wantexamples_total = $sum{"$m,$n"} > $opt{"EXAMPLES"} ? $opt{"EXAMPLES"} : $sum{"$m,$n"};
-    map { $wantexamples{"$m,$n,$_"} = int ($wantexamples_total * $sum{"$m,$n,$_"} / $sum{"$m,$n"}) } @xy;
+    if ($opt{"EXAMPLES"} eq "all")
+    {
+      $wantallexamples = 1;
+    }
+    else
+    {
+      my $wantexamples_total = $sum{"$m,$n"} > $opt{"EXAMPLES"} ? $opt{"EXAMPLES"} : $sum{"$m,$n"};
+      map { $wantexamples{"$m,$n,$_"} = int ($wantexamples_total * $sum{"$m,$n,$_"} / $sum{"$m,$n"}) } @xy;
+    }
 
     # open a file to store the examples for this {m,n}
 
@@ -110,11 +118,8 @@ while (my $s = $m->subdir_next)
 	my $n = $2;
 	my $xy = $3;
 	my $s = $4;
-	if ($wantexamples{"$m,$n,$xy"} > 0)
-	{
-	  --$wantexamples{"$m,$n,$xy"};
-	  print { $examplefiles{"$m,$n"} } "$xy $s";
-	}
+	print { $examplefiles{"$m,$n"} } "$xy $s"
+	    if ($wantallexamples || --$wantexamples{"$m,$n,$xy"} >= 0);
       }
     }
   }
