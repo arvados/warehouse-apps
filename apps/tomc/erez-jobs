@@ -106,11 +106,14 @@ foreach my $species (sort keys %traces)
 	my $sumfile = "$outputdir/mtr-sum-$hash.txt";
 	if (!-s $sumfile)
 	{
-	    system "$mtrsum $hash $outputdir/mtr-examples-$species > $sumfile";
+	    my $opts = "";
+	    $opts .= " EXAMPLES=".$override{"report/EXAMPLES"}
+		if exists $override{"report/EXAMPLES"};
+	    system "$mtrsum $opts $hash $outputdir/mtr-examples-$species > $sumfile";
 	    if ($?)
 	    {
 		unlink ("$outputdir/mtr-sum-$hash.txt");
-		die "$mtrsum $hash failed: exit $?";
+		die "\"$mtrsum $opts $hash ...\" failed: exit $?";
 	    }
 	}
 	$symlink = "$outputdir/mtr-symlink-$species.txt";

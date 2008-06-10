@@ -7,6 +7,13 @@ use Warehouse::Stream;
 use Warehouse::Manifest;
 use IO::File;
 
+my %opt = ("EXAMPLES" => 1000);
+while ($ARGV[0] =~ /^(.*?)=(.*)$/)
+{
+  $opt{$1} = $2;
+  shift @ARGV;
+}
+
 my $manifestkey = shift @ARGV;
 my $examplesbase = shift @ARGV;
 
@@ -76,7 +83,7 @@ for my $m (sort { $a <=> $b } keys %m)
 
     # how many examples should we save? max { 1000, total # satisfying reads }
 
-    my $wantexamples_total = $sum{"$m,$n"} > 1000 ? 1000 : $sum{"$m,$n"};
+    my $wantexamples_total = $sum{"$m,$n"} > $opt{"EXAMPLES"} ? $opt{"EXAMPLES"} : $sum{"$m,$n"};
     map { $wantexamples{"$m,$n,$_"} = int ($wantexamples_total * $sum{"$m,$n,$_"} / $sum{"$m,$n"}) } @xy;
 
     # open a file to store the examples for this {m,n}
