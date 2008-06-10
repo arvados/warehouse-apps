@@ -2,10 +2,10 @@
 
 use strict;
 
-my %substitute_output;
+my %override;
 while ($ARGV[0] =~ /^(.*?)=(.*)$/)
 {
-    $substitute_output{$1} = { "id" => "none", "outputkey" => $2 };
+    $override{$1} = $2;
     shift @ARGV;
 }
 
@@ -60,33 +60,43 @@ foreach my $species (sort keys %traces)
     my $megablast;
     my $megatri_count;
     my $symlink;
+    if (exists $override{"$species/megablast"})
+    {
+	$megablast = { id => "none",
+		       outputkey => $override{"$species/megablast"},
+		   };
+    }
     $megablast = findjob ( { mrfunction => "megablast",
 			     revision => [ 2014, ],
 			     inputkey => $traces{$species},
-			     knobs => join ("\\n",
-					    "BATCHSIZE=500",
-					    "FILTER400BP=0",
-					    "MAXBATCHESPERJOB=$batchesperjob",
-					    "REFERENCE=$reference",
-					    "REFERENCEDIR=$species",
-					    ),
-			 } )
-	unless ($megablast = $substitute_output{"$species/megablast"});
+			     knobs => makeknobs ("megablast",
+						 "BATCHSIZE=500",
+						 "FILTER400BP=0",
+						 "MAXBATCHESPERJOB=$batchesperjob",
+						 "REFERENCE=$reference",
+						 "REFERENCEDIR=$species",
+						 ),
+			 } ) unless $megablast;
 
     if ($megablast && $megablast->{outputkey})
     {
+	if (exists $override{"$species/megatri-count"})
+	{
+	    $megatri_count = { id => "none",
+			       outputkey => "$species/megatri-count",
+			       };
+	}
 	$megatri_count = findjob ( { mrfunction => "awz-stream",
 				     revision => [ 2046, ],
 				     inputkey => $megablast->{outputkey},
-				     knobs => join ("\\n",
-						    "EXAMPLES=5",
-						    "FUNCTION=mrs-megatri-count",
-						    "M=0-1",
-						    "N=1-5",
-						    "OUTPUTNAME=megatri-count.txt",
-						    ),
-				   } )
-	    unless ($megatri_count = $substitute_output{"$species/megatri-count"});
+				     knobs => makeknobs ("megatri-count",
+							 "EXAMPLES=5",
+							 "FUNCTION=mrs-megatri-count",
+							 "M=0-1",
+							 "N=1-5",
+							 "OUTPUTNAME=megatri-count.txt",
+							 ),
+				 } ) unless $megatri_count;
     }
     if ($megatri_count && $megatri_count->{outputkey})
     {
@@ -222,4 +232,25 @@ sub mention_failed_job
 {
     my $job = shift;
     print "# suggest investigating job id=".$job->{id}." -- failed with frozentokey=".$job->{frozentokey}." metakey=".$job->{metakey}."\n";
+}
+
+sub makeknobs
+{
+    my $function = shift @_;
+    my $knobs = "";
+    foreach (sort @_)
+    {
+	my ($k) = /^(.*)=/;
+	if (exists $override{"$function/$k"})
+	{
+	    $knobs .= $k."=".$override{"$function/$k"};
+	}
+	else
+	{
+	    $knobs .= $_;
+	}
+	$knobs .= "\\n";
+    }
+    $knobs =~ s/\\n$//s;
+    return $knobs;
 }
