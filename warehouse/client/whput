@@ -1,8 +1,5 @@
 #!/usr/bin/perl
 
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 use strict;
 
 use Warehouse;
@@ -120,9 +117,10 @@ sub traverse
     printf STDERR ("$remotedir: stored %d files in %d blocks\n",
 		   scalar @file_positions,
 		   scalar @stream_hashes)
-	if $opt->{v} >= 1;
-    printf STDERR $whc->iostats
-	if $opt->{v} >= 2;
+        if $opt{v} >= 1;
+
+    printf STDERR $whc->iostats 
+        if $opt{v} >= 2;
 
     foreach my $subdir (@subdir)
     {
