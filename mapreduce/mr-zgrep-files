@@ -48,11 +48,11 @@ elsif ($ENV{MR_LEVEL} == 1) {
 	      or die $GunzipError;
 	  
 	  my %hash; 
-	  #while ($inblob =~ m/<(.*)>(.*)<\/(.*)>/g) { 
-	  #  if ($1 eq "CENTER_NAME" && $1 eq $3) {
-	  #    $hash{"$1 $2"}++;
-	  #  }
-	  #}
+	  while ($inblob =~ m/<([^<>\n]*)>([^<>\n]*)<\/([^<>\n]*)>/g) { 
+	    if ($1 eq "CENTER_NAME" && $1 eq $3) {
+	      $hash{"$1 $2"}++;
+	    }
+	  }
 	  while ( my ($key, $value) = each(%hash) ) {
 	    $outstream->write_data ("$key => $value\n");
 	  }  
