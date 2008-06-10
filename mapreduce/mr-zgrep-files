@@ -55,15 +55,15 @@ elsif ($ENV{MR_LEVEL} == 1)
 	  gunzip \$zblob => \$inblob
 	      or die $GunzipError;
 	  $outstream->write_data ($wantfile." ".length($inblob)." \n");
-	}
-      }
-      $outstream->write_finish;
+	  $outstream->write_finish;
 
-      my $fragkey = $whc->store_block ($outstream->as_string)
-	  or die "store_block failed: ".$whc->errstr;
-      print STDERR "+++mrout ".$fragkey."+++\n";
-      print STDERR $whc->iostats;
-      exit 0;
+	  my $fragkey = $whc->store_block ($outstream->as_string)
+	      or die "store_block failed: ".$whc->errstr;
+	  print STDERR "+++mrout ".$fragkey."+++\n";
+	  print STDERR $whc->iostats;
+	  exit 0;
+	}
+      }      
     }
   }
   die "Subdir not found: $wantsubdir";
