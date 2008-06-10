@@ -49,8 +49,11 @@ elsif ($ENV{MR_LEVEL} == 1) {
 
 	  print STDERR "gunzip ok.\n" if $ENV{KNOB_DEBUG};
 
-	  my %hash; 
-	  while ($inblob =~ m/<([^<>\n]*)>([^<>\n]*)<\/([^<>\n]*)>/g) { 
+	  my %hash;
+	  my $count = 0;
+	  while ($inblob =~ m/<([^<>\n\/]*)>([^<>\n]*)<\/([^<>\n]*)>/gs) {
+	    print STDERR ($count, " at ", scalar localtime, " ... ")
+		if ($ENV{KNOB_DEBUG} && ++$count % 100000 == 0);
 	    if ($1 eq "CENTER_NAME" && $1 eq $3) {
 	      $hash{"$1 $2"}++;
 	    }
