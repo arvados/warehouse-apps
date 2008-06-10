@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+# Given the key of a manifest, enqueue (on level = 1 + current level)
+# one job for each subdir in the manifest, with input = subdir.
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $whc = new Warehouse
+    ("mogilefs_trackers" => $ENV{KNOB_SOURCE_MOGILEFS_TRACKERS},
+     "warehouse_controllers" => $ENV{KNOB_SOURCE_WAREHOUSE_CONTROLLERS},
+     "memcached_size_threshold" => $ENV{KNOB_MEMCACHED_SIZE},
+     );
+
+my $nextlevel = $ENV{MR_LEVEL} + 1;
+my $key = $ENV{MR_INPUT};
+
+if ($key !~ /^[0-9a-f]{32}(,[0-9a-f]{32})*$/)
+{
+  $key = $whc->fetch_manifest_key_by_name ($key)
+      or die $whc->errstr;
+}
+my $manifest = new Warehouse::Manifest (whc => $whc,
+					key => $key);
+$manifest->rewind;
+while (my $stream = $manifest->subdir_next)
+{
+  while (my ($pos, $size, $filename) = $stream->file_next)
+  {
+    last if !defined $pos;
+    my $name = $stream->name.":".$filename;
+    print STDERR "+++mrjobstep $nextlevel $name+++\n";
+  }
+}
+
+print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+
+1;

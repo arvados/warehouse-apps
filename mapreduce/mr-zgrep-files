@@ -1,0 +1,70 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:uncompress any *.gz and output a *.txt (filename based on hash function) for each subdir
+###MR_INPUT:manifest
+###MR_KNOBS:HASH=md5
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Digest::SHA;
+use Digest::MD5;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuefiles";
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $wantfile = $ENV{MR_INPUT};
+  my $whc = new Warehouse
+      (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
+  
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $instream = $manifest->subdir_next)
+  {
+    while (my ($pos, $size, $filename) = $instream->file_next)
+    {
+      last if !defined $pos;
+      if ($instream->name.":".$filename eq $wantfile)
+      {
+	my $outstream = new Warehouse::Stream (whc => $whc);
+	$outstream->name ($wantfile);
+	$outstream->clear;
+	$outstream->write_start ("zgrep.txt");
+	
+	$instream->seek ($pos);
+
+	if ($filename =~ s/\.g?z$//i)
+	{
+	  my $zblob = "";
+	  while (my $dataref = $instream->read_until ($pos + $size))
+	  {
+	    $zblob .= $$dataref;
+	  }
+	  my $inblob;
+	  gunzip \$zblob => \$inblob
+	      or die $GunzipError;
+	  $outstream->write_data ($wantfile." ".length($inblob)." \n");
+	}
+      }
+      $outstream->write_finish;
+
+      my $fragkey = $whc->store_block ($outstream->as_string)
+	  or die "store_block failed: ".$whc->errstr;
+      print STDERR "+++mrout ".$fragkey."+++\n";
+      print STDERR $whc->iostats;
+      exit 0;
+    }
+  }
+  die "Subdir not found: $wantsubdir";
+}
