@@ -9,8 +9,8 @@ use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
-use Digest::SHA;
-use Digest::MD5;
+#use Digest::SHA;
+#use Digest::MD5;
 
 my $manifestkey = $ENV{MR_INPUT0};
 
