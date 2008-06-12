@@ -154,7 +154,7 @@ sub _init
 	$ENV{WAREHOUSE} ||
 	(ref $warehouses eq ARRAY && $warehouses->[0]->{name});
 
-    if (defined $warehouse_name)
+    if (!defined $warehouse_name)
     {
 	die "I don't have a default warehouse to use";
     }
