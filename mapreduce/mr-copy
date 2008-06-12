@@ -19,6 +19,7 @@ if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey;
   do "mrtask-queuesubdirs" or die "mrtask-queuesubdirs failed: $! $@";
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
 }
 
 elsif ($ENV{MR_LEVEL} == 1)
