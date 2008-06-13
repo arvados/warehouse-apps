@@ -41,7 +41,8 @@ for my $m ($mmin..$mmax)
 	  my ($xxx, $yyy) = ($1, $2);
 	  my $x = substr $xxx, $m, 1;
 	  my $y = substr $yyy, $m, 1;
-	  if (++$mismatch{$x.$y} <= $ENV{KNOB_EXAMPLES})
+	  if (++$mismatch{$x.$y} <= $ENV{KNOB_EXAMPLES}
+	      || $ENV{KNOB_EXAMPLES} eq "all")
 	  {
 	    if (!$used_as_example)
 	    {
