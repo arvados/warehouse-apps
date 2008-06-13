@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+use LWP::UserAgent;
+use HTTP::Request::Common 'POST';
+
+my $maxfailures = 5;		# sleep and retry <= this many times
+
+my ($nmin, $nmax) = split (/-/, $ENV{KNOB_N});
+$nmax ||= $nmin;
+
+my ($mmin, $mmax) = split (/-/, $ENV{KNOB_M});
+$mmax ||= $mmin;
+
+while (<>)
+{
+  my $id;
+  if (/^(\#example: m=(\d+) n=(\d+) .. )?gnl\|ti\|(\d+) /)
+  {
+    if (!defined ($1) ||
+	( $2 >= $mmin && $2 <= $mmax &&
+	  $3 >= $nmin && $3 <= $nmax))
+    {
+      $id = $4;
+    }
+  }
+  if (defined ($id))
+  {
+    for my $qtype (qw (info fasta quality))
+    {
+      my $query = "retrieve $qtype $id";
+      my $req
+	  = POST 'http://trace.ncbi.nlm.nih.gov/Traces/trace.cgi?cmd=raw',
+	  [query=>$query];
+      my $res = LWP::UserAgent->new->request ($req);
+      if (!$res->is_success)
+      {
+	if ($maxfailures-- > 0)
+	{
+	  sleep 1;
+	  redo;
+	}
+	die "Too many failed requests, last one was ".$res->status_line;
+      }
+      my $stuff = $res->content;
+      if ($qtype eq "info")
+      {
+	$stuff =~ s/^\:\t/\: /gs;
+	$stuff =~ s/\n/;/g;
+      }
+      elsif ($qtype eq "fasta")
+      {
+	$stuff =~ s/\n//gs;
+      }
+      elsif ($qtype eq "quality")
+      {
+	$stuff =~ s/\n/ /gs;
+      }
+      $_ =~ s/$/ <$qtype>$stuff<\/$qtype>/;
+    }
+  }
+  print;
+}
