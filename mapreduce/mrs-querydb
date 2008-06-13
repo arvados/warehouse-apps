@@ -6,12 +6,16 @@ use LWP::UserAgent;
 use HTTP::Request::Common 'POST';
 
 my $maxfailures = 5;		# sleep and retry <= this many times
+my $lookupcount = 0;
 
 my ($nmin, $nmax) = split (/-/, $ENV{KNOB_N});
 $nmax ||= $nmin;
 
 my ($mmin, $mmax) = split (/-/, $ENV{KNOB_M});
 $mmax ||= $mmin;
+
+my $cache_flag = $nmin < $nmax || $mmin < $mmax;
+my %cache;
 
 while (<>)
 {
@@ -25,7 +29,11 @@ while (<>)
       $id = $4;
     }
   }
-  if (defined ($id))
+  if (defined $id && $cache_flag && exists $cache{$id})
+  {
+    s/$/$cache{$id}/e;
+  }
+  elsif (defined ($id))
   {
     for my $qtype (qw (info fasta quality))
     {
@@ -43,6 +51,7 @@ while (<>)
 	}
 	die "Too many failed requests, last one was ".$res->status_line;
       }
+      ++$lookupcount;
       my $stuff = $res->content;
       if ($qtype eq "info")
       {
@@ -57,8 +66,11 @@ while (<>)
       {
 	$stuff =~ s/\n/ /gs;
       }
-      $_ =~ s/$/ <$qtype>$stuff<\/$qtype>/;
+      s/$/ <$qtype>$stuff<\/$qtype>/;
+      $cache{$id} .= " <$qtype>$stuff<\/$qtype>" if $cache_flag;
     }
   }
   print;
 }
+
+print STDERR "$0: $lookupcount successful ncbi lookups\n";
