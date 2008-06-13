@@ -8,9 +8,9 @@ my ($mmin, $mmax) = split (/-/, $ENV{KNOB_M});
 $mmax ||= $mmin;
 
 #don't change anything if T is not defined --AWZ
-my $t; 
-if (ENV{KNOB_T}) {
-  $t = "-t ".$ENV{KNOB_T}; 
+my @megatri_options; 
+if ($ENV{KNOB_T}) {
+  push @megatri_options, "-t", $ENV{KNOB_T};
 }
 
 open MEGABLAST, "<&STDIN";
@@ -27,7 +27,7 @@ for my $m ($mmin..$mmax)
     if (!$child)
     {
       close "pipe$npipes";
-      open (MEGATRI, "-|", "$ENV{MR_REVISION_INSTALLDIR}/src/apps/awz/megatri.pl", "-n", $n, "-m", $m, $t)
+      open (MEGATRI, "-|", "$ENV{MR_REVISION_INSTALLDIR}/src/apps/awz/megatri.pl", "-n", $n, "-m", $m, @megatri_options)
 	  or die "open pipe megatri: $!";
       close STDIN;
 
