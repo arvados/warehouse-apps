@@ -59,7 +59,7 @@ foreach my $species (sort keys %traces)
 {
     my $megablast;
     my $megatri_count;
-    my $symlink;
+    my $megatri_count_m1n5;
     if (exists $override{"$species/megablast"})
     {
 	$megablast = { id => "none",
@@ -98,83 +98,66 @@ foreach my $species (sort keys %traces)
 							 ),
 				 } ) unless $megatri_count;
     }
-    if ($megatri_count && $megatri_count->{outputkey})
+    if ($megablast && $megablast->{outputkey})
     {
-	my $mtrsum = $0;
-	$mtrsum =~ s/[^\/]*$/mtr-sum.pl/;
-	my $hash = $megatri_count->{outputkey};
-	my $sumfile = "$outputdir/mtr-sum-$hash.txt";
-	if (!-s $sumfile)
+	if (exists $override{"$species/megatri-count-m1n5"})
 	{
-	    my $opts = "";
-	    $opts .= " EXAMPLES=".$override{"report/EXAMPLES"}
-		if exists $override{"report/EXAMPLES"};
-	    system "$mtrsum $opts $hash $outputdir/mtr-examples-$species > $sumfile";
-	    if ($?)
-	    {
-		unlink ("$outputdir/mtr-sum-$hash.txt");
-		die "\"$mtrsum $opts $hash ...\" failed: exit $?";
-	    }
+	    $megatri_count_m1n5 = { id => "none",
+				    outputkey => "$species/megatri-count",
+				};
 	}
-	$symlink = "$outputdir/mtr-symlink-$species.txt";
-	if (-e $symlink && !-l $symlink)
-	{
-	    die "$symlink is not a symlink";
-	}
-	unlink ($symlink) if -l $symlink;
-	symlink ("mtr-sum-$hash.txt", $symlink)
-	    or die "$symlink: $!";
-
-	my $mtrnormalize = $0;
-	$mtrnormalize =~ s/[^\/]*$/mtr-normalize.pl/;
-	for my $m (0, 1)
-	{
-	    if (-e "$outputdir/mtr-normalized-$species-m$m.png" &&
-		-M "$outputdir/mtr-normalized-$species-m$m.png" < -M "$outputdir/mtr-sum-$hash.txt")
-	    {
-		next;
-	    }
-
-	    system "$mtrnormalize $m < $symlink > $outputdir/mtr-normalized-$species-m$m.txt";
-	    if ($?)
-	    {
-		die "$mtrnormalize pipe exit $?";
-	    }
-
-	    my $mtrgraph = $0;
-	    $mtrgraph =~ s/[^\/]*$/mtr-graph.r/;
-
-	    my $Species = $species;
-	    $Species =~ s/_/ /;
-	    $Species =~ s/\b([a-z])/uc $1/eg;
-
-	    system "R --slave --vanilla --args imagefile='$outputdir/mtr-normalized-$species-m$m.png' infile='$outputdir/mtr-normalized-$species-m$m.txt' organism='$Species' m='$m' < $mtrgraph >/dev/null";
-	    if ($?)
-	    {
-		die "R exit $?";
-	    }
-	}
-
-	$html .= "<tr>\n";
-	for my $m (0, 1)
-	{
-	    my @summary = `cut -f1,2,15- < $outputdir/mtr-normalized-$species-m$m.txt`;
-	    $html .= "<td><img src=\"mtr-normalized-$species-m$m.png\"><br /><pre><small>";
-	    map {
-		chomp;
-		$_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
-		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>};
-		$html .= $_;
-	    } @summary;
-	    $html .= "</small></pre></td>";
-	}
-	$html .= "</tr>\n";
+	$megatri_count_m1n5 = findjob ( { mrfunction => "awz-stream",
+					  revision => [ 2080, ],
+					  inputkey => $megablast->{outputkey},
+					  knobs => makeknobs ("megatri-count",
+							      "EXAMPLES=all",
+							      "FUNCTION=mrs-megatri-count",
+							      "M=1",
+							      "N=5",
+							      "OUTPUTNAME=megatri-count.txt",
+							      ),
+				      } ) unless $megatri_count_m1n5;
     }
-    my $species_jobs = sprintf (" %-25s %-38s %-38s %-38s %s\n",
+    foreach my $megatri_job ($megatri_count, $megatri_count_m1n5)
+    {
+	if ($megatri_job && $megatri_job->{outputkey})
+	{
+	    my $hash = $megatri_job->{outputkey};
+	    my $symlink = do_mtrsum ($hash, $species);
+	    next if !defined $symlink;
+
+	    $html .= "<tr>\n";
+	    for my $m (0, 1)
+	    {
+		next unless $megatri_job->{knobs} =~ /M=[-\d]*$m/; # only if M=$m is actually done in this job
+
+		my $normalized = do_mtrnormalize ($symlink, $species, $m);
+
+		if (!-e "$outputdir/mtr-normalized-$species-m$m.png" ||
+		    -M "$outputdir/mtr-normalized-$species-m$m.png" >= -M "$outputdir/mtr-sum-$hash.txt")
+		{
+		    do_mtrgraph ($normalized, $species, $m);
+		}
+
+		my @summary = `cut -f1,2,15- < $normalized`;
+		$html .= "<td><img src=\"mtr-normalized-$species-m$m.png\"><br /><pre><small>";
+		map {
+		    chomp;
+		    $_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
+		    s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>};
+		    $html .= $_;
+		} @summary;
+		$html .= "</small></pre></td>";
+	    }
+	    $html .= "</tr>\n";
+	}
+    }
+    my $species_jobs = sprintf (" %-25s %-38s %-38s %-38s %s\n %-25s %-38s %-38s %-38s\n",
 				$species,
 				$traces{$species},
 				id_and_output($megablast),
 				id_and_output($megatri_count),
+				"", "", "", id_and_output ($megatri_count_m1n5),
 				);
     $all_species_jobs .= $species_jobs;
     print $species_jobs;
@@ -256,4 +239,74 @@ sub makeknobs
     }
     $knobs =~ s/\\n$//s;
     return $knobs;
+}
+
+sub do_mtrsum
+{
+    my $hash = shift;
+    my $species = shift;
+
+    my $mtrsum = $0;
+    $mtrsum =~ s/[^\/]*$/mtr-sum.pl/;
+    my $sumfile = "$outputdir/mtr-sum-$hash.txt";
+    if (!-s $sumfile)
+    {
+	return undef if $override{"mtrsum"} eq "skip";
+	my $opts = "";
+	$opts .= " EXAMPLES=".$override{"report/EXAMPLES"}
+	    if exists $override{"report/EXAMPLES"};
+	system "$mtrsum $opts $hash $outputdir/mtr-examples-$species > $sumfile";
+	if ($?)
+	{
+	    unlink ("$outputdir/mtr-sum-$hash.txt");
+	    die "\"$mtrsum $opts $hash ...\" failed: exit $?";
+	}
+    }
+    my $symlink = "$outputdir/mtr-symlink-$species.txt";
+    if (-e $symlink && !-l $symlink)
+    {
+	die "$symlink is not a symlink";
+    }
+    unlink ($symlink) if -l $symlink;
+    symlink ("mtr-sum-$hash.txt", $symlink)
+	or die "$symlink: $!";
+    return $symlink;
+}
+
+sub do_mtrnormalize
+{
+    my $symlink = shift;
+    my $species = shift;
+    my $m = shift;
+
+    my $mtrnormalize = $0;
+    $mtrnormalize =~ s/[^\/]*$/mtr-normalize.pl/;
+    system "$mtrnormalize $m < $symlink > $outputdir/mtr-normalized-$species-m$m.txt";
+    if ($?)
+    {
+	die "$mtrnormalize pipe exit $?";
+    }
+}
+
+sub do_mtrgraph
+{
+    my $normalized = shift;
+    my $species = shift;
+    my $m = shift;
+
+    my $mtrgraph = $0;
+    $mtrgraph =~ s/[^\/]*$/mtr-graph.r/;
+
+    my $Species = $species;
+    $Species =~ s/_/ /;
+    $Species =~ s/\b([a-z])/uc $1/eg;
+
+    my $imagefile = "mtr-normalized-$species-m$m.png";
+    system "R --slave --vanilla --args imagefile='$outputdir/$imagefile' infile='$outputdir/mtr-normalized-$species-m$m.txt' organism='$Species' m='$m' < $mtrgraph >/dev/null";
+    if ($?)
+    {
+	die "R exit $?";
+    }
+
+    return $imagefile;
 }
