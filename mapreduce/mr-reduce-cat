@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:cat all streams together as one long stream
+###MR_INPUT:manifest
+###MR_KNOBS:OUTPUTNAME=mr-reduce-cat.txt
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+die "OUTPUTNAME knob required" if !$ENV{KNOB_OUTPUTNAME};
+
+Safepipe::readfrom ("main::STDIN",
+		    "mrs-fetch -h '$ENV{MR_INPUT0}' '*'",
+		    "mrs-store . '$ENV{KNOB_OUTPUTNAME}'",
+		    "mrs-output",
+		    ) or die "pipe failed: $!";
+close STDIN or die "close failed: $!";
+exit 0;
