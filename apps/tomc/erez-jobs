@@ -34,8 +34,8 @@ for (@jobs)
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
-my $header = sprintf (" %-25s %-38s %-38s %-38s\n",
-		      qw(species traces megablast megatri-count));
+my $header = sprintf (" %-25s %-38s %-38s %-38s %-38s %-38s\n",
+		      qw(species traces megablast megatri-count/megatri-count-m1n5 querydb reduce-cat));
 print $header;
 
 my $html = "";
@@ -60,6 +60,8 @@ foreach my $species (sort keys %traces)
     my $megablast;
     my $megatri_count;
     my $megatri_count_m1n5;
+    my $querydb;
+    my $reduce_cat;
     if (exists $override{"$species/megablast"})
     {
 	$megablast = { id => "none",
@@ -83,7 +85,7 @@ foreach my $species (sort keys %traces)
 	if (exists $override{"$species/megatri-count"})
 	{
 	    $megatri_count = { id => "none",
-			       outputkey => "$species/megatri-count",
+			       outputkey => $override{"$species/megatri-count"},
 			       };
 	}
 	$megatri_count = findjob ( { mrfunction => "awz-stream",
@@ -103,7 +105,7 @@ foreach my $species (sort keys %traces)
 	if (exists $override{"$species/megatri-count-m1n5"})
 	{
 	    $megatri_count_m1n5 = { id => "none",
-				    outputkey => "$species/megatri-count",
+				    outputkey => $override{"$species/megatri-count-m1n5"},
 				};
 	}
 	$megatri_count_m1n5 = findjob ( { mrfunction => "awz-stream",
@@ -117,6 +119,41 @@ foreach my $species (sort keys %traces)
 							      "OUTPUTNAME=megatri-count.txt",
 							      ),
 				      } ) unless $megatri_count_m1n5;
+    }
+    if ($megatri_count_m1n5 && $megatri_count_m1n5->{outputkey})
+    {
+	if (exists $override{"$species/querydb"})
+	{
+	    $querydb = { id => "none",
+			 outputkey => $override{"$species/querydb"},
+		     };
+	}
+	$querydb = findjob ( { mrfunction => "awz-stream",
+			       revision => [ 2079, ],
+			       inputkey => $megatri_count_m1n5->{outputkey},
+			       knobs => makeknobs ("querydb",
+						   "FUNCTION=mrs-querydb",
+						   "M=1",
+						   "N=5",
+						   "OUTPUTNAME=megatri-count.txt",
+						   ),
+			   } ) unless $querydb;
+    }
+    if ($querydb && $querydb->{outputkey})
+    {
+	if (exists $override{"$species/reduce-cat"})
+	{
+	    $reduce_cat = { id => "none",
+			    outputkey => $override{"$species/reduce-cat"},
+			};
+	}
+	$reduce_cat = findjob ( { mrfunction => "reduce-cat",
+				  revision => [ 2084, ],
+				  inputkey => $querydb->{outputkey},
+				  knobs => makeknobs ("reduce-cat",
+						      "OUTPUTNAME=megatri-count.txt",
+						      ),
+			      } ) unless $reduce_cat;
     }
     foreach my $megatri_job ($megatri_count, $megatri_count_m1n5)
     {
@@ -152,12 +189,12 @@ foreach my $species (sort keys %traces)
 	    $html .= "</tr>\n";
 	}
     }
-    my $species_jobs = sprintf (" %-25s %-38s %-38s %-38s %s\n %-25s %-38s %-38s %-38s\n",
+    my $species_jobs = sprintf (" %-25s %-38s %-38s %-38s\n %-25s %-38s %-38s %-38s %-38s %-38s\n",
 				$species,
 				$traces{$species},
 				id_and_output($megablast),
 				id_and_output($megatri_count),
-				"", "", "", id_and_output ($megatri_count_m1n5),
+				"", "", "", id_and_output ($megatri_count_m1n5), id_and_output ($querydb), id_and_output ($reduce_cat),
 				);
     $all_species_jobs .= $species_jobs;
     print $species_jobs;
@@ -209,6 +246,7 @@ sub suggest_new_job
 {
     my $want = shift;
     my $revision = $want->{revision}->[1] || $revision_default;
+    $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
     my $knobs = $want->{knobs};
     $knobs =~ s/=(.*?)(\\n|$)/='$1' /g;
     print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' $knobs\n";
