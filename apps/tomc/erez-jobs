@@ -109,10 +109,10 @@ foreach my $species (sort keys %traces)
 				};
 	}
 	$megatri_count_m1n5 = findjob ( { mrfunction => "awz-stream",
-					  revision => [ 2080, ],
+					  revision => [ 2056, ],
 					  inputkey => $megablast->{outputkey},
 					  knobs => makeknobs ("megatri-count",
-							      "EXAMPLES=all",
+							      "EXAMPLES=1000000",
 							      "FUNCTION=mrs-megatri-count",
 							      "M=1",
 							      "N=5",
