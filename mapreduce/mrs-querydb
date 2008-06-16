@@ -20,7 +20,7 @@ my %cache;
 while (<>)
 {
   my $id;
-  if (/^(\#example: m=(\d+) n=(\d+) .. )?gnl\|ti\|(\d+) /)
+  if (/^(\#example: m=(\d+) n=(\d+) .. )?gnl\|ti\|(\d+)/)
   {
     if (!defined ($1) ||
 	( $2 >= $mmin && $2 <= $mmax &&
