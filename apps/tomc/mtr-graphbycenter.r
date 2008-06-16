@@ -26,6 +26,6 @@ barplot(
         beside=TRUE,
         col=1:ncol(T)
 );
-legend((nrow(T)*ncol(T))+nrow(T)+1,max(T),dimnames(T)[2][[1]], cex=1, fill=1:ncol(T),title='Whatever Title');
+legend((nrow(T)*ncol(T))+nrow(T)+1,max(T),dimnames(T)[2][[1]], cex=1, fill=1:ncol(T),title=legendtitle);
 
 dev.off();
