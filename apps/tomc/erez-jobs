@@ -182,8 +182,8 @@ foreach my $species (sort keys %traces)
 		    do_mtrgraph ($normalized, $species, $m, $suffix);
 		}
 
-		my @summary = `cut -f1,2,15- < $normalized`;
-		$html .= "<td><img src=\"mtr-normalized-$species-m$m$suffix.png\"><br /><pre><small>";
+		my @summary = `cut -f1,2,15- < $outputdir/$normalized`;
+		$html .= "<td valign=\"top\"><img src=\"mtr-normalized-$species-m$m$suffix.png\"><br /><pre><small>";
 		map {
 		    chomp;
 		    $_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
@@ -365,11 +365,15 @@ sub do_mtrnormalize
 
     my $mtrnormalize = $0;
     $mtrnormalize =~ s/[^\/]*$/mtr-normalize.pl/;
-    system "$mtrnormalize $m < $symlink > $outputdir/mtr-normalized-$species-m$m$suffix.txt";
+
+    my $normalized = "mtr-normalized-$species-m$m$suffix.txt";
+
+    system "$mtrnormalize $m < $symlink > $outputdir/$normalized";
     if ($?)
     {
 	die "$mtrnormalize pipe exit $?";
     }
+    return $normalized;
 }
 
 sub do_mtrgraph
@@ -387,7 +391,7 @@ sub do_mtrgraph
     $Species =~ s/\b([a-z])/uc $1/eg;
 
     my $imagefile = "mtr-normalized-$species-m$m$suffix.png";
-    system "R --slave --vanilla --args imagefile='$outputdir/$imagefile' infile='$outputdir/mtr-normalized-$species-m$m$suffix.txt' organism='$Species' m='$m' < $mtrgraph >/dev/null";
+    system "R --slave --vanilla --args imagefile='$outputdir/$imagefile' infile='$outputdir/$normalized' organism='$Species' m='$m' < $mtrgraph >/dev/null";
     if ($?)
     {
 	die "R exit $?";
