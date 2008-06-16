@@ -162,12 +162,17 @@ foreach my $species (sort keys %traces)
 	{
 	    my $hash = $megatri_job->{outputkey};
 	    my $symlink = do_mtrsum ($hash, $species);
-	    next if !defined $symlink;
 	    my $suffix = $megatri_job eq $megatri_count ? "" : "-m1n5";
 
 	    for my $m (0, 1)
 	    {
 		next unless $megatri_job->{knobs} =~ /M=[-\d]*$m/; # only if M=$m is actually done in this job
+
+		if (!defined $symlink)
+		{
+		    $html .= "<td></td>\n";
+		    next;
+		}
 
 		my $normalized = do_mtrnormalize ($symlink, $species, $m, $suffix);
 
@@ -185,7 +190,7 @@ foreach my $species (sort keys %traces)
 		    s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>};
 		    $html .= $_;
 		} @summary;
-		$html .= "</small></pre></td>";
+		$html .= "</small></pre></td>\n";
 	    }
 	}
     }
@@ -218,7 +223,7 @@ foreach my $species (sort keys %traces)
 		my $Species = $species;
 		$Species =~ s/_/ /g;
 		$Species =~ s/\b([a-z])/uc $1/eg;
-		system "R --slave --vanilla --args imagefile='$outputdir/$hash-$filter.png' infile='$outputdir/$hash-$filter.txt' graph_w=8 graph_h=4 title='$Species' legendtitle='Center' < $mtrgraphbycenter_R >/dev/null";
+		system "R --slave --vanilla --args imagefile='$outputdir/$hash-$filter.png' infile='$outputdir/$hash-$filter.txt' graph_w=8 graph_h=4 title='$Species\n$filter' legendtitle='Center' < $mtrgraphbycenter_R >/dev/null";
 		if ($?)
 		{
 		    unlink "$outputdir/$hash-$filter.png";
