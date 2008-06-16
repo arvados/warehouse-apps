@@ -10,11 +10,16 @@ postscript(paste("|convert ps:- -rotate 90 ",imagefile,sep=""), width=as.numeric
 
 T <- read.delim(infile,header=TRUE,row.names=1);
 
-color <- gray(seq(1,0,by=(1/(ncol(T)-1))*-1));
+
+if(ncol(T) > 1) { color <- gray(seq(1,0,by=(1/(ncol(T)-1))*-1)); } else { color <- gray(seq(1,0)); }
 palette(color)
-par(xpd=TRUE, mar=par()$mar+c(0,0,0,2));
+par(xpd=TRUE, mar=par()$mar+c(2,0,0,0));
 
 top_axis <- ceiling(max(T)/10)*10;
+
+#add the legend outside the plot on the bottom, centered on the plot x axis
+x <- (nrow(T)*ncol(T) - (15*ncol(T))) + (nrow(T)*ncol(T)/2);
+y <- top_axis/2*-1; 
 
 # Plot the data
 barplot(
@@ -26,6 +31,7 @@ barplot(
         beside=TRUE,
         col=1:ncol(T)
 );
-legend((nrow(T)*ncol(T))+nrow(T)+1,max(T),dimnames(T)[2][[1]], cex=1, fill=1:ncol(T),title=legendtitle);
+
+legend(1,y,dimnames(T)[2][[1]], cex=1, fill=1:ncol(T),horiz=TRUE,bty="n",inset=0,trace=TRUE);
 
 dev.off();
