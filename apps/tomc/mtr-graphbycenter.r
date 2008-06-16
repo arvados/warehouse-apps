@@ -12,7 +12,7 @@ T <- read.delim(infile,header=TRUE,row.names=1);
 
 color <- gray(seq(1,0,by=(1/(ncol(T)-1))*-1));
 palette(color)
-par(xpd=TRUE, mar=par()$mar+c(3,0,0,12));
+par(xpd=TRUE, mar=par()$mar+c(0,0,0,2));
 
 top_axis <- ceiling(max(T)/10)*10;
 
