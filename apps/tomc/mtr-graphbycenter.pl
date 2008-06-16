@@ -21,6 +21,7 @@ if (@ARGV == 1 && $ARGV[0] =~ /^[\da-f]{32}$/)
 
 my $center_xy = {};
 my %center;
+my $N;
 while (<>)
 {
     if (/^\#example: m=1 n=5 (..).*;center_name:\s*(.*?);.*;source_type:\s*(.*?);.*/)
@@ -34,6 +35,7 @@ while (<>)
 	$center_xy->{$center} ||= {};
 	$center_xy->{$center}->{$xy} ++;
 	$center{$center} ++;
+	$N ++;
     }
 }
 
@@ -50,6 +52,7 @@ for my $xy (qw(ac ag at ca cg ct ga gc gt ta tc tg))
     for my $center (@center)
     {
 	my $count = 0 + $center_xy->{$center}->{$xy};
+	$count = sprintf ("%.2f", $count * 100 / $N) if $N > 0;
 	print "\t$count";
     }
     print "\n";
