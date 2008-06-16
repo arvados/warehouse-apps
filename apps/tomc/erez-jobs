@@ -34,8 +34,8 @@ for (@jobs)
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
-my $header = sprintf (" %-25s %-38s %-38s %-38s %-38s %-38s\n",
-		      qw(species traces megablast megatri-count/megatri-count-m1n5 querydb reduce-cat));
+my $header = sprintf (" %-32s %-38s %-38s %-38s %-38s\n",
+		      qw(species/traces megablast megatri-count/megatri-count-m1n5 querydb reduce-cat));
 print $header;
 
 my $html = "";
@@ -155,6 +155,7 @@ foreach my $species (sort keys %traces)
 						      ),
 			      } ) unless $reduce_cat;
     }
+    $html .= "<tr>\n";
     foreach my $megatri_job ($megatri_count, $megatri_count_m1n5)
     {
 	if ($megatri_job && $megatri_job->{outputkey})
@@ -162,22 +163,22 @@ foreach my $species (sort keys %traces)
 	    my $hash = $megatri_job->{outputkey};
 	    my $symlink = do_mtrsum ($hash, $species);
 	    next if !defined $symlink;
+	    my $suffix = $megatri_job eq $megatri_count ? "" : "-m1n5";
 
-	    $html .= "<tr>\n";
 	    for my $m (0, 1)
 	    {
 		next unless $megatri_job->{knobs} =~ /M=[-\d]*$m/; # only if M=$m is actually done in this job
 
-		my $normalized = do_mtrnormalize ($symlink, $species, $m);
+		my $normalized = do_mtrnormalize ($symlink, $species, $m, $suffix);
 
-		if (!-e "$outputdir/mtr-normalized-$species-m$m.png" ||
-		    -M "$outputdir/mtr-normalized-$species-m$m.png" >= -M "$outputdir/mtr-sum-$hash.txt")
+		if (!-e "$outputdir/mtr-normalized-$species-m$m$suffix.png" ||
+		    -M "$outputdir/mtr-normalized-$species-m$m$suffix.png" >= -M "$outputdir/mtr-sum-$hash.txt")
 		{
-		    do_mtrgraph ($normalized, $species, $m);
+		    do_mtrgraph ($normalized, $species, $m, $suffix);
 		}
 
 		my @summary = `cut -f1,2,15- < $normalized`;
-		$html .= "<td><img src=\"mtr-normalized-$species-m$m.png\"><br /><pre><small>";
+		$html .= "<td><img src=\"mtr-normalized-$species-m$m$suffix.png\"><br /><pre><small>";
 		map {
 		    chomp;
 		    $_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
@@ -186,15 +187,54 @@ foreach my $species (sort keys %traces)
 		} @summary;
 		$html .= "</small></pre></td>";
 	    }
-	    $html .= "</tr>\n";
 	}
     }
-    my $species_jobs = sprintf (" %-25s %-38s %-38s %-38s\n %-25s %-38s %-38s %-38s %-38s %-38s\n",
+
+    if ($reduce_cat && $reduce_cat->{outputkey})
+    {
+	my $hash = $reduce_cat->{outputkey};
+	for my $filter (qw(all genomic genomic-100bp-runs))
+	{
+	    if (!-e "$outputdir/$hash-$filter.txt")
+	    {
+		my $mtrgraphbycenter = $0;
+		$mtrgraphbycenter =~ s/[^\/]*$/mtr-graphbycenter.pl/;
+
+		system "$mtrgraphbycenter $filter $hash > $outputdir/$hash-$filter.txt";
+		if ($?)
+		{
+		    unlink "$outputdir/$hash-$filter.txt";
+		    die "whget $hash exit $?";
+		}
+		print STDERR "$species\t$outputdir/$hash-$filter.txt\n";
+	    }
+	    if (!-e "$outputdir/$hash-$filter.png")
+	    {
+		my $mtrgraphbycenter_R = $0;
+		$mtrgraphbycenter_R =~ s/[^\/]*$/mtr-graphbycenter.r/;
+
+		next if !-e $mtrgraphbycenter_R;
+
+		my $Species = $species;
+		$Species =~ s/_/ /g;
+		$Species =~ s/\b([a-z])/uc $1/eg;
+		system "R --slave --vanilla --args imagefile='$outputdir/$hash-$filter.png' infile='$outputdir/$hash-$filter.txt' graph_w=8 graph_h=4 title='$Species' legendtitle='Center' < $mtrgraphbycenter_R >/dev/null";
+		if ($?)
+		{
+		    unlink "$outputdir/$hash-$filter.png";
+		    die "R exit $?";
+		}
+	    }
+	    $html .= "<td valign=\"top\"><img src=\"$hash-$filter.png\"><br /><pre><small><a href=\"$hash-$filter.txt\">more...</a></small></pre></td>";
+	}
+    }
+
+    $html .= "</tr>\n";
+    my $species_jobs = sprintf (" %-32s %-38s %-38s\n %-32s %-38s %-38s %-38s %-38s\n",
 				$species,
-				$traces{$species},
 				id_and_output($megablast),
 				id_and_output($megatri_count),
-				"", "", "", id_and_output ($megatri_count_m1n5), id_and_output ($querydb), id_and_output ($reduce_cat),
+				$traces{$species}, "", id_and_output ($megatri_count_m1n5), id_and_output ($querydb), id_and_output ($reduce_cat),
 				);
     $all_species_jobs .= $species_jobs;
     print $species_jobs;
@@ -316,10 +356,11 @@ sub do_mtrnormalize
     my $symlink = shift;
     my $species = shift;
     my $m = shift;
+    my $suffix = shift;
 
     my $mtrnormalize = $0;
     $mtrnormalize =~ s/[^\/]*$/mtr-normalize.pl/;
-    system "$mtrnormalize $m < $symlink > $outputdir/mtr-normalized-$species-m$m.txt";
+    system "$mtrnormalize $m < $symlink > $outputdir/mtr-normalized-$species-m$m$suffix.txt";
     if ($?)
     {
 	die "$mtrnormalize pipe exit $?";
@@ -331,6 +372,7 @@ sub do_mtrgraph
     my $normalized = shift;
     my $species = shift;
     my $m = shift;
+    my $suffix = shift;
 
     my $mtrgraph = $0;
     $mtrgraph =~ s/[^\/]*$/mtr-graph.r/;
@@ -339,8 +381,8 @@ sub do_mtrgraph
     $Species =~ s/_/ /;
     $Species =~ s/\b([a-z])/uc $1/eg;
 
-    my $imagefile = "mtr-normalized-$species-m$m.png";
-    system "R --slave --vanilla --args imagefile='$outputdir/$imagefile' infile='$outputdir/mtr-normalized-$species-m$m.txt' organism='$Species' m='$m' < $mtrgraph >/dev/null";
+    my $imagefile = "mtr-normalized-$species-m$m$suffix.png";
+    system "R --slave --vanilla --args imagefile='$outputdir/$imagefile' infile='$outputdir/mtr-normalized-$species-m$m$suffix.txt' organism='$Species' m='$m' < $mtrgraph >/dev/null";
     if ($?)
     {
 	die "R exit $?";
