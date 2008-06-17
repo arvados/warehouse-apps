@@ -93,7 +93,8 @@ if ($ENV{MR_LEVEL} == 1)
   my $batchstart = 0;		# byte pos in input file of current batch start
   my $batchend = 0;		# byte pos in input file of current batch end
   my $bpcount = 0;		# ACGT base pairs counted in current trace
-  my $have_good_reads = 0;	# any traces seen yet in this batch?
+  my $have_good_reads = 0;	# any >= 400bp traces seen yet in this batch?
+  my $have_any_reads = 0;	# any traces at all seen yet in this batch?
   while (defined ($_ = <TRACES>))
   {
     if (/^>/)
@@ -107,9 +108,11 @@ if ($ENV{MR_LEVEL} == 1)
       elsif ($ntraces > 1 &&
 	     $ntraces % $ENV{KNOB_BATCHSIZE} == 1)
       {
-	print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n";
+	print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n"
+	    if $have_any_reads;
 	$batchstart = $batchend;
 	$have_good_reads = 0;
+	$have_any_reads = 0;
 	if (++$nbatches == $maxbatches)
 	{
 	  while (<TRACES>) { }
@@ -122,6 +125,7 @@ if ($ENV{MR_LEVEL} == 1)
     {
       $bpcount += tr/acgtACGT/acgtACGT/;
       $have_good_reads = 1 if $bpcount >= 400;
+      $have_any_reads = 1 if $bpcount > 0;
     }
     $batchend += length;
   }
