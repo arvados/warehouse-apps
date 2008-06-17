@@ -183,7 +183,7 @@ foreach my $species (sort keys %traces)
 		}
 
 		my @summary = `cut -f1,2,15- < $outputdir/$normalized`;
-		$html .= "<td valign=\"top\"><img src=\"mtr-normalized-$species-m$m$suffix.png\"><br /><pre><small>";
+		$html .= "<td valign=\"top\" align=\"center\"><img src=\"mtr-normalized-$species-m$m$suffix.png\"><br /><pre><small>";
 		map {
 		    chomp;
 		    $_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
@@ -229,7 +229,8 @@ foreach my $species (sort keys %traces)
 		    die "R exit $?";
 		}
 	    }
-	    $html .= "<td valign=\"top\"><img src=\"$hash-$filter.png\"><br /><pre><small><a href=\"$hash-$filter.txt\">more...</a></small></pre></td>";
+	    my $table = `cat $outputdir/$hash-$filter.txt`;
+	    $html .= "<td valign=\"top\" align=\"center\"><img src=\"$hash-$filter.png\"><br /><pre><small>$table</small></pre></td>";
 	}
     }
 
