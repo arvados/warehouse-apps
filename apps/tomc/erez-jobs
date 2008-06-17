@@ -202,6 +202,7 @@ foreach my $species (sort keys %traces)
 	    my $hash = $megatri_job->{outputkey};
 
 	    my $normalized;
+	    my $examples;
 	    if ($suffix)
 	    {
 		my $symlink = do_mtrsum ($hash, $species);
@@ -211,11 +212,12 @@ foreach my $species (sort keys %traces)
 	    else
 	    {
 		if (!$megatri_sum2 || !$megatri_sum2->{outputkey}) { $html .= "<td></td>"; next; }
-		$normalized = do_mtrnormalize2 ($megatri_sum2->{outputkey}, $species, $m, $suffix);
+		$hash = $megatri_sum2->{outputkey};
+		$normalized = do_mtrnormalize2 ($hash, $species, $m, $suffix);
 	    }
 
 	    if (!-e "$outputdir/mtr-normalized-$species-m$m$suffix.png" ||
-		-M "$outputdir/mtr-normalized-$species-m$m$suffix.png" >= -M "$outputdir/mtr-sum-$hash.txt")
+		-M "$outputdir/mtr-normalized-$species-m$m$suffix.png" >= -M "$outputdir/$normalized")
 	    {
 		do_mtrgraph ($normalized, $species, $m, $suffix);
 	    }
@@ -225,7 +227,8 @@ foreach my $species (sort keys %traces)
 	    map {
 		chomp;
 		$_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
-		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>};
+		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>} if $suffix;
+		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"http://templeton-controller.freelogy.org/whget.cgi/$hash/m${2}n${3}/examples.txt\">more</A>} if !$suffix;
 		$html .= $_;
 	    } @summary;
 	    $html .= "</small></pre></td>\n";
@@ -426,6 +429,7 @@ sub do_mtrnormalize2
     $mtrnormalize2 =~ s/[^\/]*$/mtr-normalize2.pl/;
 
     my $normalized = "mtr-normalized-$species-m$m$suffix.txt";
+    return $normalized if (-e "$outputdir/$normalized");
 
     system "$mtrnormalize2 $hash $m > $outputdir/$normalized";
     if ($?)
