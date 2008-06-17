@@ -59,6 +59,8 @@ foreach my $species (sort keys %traces)
 {
     my $megablast;
     my $megatri_count;
+    my $megatri_sum1;
+    my $megatri_sum2;
     my $megatri_count_m1n5;
     my $querydb;
     my $reduce_cat;
@@ -99,6 +101,38 @@ foreach my $species (sort keys %traces)
 							 "OUTPUTNAME=megatri-count.txt",
 							 ),
 				 } ) unless $megatri_count;
+    }
+    if ($megatri_count && $megatri_count->{outputkey})
+    {
+	if (exists $override{"$species/megatri-sum1"})
+	{
+	    $megatri_sum1 = { id => "none",
+			      outputkey => $override{"$species/megatri-sum1"},
+			  };
+	}
+	$megatri_sum1 = findjob ( { mrfunction => "megatri-sum",
+				     revision => [ 2100, ],
+				     inputkey => $megatri_count->{outputkey},
+				     knobs => makeknobs ("megatri-sum1",
+							 "EXAMPLES=1000",
+							 ),
+				 } ) unless $megatri_sum1;
+    }
+    if ($megatri_sum1 && $megatri_sum1->{outputkey})
+    {
+	if (exists $override{"$species/megatri-sum2"})
+	{
+	    $megatri_sum2 = { id => "none",
+			      outputkey => $override{"$species/megatri-sum2"},
+			  };
+	}
+	$megatri_sum2 = findjob ( { mrfunction => "megatri-sum",
+				     revision => [ 2100, ],
+				     inputkey => $megatri_sum1->{outputkey},
+				     knobs => makeknobs ("megatri-sum2",
+							 "EXAMPLES=1000",
+							 ),
+				 } ) unless $megatri_sum2;
     }
     if ($megablast && $megablast->{outputkey})
     {
@@ -235,10 +269,12 @@ foreach my $species (sort keys %traces)
     }
 
     $html .= "</tr>\n";
-    my $species_jobs = sprintf (" %-32s %-38s %-38s\n %-32s %-38s %-38s %-38s %-38s\n",
+    my $species_jobs = sprintf (" %-32s %-38s %-38s %-38s %-38s\n %-32s %-38s %-38s %-38s %-38s\n",
 				$species,
 				id_and_output($megablast),
 				id_and_output($megatri_count),
+				id_and_output($megatri_sum1),
+				id_and_output($megatri_sum2),
 				$traces{$species}, "", id_and_output ($megatri_count_m1n5), id_and_output ($querydb), id_and_output ($reduce_cat),
 				);
     $all_species_jobs .= $species_jobs;
