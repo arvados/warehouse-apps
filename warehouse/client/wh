@@ -43,11 +43,16 @@ sub help
 {
     print qq{
 wh help
-wh job freeze id=ID [stop=1]
+
 wh job list [id_min=ID] [id_max=ID]
+wh job show id=ID
+
 wh job new nodes=N photons=N mrfunction=NAME revision=N inputkey=KEY \
            BARKNOB=foo BAZKNOB=baz
 wh job new nodes=N photons=N thaw=ID
+wh job new nodes=N photons=N thawedfromkey=KEY
+
+wh job freeze id=ID [stop=1]
 
 };
 }
