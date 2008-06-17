@@ -211,7 +211,6 @@ foreach my $species (sort keys %traces)
 		    unlink "$outputdir/$hash-$filter.txt";
 		    die "whget $hash exit $?";
 		}
-		print STDERR "$species\t$outputdir/$hash-$filter.txt\n";
 	    }
 	    if (!-e "$outputdir/$hash-$filter.png")
 	    {

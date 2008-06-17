@@ -52,7 +52,6 @@ for my $xy (qw(ac ag at ca cg ct ga gc gt ta tc tg))
     for my $center (@center)
     {
 	my $count = 0 + $center_xy->{$center}->{$xy};
-	$count = sprintf ("%.2f", $count * 100 / $N) if $N > 0;
 	print "\t$count";
     }
     print "\n";

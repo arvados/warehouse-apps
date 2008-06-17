@@ -10,6 +10,7 @@ postscript(paste("|convert ps:- -rotate 90 ",imagefile,sep=""), width=as.numeric
 
 T <- read.delim(infile,header=TRUE,row.names=1);
 
+for (ctr in 1:ncol(T)) if(sum(T[,ctr])>0) T[,ctr] <- 100 * T[,ctr] / sum(T[,ctr])
 
 if(ncol(T) > 1) { color <- gray(seq(1,0,by=(1/(ncol(T)-1))*-1)); } else { color <- gray(seq(1,0)); }
 palette(color)
