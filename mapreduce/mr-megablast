@@ -130,7 +130,8 @@ if ($ENV{MR_LEVEL} == 1)
     $batchend += length;
   }
   print STDERR "+++mrjobstep 2 $batchstart $batchend $subdir $filename+++\n"
-      if $batchend > $batchstart;
+      if ($batchend > $batchstart
+	  && $have_any_reads);
   close TRACES or die "Pipe failed: $!, exited $?";
 
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
