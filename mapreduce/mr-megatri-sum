@@ -1,0 +1,245 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:add up megatri-count output from each job
+###MR_INPUT:manifest
+###MR_KNOBS:EXAMPLES=1000
+
+use strict;
+use Warehouse;
+use Warehouse::Stream;
+use Warehouse::Manifest;
+use IO::File;
+
+my %mnstream;
+
+my @xy = qw(ac ag at ca cg ct ga gc gt ta tc tg);
+
+my $whc = new Warehouse;
+my $in = new Warehouse::Manifest (whc => $whc,
+				  key => $ENV{MR_INPUT0});
+$in->rewind;
+
+$ENV{KNOB_EXAMPLES} ||= 1000;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # queue a level 1 jobstep for each file in the original megablast input
+
+  my %orig_file;
+  my %mn;
+  while (my $s = $in->subdir_next)
+  {
+    if ($s->name =~ /^(.*)-\d+-\d+$/) # merge megatri-count batches into 001.{m}{n} buckets
+    {
+      if (1 == ++$orig_file{$1})
+      {
+	print STDERR "+++mrjobstep 1 $1+++\n";
+      }
+    }
+    elsif ($s->name =~ /(.*)-m(\d+)n(\d+)$/) # merge {filenumber}.mn buckets into one bucket per mn
+    {
+      if (1 == ++$mn{"$2,$3"})
+      {
+	print STDERR "+++mrjobstep 2 $2 $3+++\n";
+      }
+    }
+  }
+
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
+if ($ENV{MR_LEVEL} == 1)
+{
+  # Output one stream per mn
+  # Pass through up to KNOB_EXAMPLES "#example" lines per xy per mn
+  # Add all "#summary" lines for each mn, and output to the appropriate mn stream
+  # Add all "xy=*" lines for each mn, and output to the appropriate mn stream
+
+  my %sum;			# sum{m,n,xy} = running total
+  my %examples;
+  my %summaryfields;
+
+  while (my $s = $in->subdir_next)
+  {
+    if ($s->name =~ /^(.*)-\d+-\d+$/)
+    {
+      if ($1 eq $ENV{MR_INPUT})
+      {
+	print STDERR ".";
+	$s->rewind;
+	while (my ($pos, $size, $filename) = $s->file_next)
+	{
+	  last if !defined $pos;
+	  $s->seek ($pos);    
+	  while (my $dataref = $s->read_until (undef, "\n"))
+	  {
+	    if ($$dataref =~ /^m=(\d+) n=(\d+) (..)=(\d+)$/)
+	    {
+	      $sum{"$1,$2,$3"} += $4;
+	    }
+	    elsif ($$dataref =~ /^\#summary: m=(\d+) n=(\d+) (.*)/)
+	    {
+	      my $m = $1;
+	      my $n = $2;
+	      my $s = $3;
+	      while ($s =~ /\b(\S+)=(\d+)\b/g)
+	      {
+		$sum{"$m,$n,$1"} += $2;
+		$summaryfields{$1} = 1;
+	      }
+	    }
+	    elsif ($$dataref =~ /\#example: m=(\d+) n=(\d+) (..) /)
+	    {
+	      if ($ENV{KNOB_EXAMPLES} eq "all" ||
+		  $ENV{KNOB_EXAMPLES} >= ++$examples{"$1,$2,$3"})
+	      {
+		my $outstream = get_outstream ($ENV{MR_INPUT}, $1, $2);
+		$outstream->write_data ($dataref);
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+  my %m;
+  my %n;
+  foreach (sort keys %sum)
+  {
+    my ($m, $n, $xy) = split (/,/);
+    $m{$m} = 1;
+    $n{$n} = 1;
+  }
+  my $all_mn_streams;
+  for my $m (sort { $a <=> $b } keys %m)
+  {
+    for my $n (sort { $a <=> $b } keys %n)
+    {
+      my $outstream = get_outstream ($ENV{MR_INPUT}, $m, $n);
+      my $summaryline = "m=$m n=$n";
+      foreach (@xy, keys %summaryfields)
+      {
+	$summaryline .= " ".$_."=".$sum{"$m,$n,$_"};
+      }
+      $summaryline .= "\n";
+      $outstream->write_data ($summaryline);
+      $outstream->write_finish;
+      $all_mn_streams .= $outstream->as_string;
+    }
+  }
+  my $hash = $whc->store_block (\$all_mn_streams)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout $hash+++\n";
+  exit 0;
+}
+
+if ($ENV{MR_LEVEL} == 2)
+{
+  # Output a summary stream and an examples stream
+  # Read streams from input with mn specified in MR_INPUT
+  # Add all summary lines
+  # Pass through up to KNOB_EXAMPLES "#example" lines, with proportions of xy equal to the proportions indicated by the summary lines
+
+  my ($m, $n) = split (/ /, $ENV{MR_INPUT});
+  my %sum;
+  my @sumkeys;
+  while (my $s = $in->subdir_next)
+  {
+    if ($s->name =~ /^(.*)-m(\d+)n(\d+)$/)
+    {
+      if ($2 == $m && $3 == $n)
+      {
+	$s->rewind;
+	while (my ($pos, $size, $filename) = $s->file_next)
+	{
+	  last if !defined $pos;
+	  $s->seek ($pos);    
+	  while (my $dataref = $s->read_until (undef, "\n"))
+	  {
+	    if ($$dataref =~ /^m=$m n=$n( .*)/)
+	    {
+	      my $subtotals = $1;
+	      while ($subtotals =~ / (\S+)=(\d*)/g)
+	      {
+		push (@sumkeys, $1) if !exists $sum{$1};
+		$sum{$1} += $2;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  $outstream->clear;
+  $outstream->name ("./m${m}n${n}");
+  $outstream->write_start ("stats.txt");
+  foreach (@sumkeys)
+  {
+    $outstream->write_data ($_."=".$sum{$_}."\n");
+  }
+  $outstream->write_finish;
+  $outstream->write_start ("examples.txt");
+
+  my %wantexamples;
+  if ($ENV{KNOB_EXAMPLES} ne "all")
+  {
+    my $wantexamples_total = $ENV{KNOB_EXAMPLES} + 0;
+    $wantexamples_total ||= 1;
+    my $sum_all_xy = 0;
+    map { $sum_all_xy += $sum{$_} } @xy;
+    map { $wantexamples{$_} = int (0.5 + $wantexamples_total * $sum{$_} / $sum_all_xy) } @xy;
+  }
+
+  $in->rewind;
+  while (my $s = $in->subdir_next)
+  {
+    if ($s->name =~ /^(.*)-m(\d+)n(\d+)$/)
+    {
+      if ($2 == $m && $3 == $n)
+      {
+	$s->rewind;
+	while (my ($pos, $size, $filename) = $s->file_next)
+	{
+	  last if !defined $pos;
+	  $s->seek ($pos);    
+	  while (my $dataref = $s->read_until (undef, "\n"))
+	  {
+	    if ($$dataref =~ /^\#example: m=$m n=$n (..) /)
+	    {
+	      if ($ENV{KNOB_EXAMPLES} eq "all" ||
+		  0 < $wantexamples{$1}--)
+	      {
+		$outstream->write_data ($dataref);
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+  $outstream->write_finish;
+  my $hash = $whc->store_block ($outstream->as_string)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout $hash+++\n";
+  exit 0;
+}
+
+
+sub get_outstream
+{
+  my ($basename, $m, $n) = @_;
+  if (!exists $mnstream{"$m,$n"})
+  {
+    my $outstream = new Warehouse::Stream (whc => $whc);
+    $outstream->clear;
+    $outstream->name ($basename."-m${m}n${n}");
+    $outstream->write_start ("megatri-count.txt");
+    $mnstream{"$m,$n"} = $outstream;
+  }
+  return $mnstream{"$m,$n"};
+}
+
