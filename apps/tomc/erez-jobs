@@ -34,8 +34,8 @@ for (@jobs)
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
-my $header = sprintf (" %-32s %-38s %-38s %-38s %-38s\n",
-		      qw(species/traces megablast megatri-count/megatri-count-m1n5 querydb reduce-cat));
+my $header = sprintf (" %-32s %-38s %-38s %-38s %-38s\n\n",
+		      qw(species/traces megablast megatri-count/megatri-count-m1n5 megatri-sum1/querydb megatri-sum2/reduce-cat));
 print $header;
 
 my $html = "";
@@ -190,42 +190,45 @@ foreach my $species (sort keys %traces)
 			      } ) unless $reduce_cat;
     }
     $html .= "<tr>\n";
-    foreach my $megatri_job ($megatri_count, $megatri_count_m1n5)
+    foreach my $suffix ("", "-m1n5")
     {
-	if ($megatri_job && $megatri_job->{outputkey})
+	my $megatri_job = $suffix ? $megatri_count_m1n5 : $megatri_count_m1n5;
+
+	for my $m (0, 1)
 	{
+	    do { next; } if $m == 0 && $suffix;
+	    do { $html .= "<td></td>\n"; next; } if !$megatri_job || !$megatri_job->{outputkey};
+
 	    my $hash = $megatri_job->{outputkey};
-	    my $symlink = do_mtrsum ($hash, $species);
-	    my $suffix = $megatri_job eq $megatri_count ? "" : "-m1n5";
 
-	    for my $m (0, 1)
+	    my $normalized;
+	    if ($suffix)
 	    {
-		next unless $megatri_job->{knobs} =~ /M=[-\d]*$m/; # only if M=$m is actually done in this job
-
-		if (!defined $symlink)
-		{
-		    $html .= "<td></td>\n";
-		    next;
-		}
-
-		my $normalized = do_mtrnormalize ($symlink, $species, $m, $suffix);
-
-		if (!-e "$outputdir/mtr-normalized-$species-m$m$suffix.png" ||
-		    -M "$outputdir/mtr-normalized-$species-m$m$suffix.png" >= -M "$outputdir/mtr-sum-$hash.txt")
-		{
-		    do_mtrgraph ($normalized, $species, $m, $suffix);
-		}
-
-		my @summary = `cut -f1,2,15- < $outputdir/$normalized`;
-		$html .= "<td valign=\"top\" align=\"center\"><img src=\"mtr-normalized-$species-m$m$suffix.png\"><br /><pre><small>";
-		map {
-		    chomp;
-		    $_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
-		    s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>};
-		    $html .= $_;
-		} @summary;
-		$html .= "</small></pre></td>\n";
+		my $symlink = do_mtrsum ($hash, $species);
+		if (!defined $symlink) { $html .= "<td></td>"; next; }
+		$normalized = do_mtrnormalize ($symlink, $species, $m, $suffix);
 	    }
+	    else
+	    {
+		if (!$megatri_sum2 || !$megatri_sum2->{outputkey}) { $html .= "<td></td>"; next; }
+		$normalized = do_mtrnormalize2 ($megatri_sum2->{outputkey}, $species, $m, $suffix);
+	    }
+
+	    if (!-e "$outputdir/mtr-normalized-$species-m$m$suffix.png" ||
+		-M "$outputdir/mtr-normalized-$species-m$m$suffix.png" >= -M "$outputdir/mtr-sum-$hash.txt")
+	    {
+		do_mtrgraph ($normalized, $species, $m, $suffix);
+	    }
+
+	    my @summary = `cut -f1,2,15- < $outputdir/$normalized`;
+	    $html .= "<td valign=\"top\"><img src=\"mtr-normalized-$species-m$m$suffix.png\"><br /><pre><small>\n";
+	    map {
+		chomp;
+		$_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
+		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>};
+		$html .= $_;
+	    } @summary;
+	    $html .= "</small></pre></td>\n";
 	}
     }
 
@@ -264,12 +267,12 @@ foreach my $species (sort keys %traces)
 		}
 	    }
 	    my $table = `cat $outputdir/$hash-$filter.txt`;
-	    $html .= "<td valign=\"top\" align=\"center\"><img src=\"$hash-$filter.png\"><br /><pre><small>$table</small></pre></td>";
+	    $html .= "<td valign=\"top\"><img src=\"$hash-$filter.png\"><br /><pre><small>$table</small></pre></td>";
 	}
     }
 
     $html .= "</tr>\n";
-    my $species_jobs = sprintf (" %-32s %-38s %-38s %-38s %-38s\n %-32s %-38s %-38s %-38s %-38s\n",
+    my $species_jobs = sprintf (" %-32s %-38s %-38s %-38s %-38s\n %-32s %-38s %-38s %-38s %-38s\n\n",
 				$species,
 				id_and_output($megablast),
 				id_and_output($megatri_count),
@@ -408,6 +411,26 @@ sub do_mtrnormalize
     if ($?)
     {
 	die "$mtrnormalize pipe exit $?";
+    }
+    return $normalized;
+}
+
+sub do_mtrnormalize2
+{
+    my $hash = shift;
+    my $species = shift;
+    my $m = shift;
+    my $suffix = shift;
+
+    my $mtrnormalize2 = $0;
+    $mtrnormalize2 =~ s/[^\/]*$/mtr-normalize2.pl/;
+
+    my $normalized = "mtr-normalized-$species-m$m$suffix.txt";
+
+    system "$mtrnormalize2 $hash $m > $outputdir/$normalized";
+    if ($?)
+    {
+	die "$mtrnormalize2 pipe exit $?";
     }
     return $normalized;
 }
