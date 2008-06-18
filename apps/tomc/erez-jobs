@@ -275,7 +275,7 @@ foreach my $species (sort keys %traces)
     }
 
     $html .= "</tr>\n";
-    my $species_jobs = sprintf (" %-32s %-38s %-38s %-38s %-38s\n %-32s %-38s %-38s %-38s %-38s\n\n",
+    my $species_jobs = sprintf (" %-32s %38s %38s %38s %38s\n %-32s %38s %38s %38s %38s\n\n",
 				$species,
 				id_and_output($megablast),
 				id_and_output($megatri_count),
