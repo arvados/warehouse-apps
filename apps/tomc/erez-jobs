@@ -288,6 +288,8 @@ foreach my $species (sort keys %traces)
 }
 $html .= "</table>\n";
 
+$all_species_jobs =~ s|\b([\da-f]{32})\b|<a href="http://templeton-controller.freelogy.org/whget.cgi/$1/">$1</a>|g;
+
 $html .= "<pre>";
 $html .= $all_species_jobs;
 $html .= "</pre>";
