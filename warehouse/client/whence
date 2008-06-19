@@ -2,8 +2,16 @@
 
 use strict;
 use Warehouse;
+use Warehouse::Stream;
 
-die "usage: whence {key|jobid}[\@warehouse]\n" unless @ARGV==1;
+my %opt;
+while ($ARGV[0] =~ /^--(\S+)(?:=(.*))?/)
+{
+    $opt{$1} = defined($2) ? $2 : 1;
+    shift @ARGV;
+}
+
+die "usage: whence [--skip-thawed] {key|jobid}[\@warehouse]\n" unless @ARGV==1;
 
 my ($key, $warehouse_name) = split (/\@/, shift @ARGV);
 $warehouse_name = $Warehouse::warehouses->[0]->{name}
@@ -29,19 +37,58 @@ while (defined $targetjob)
 {
     printf "#%d\@%s\n", $targetjob->{id}, $warehouse_name;
     printf "  mrfunction = %s r%d\n", $targetjob->{mrfunction}, $targetjob->{revision};
-    printf "  output = %s\n", $targetjob->{outputkey};
-    printf "  input = %s\n", $targetjob->{inputkey};
-    map { printf "  %s\n", $_ } split (/\\n/, $targetjob->{knobs});
-    print "\n";
 
-    $output_to_job{$targetjob->{outputkey}} = "loop";
-
-    last if $targetjob->{inputkey} !~ /\S/;
-
-    $targetjob = $output_to_job{$targetjob->{inputkey}};
-    if ($targetjob eq "loop")
+    if (($opt{"skip-thawed"} && $targetjob->{revision} != -1)
+	|| !$targetjob->{thawedfromkey})
     {
-	warn "Cycle detected; stopping.\n";
-	last;
+	printf "  output = %s\n", $targetjob->{outputkey};
+	printf "  input = %s\n", $targetjob->{inputkey};
+	map { printf "  %s\n", $_ } split (/\\n/, $targetjob->{knobs});
+	print "\n";
+
+	$output_to_job{$targetjob->{outputkey}} = "loop";
+
+	last if $targetjob->{inputkey} !~ /\S/;
+
+	$targetjob = $output_to_job{$targetjob->{inputkey}};
+	if ($targetjob eq "loop")
+	{
+	    warn "Cycle detected; stopping.\n";
+	    last;
+	}
+    }
+    else
+    {
+	printf "  output = %s\n", $targetjob->{outputkey};
+	printf ("  thawedfromkey = %s\n", $targetjob->{thawedfromkey});
+
+	my $thawhash = $targetjob->{thawedfromkey};
+	my $thawed = $whc->fetch_block ($thawhash)
+	    or die "fetch_block($thawhash) failed";
+	$thawed =~ /^job (\d+)\n/
+	    or die "could not parse thawedfromkey $thawhash";
+	($1 < $targetjob->{id})
+	    or die "thawedfromkey $thawhash claims to be from job $1, which was not even submitted yet when job ".$targetjob->{id}." was submitted.\n";
+	($targetjob = $id_to_job{$1})
+	    or die "couldn't find job $1 in job list";
+
+	my $verified = 0;
+	my $metastream = new Warehouse::Stream
+	    (whc => $whc,
+	     hash => [split (/,/, $targetjob->{metakey})]);
+	$metastream->rewind;
+	while (my $dataref = $metastream->read_until (undef, "\n"))
+	{
+	    if ($$dataref =~ /^\S+ \d+ \d+  frozento ?key is (\S+)/
+		&& $1 eq $thawhash)
+	    {
+		$verified = 1;
+		last;
+	    }
+	}
+	if (!$verified)
+	{
+	    warn "WARNING: thawedfromkey $thawhash does not appear in meta stream of job ".$targetjob->{id}." -- continuing anyway.\n";
+	}
     }
 }
