@@ -59,10 +59,40 @@ wh job freeze id=ID [stop=1]
 
 sub job_freeze
 {
+    my $ok = 1;
+    my $oldfrozento;
+    my $joblist;
+    if (($joblist = $whc->job_list (id_min => $opt{id},
+				    id_max => $opt{id}))
+	&& $#$joblist == 0)
+    {
+	$oldfrozento = $joblist->[0]->{frozentokey};
+    }
     if (!$whc->job_freeze (%opt))
     {
+	$ok = 0;
 	warn ($whc->errstr . "\n");
     }
+    for (qw(0 1 2 2 3 3 4 4 5 5 5 10 10 10 10))
+    {
+	print STDERR "." if $_ >= 2;
+	sleep $_;
+	if (($joblist = $whc->job_list (id_min => $opt{id},
+					id_max => $opt{id}))
+	    && $#$joblist == 0)
+	{
+	    my $newfrozento = $joblist->[0]->{frozentokey};
+	    if ($newfrozento ne $oldfrozento)
+	    {
+		print STDERR "\n" if $_ >= 2;
+		print "$newfrozento\n";
+		return;
+	    }
+	}
+	return if !$ok;
+    }
+    print STDERR " timed out waiting for new frozentokey to appear.\n";
+    print STDERR "Previous frozentokey is $oldfrozento\n" if $oldfrozento;
 }
 
 sub job_list
