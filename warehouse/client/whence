@@ -3,6 +3,7 @@
 use strict;
 use Warehouse;
 use Warehouse::Stream;
+use Date::Parse;
 
 my %opt;
 while ($ARGV[0] =~ /^--(\S+)(?:=(.*))?/)
@@ -11,7 +12,15 @@ while ($ARGV[0] =~ /^--(\S+)(?:=(.*))?/)
     shift @ARGV;
 }
 
-die "usage: whence [--skip-thawed] {key|jobid}[\@warehouse]\n" unless @ARGV==1;
+if (@ARGV != 1)
+{
+    die <<EOF;
+usage: whence [options] {key|jobid}[\@warehouse]
+options:
+       --skip-thawed     don\'t follow freeze/thaw cycles
+       --node-seconds    show total #nodes * seconds allocated to each job
+EOF
+}
 
 my ($key, $warehouse_name) = split (/\@/, shift @ARGV);
 $warehouse_name = $Warehouse::warehouses->[0]->{name}
@@ -36,6 +45,7 @@ die "Didn't find a job whose id or output is $key\n" if !defined $targetjob;
 while (defined $targetjob)
 {
     printf "#%d\@%s\n", $targetjob->{id}, $warehouse_name;
+    print_times ($targetjob);
     printf "  mrfunction = %s r%d\n", $targetjob->{mrfunction}, $targetjob->{revision};
 
     if (($opt{"skip-thawed"} && $targetjob->{revision} != -1)
@@ -90,5 +100,50 @@ while (defined $targetjob)
 	{
 	    warn "WARNING: thawedfromkey $thawhash does not appear in meta stream of job ".$targetjob->{id}." -- continuing anyway.\n";
 	}
+    }
+}
+
+sub print_times
+{
+    my $job = shift;
+    if ($opt{"node-seconds"} && $job->{finishtime} && $job->{starttime})
+    {
+	my $nnodes = $job->{nodes};
+	if ($nnodes =~ /\D/)
+	{
+	    my $nodelist = $nnodes;
+	    $nnodes = 0;
+	    while ($nodelist =~ /([^,\[]+)(?:\[(.*?)\])?/g)
+	    {
+		my $base = $1;
+		my $range = $2;
+		if (defined $range)
+		{
+		    for (split /,/, $range)
+		    {
+			if (/^(\d+)-(\d+)$/)
+			{
+			    for ($1..$2) { ++$nnodes; }
+			}
+			elsif (/^(\d+)/)
+			{
+			    ++$nnodes;
+			}
+			else
+			{
+			    die "couldn't grok nodelist \"$nodelist\"";
+			}
+		    }
+		}
+		else
+		{
+		    ++$nnodes;
+		}
+	    }
+	}
+	my $elapsed = str2time ($job->{finishtime}) - str2time ($job->{starttime});
+	my $nodeseconds = $elapsed * $nnodes;
+	printf ("  --node-seconds = %d = %d nodes * %d seconds\n",
+		$nodeseconds, $nnodes, $elapsed);
     }
 }
