@@ -36,8 +36,8 @@ while(<>) {
 	  $chrpos1= $chr_pos+$pos+1;
         }
         elsif ($strand =~ m/M/) {
-          $chrpos0= $chr_pos+$pos-2;
-	  $chrpos1= $chr_pos+$pos+1;
+          $chrpos0= $chr_pos-$pos-2;
+	  $chrpos1= $chr_pos-$pos+1;
         }
         else {
           die "parse error\n"
