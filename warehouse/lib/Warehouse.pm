@@ -497,9 +497,13 @@ sub fetch_block_ref
 {
     my $self = shift;
     my $hash = shift;
-    my $verifyflag = shift;
+    my $verifyflag = ref $_[0] ? undef : shift;
+    my $nowarnflag = ref $_[0] ? undef : shift;
+    my $options = @_ ? shift : {};
+
+    $verifyflag = $options->{verify} if !defined $verifyflag;
     $verifyflag = 1 if !defined $verifyflag;
-    my $nowarnflag = shift;
+    $nowarnflag = $options->{nowarn} if !defined $nowarnflag;
 
     if ($hash =~ /\+K/)
     {
@@ -582,7 +586,7 @@ sub fetch_block_ref
     }
 
     $self->{stats_read_attempts} ++;
-    my $dataref = $self->_get_file_data ($md5, $verifyflag);
+    my $dataref = $self->_get_file_data ($md5, $verifyflag, $options);
     if (!defined $dataref)
     {
 	warn "_get_file_data ($md5) failed: ".$self->{errstr}
@@ -592,7 +596,9 @@ sub fetch_block_ref
     $self->{stats_read_bytes} += length $$dataref;
     $self->{stats_read_blocks} ++;
 
-    if (length $$dataref <= $self->{memcached_size_threshold})
+    if (length $$dataref <= $self->{memcached_size_threshold}
+	&& !exists $options->{length}
+	&& !$options->{offset})
     {
 	$self->_store_block_memcached ($md5, $dataref);
     }
@@ -1209,7 +1215,13 @@ sub _get_file_data
 {
     my $self = shift;
     my $hash = shift;
-    my $verifyflag = shift;
+    my $verifyflag = ref $_[0] ? undef : shift;
+    my $options = shift || {};
+
+    $verifyflag = $options->{verify} if !defined $verifyflag;
+
+    die "can't get partial file data with verify=1"
+	if $verifyflag && ($options->{offset} || exists $options->{length});
 
     $self->{errstr} = "No paths found for $hash";
     foreach my $trycache (1, 0)
@@ -1236,7 +1248,16 @@ sub _get_file_data
 	}
 	foreach (@$pathref)
 	{
-	    my $r = $self->{ua}->get ($_);
+	    my @headers;
+	    if ($options->{offset} || $options->{length})
+	    {
+		my $from = $options->{offset} || 0;
+		my $to = ($options->{length}
+			  ? $options->{length} + $from - 1
+			  : '*');
+		push @headers, (Range => "bytes=$from-$to");
+	    }
+	    my $r = $self->{ua}->get ($_, @headers);
 	    if ($r->is_success)
 	    {
 		print STDERR "Read $hash from $_\n"

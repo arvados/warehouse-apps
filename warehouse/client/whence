@@ -74,7 +74,8 @@ while (defined $targetjob)
 	printf ("  thawedfromkey = %s\n", $targetjob->{thawedfromkey});
 
 	my $thawhash = $targetjob->{thawedfromkey};
-	my $thawed = $whc->fetch_block ($thawhash)
+	my $thawed = $whc->fetch_block ($thawhash,
+					{ verify => 0, length => 500 })
 	    or die "fetch_block($thawhash) failed";
 	$thawed =~ /^job (\d+)\n/
 	    or die "could not parse thawedfromkey $thawhash";
