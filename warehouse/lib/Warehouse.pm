@@ -7,6 +7,7 @@ use MogileFS::Client;
 use Cache::Memcached;
 use LWP::UserAgent;
 use HTTP::Request::Common;
+use Date::Parse;
 
 $memcached_max_data = 1000000;
 $no_warehouse_client_conf = 0;
@@ -978,6 +979,9 @@ sub job_list
 		    my ($k, $v) = split /=/, $_, 2;
 		    $h{$k} = $v;
 		}
+		$h{nnodes} = $self->_nodelist_to_nnodes ($h{nodes});
+		$h{starttime_s} = $self->_to_unixtime ($h{starttime});
+		$h{finishtime_s} = $self->_to_unixtime ($h{finishtime});
 		push @ret, \%h;
 	    }
 	}
@@ -989,6 +993,54 @@ sub job_list
 	return undef;
     }
     return undef;
+}
+
+sub _nodelist_to_nnodes
+{
+    my $self = shift;
+    my $nnodes = shift;
+    if ($nnodes =~ /\D/)
+    {
+	my $nodelist = $nnodes;
+	$nnodes = 0;
+	while ($nodelist =~ /([^,\[]+)(?:\[(.*?)\])?/g)
+	{
+	    my $base = $1;
+	    my $range = $2;
+	    if (defined $range)
+	    {
+		for (split /,/, $range)
+		{
+		    if (/^(\d+)-(\d+)$/)
+		    {
+			for ($1..$2) { ++$nnodes; }
+		    }
+		    elsif (/^(\d+)/)
+		    {
+			++$nnodes;
+		    }
+		    else
+		    {
+			# can't parse node list!
+			return 0;
+		    }
+		}
+	    }
+	    else
+	    {
+		++$nnodes;
+	    }
+	}
+    }
+    return $nnodes;
+}
+
+sub _to_unixtime
+{
+    my $self = shift;
+    my $datestring = shift;
+    return undef if !$datestring;
+    return str2time ($datestring);
 }
 
 
