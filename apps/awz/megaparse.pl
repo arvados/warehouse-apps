@@ -13,10 +13,29 @@ getopts ("n:m:", \%args);
 
 while(<>) {
   my $input_line = $_;
-  my ($first,$runs,$chr,$strand,$chr_pos,$tr_pos,$other) = split (/;/, $_,7); 
-  $first =~ m/ti\|(\d+)/;
-  my $ti = $1;
 
+  my $est=""; 
+  if ($input_line =~ m/est/i) {
+    $est="EST"; 
+  }
+
+  my ($first, $runs, $chr, $strand, $chr_pos, $tr_pos, $other) = 
+      split (/;/, $_,7);
+
+  my $source_type = "";
+  if ($other =~ m/;source_type:\s*(.*?);/) {
+    $source_type = $1; 
+  } 
+  my $center_name = "";
+  if ($other =~ m/;center_name:\s*(.*?);/) {
+    $center_name = $1; 
+  }
+  my $ti = ""; 
+  if ( $first =~ m/ti\|(\d+)/ ) {
+    $ti = $1;
+  }
+  
+  
   #strip off white space 
   $chr =~ s/ //; 
   $strand =~ s/ //; 
@@ -26,7 +45,8 @@ while(<>) {
   my @edits = split (/,/,$runs); 
   foreach my $edit (@edits) {
     if ($edit =~ m/(...}...) \d+ (\d+) \((.*)\)/ && $2 >= 100) {
-      my $type = $1; 
+      my $type = $1;
+      my $length = $2; 
       my @runpos = split (/ /, $3); 
       foreach my $pos (@runpos) {
         my $chrpos0;
@@ -42,7 +62,9 @@ while(<>) {
         else {
           die "parse error\n"
         }
-        print "$chr $chrpos0 $chrpos1 $type|$strand|$chr_pos|$pos|$tr_pos|ti|$ti\n";
+        print "$chr $chrpos0 $chrpos1 ".
+	    "$type|$strand|$length|$source_type|$est|$center_name|".
+	    "ti|$ti\n";
       }
     }
   }
