@@ -18,8 +18,11 @@ usage: whence [options] {key|jobid}[\@warehouse]
 options:
        --skip-thawed     don\'t follow freeze/thaw cycles
        --node-seconds    show total #nodes * seconds allocated to each job
-       --slot-seconds    show total slot seconds for all job steps
+       --slots           show number of slots (maximum concurrent job steps)
+       --slot-seconds    show number of slots * job duration
+       --failure-seconds show total slot seconds for failed job steps
        --success-seconds show total slot seconds for successful job steps
+       --idle-seconds    show total slot seconds not accounted for by job steps
 EOF
 }
 
@@ -108,12 +111,59 @@ while (defined $targetjob)
 sub print_times
 {
     my $job = shift;
-    if ($opt{"node-seconds"} && $job->{finishtime_s} && $job->{starttime_s})
+    my $nodeseconds;
+    if (($opt{"node-seconds"} || $opt{"slot-seconds"})
+	&& $job->{finishtime_s} && $job->{starttime_s})
     {
 	my $nnodes = $job->{nnodes};
 	my $elapsed = $job->{finishtime_s} - $job->{starttime_s};
-	my $nodeseconds = $elapsed * $nnodes;
+	$nodeseconds = $elapsed * $nnodes;
 	printf ("  --node-seconds = %d = %d nodes * %d seconds\n",
-		$nodeseconds, $nnodes, $elapsed);
+		$nodeseconds, $nnodes, $elapsed) if $opt{"node-seconds"};
     }
+    if (($opt{"failure-seconds"} || $opt{"success-seconds"} || $opt{"slots"} || $opt{"slot-seconds"})
+	&& $job->{metakey})
+    {
+	my $failure_seconds = 0;
+	my $success_seconds = 0;
+	my $allocation_slots = 0;
+	my $s = new Warehouse::Stream (whc => $whc,
+				       hash => [split (",", $job->{metakey})]);
+	$s->rewind();
+	while (my $dataref = $s->read_until (undef, "\n"))
+	{
+	    if ($$dataref =~ /^\S+ \d+ \d+ \d+ (success|failure) in (\d+) seconds\n/)
+	    {
+		$failure_seconds += $2 if $1 eq "failure";
+		$success_seconds += $2 if $1 eq "success";
+	    }
+	    elsif ($$dataref =~ /^\S+ \d+ \d+  node \S+ - (\d+) slots\n/)
+	    {
+		$allocation_slots += $1;
+	    }
+	}
+	my $slot_seconds = $allocation_slots * $nodeseconds;
+
+	printf ("  --slots = %d\n", $allocation_slots)
+	    if ($opt{"slots"});
+	printf ("  --slot-seconds = %d\n", $slot_seconds)
+	    if ($opt{"slots"} && defined $nodeseconds);
+	printf ("  --failure-seconds = %d%s\n", $failure_seconds, fmt_percent_of ($failure_seconds, $slot_seconds))
+	    if ($opt{"failure-seconds"});
+	printf ("  --success-seconds = %d%s\n", $success_seconds, fmt_percent_of ($success_seconds, $slot_seconds))
+	    if ($opt{"success-seconds"});
+	printf ("  --idle-seconds = %d%s\n", $slot_seconds - $failure_seconds - $success_seconds,
+		fmt_percent_of ($slot_seconds - $failure_seconds - $success_seconds, $slot_seconds))
+	    if ($opt{"idle-seconds"});
+    }
+}
+
+sub fmt_percent_of
+{
+    my ($a, $b) = @_;
+    return "" if !$b;
+    my $p = 100 * $a / $b;
+    if ($p < 1) { return sprintf (" (%.2f%%)", $p); }
+    if ($p < 10) { return sprintf (" (%.1f%%)", $p); }
+    return sprintf (" (%d%%)", $p);
 }
