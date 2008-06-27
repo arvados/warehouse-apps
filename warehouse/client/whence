@@ -80,7 +80,7 @@ while (defined $targetjob)
 	my ($firstblock) = $thawhash =~ /^([0-9a-f]{32})/;
 	my $thawed = $whc->fetch_block ($firstblock,
 					{ verify => 0, length => 500 })
-	    or die "fetch_block($thawhash) failed";
+	    or die "fetch_block($firstblock) failed";
 	$thawed =~ /^job (\d+)\n/
 	    or die "could not parse thawedfromkey $thawhash";
 	($1 < $targetjob->{id})
@@ -112,12 +112,13 @@ while (defined $targetjob)
 sub print_times
 {
     my $job = shift;
+    my $elapsed;
     my $nodeseconds;
     if (($opt{"node-seconds"} || $opt{"slot-seconds"})
 	&& $job->{finishtime_s} && $job->{starttime_s})
     {
 	my $nnodes = $job->{nnodes};
-	my $elapsed = $job->{finishtime_s} - $job->{starttime_s};
+	$elapsed = $job->{finishtime_s} - $job->{starttime_s};
 	$nodeseconds = $elapsed * $nnodes;
 	printf ("  --node-seconds = %d = %d nodes * %d seconds\n",
 		$nodeseconds, $nnodes, $elapsed) if $opt{"node-seconds"};
@@ -143,12 +144,12 @@ sub print_times
 		$allocation_slots += $1;
 	    }
 	}
-	my $slot_seconds = $allocation_slots * $nodeseconds;
+	my $slot_seconds = $allocation_slots * $elapsed;
 
 	printf ("  --slots = %d\n", $allocation_slots)
 	    if ($opt{"slots"});
 	printf ("  --slot-seconds = %d\n", $slot_seconds)
-	    if ($opt{"slots"} && defined $nodeseconds);
+	    if ($opt{"slots"} && defined $elapsed);
 	printf ("  --failure-seconds = %d%s\n", $failure_seconds, fmt_percent_of ($failure_seconds, $slot_seconds))
 	    if ($opt{"failure-seconds"});
 	printf ("  --success-seconds = %d%s\n", $success_seconds, fmt_percent_of ($success_seconds, $slot_seconds))
