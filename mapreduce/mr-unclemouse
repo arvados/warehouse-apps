@@ -1,0 +1,51 @@
+#!/usr/bin/perl
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Digest::SHA;
+use Digest::MD5;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+    for my $z (qw(0 1 2 3 4 5 6 7 8 9 a b c d e f))
+    {
+	for my $n (qw(0 1 2 3 4 5 6 7 8 9 a b c d e f))
+	{
+	    print STDERR "+++mrjobstep 1 $z$n+++\n";
+	}
+    }
+}
+
+else
+{
+    sleep $ENV{MR_ID} * 3 if $ENV{MR_ID} <= 4; # slow start
+    my $prefix = $ENV{MR_INPUT};
+    my @keys = `mogtool --domain=warehouse --trackers=uncle-controller.nrb.freelogy.org:6001 listkey $prefix`;
+    chop @keys;
+    pop @keys if $keys[-1] =~ /^\#/;
+    my $whc = new Warehouse (warehouse_name => 'uncle');
+    my $out = new Warehouse::Stream (whc => $whc);
+    $out->clear;
+    $out->name ("./$ENV{MR_INPUT}");
+    $out->write_start ("outputs.txt");
+    for (@keys)
+    {
+	my $dataref = $whc->fetch_block_ref ($_, { verify => 0, offset => 0, length => 2048 });
+	next if !$dataref;
+	if ($$dataref =~ /^(\.\/fasta\.mus_musculus\.\d\d\d\.gz-\d+-\d+)/s)
+	{
+	    $out->write_data ("$_ $1\n");
+	}
+	elsif ($$dataref =~ /^\.\/fasta\.mus_musculus/)
+	{
+	    print STDERR "$_ $$dataref\n";
+	    die;
+	}
+    }
+    $out->write_finish;
+print STDERR $out->as_string;
+    my $hash = $whc->store_block ($out->as_string);
+    print STDERR "+++mrout $hash+++\n";
+}
