@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:run MAQ against reference
+###MR_INPUT:manifest
+###MR_KNOBS:REFERENCE=f4c53b5ea8ed51077c46116b5c591fae
+###MR_KNOBS:REFERENCEFILE=homo_sapiens
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+
+
+my $traces_manifest_key = $ENV{MR_INPUT0};
+my $reference_manifest_key = $ENV{KNOB_REFERENCE};
+my $reference_manifest_file = $ENV{KNOB_REFERENCEFILE};
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # queue a level 1 jobstep for each file in the input manifest
+
+  my $ref = new Warehouse::Manifest (whc => $whc,
+				     key => $traces_manifest_key);
+  my $nfiles = 0;
+
+  while (my $s = $ref->subdir_next)
+  {
+    my $subdir = $s->name;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      next if !/(.*)_1.bfq/;
+      $filename = $1;
+      print STDERR "+++mrjobstep 1 $nfiles $subdir $filename+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($nfiles, $subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 3);
+
+  my $tmp = $ENV{MR_JOB_TMP};
+
+  my $reffile = "$tmp/$reference_manifest_file";
+  my $readfile1 = "$tmp/${filename}_1.bfq";
+  my $readfile2 = "$tmp/${filename}_2.bfq";
+  atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
+  atomic_whget("$traces_manifest_key/$subdir/${filename}_1.bfq", $readfile1);
+  atomic_whget("$traces_manifest_key/$subdir/${filename}_2.bfq", $readfile2);
+
+  Safepipe::readfrom
+      ("main::MAQ",
+       "maq map -n 2 -m 0.001 -a 250 - '$reffile' '$readfile1' '$readfile2'",
+       "mrs-store '$subdir' '$filename.map'",
+       "mrs-output",
+      )
+      or die "pipe failed: $!";
+  close MAQ or die "Pipe failed: $!";
+  exit 0;
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $target" if !-e $target;
+}
