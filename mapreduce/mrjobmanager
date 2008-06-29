@@ -17,6 +17,8 @@ use Warehouse::Stream;
 
 do '/etc/polony-tools/config.pl';
 
+my $have_slurm = exists $ENV{SLURM_JOBID} && exists $ENV{SLURM_NODELIST};
+
 
 
 $SIG{'USR1'} = sub
@@ -30,17 +32,6 @@ $SIG{'USR2'} = sub
 
 
 
-my ($job_id) = @ARGV;
-
-
-
-my $dbh = DBI->connect($main::mapreduce_dsn,
-		       $main::mrcontrol_mysql_username,
-		       $main::mrcontrol_mysql_password);
-die $DBI::errstr if !$dbh;
-
-
-
 my $whc = new Warehouse or die "failed to create Warehouse client";
 my $metastream = new Warehouse::Stream (whc => $whc);
 $metastream->clear;
@@ -49,9 +40,48 @@ $metastream->write_start ("log.txt");
 
 
 
-my $sth = $dbh->prepare ("select * from mrjob where id=?");
-$sth->execute ($job_id) or die $dbh->errstr;
-my $Job = $sth->fetchrow_hashref or die $sth->errstr;
+my $Job = {};
+my $job_id;
+my $dbh;
+my $sth;
+if ($have_slurm)
+{
+  ($job_id) = @ARGV;
+
+  $dbh = DBI->connect($main::mapreduce_dsn,
+		      $main::mrcontrol_mysql_username,
+		      $main::mrcontrol_mysql_password);
+  die $DBI::errstr if !$dbh;
+
+
+
+  $sth = $dbh->prepare ("select * from mrjob where id=?");
+  $sth->execute ($job_id) or die $dbh->errstr;
+  $Job = $sth->fetchrow_hashref or die $sth->errstr;
+}
+
+else
+{
+  my %knob;
+  foreach (@ARGV)
+  {
+    $Job->{$1} = $2 if /([a-z].*?)=(.*)/;
+    $knob{$1} = $2 if /([^a-z].*?)=(.*)/;
+  }
+  $Job->{knobs} = join ("\n", map { "$_=$knob{$_}" } sort keys %knob);
+
+  if (!$Job->{thawedfromkey})
+  {
+    map { die "No $_ specified" unless $Job->{$_} }
+    qw(mrfunction revision inputkey);
+  }
+
+  chomp ($Job->{id} = sprintf ("%d.%d\@%s", time, $$, `hostname`));
+  $job_id = $Job->{id};
+}
+
+
+
 $Job->{inputkey} = $Job->{input0} if !exists $Job->{inputkey};
 delete $Job->{input0};
 
@@ -68,7 +98,17 @@ Log (undef, "check slurm allocation");
 my @slot;
 my @node;
 # Should use $ENV{SLURM_TASKS_PER_NODE} instead of sinfo? (eg. "4(x3),2,4(x2)")
-foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
+my @sinfo;
+if (!$have_slurm)
+{
+  my $localcpus = 0 + `grep -cw ^processor /proc/cpuinfo` || 1;
+  push @sinfo, "$localcpus localhost";
+}
+if (exists $ENV{SLURM_NODELIST})
+{
+  push @sinfo, `sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`;
+}
+foreach (@sinfo)
 {
   my ($ncpus, $slurm_nodelist) = split;
   $ncpus = $max_ncpus if defined ($max_ncpus) && $ncpus > $max_ncpus && $max_ncpus > 0;
@@ -126,35 +166,38 @@ foreach (`sinfo -h --format='%c %N' --nodes='$ENV{SLURM_NODELIST}'`)
 
 
 
-# Claim this job, and make sure nobody else does
-
-$sth = $dbh->prepare ("insert into mrjobmanager
-                       (pid, revision, starttime)
-                       values (?, ?, now())");
-my $rev = q/$Revision$/;
-$rev =~ /\d+/;
-$sth->execute ($$, $&) or die $dbh->errstr;
-
-$sth = $dbh->prepare ("select last_insert_id()");
-$sth->execute or die $dbh->errstr;
-my ($jobmanager_id) = $sth->fetchrow_array;
-
-$sth = $dbh->prepare ("update mrjob set jobmanager_id=?, starttime=now()
-                       where id=? and jobmanager_id is null");
-$sth->execute ($jobmanager_id, $job_id) or croak ($dbh->errstr);
-
-$sth = $dbh->prepare ("select jobmanager_id from mrjob
-                       where id=?");
-$sth->execute ($job_id) or croak ($dbh->errstr);
-my ($check_jobmanager_id) = $sth->fetchrow_array;
-if ($check_jobmanager_id != $jobmanager_id)
+my $jobmanager_id;
+if ($have_slurm)
 {
-  # race condition - another job manager proc stole the job
-  Log (undef,
-       "job taken by jobmanager id $check_jobmanager_id");
-  exit (1);
-}
+  # Claim this job, and make sure nobody else does
 
+  $sth = $dbh->prepare ("insert into mrjobmanager
+			 (pid, revision, starttime)
+			 values (?, ?, now())");
+  my $rev = q/$Revision$/;
+  $rev =~ /\d+/;
+  $sth->execute ($$, $&) or die $dbh->errstr;
+
+  $sth = $dbh->prepare ("select last_insert_id()");
+  $sth->execute or die $dbh->errstr;
+  ($jobmanager_id) = $sth->fetchrow_array;
+
+  $sth = $dbh->prepare ("update mrjob set jobmanager_id=?, starttime=now()
+			 where id=? and jobmanager_id is null");
+  $sth->execute ($jobmanager_id, $job_id) or croak ($dbh->errstr);
+
+  $sth = $dbh->prepare ("select jobmanager_id from mrjob
+			 where id=?");
+  $sth->execute ($job_id) or croak ($dbh->errstr);
+  my ($check_jobmanager_id) = $sth->fetchrow_array;
+  if ($check_jobmanager_id != $jobmanager_id)
+  {
+    # race condition - another job manager proc stole the job
+    Log (undef,
+	 "job taken by jobmanager id $check_jobmanager_id");
+    exit (1);
+  }
+}
 
 
 Log (undef, "start");
@@ -194,17 +237,32 @@ else
 
 
 
-Log (undef, "Install revision ".$Job->{revision});
-my $nodelist = join(",", @node);
-$ENV{"MR_REVISION"} = $Job->{revision};
-$ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
-$ENV{"INSTALL_REPOS"} = $main::svn_repos;
-$ENV{"INSTALL_REVISION"} = $Job->{revision};
-my $execstr = "srun --nodelist='$nodelist' -D /tmp --job-name='$job_id' sh -c 'mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )'";
-print STDERR "$execstr\n" if $ENV{MR_DEBUG};
-my $ret = system ($execstr);
-Log (undef, "Install exited $ret");
-system ("srun --nodelist='$nodelist' -D /tmp rm -rf /tmp/mrcompute/work");
+my $skip_install = (!$have_slurm && $Job->{revision} =~ /\D/);
+if ($skip_install)
+{
+  $ENV{"MR_REVISION_SRCDIR"} = $Job->{revision};
+}
+else
+{
+  $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
+
+  Log (undef, "Install revision ".$Job->{revision});
+  my $nodelist = join(",", @node);
+  $ENV{"MR_REVISION"} = $Job->{revision};
+  $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
+  $ENV{"INSTALL_REPOS"} = $main::svn_repos;
+  $ENV{"INSTALL_REVISION"} = $Job->{revision};
+  my @srunargs = ("--nodelist='$nodelist'",
+		  "-D", "/tmp", "--job-name='$job_id'");
+  my @execargs = ("sh", "-c",
+		  "mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
+  my $ret = srun (\@srunargs, \@execargs, { fork => 1 });
+  Log (undef, "Install exited $ret");
+
+  srun (["--nodelist=$nodelist", "-D", "/tmp"],
+      [qw(rm -rf /tmp/mrcompute/work)],
+      { fork => 1 });
+}
 
 
 
@@ -279,7 +337,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     open(STDOUT,">&writer");
     open(STDERR,">&writer");
 
-    $dbh->{InactiveDestroy} = 1;
+    $dbh->{InactiveDestroy} = 1 if $dbh;
     undef $dbh;
     undef $sth;
 
@@ -298,26 +356,33 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
 
-    my @execargs = ("srun",
-		    "--nodelist=".$childnode,
-		    qw(-n1 -c1 -N1 -D /tmp),
-		    "--job-name=$job_id.$id.$$",
-		    "sh",
-		    "-c",
-		    "mkdir -p /tmp/mrcompute/revision "
-		    ."&& cd /tmp/mrcompute "
-		    ."&& "
-		    ."( "
-		    ."  [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] "
-		    ."|| "
-		    ."  ( svn export --quiet '$main::svn_repos/installrevision' "
-		    ."    && ./installrevision "
-		    ."  ) "
-		    .") "
-		    ."&& exec $ENV{MR_REVISION_INSTALLDIR}/src/mapreduce/mrtaskmanager");
-    print STDERR (join (" ", map { / / ? "'$_'" : $_ } @execargs), "\n")
-	if $ENV{MR_DEBUG};
-    exec(@execargs);
+    my @srunargs = (
+      "srun",
+      "--nodelist=".$childnode,
+      qw(-n1 -c1 -N1 -D /tmp),
+      "--job-name=$job_id.$id.$$",
+	);
+    my @execargs = (
+      "sh",
+      "-c",
+      "mkdir -p /tmp/mrcompute/revision "
+      ."&& cd /tmp/mrcompute "
+		    );
+    if (!$skip_install)
+    {
+      $execargs[-1] .=
+	  "&& "
+	  ."( "
+	  ."  [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] "
+	  ."|| "
+	  ."  ( svn export --quiet '$main::svn_repos/installrevision' "
+	  ."    && ./installrevision "
+	  ."  ) "
+	  .") ";
+    }
+    $execargs[-1] .=
+	"&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
+    srun(\@srunargs, \@execargs);
     exit(1);
   }
   close("writer");
@@ -580,6 +645,12 @@ sub check_squeue
   }
   $squeue_checked = time;
 
+  if (!$have_slurm)
+  {
+    # here is an opportunity to check for mysterious problems with local procs
+    return;
+  }
+
   # get a list of steps still running
   my @squeue = `squeue -s -h -o '%i %j' && echo ok`;
   chop @squeue;
@@ -728,7 +799,7 @@ sub fhbits
 sub Log				# ($jobstep_id, $logmessage)
 {
   my $fh = select STDERR; $|=1; select $fh;
-  my $message = sprintf ("%d %d %s %s\n", $job_id, $$, @_);
+  my $message = sprintf ("%s %d %s %s\n", $job_id, $$, @_);
   print STDERR $message;
 
   return if !$metastream;
@@ -741,6 +812,7 @@ sub Log				# ($jobstep_id, $logmessage)
 
 sub reconnect_database
 {
+  return if !$have_slurm;
   return if ($dbh && $dbh->do ("select now()"));
   for (1..16)
   {
@@ -757,6 +829,7 @@ sub reconnect_database
 
 sub dbh_do
 {
+  return 1 if !$have_slurm;
   my $ret = $dbh->do (@_);
   return $ret unless (!$ret && $DBI::errstr =~ /server has gone away/);
   reconnect_database();
@@ -778,6 +851,8 @@ sub croak
 
 sub cleanup
 {
+  return if !$have_slurm;
+
   reconnect_database();
   my $sth;
   $sth = $dbh->prepare ("update mrjobmanager set finishtime=now() where id=?");
@@ -799,7 +874,8 @@ sub save_meta
   Log (undef, "meta key is $key");
   $dbh->do ("update mrjob set metakey=? where id=?",
 	    undef,
-	    $key, $job_id);
+	    $key, $job_id)
+      if $have_slurm;
 }
 
 
@@ -932,4 +1008,23 @@ sub freezeunquote
   my $s = shift;
   $s =~ s{\\(.)}{$1 eq "n" ? "\n" : $1}ge;
   return $s;
+}
+
+
+sub srun
+{
+  my $srunargs = shift;
+  my $execargs = shift;
+  my $opts = shift || {};
+  my $args = $have_slurm ? [@$srunargs, @$execargs] : $execargs;
+  print STDERR (join (" ",
+		      map { / / ? "'$_'" : $_ }
+		      (@$args)),
+		"\n")
+      if $ENV{MR_DEBUG};
+
+  return system (@$args) if $opts->{fork};
+
+  exec @$args;
+  die "exec failed: $!";
 }
