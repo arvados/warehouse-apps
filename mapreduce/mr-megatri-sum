@@ -58,6 +58,7 @@ if ($ENV{MR_LEVEL} == 1)
   # Add all "xy=*" lines for each mn, and output to the appropriate mn stream
 
   my %sum;			# sum{m,n,xy} = running total
+  my %freq;                     # freq{m,n,axb}ayb} = running total of motifs 
   my %examples;
   my %summaryfields;
 
@@ -99,6 +100,10 @@ if ($ENV{MR_LEVEL} == 1)
 		$outstream->write_data ($dataref);
 	      }
 	    }
+	    elsif ($$dataref =~ /\#freq m=(\d+) n=(\d+) (\S+)=(\d+)/)
+	    {
+	      $freq{"$1,$2,$3"}+=$4; 
+	    }
 	  }
 	}
       }
@@ -111,6 +116,9 @@ if ($ENV{MR_LEVEL} == 1)
     my ($m, $n, $xy) = split (/,/);
     $m{$m} = 1;
     $n{$n} = 1;
+  }
+  while ( my ($key, $value) = each(%freq) ) { 
+    $freqline .= "#freq $key=$value\n"; 
   }
   my $all_mn_streams;
   for my $m (sort { $a <=> $b } keys %m)
