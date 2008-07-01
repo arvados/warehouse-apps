@@ -7,12 +7,6 @@ $nmax ||= $nmin;
 my ($mmin, $mmax) = split (/-/, $ENV{KNOB_M});
 $mmax ||= $mmin;
 
-#don't change anything if T is not defined --AWZ
-my @megatri_options; 
-if ($ENV{KNOB_T}) {
-  push @megatri_options, "-t", $ENV{KNOB_T};
-}
-
 open MEGABLAST, "<&STDIN";
 close STDIN;
 
@@ -32,6 +26,7 @@ for my $m ($mmin..$mmax)
       close STDIN;
 
       my %mismatch;
+      my %freq; 
       my $examples = "";
       while (<MEGATRI>)
       {
@@ -39,6 +34,7 @@ for my $m ($mmin..$mmax)
 	while (/(\S+)\}(\S+)/g)
 	{
 	  my ($xxx, $yyy) = ($1, $2);
+	  $freq{$xxx."}".$yyy}++; 
 	  my $x = substr $xxx, $m, 1;
 	  my $y = substr $yyy, $m, 1;
 	  if (++$mismatch{$x.$y} <= $ENV{KNOB_EXAMPLES}
@@ -58,6 +54,9 @@ for my $m ($mmin..$mmax)
       close MEGATRI or die "close MEGATRI: exit=$? error=$!";
       print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
       print "#summary: m=$m n=$n $summary\n";
+      while ( my ($key, $value) = each(%hash) ) { 
+	print "#freq $key $value \n"; 
+      }
       print $examples;
       exit 0;
     }
