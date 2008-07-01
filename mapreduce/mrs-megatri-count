@@ -54,7 +54,7 @@ for my $m ($mmin..$mmax)
       close MEGATRI or die "close MEGATRI: exit=$? error=$!";
       print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
       print "#summary: m=$m n=$n $summary\n";
-      while ( my ($key, $value) = each(%hash) ) { 
+      while ( my ($key, $value) = each(%freq) ) { 
 	print "#freq $key $value \n"; 
       }
       print $examples;
