@@ -55,7 +55,7 @@ for my $m ($mmin..$mmax)
       print map { "m=$m n=$n $_=$mismatch{$_}\n" } keys %mismatch;
       print "#summary: m=$m n=$n $summary\n";
       while ( my ($key, $value) = each(%freq) ) { 
-	print "#freq $key $value \n"; 
+	print "#freq m=$m n=$n $key=$value \n"; 
       }
       print $examples;
       exit 0;
