@@ -3,8 +3,8 @@
 
 ###MR_DESCRIPTION:run MAQ against reference
 ###MR_INPUT:manifest
-###MR_KNOBS:REFERENCE=f4c53b5ea8ed51077c46116b5c591fae
-###MR_KNOBS:REFERENCEFILE=homo_sapiens
+###MR_KNOBS:REFERENCE=99259f4330907e84fe7253bd4e52dd3e
+###MR_KNOBS:REFERENCEFILE=homo_sapiens.bfa
 
 use strict; 
 use Warehouse;
@@ -14,9 +14,18 @@ use Safepipe;
 use Fcntl ':flock';
 
 
-my $traces_manifest_key = $ENV{MR_INPUT0};
-my $reference_manifest_key = $ENV{KNOB_REFERENCE};
-my $reference_manifest_file = $ENV{KNOB_REFERENCEFILE};
+my $tmp = $ENV{MR_JOB_TMP};
+
+my $src = "$ENV{MR_REVISION_INSTALLDIR}";
+my $traces_manifest_key = $ENV{MR_INPUT0} or die;
+my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
+my $reference_manifest_file = $ENV{KNOB_REFERENCEFILE} or die;
+my $batchsize = 1_200_000;
+my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
+$max_mismatches = 2 unless defined $max_mismatches;
+my $reffile = "$tmp/$reference_manifest_file";
+
+my $MAQ_PATH="/home/miron/maq-0.6.6/maq";
 
 my $whc = new Warehouse;
 
@@ -26,17 +35,16 @@ if ($ENV{MR_LEVEL} == 0)
 
   my $ref = new Warehouse::Manifest (whc => $whc,
 				     key => $traces_manifest_key);
-  my $nfiles = 0;
-
   while (my $s = $ref->subdir_next)
   {
     my $subdir = $s->name;
+    $subdir =~ s/^\.\///;
     while (my ($pos, $size, $filename) = $s->file_next)
     {
       last if !defined $pos;
-      next if !/(.*)_1.bfq/;
+      next if $filename !~ /(.*)_1.bfq$/;
       $filename = $1;
-      print STDERR "+++mrjobstep 1 $nfiles $subdir $filename+++\n";
+      print STDERR "+++mrjobstep 1 $subdir $filename+++\n";
     }
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
@@ -44,21 +52,41 @@ if ($ENV{MR_LEVEL} == 0)
 }
 if ($ENV{MR_LEVEL} == 1)
 {
-  my ($nfiles, $subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 3);
+  my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
 
-  my $tmp = $ENV{MR_JOB_TMP};
+  atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
 
-  my $reffile = "$tmp/$reference_manifest_file";
   my $readfile1 = "$tmp/${filename}_1.bfq";
   my $readfile2 = "$tmp/${filename}_2.bfq";
-  atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
   atomic_whget("$traces_manifest_key/$subdir/${filename}_1.bfq", $readfile1);
   atomic_whget("$traces_manifest_key/$subdir/${filename}_2.bfq", $readfile2);
 
+  my $count = `$src/apps/miron/bfq-split.pl $batchsize $readfile1 '$tmp/${filename}c%d_1.bfq'` 
+	or die;
+  unlink $readfile1;
+  my $count1 = `$src/apps/miron/bfq-split.pl $batchsize $readfile2 '$tmp/${filename}c%d_2.bfq'` 
+	or die;
+  unlink $readfile2;
+  die if $count != $count1;
+
+  for (my $ind = 0 ; $ind < $count ; $ind++) {
+	print STDERR "+++mrjobstep 2 $subdir $tmp/${filename}c$ind+++\n";
+  }
+  
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 2)
+{
+  my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
+
+  my $readfile1 = "${filename}_1.bfq";
+  my $readfile2 = "${filename}_2.bfq";
+
   Safepipe::readfrom
       ("main::MAQ",
-       "maq map -n 2 -m 0.001 -a 250 - '$reffile' '$readfile1' '$readfile2'",
-       "mrs-store '$subdir' '$filename.map'",
+       "$MAQ_PATH map -n $max_mismatches -m 0.001 -a 250 - '$reffile' '$readfile1' '$readfile2'",
+       "mrs-store './$subdir' '$filename.map'",
        "mrs-output",
       )
       or die "pipe failed: $!";
@@ -83,5 +111,5 @@ sub atomic_whget {
     system "rm -rf '$target.tmp'";
   }
   close L;
-  die "Failed to whget $target" if !-e $target;
+  die "Failed to whget $source -> $target" if !-e $target;
 }
