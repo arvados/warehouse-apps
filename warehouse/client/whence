@@ -88,23 +88,26 @@ while (defined $targetjob)
 	($targetjob = $id_to_job{$1})
 	    or die "couldn't find job $1 in job list";
 
-	my $verified = 0;
-	my $metastream = new Warehouse::Stream
-	    (whc => $whc,
-	     hash => [split (/,/, $targetjob->{metakey})]);
-	$metastream->rewind;
-	while (my $dataref = $metastream->read_until (undef, "\n"))
+	if ($opt{"verify-freeze"})
 	{
-	    if ($$dataref =~ /^\S+ \d+ \d+  frozento ?key is (\S+)/
-		&& $1 eq $thawhash)
+	    my $verified = 0;
+	    my $metastream = new Warehouse::Stream
+		(whc => $whc,
+		 hash => [split (/,/, $targetjob->{metakey})]);
+	    $metastream->rewind;
+	    while (my $dataref = $metastream->read_until (undef, "\n"))
 	    {
-		$verified = 1;
-		last;
+		if ($$dataref =~ /^\S+ \d+ \d+  frozento ?key is (\S+)/
+		    && $1 eq $thawhash)
+		{
+		    $verified = 1;
+		    last;
+		}
 	    }
-	}
-	if (!$verified)
-	{
-	    warn "WARNING: thawedfromkey $thawhash does not appear in meta stream of job ".$targetjob->{id}." -- continuing anyway.\n";
+	    if (!$verified)
+	    {
+		warn "WARNING: thawedfromkey $thawhash does not appear in meta stream of job ".$targetjob->{id}." -- continuing anyway.\n";
+	    }
 	}
     }
 }
