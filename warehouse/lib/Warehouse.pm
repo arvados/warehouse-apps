@@ -8,6 +8,7 @@ use Cache::Memcached;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Date::Parse;
+use Warehouse::Stream;
 
 $memcached_max_data = 1000000;
 $no_warehouse_client_conf = 0;
@@ -263,6 +264,11 @@ sub _init
 	     .$self->{mogilefs_size_threshold}
 	     ." will not be stored in either memcached or mogilefs!\n");
     }
+
+    $self->{job_hashref} = {};
+    $self->{meta_stats_hashref} = {};
+    $self->{job_list_arrayref} = undef;
+    $self->{job_list_fetched} = undef;
 
     return $self;
 }
@@ -958,6 +964,14 @@ sub list_manifests
 sub job_list
 {
     my $self = shift;
+    if (@_) { return $self->_job_list (@_); }
+    $self->_refresh_job_list;
+    return $self->{job_list_arrayref};
+}
+
+sub _job_list
+{
+    my $self = shift;
     my %what = @_;
     my $url = "http://".$self->{warehouse_servers}."/job/list";
     $url .= "?".$what{id_min}."-".$what{id_max}
@@ -1304,6 +1318,146 @@ sub block_might_exist
     my @paths = $self->{mogc}->get_paths ($hash, { noverify => 1 });
     return @paths ? 1 : 0;
 }
+
+
+
+=head2 job_stats
+
+ my $job = $whc->job_stats (1234);
+ if ($job && $job->{meta_stats})
+ {
+     printf ("%d of %d slot seconds spent in successful jobsteps",
+	     $job->{meta_stats}->{slot_seconds},
+             $job->{meta_stats}->{success_seconds});
+ }
+
+=cut
+
+sub _refresh_job_list
+{
+    my $self = shift;
+    if (!ref $self->{job_list_arrayref} || $self->{job_list_fetched} < time - 30)
+    {
+	$self->{job_list_arrayref} = $self->_job_list;
+	$self->{job_by_output} = {};
+	foreach (@{$self->{job_list_arrayref}})
+	{
+	    $self->{job_hashref}->{$_->{id}} = $_;
+	    $_->{cache_fetched} = time;
+	    $self->{job_by_output}->{$_->{outputkey}} = $_ if $_->{outputkey};
+	}
+	$self->{job_list_fetched} = time;
+    }
+}
+
+sub job_stats
+{
+    my $self = shift;
+    my $jobid = shift;
+    $self->_refresh_job_list;
+    if (!ref $self->{job_hashref}->{$jobid})
+    {
+	return undef;
+    }
+    my $job = $self->{job_hashref}->{$jobid};
+    if (!length $job->{success} && $job->{cache_fetched} < time - 30)
+    {
+	my $newjoblist = $self->job_list (id_min => $jobid, id_max => $jobid);
+	if (@$newjoblist == 1)
+	{
+	    $job = $newjoblist->[0];
+	    $self->{job_hashref}->{$jobid} = $job;
+	}
+    }
+    if ($job->{finishtime_s} && $job->{starttime_s})
+    {
+	$job->{elapsed} = $job->{finishtime_s} - $job->{starttime_s};
+	$job->{nodeseconds} = $job->{elapsed} * $job->{nnodes};
+    }
+    if ($job->{metakey} && !$self->{meta_stats_hashref}->{$job->{metakey}})
+    {
+	my $stats = { frozentokeys => {} };
+	$self->{meta_stats_hashref}->{$job->{metakey}} = $stats;
+
+	my $failure_seconds = 0;
+	my $success_seconds = 0;
+	my $slots = 0;
+	my $s = new Warehouse::Stream (whc => $self,
+				       hash => [split (",", $job->{metakey})]);
+	$s->rewind();
+	while (my $dataref = $s->read_until (undef, "\n"))
+	{
+	    if ($$dataref =~ /^\S+ \d+ \d+ \d+ (success|failure) in (\d+) seconds\n/)
+	    {
+		$failure_seconds += $2 if $1 eq "failure";
+		$success_seconds += $2 if $1 eq "success";
+	    }
+	    elsif ($$dataref =~ /^\S+ \d+ \d+  node \S+ - (\d+) slots\n/)
+	    {
+		$slots += $1;
+	    }
+	    elsif ($$dataref =~ /^\S+ \d+ \d+  frozento ?key is (\S+)/)
+	    {
+		$stats->{frozentokeys}->{$1} = 1;
+	    }
+	}
+	my $slot_seconds = $slots * $job->{elapsed};
+
+	$stats->{slots} = $slots;
+	$stats->{slot_seconds} = $slot_seconds;
+	$stats->{failure_seconds} = $failure_seconds;
+	$stats->{success_seconds} = $success_seconds;
+	$stats->{idle_seconds} = $slot_seconds - $failure_seconds - $success_seconds;
+	foreach (qw(failure success idle))
+	{
+	    if ($stats->{slot_seconds} > 0)
+	    {
+		$stats->{$_."_percent"} =
+		    sprintf ("%.2f",
+			     100 * $stats->{$_."_seconds"} / $stats->{slot_seconds});
+	    }
+	}
+    }
+    $job->{meta_stats} = $self->{meta_stats_hashref}->{$job->{metakey}} || {};
+    return $job;
+}
+
+sub job_follow_input
+{
+    my $self = shift;
+    my $targetjob = shift;
+
+    $self->_refresh_job_list;
+    return $self->{job_by_output}->{$targetjob->{inputkey}};
+}
+
+sub job_follow_thawedfrom
+{
+    my $self = shift;
+    my $targetjob = shift;
+
+    my $thawhash = $targetjob->{thawedfromkey};
+    return undef if !$thawhash;
+
+    my ($firstblock) = $thawhash =~ /^([0-9a-f]{32})/;
+    my $thawed = $self->fetch_block ($firstblock,
+				     { verify => 0, length => 500 })
+	or die "fetch_block($firstblock) failed";
+    $thawed =~ /^job (\d+)\n/
+	or die "could not parse thawedfromkey $thawhash";
+    ($1 < $targetjob->{id})
+	or die "thawedfromkey $thawhash claims to be from job $1, which was not even submitted yet when job ".$targetjob->{id}." was submitted.\n";
+    ($targetjob = $self->job_stats ($1))
+	or die "couldn't find job $1 in job list";
+
+    if (!$targetjob->{meta_stats}->{frozentokeys}->{$thawhash})
+    {
+	warn "WARNING: thawedfromkey $thawhash does not appear in meta stream of job "
+	    .$targetjob->{id}." -- continuing anyway.\n";
+    }
+    return $targetjob;
+}
+
 
 
 

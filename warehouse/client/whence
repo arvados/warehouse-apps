@@ -32,24 +32,28 @@ $warehouse_name = $Warehouse::warehouses->[0]->{name}
 
 my $whc = new Warehouse (warehouse_name => $warehouse_name);
 my $joblist = $whc->job_list;
-my %output_to_job;
+my %did;
 my %id_to_job;
 for my $job (@$joblist)
 {
-    $output_to_job{$job->{outputkey}} = $job
-	unless $job->{outputkey} eq $job->{inputkey};
     $id_to_job{$job->{id}} = $job;
 }
 
 my $targetjob;
-$targetjob = $id_to_job{$key} if exists $id_to_job{$key};
-$targetjob = $output_to_job{$key} if exists $output_to_job{$key};
+$targetjob = $whc->job_follow_input ( { inputkey => $key } ) || $id_to_job{$key};
 die "Didn't find a job whose id or output is $key\n" if !defined $targetjob;
 
 while (defined $targetjob)
 {
+    if ($did{$targetjob->{outputkey}})
+    {
+	warn "Cycle detected; stopping.\n";
+	last;
+    }
+    $did{$targetjob->{outputkey}} = 1;
+
     printf "#%d\@%s\n", $targetjob->{id}, $warehouse_name;
-    print_times ($targetjob);
+    print_times ($whc->job_stats ($targetjob->{id}));
     printf "  mrfunction = %s r%d\n", $targetjob->{mrfunction}, $targetjob->{revision};
 
     if (($opt{"skip-thawed"} && $targetjob->{revision} != -1)
@@ -60,115 +64,37 @@ while (defined $targetjob)
 	map { printf "  %s\n", $_ } split (/\\n/, $targetjob->{knobs});
 	print "\n";
 
-	$output_to_job{$targetjob->{outputkey}} = "loop";
-
 	last if $targetjob->{inputkey} !~ /\S/;
-
-	$targetjob = $output_to_job{$targetjob->{inputkey}};
-	if ($targetjob eq "loop")
-	{
-	    warn "Cycle detected; stopping.\n";
-	    last;
-	}
+	$targetjob = $whc->job_follow_input ($targetjob);
     }
     else
     {
 	printf "  output = %s\n", $targetjob->{outputkey};
 	printf ("  thawedfromkey = %s\n", $targetjob->{thawedfromkey});
-
-	my $thawhash = $targetjob->{thawedfromkey};
-	my ($firstblock) = $thawhash =~ /^([0-9a-f]{32})/;
-	my $thawed = $whc->fetch_block ($firstblock,
-					{ verify => 0, length => 500 })
-	    or die "fetch_block($firstblock) failed";
-	$thawed =~ /^job (\d+)\n/
-	    or die "could not parse thawedfromkey $thawhash";
-	($1 < $targetjob->{id})
-	    or die "thawedfromkey $thawhash claims to be from job $1, which was not even submitted yet when job ".$targetjob->{id}." was submitted.\n";
-	($targetjob = $id_to_job{$1})
-	    or die "couldn't find job $1 in job list";
-
-	if ($opt{"verify-freeze"})
-	{
-	    my $verified = 0;
-	    my $metastream = new Warehouse::Stream
-		(whc => $whc,
-		 hash => [split (/,/, $targetjob->{metakey})]);
-	    $metastream->rewind;
-	    while (my $dataref = $metastream->read_until (undef, "\n"))
-	    {
-		if ($$dataref =~ /^\S+ \d+ \d+  frozento ?key is (\S+)/
-		    && $1 eq $thawhash)
-		{
-		    $verified = 1;
-		    last;
-		}
-	    }
-	    if (!$verified)
-	    {
-		warn "WARNING: thawedfromkey $thawhash does not appear in meta stream of job ".$targetjob->{id}." -- continuing anyway.\n";
-	    }
-	}
+	$targetjob = $whc->job_follow_thawedfrom ($targetjob);
     }
 }
 
 sub print_times
 {
     my $job = shift;
-    my $elapsed;
-    my $nodeseconds;
-    if (($opt{"node-seconds"} || $opt{"slot-seconds"})
-	&& $job->{finishtime_s} && $job->{starttime_s})
+    my $metastats = $job->{meta_stats};
+    if ($job)
     {
-	my $nnodes = $job->{nnodes};
-	$elapsed = $job->{finishtime_s} - $job->{starttime_s};
-	$nodeseconds = $elapsed * $nnodes;
 	printf ("  --node-seconds = %d = %d nodes * %d seconds\n",
-		$nodeseconds, $nnodes, $elapsed) if $opt{"node-seconds"};
-    }
-    if (($opt{"failure-seconds"} || $opt{"success-seconds"} || $opt{"slots"} || $opt{"slot-seconds"})
-	&& $job->{metakey})
-    {
-	my $failure_seconds = 0;
-	my $success_seconds = 0;
-	my $allocation_slots = 0;
-	my $s = new Warehouse::Stream (whc => $whc,
-				       hash => [split (",", $job->{metakey})]);
-	$s->rewind();
-	while (my $dataref = $s->read_until (undef, "\n"))
+		$job->{nodeseconds},
+		$job->{nnodes},
+		$job->{elapsed});
+	printf ("  --slot-seconds = %d = %d slots * %d seconds\n",
+		$metastats->{slot_seconds},
+		$metastats->{slots},
+		$job->{elapsed});
+	foreach (qw(success failure idle))
 	{
-	    if ($$dataref =~ /^\S+ \d+ \d+ \d+ (success|failure) in (\d+) seconds\n/)
-	    {
-		$failure_seconds += $2 if $1 eq "failure";
-		$success_seconds += $2 if $1 eq "success";
-	    }
-	    elsif ($$dataref =~ /^\S+ \d+ \d+  node \S+ - (\d+) slots\n/)
-	    {
-		$allocation_slots += $1;
-	    }
+	    printf ("  --$_-seconds = %d%s\n",
+		    $metastats->{$_."_seconds"},
+		    $metastats->{$_."_percent"}
+		    ? " = ".$metastats->{$_."_percent"}."%" : "");
 	}
-	my $slot_seconds = $allocation_slots * $elapsed;
-
-	printf ("  --slots = %d\n", $allocation_slots)
-	    if ($opt{"slots"});
-	printf ("  --slot-seconds = %d\n", $slot_seconds)
-	    if ($opt{"slots"} && defined $elapsed);
-	printf ("  --failure-seconds = %d%s\n", $failure_seconds, fmt_percent_of ($failure_seconds, $slot_seconds))
-	    if ($opt{"failure-seconds"});
-	printf ("  --success-seconds = %d%s\n", $success_seconds, fmt_percent_of ($success_seconds, $slot_seconds))
-	    if ($opt{"success-seconds"});
-	printf ("  --idle-seconds = %d%s\n", $slot_seconds - $failure_seconds - $success_seconds,
-		fmt_percent_of ($slot_seconds - $failure_seconds - $success_seconds, $slot_seconds))
-	    if ($opt{"idle-seconds"});
     }
-}
-
-sub fmt_percent_of
-{
-    my ($a, $b) = @_;
-    return "" if !$b;
-    my $p = 100 * $a / $b;
-    if ($p < 1) { return sprintf (" (%.2f%%)", $p); }
-    if ($p < 10) { return sprintf (" (%.1f%%)", $p); }
-    return sprintf (" (%d%%)", $p);
 }
