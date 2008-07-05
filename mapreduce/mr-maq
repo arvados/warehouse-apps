@@ -21,7 +21,7 @@ my $traces_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $reference_manifest_file = $ENV{KNOB_REFERENCEFILE} or die;
 #my $batchsize = 1_000_000;
-my $batchsize = 2_000_000;
+my $batchsize = 2_200_000;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 2 unless defined $max_mismatches;
 my $reffile = "$tmp/$reference_manifest_file";
@@ -65,16 +65,11 @@ if ($ENV{MR_LEVEL} == 1)
   atomic_whget("$traces_manifest_key/$subdir/${filename}_1.bfq", $readfile1);
   atomic_whget("$traces_manifest_key/$subdir/${filename}_2.bfq", $readfile2);
 
-  my $count = `$src/apps/miron/bfq-split.pl $batchsize $readfile1 '$tmp/${filename}c%d_1.bfq'` 
+  my $count = `$src/apps/miron/bfq-split.pl $batchsize '$readfile1'` 
 	or die;
-  unlink $readfile1;
-  my $count1 = `$src/apps/miron/bfq-split.pl $batchsize $readfile2 '$tmp/${filename}c%d_2.bfq'` 
-	or die;
-  unlink $readfile2;
-  die if $count != $count1;
 
   for (my $ind = 0 ; $ind < $count ; $ind++) {
-	print STDERR "+++mrjobstep 2 $subdir $tmp/${filename}c$ind+++\n";
+	print STDERR "+++mrjobstep 2 $subdir $filename $ind+++\n";
   }
   
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
@@ -82,19 +77,30 @@ if ($ENV{MR_LEVEL} == 1)
 }
 if ($ENV{MR_LEVEL} == 2)
 {
-  my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
+  my ($subdir, $filename, $ind) = split (/ /, $ENV{MR_INPUT}, 3);
 
-  my $readfile1 = "${filename}_1.bfq";
-  my $readfile2 = "${filename}_2.bfq";
+  my $readfile1 = "$tmp/${filename}_1.bfq";
+  my $readfile2 = "$tmp/${filename}_2.bfq";
+
+  my $batchfile1 = "$tmp/${filename}c${ind}_1.bfq";
+  my $batchfile2 = "$tmp/${filename}c${ind}_2.bfq";
+
+  atomic_whget("$traces_manifest_key/$subdir/${filename}_1.bfq", $readfile1);
+  atomic_whget("$traces_manifest_key/$subdir/${filename}_2.bfq", $readfile2);
+
+  system("$src/apps/miron/bfq-split.pl $batchsize $readfile1 $ind '$batchfile1'") == 0 or die "could not create $batchfile1";
+  system("$src/apps/miron/bfq-split.pl $batchsize $readfile2 $ind '$batchfile2'") == 0 or die "could not create $batchfile2";
 
   Safepipe::readfrom
       ("main::MAQ",
-       "$MAQ_path map -n $max_mismatches -m 0.001 -a 250 - '$reffile' '$readfile1' '$readfile2'",
+       "$MAQ_path map -n $max_mismatches -m 0.001 -a 250 - '$reffile' '$batchfile1' '$batchfile2'",
        "mrs-store './$subdir' '$filename.map'",
        "mrs-output",
       )
       or die "pipe failed: $!";
   close MAQ or die "Pipe failed: $!";
+  unlink $batchfile1;
+  unlink $batchfile2;
   exit 0;
 }
 
