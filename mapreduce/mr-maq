@@ -16,7 +16,7 @@ use Fcntl ':flock';
 
 my $tmp = $ENV{MR_JOB_TMP};
 
-my $src = "$ENV{MR_REVISION_INSTALLDIR}";
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
 my $traces_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $reference_manifest_file = $ENV{KNOB_REFERENCEFILE} or die;
@@ -56,10 +56,6 @@ if ($ENV{MR_LEVEL} == 1)
 {
   my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
 
-  atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
-  atomic_whget($MAQ_bin_key, $MAQ_path);
-  chmod 0755, $MAQ_path;
-
   my $readfile1 = "$tmp/${filename}_1.bfq";
   my $readfile2 = "$tmp/${filename}_2.bfq";
   atomic_whget("$traces_manifest_key/$subdir/${filename}_1.bfq", $readfile1);
@@ -90,6 +86,10 @@ if ($ENV{MR_LEVEL} == 2)
 
   system("$src/apps/miron/bfq-split.pl $batchsize $readfile1 $ind '$batchfile1'") == 0 or die "could not create $batchfile1";
   system("$src/apps/miron/bfq-split.pl $batchsize $readfile2 $ind '$batchfile2'") == 0 or die "could not create $batchfile2";
+
+  atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
+  atomic_whget($MAQ_bin_key, $MAQ_path);
+  chmod 0755, $MAQ_path;
 
   Safepipe::readfrom
       ("main::MAQ",
