@@ -20,12 +20,14 @@ my $src = "$ENV{MR_REVISION_INSTALLDIR}";
 my $traces_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $reference_manifest_file = $ENV{KNOB_REFERENCEFILE} or die;
-my $batchsize = 1_200_000;
+#my $batchsize = 1_000_000;
+my $batchsize = 2_000_000;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 2 unless defined $max_mismatches;
 my $reffile = "$tmp/$reference_manifest_file";
+my $MAQ_bin_key = '71d95666f636d7f250664cd733b2f9ef';
 
-my $MAQ_PATH="/home/miron/maq-0.6.6/maq";
+my $MAQ_path="$tmp/maq";
 
 my $whc = new Warehouse;
 
@@ -55,6 +57,8 @@ if ($ENV{MR_LEVEL} == 1)
   my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
 
   atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
+  atomic_whget($MAQ_bin_key, $MAQ_path);
+  chmod 0755, $MAQ_path;
 
   my $readfile1 = "$tmp/${filename}_1.bfq";
   my $readfile2 = "$tmp/${filename}_2.bfq";
@@ -85,7 +89,7 @@ if ($ENV{MR_LEVEL} == 2)
 
   Safepipe::readfrom
       ("main::MAQ",
-       "$MAQ_PATH map -n $max_mismatches -m 0.001 -a 250 - '$reffile' '$readfile1' '$readfile2'",
+       "$MAQ_path map -n $max_mismatches -m 0.001 -a 250 - '$reffile' '$readfile1' '$readfile2'",
        "mrs-store './$subdir' '$filename.map'",
        "mrs-output",
       )

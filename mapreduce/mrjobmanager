@@ -17,6 +17,8 @@ use Warehouse::Stream;
 
 do '/etc/polony-tools/config.pl';
 
+my $mrcompute = "mrcompute-$<";
+
 my $have_slurm = exists $ENV{SLURM_JOBID} && exists $ENV{SLURM_NODELIST};
 
 
@@ -249,18 +251,18 @@ else
   Log (undef, "Install revision ".$Job->{revision});
   my $nodelist = join(",", @node);
   $ENV{"MR_REVISION"} = $Job->{revision};
-  $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
+  $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/$mrcompute/revision/$Job->{revision}";
   $ENV{"INSTALL_REPOS"} = $main::svn_repos;
   $ENV{"INSTALL_REVISION"} = $Job->{revision};
   my @srunargs = ("--nodelist='$nodelist'",
 		  "-D", "/tmp", "--job-name='$job_id'");
   my @execargs = ("sh", "-c",
-		  "mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
+		  "mkdir -p /tmp/$mrcompute/revision && cd /tmp/$mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
   my $ret = srun (\@srunargs, \@execargs, { fork => 1 });
   Log (undef, "Install exited $ret");
 
   srun (["--nodelist=$nodelist", "-D", "/tmp"],
-      [qw(rm -rf /tmp/mrcompute/work)],
+      [qw(rm -rf /tmp/$mrcompute/work)],
       { fork => 1 });
 }
 
@@ -365,8 +367,8 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     my @execargs = (
       "sh",
       "-c",
-      "mkdir -p /tmp/mrcompute/revision "
-      ."&& cd /tmp/mrcompute "
+      "mkdir -p /tmp/$mrcompute/revision "
+      ."&& cd /tmp/$mrcompute "
 		    );
     if (!$skip_install)
     {
