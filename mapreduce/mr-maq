@@ -25,7 +25,7 @@ my $batchsize = 2_200_000;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 2 unless defined $max_mismatches;
 my $reffile = "$tmp/$reference_manifest_file";
-my $MAQ_bin_key = '71d95666f636d7f250664cd733b2f9ef';
+my $MAQ_bin_key = '225ad960b8c87dd2c2b4091194ea4461';
 
 my $MAQ_path="$tmp/maq";
 
