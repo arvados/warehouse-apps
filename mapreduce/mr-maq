@@ -94,7 +94,7 @@ if ($ENV{MR_LEVEL} == 2)
   Safepipe::readfrom
       ("main::MAQ",
        "$MAQ_path map -n $max_mismatches -m 0.001 -a 250 - '$reffile' '$batchfile1' '$batchfile2'",
-       "mrs-store './$subdir' '$filename.map'",
+       "mrs-store './$subdir' '${filename}c${ind}.map'",
        "mrs-output",
       )
       or die "pipe failed: $!";
