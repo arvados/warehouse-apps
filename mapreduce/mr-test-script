@@ -1,0 +1,8 @@
+#!/usr/bin/perl
+
+use strict; 
+my $script = $ENV{KNOB_SCRIPT} or die;
+
+print STDERR "starting...\n";
+eval $script;
+print STDERR "ending...\n";
