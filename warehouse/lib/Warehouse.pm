@@ -269,6 +269,7 @@ sub _init
     $self->{meta_stats_hashref} = {};
     $self->{job_list_arrayref} = undef;
     $self->{job_list_fetched} = undef;
+    $self->_read_cache;
 
     return $self;
 }
@@ -1333,18 +1334,49 @@ sub block_might_exist
 
 =cut
 
+sub write_cache
+{
+    my $self = shift;
+    my $storeme = {};
+    map { $storeme->{$_} = $self->{$_} } qw(job_list_arrayref job_hashref job_list_fetched meta_stats_hashref);
+    my $cachefile = "/tmp/warehouse.cache.$<.".$self->{warehouse_servers};
+    eval {
+	use Storable "lock_store";
+	lock_store $storeme, "$cachefile";
+    };
+}
+
+sub _read_cache
+{
+    my $self = shift;
+    my $stored;
+    eval {
+	use Storable "lock_retrieve";
+	$stored = lock_retrieve "/tmp/warehouse.cache.$<.".$self->{warehouse_servers};
+    };
+    if (ref $stored eq 'HASH')
+    {
+	map { $self->{$_} = $stored->{$_} } keys %$stored;
+    }
+}
+
 sub _refresh_job_list
 {
     my $self = shift;
-    if (!ref $self->{job_list_arrayref} || $self->{job_list_fetched} < time - 30)
+    if (!ref $self->{job_list_arrayref} || $self->{job_list_fetched} < time - 60)
     {
 	$self->{job_list_arrayref} = $self->_job_list;
 	$self->{job_by_output} = {};
 	foreach (@{$self->{job_list_arrayref}})
 	{
-	    $self->{job_hashref}->{$_->{id}} = $_;
-	    $_->{cache_fetched} = time;
-	    $self->{job_by_output}->{$_->{outputkey}} = $_ if $_->{outputkey};
+	    if (!$self->{job_hashref}->{$_->{id}} ||
+		$self->{job_hashref}->{$_->{id}}->{success} eq undef &&
+		$self->{job_hashref}->{$_->{id}}->{cache_fetched} < time - 60)
+	    {
+		$self->{job_hashref}->{$_->{id}} = $_;
+		$_->{cache_fetched} = time;
+	    }
+	    $self->{job_by_output}->{$_->{outputkey}} = $_ if $_->{outputkey} && $_->{success};
 	}
 	$self->{job_list_fetched} = time;
     }
@@ -1379,6 +1411,7 @@ sub job_stats
 	my $stats = { frozentokeys => {} };
 	$self->{meta_stats_hashref}->{$job->{metakey}} = $stats;
 
+	my $logstarttime;
 	my $failure_seconds = 0;
 	my $success_seconds = 0;
 	my $slots = 0;
@@ -1387,18 +1420,38 @@ sub job_stats
 	$s->rewind();
 	while (my $dataref = $s->read_until (undef, "\n"))
 	{
+	    if (!defined $logstarttime && $$dataref =~ /^(\S+) /)
+	    {
+		$logstarttime = $1;
+		$logstarttime =~ s/_/ /;
+		$logstarttime = str2time ($logstarttime);
+	    }
 	    if ($$dataref =~ /^\S+ \d+ \d+ \d+ (success|failure) in (\d+) seconds\n/)
 	    {
 		$failure_seconds += $2 if $1 eq "failure";
 		$success_seconds += $2 if $1 eq "success";
 	    }
-	    elsif ($$dataref =~ /^\S+ \d+ \d+  node \S+ - (\d+) slots\n/)
+	    elsif ($$dataref =~ /^(\S+) \d+ \d+  node \S+ - (\d+) slots\n/)
 	    {
-		$slots += $1;
+		$slots += $2;
 	    }
-	    elsif ($$dataref =~ /^\S+ \d+ \d+  frozento ?key is (\S+)/)
+	    elsif ($$dataref =~ /^(\S+) \d+ \d+  frozento ?key is (\S+)/)
 	    {
-		$stats->{frozentokeys}->{$1} = 1;
+		my $logtime = $1;
+		my $frozentokey = $2;
+		$logtime =~ s/_/ /;
+		$logtime = str2time ($logtime);
+		my $slot_seconds = $slots * ($logtime - $logstarttime);
+		$stats->{frozentokeys}->{$frozentokey} = {
+		    starttime => $logstarttime,
+		    frozentime => $logtime,
+		    elapsed => $logtime - $logstarttime,
+		    slots => $slots,
+		    slot_seconds => $slot_seconds,
+		    success_seconds => $success_seconds,
+		    failure_seconds => $failure_seconds,
+		    idle_seconds => $slot_seconds - $failure_seconds - $success_seconds,
+		};
 	    }
 	}
 	my $slot_seconds = $slots * $job->{elapsed};
