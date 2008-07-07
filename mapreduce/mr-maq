@@ -56,8 +56,8 @@ if ($ENV{MR_LEVEL} == 1)
 {
   my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
 
-  my $readfile1 = "$tmp/${filename}_1.bfq";
-  my $readfile2 = "$tmp/${filename}_2.bfq";
+  my $readfile1 = "$tmp/${filename}x_1.bfq";
+  my $readfile2 = "$tmp/${filename}x_2.bfq";
   atomic_whget("$traces_manifest_key/$subdir/${filename}_1.bfq", $readfile1);
   atomic_whget("$traces_manifest_key/$subdir/${filename}_2.bfq", $readfile2);
 
@@ -67,6 +67,9 @@ if ($ENV{MR_LEVEL} == 1)
   for (my $ind = 0 ; $ind < $count ; $ind++) {
 	print STDERR "+++mrjobstep 2 $subdir $filename $ind+++\n";
   }
+
+  unlink $readfile1;
+  unlink $readfile2;
   
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   exit 0;
@@ -75,8 +78,8 @@ if ($ENV{MR_LEVEL} == 2)
 {
   my ($subdir, $filename, $ind) = split (/ /, $ENV{MR_INPUT}, 3);
 
-  my $readfile1 = "$tmp/${filename}_1.bfq";
-  my $readfile2 = "$tmp/${filename}_2.bfq";
+  my $readfile1 = "$tmp/${filename}f${ind}_1.bfq";
+  my $readfile2 = "$tmp/${filename}f${ind}_2.bfq";
 
   my $batchfile1 = "$tmp/${filename}c${ind}_1.bfq";
   my $batchfile2 = "$tmp/${filename}c${ind}_2.bfq";
@@ -86,6 +89,9 @@ if ($ENV{MR_LEVEL} == 2)
 
   system("$src/apps/miron/bfq-split.pl $batchsize $readfile1 $ind '$batchfile1'") == 0 or die "could not create $batchfile1";
   system("$src/apps/miron/bfq-split.pl $batchsize $readfile2 $ind '$batchfile2'") == 0 or die "could not create $batchfile2";
+
+  unlink $readfile1;
+  unlink $readfile2;
 
   atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
   atomic_whget($MAQ_bin_key, $MAQ_path);
