@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 
 use strict;
+use Warehouse;
+my $whc = new Warehouse;
 
 my %override;
 while ($ARGV[0] =~ /^(.*?)=(.*)$/)
@@ -19,24 +21,22 @@ example: $0 2036 f4c53b5ea8ed51077c46116b5c591fae 600 .
 
 my ($revision_default, $reference, $batchesperjob, $outputdir) = @ARGV;
 
-open STDIN, "wh job list |";
-
 my %Job;
 my @Job;
 
-my @jobs = <STDIN>;
-for (@jobs)
+my $joblist = $whc->job_list;
+for (@$joblist)
 {
-    my %have;
-    chomp;
-    map { /(.*?)=(.*)/; $have{$1} = $2; } split (/, /);
-    $Job{$have{id}} = \%have;
+    $Job{$_->{id}} = $_;
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
 my $header = sprintf (" %-32s %-38s %-38s %-38s %-38s\n\n",
 		      qw(species/traces megablast megatri-count/megatri-count-m1n5 megatri-sum1/querydb megatri-sum2/reduce-cat));
 print $header;
+
+my $alltimes = {};
+my $alltimestring = "";
 
 my $html = "";
 my $all_species_jobs = $header;
@@ -228,7 +228,7 @@ foreach my $species (sort keys %traces)
 		chomp;
 		$_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
 		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>} if $suffix;
-		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"http://templeton-controller.freelogy.org/whget.cgi/$hash/m${2}n${3}/examples.txt\">more</A>} if !$suffix;
+		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"http://templeton-controller.freelogy.org/whget.cgi/$hash/m$2n$3/examples.txt\">more</A>} if !$suffix;
 		$html .= $_;
 	    } @summary;
 	    $html .= "</small></pre></td>\n";
@@ -275,16 +275,41 @@ foreach my $species (sort keys %traces)
     }
 
     $html .= "</tr>\n";
-    my $species_jobs = sprintf (" %-32s %38s %38s %38s %38s\n %-32s %38s %38s %38s %38s\n\n",
+    my $species_jobs = sprintf (" %-32s %38s %38s %38s %38s\n %-32s %38s %38s %38s %38s\n",
 				$species,
 				id_and_output($megablast),
 				id_and_output($megatri_count),
 				id_and_output($megatri_sum1),
 				id_and_output($megatri_sum2),
-				$traces{$species}, "", id_and_output ($megatri_count_m1n5), id_and_output ($querydb), id_and_output ($reduce_cat),
+				$traces{$species},
+				"",
+				id_and_output($megatri_count_m1n5),
+				id_and_output($querydb),
+				id_and_output($reduce_cat),
 				);
+
     $all_species_jobs .= $species_jobs;
     print $species_jobs;
+
+
+    my $times = {};
+    foreach ($megablast, $megatri_count, $megatri_sum1, $megatri_sum2,
+	     $megatri_count_m1n5, $querydb, $reduce_cat)
+    {
+	my $jobtimes = get_job_times ($_);
+	map { $times->{$_} += $jobtimes->{$_} } keys %$jobtimes;
+    }
+    map { $alltimes->{$_} += $times->{$_} } keys %$times;
+    my $timestring = format_times ($species, $times);
+    $alltimestring .= $timestring;
+    print $timestring;
+
+
+    $all_species_jobs .= "\n";
+    print "\n";
+
+
+    $whc->write_cache;
 }
 $html .= "</table>\n";
 
@@ -292,11 +317,16 @@ $all_species_jobs =~ s|\b([\da-f]{32})\b|<a href="http://templeton-controller.fr
 
 $html .= "<pre>";
 $html .= $all_species_jobs;
+$html .= $alltimestring;
+$html .= "<b>".format_times ("all", $alltimes)."</b>";
 $html .= "</pre>";
 
 open HTML, ">", $outputdir."/mtr-index.html" or die "create mtr-index.html: $!";
 print HTML $html;
 close HTML or die "close mtr-index.html: $!";
+
+print format_times ("all", $alltimes);
+
 
 sub id_and_output
 {
@@ -463,4 +493,91 @@ sub do_mtrgraph
     }
 
     return $imagefile;
+}
+
+sub get_job_times
+{
+    my $job = shift;
+    my $atwhichfreeze = shift;
+    return {
+	nodeseconds => 0,
+	elapsed => 0,
+	slot_seconds => 0,
+	success_seconds => 0,
+	failure_seconds => 0,
+	} if !$job;
+    my $frozen = $whc->job_follow_thawedfrom ($job);
+    $frozen = $whc->job_stats ($frozen->{id});
+
+    my $times = get_job_times ($frozen, $job->{thawedfromkey});
+
+    $job = $whc->job_stats ($job->{id});
+    my $frozentimes;
+    if ($atwhichfreeze
+	&& $job->{meta_stats}->{frozentokeys}
+	&& ($frozentimes = $job->{meta_stats}->{frozentokeys}->{$atwhichfreeze}))
+    {
+	printf STDERR ("Adding stats from %d at t=%d: %d elapsed, %d success, %d failure, %d idle\n",
+		       $job->{id},
+		       $frozentimes->{frozentime},
+		       $frozentimes->{elapsed},
+		       $frozentimes->{success_seconds},
+		       $frozentimes->{failure_seconds},
+		       $frozentimes->{idle_seconds}) if $ENV{MTR_DEBUG};
+	foreach (keys %$times)
+	{
+	    $times->{$_} += $frozentimes->{$_};
+	}
+    }
+    else
+    {
+	if ($ENV{MTR_DEBUG})
+	{
+	    if ($atwhichfreeze)
+	    {
+		print STDERR "Adding stats from ".$job->{id}.", using entire job because frozentokey ".$atwhichfreeze." not found\n";
+	    }
+	    else
+	    {
+		print STDERR "Adding stats from ".$job->{id}."\n";
+	    }
+	}
+	foreach (keys %$times)
+	{
+	    $times->{$_} += ($job->{meta_stats}->{$_} || $job->{$_});
+	}
+    }
+    return $times;
+}
+
+sub format_times
+{
+    my $species = shift;
+    my $times = shift;
+
+    my $s = sprintf (" %-32s %d s (%s) job allocation, %d s (%s) node allocation",
+		     $species,
+		     $times->{elapsed}, fancytime ($times->{elapsed}),
+		     $times->{nodeseconds}, fancytime ($times->{nodeseconds}),
+		     );
+    $s .= sprintf (", %.1f%% success, %.1f%% failure, %.1f%% idle",
+		    $times->{success_seconds} * 100 / $times->{slot_seconds},
+		    $times->{failure_seconds} * 100 / $times->{slot_seconds},
+		    100 - ($times->{success_seconds} + $times->{failure_seconds}) * 100 / $times->{slot_seconds},
+		    )
+	if $times->{slot_seconds};
+    $s .= "\n";
+    return $s;
+}
+
+sub fancytime
+{
+    my $s = shift;
+    my $fancy = sprintf ("%dd%dh%dm%ds",
+			 int($s/86400),
+			 int(($s%86400)/3600),
+			 int(($s%3600)/60),
+			 int($s%60));
+    while ($fancy =~ s/^\b0\D//) { }
+    return $fancy;
 }
