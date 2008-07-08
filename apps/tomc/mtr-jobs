@@ -40,6 +40,8 @@ my $alltimestring = "";
 
 my $html = "";
 my $all_species_jobs = $header;
+my %data_size_species;
+my %data_size_column;
 
 my %traces = qw{
     anopheles_gambiae       8acd9332f0b7c299bd435d91cecf7f1e
@@ -305,6 +307,20 @@ foreach my $species (sort keys %traces)
     print $timestring;
 
 
+    $data_size_species{$species} += $whc->manifest_data_size ($traces{$species});
+    $data_size_column{"input"} += $whc->manifest_data_size ($traces{$species});
+    foreach (qw(megablast megatri_count megatri_sum1 megatri_sum2
+		megatri_count_m1n5 querydb reduce_cat))
+    {
+	my $job = eval "\$$_";
+	my $key = $job->{outputkey};
+	next if !$key;
+	$data_size_species{$species} += $whc->manifest_data_size ($key);
+	$data_size_column{$_} += $whc->manifest_data_size ($key);
+    }
+    printf " %d bytes\n", $data_size_species{$species};
+
+
     $all_species_jobs .= "\n";
     print "\n";
 
@@ -319,6 +335,8 @@ $html .= "<pre>";
 $html .= $all_species_jobs;
 $html .= $alltimestring;
 $html .= "<b>".format_times ("all", $alltimes)."</b>";
+$html .= "\n";
+$html .= format_sizes();
 $html .= "</pre>";
 
 open HTML, ">", $outputdir."/mtr-index.html" or die "create mtr-index.html: $!";
@@ -568,6 +586,32 @@ sub format_times
 	if $times->{slot_seconds};
     $s .= "\n";
     return $s;
+}
+
+sub format_sizes
+{
+    my $total = 0;
+    my $s = "";
+    foreach my $species (sort keys %data_size_species)
+    {
+	$s .= sprintf (" %-32s %17s bytes\n", $species, addcommas($data_size_species{$species}));
+	$total += $data_size_species{$species};
+    }
+    $s .= "\n";
+    foreach my $column (sort keys %data_size_column)
+    {
+	$s .= sprintf (" %-32s %17s bytes\n", $column, addcommas($data_size_column{$column}));
+    }
+    $s .= "\n";
+    $s .= sprintf (" %-32s %17s bytes\n", "total", addcommas($total));
+    return $s;
+}
+
+sub addcommas
+{
+    my $n = shift;
+    while ($n =~ s/(.*\d)(\d\d\d)\b/$1,$2/) { }
+    return $n;
 }
 
 sub fancytime
