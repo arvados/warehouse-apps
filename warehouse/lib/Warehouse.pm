@@ -266,6 +266,7 @@ sub _init
     }
 
     $self->{job_hashref} = {};
+    $self->{manifest_stats_hashref} = {};
     $self->{meta_stats_hashref} = {};
     $self->{job_list_arrayref} = undef;
     $self->{job_list_fetched} = undef;
@@ -1338,7 +1339,11 @@ sub write_cache
 {
     my $self = shift;
     my $storeme = {};
-    map { $storeme->{$_} = $self->{$_} } qw(job_list_arrayref job_hashref job_list_fetched meta_stats_hashref);
+    map { $storeme->{$_} = $self->{$_} } qw(job_list_arrayref
+					    job_hashref
+					    job_list_fetched
+					    meta_stats_hashref
+					    manifest_stats_hashref);
     my $cachefile = "/tmp/warehouse.cache.$<.".$self->{warehouse_servers};
     eval {
 	use Storable "lock_store";
@@ -1509,6 +1514,48 @@ sub job_follow_thawedfrom
 	    .$targetjob->{id}." -- continuing anyway.\n";
     }
     return $targetjob;
+}
+
+
+
+=head2 manifest_data_size
+
+    my $bytes = $whc->manifest_data_size ($key);
+
+=cut
+
+sub manifest_data_size
+{
+    my $self = shift;
+    my $key = shift;
+
+    if ($self->{manifest_stats_hashref}->{$key} &&
+	$self->{manifest_stats_hashref}->{$key}->{data_size})
+    {
+	return $self->{manifest_stats_hashref}->{$key}->{data_size};
+    }
+
+    my $s = new Warehouse::Stream (whc => $self,
+				   hash => [split (",", $key)]);
+    $s->rewind;
+    my $data_size = 0;
+    while (my $dataref = $s->read_until (undef, "\n"))
+    {
+	while ($$dataref =~ / [a-f0-9]{32}.*?(\+(\d+))?/g)
+	{
+	    if (!defined $1)
+	    {
+		my $blockdata = $self->{whc}->fetch_block_ref ($_);
+		$data_size += length $$blockdata;
+	    }
+	    else
+	    {
+		$data_size += $2;
+	    }
+	}
+    }
+    $self->{manifest_stats_hashref}->{$key} = { data_size => $data_size };
+    return $data_size;
 }
 
 
