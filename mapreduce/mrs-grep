@@ -1,0 +1,7 @@
+#!/usr/bin/perl
+
+my $pattern = shift @ARGV;
+while (<STDIN>)
+{
+    print if /$pattern/;
+}

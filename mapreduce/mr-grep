@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:uncompress any *.gz and output lines that match PATTERN
+###MR_INPUT:manifest
+###MR_KNOBS:PATTERN=//
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Safepipe;
+
+my $manifestkey = $ENV{MR_INPUT0};
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0) {
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $stream = $manifest->subdir_next)
+  {
+    while (my ($pos, $size, $filename) = $stream->file_next)
+    {
+      last if !defined $pos;
+      print STDERR "+++mrjobstep 1 ".$stream->name." $filename+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+elsif ($ENV{MR_LEVEL} == 1) {
+  my ($wantsubdir, $wantfile) = split (/ /, $ENV{MR_INPUT}, 2);
+
+  my $outfile = $wantfile;
+  $outfile =~ s/\.g?z$//i;
+  $outfile =~ s/$/.gz/ if $ENV{KNOB_GZIP};
+
+  Safepipe::readfrom ("main::X",
+		      "mrs-fetch -h $manifestkey '$wantsubdir' '$wantfile'",
+		      "mrs-grep '$ENV{KNOB_PATTERN}'",
+		      $ENV{KNOB_GZIP} ? "gzip -1" : (),
+		      "mrs-store '$wantsubdir' '$outfile'",
+		      "mrs-output",
+		      );
+  close X or die "close X: $!";
+}
