@@ -71,26 +71,34 @@ while(<>) {
       foreach my $pos (@runpos) {
         my $chrpos0;
 	my $chrpos1; 
-	my $trpos0; 
         if ($strand =~ m/P/) {
           $chrpos0= $chr_pos+$pos-2;
 	  $chrpos1= $chr_pos+$pos+1;
-	  $trpos0 = $tr_pos+$pos; 
         }
         elsif ($strand =~ m/M/) {
           $chrpos0= $chr_pos-$pos-2;
 	  $chrpos1= $chr_pos-$pos+1;
-	  $trpos0 = $tr_pos-$pos; 
         }
         else {
           die "parse error\n"
         }
-	#my $triM1 = 
-	#my $tri = 
-	#my $triP1 =
-        print "$chr $chrpos0 $chrpos1 ".
-	    "$type|$trpos0|$strand|$length|$source_type|$est|$center_name|".
-	    "ti|$ti\n";
+	my $mm;
+	my $mmM; 
+	my $mmP;
+	if ($type =~ m/...}(.)(.)(.)/) {
+	  $mmM = $1;
+	  $mm = $2; 
+	  $mmP = $3;   
+	}
+	if (uc(substr($fasta, $tr_pos+$pos-2, 3)) ne uc("$mmM$mm$mmP")) {
+	  die substr($fasta, $tr_pos+$pos-2, 3)." ".uc("$mmM$mm$mmP")." ";
+	}
+	print "$chr $chrpos0 $chrpos1 $type|".
+	    ($tr_pos+$pos)."|".
+	    $quality[$tr_pos+$pos-1]."|".
+	    $quality[$tr_pos+$pos]."|".
+	    $quality[$tr_pos+$pos+1]."|".
+	    "$strand|$length|$source_type|$est|$center_name|ti|$ti\n";
       }
     }
   }
