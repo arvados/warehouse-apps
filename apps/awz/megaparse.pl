@@ -18,7 +18,6 @@ while(<>) {
   if ($input_line =~ m/est/i) {
     $est="EST"; 
   }
-
   my ($first, $runs, $chr, $strand, $chr_pos, $tr_pos, $other) = 
       split (/;/, $_,7);
 
@@ -34,7 +33,28 @@ while(<>) {
   if ( $first =~ m/ti\|(\d+)/ ) {
     $ti = $1;
   }
-  
+  my @quality; 
+  my $name = ""; 
+  if ( $other =~ m/<quality>>gnl\|ti\|(\d+) (.*)<\/quality>/) {
+    if ($ti ne $1) {
+      warn "$ti <> $1; $input_line\n"; 
+      next;       
+    }
+    @quality = split (/\s+/, $2); 
+  }
+  my $fasta = ""; 
+  if ( $other =~ m/<fasta>>gnl\|ti\|(\d+).*?([ACGTN]*)<\/fasta>/) {
+    if ($ti ne $1) {
+      warn "$ti <> $1; $input_line\n"; 
+      next; 
+    }
+    $fasta = $2;
+  }
+  if (@quality != (length($fasta) + 1)) {
+    warn "$fasta; $input_line \n"; 
+    next;
+  } 
+  #print "$fasta\n";
   
   #strip off white space 
   $chr =~ s/ //; 
@@ -51,21 +71,28 @@ while(<>) {
       foreach my $pos (@runpos) {
         my $chrpos0;
 	my $chrpos1; 
+	my $trpos0; 
         if ($strand =~ m/P/) {
           $chrpos0= $chr_pos+$pos-2;
 	  $chrpos1= $chr_pos+$pos+1;
+	  $trpos0 = $tr_pos+$pos; 
         }
         elsif ($strand =~ m/M/) {
           $chrpos0= $chr_pos-$pos-2;
 	  $chrpos1= $chr_pos-$pos+1;
+	  $trpos0 = $tr_pos-$pos; 
         }
         else {
           die "parse error\n"
         }
+	#my $triM1 = 
+	#my $tri = 
+	#my $triP1 =
         print "$chr $chrpos0 $chrpos1 ".
-	    "$type|$strand|$length|$source_type|$est|$center_name|".
+	    "$type|$trpos0|$strand|$length|$source_type|$est|$center_name|".
 	    "ti|$ti\n";
       }
     }
   }
 }
+
