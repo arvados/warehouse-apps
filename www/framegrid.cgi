@@ -13,13 +13,7 @@ my $png = $q->param ("format") eq "png";
 
 print $q->header ($png ? 'image/png' : 'text/plain');
 
-do '/etc/polony-tools/config.pl';
-
-my $dbh = DBI->connect($main::mogilefs_dsn,
-		       $main::mrwebgui_mysql_username,
-		       $main::mrwebgui_mysql_password)
-    or die DBI->errstr;
-
+do '/etc/polony-tools/genomerator.conf.pl';
 
 my $mogc;
 for (qw(1 2 3 4 5))

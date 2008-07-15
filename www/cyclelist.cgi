@@ -8,7 +8,7 @@ my $q = new CGI;
 
 print $q->header ('text/plain');
 
-do '/etc/polony-tools/config.pl';
+do '/etc/polony-tools/genomerator.conf.pl';
 
 my $dbh = DBI->connect($main::analysis_dsn,
 		       $main::mrwebgui_mysql_username,

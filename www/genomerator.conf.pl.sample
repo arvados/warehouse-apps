@@ -1,0 +1,8 @@
+@main::mogilefs_trackers = ("templeton-controller.oxf.freelogy.org:6001");
+$main::mogilefs_default_domain = "images";
+
+$main::mrwebgui_mysql_username = "mrwebgui";
+$main::mrwebgui_mysql_password = "xxxxxxxx";
+$main::analysis_dsn = "DBI:mysql:database=analysis;host=localhost";
+
+1;

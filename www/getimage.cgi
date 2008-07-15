@@ -8,7 +8,7 @@ use CGI ':standard';
 
 my $q = new CGI;
 
-do '/etc/polony-tools/config.pl';
+do '/etc/polony-tools/genomerator.conf.pl';
 
 my ($outputsize, $prefix, $domain);
 
