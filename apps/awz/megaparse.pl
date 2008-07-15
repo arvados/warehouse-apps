@@ -54,7 +54,6 @@ while(<>) {
     warn "$fasta; $input_line \n"; 
     next;
   } 
-  #print "$fasta\n";
   
   #strip off white space 
   $chr =~ s/ //; 
@@ -80,7 +79,7 @@ while(<>) {
 	  $chrpos1= $chr_pos-$pos+1;
         }
         else {
-          die "parse error\n"
+          warn "parse error in ti|$ti\n";
         }
 	my $mm;
 	my $mmM; 
@@ -91,7 +90,9 @@ while(<>) {
 	  $mmP = $3;   
 	}
 	if (uc(substr($fasta, $tr_pos+$pos-2, 3)) ne uc("$mmM$mm$mmP")) {
-	  die substr($fasta, $tr_pos+$pos-2, 3)." ".uc("$mmM$mm$mmP")." ";
+	  warn "parse error in ti|$ti -".
+	      substr($fasta, $tr_pos+$pos-2, 3)." <> ".
+	      uc("$mmM$mm$mmP")."\n";
 	}
 	print "$chr $chrpos0 $chrpos1 $type|".
 	    ($tr_pos+$pos)."|".
