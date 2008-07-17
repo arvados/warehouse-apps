@@ -58,9 +58,10 @@ if ($ENV{MR_LEVEL} == 1)
   my $cur_chr;
   my $cur_bucket;
   my @manifest_lines;
+  my $stream_name = "./$subdir-$filename";
   my $stream = new Warehouse::Stream (whc => $whc);
   $stream->clear;
-  $stream->name ("./$subdir");
+  $stream->name ($stream_name);
   my $compressed = "";
   my $z;
   
@@ -80,7 +81,7 @@ if ($ENV{MR_LEVEL} == 1)
 	if ($bucket % 20 == 19) {
 	  push @manifest_lines, $stream->as_string;
 	  $stream->clear;
-	  $stream->name("./$subdir");
+	  $stream->name($stream_name);
 	}
       }
       $z = new IO::Compress::Gzip \$compressed, Minimal=>1
