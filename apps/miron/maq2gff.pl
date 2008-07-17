@@ -56,7 +56,7 @@ while (<>) {
   }
   my $end_pos = $pos + $length - 1;
   my $outindex = "$chr-" . sprintf ("%04d", int($pos / 1_000_000));
-  push @{$output{$outindex}}, "$chr\tMAQ\tplaced-read\t$pos\t$end_pos\t$mapqual\t$strand\t.\t$attrs\n";
+  push @{$output{$outindex}}, "$chr\tMAQ\tplaced-read\t$pos\t$end_pos\t$mapqual\t$strand\t.\t$attrs";
 }
 
 foreach my $key (sort keys %output) {
