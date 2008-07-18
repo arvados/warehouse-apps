@@ -91,17 +91,48 @@ if ($ENV{MR_LEVEL} == 1)
   my $my_filename = "$chr-$bucket.gff.gz";
 
   my $ref = new Warehouse::Manifest (whc => $whc,
-				     key => $input_manifest_key);
-  while (my $s = $ref->subdir_next)
+    key => $input_manifest_key);
+  my @data;
+  my $topdir;
+  while (my $stream = $ref->subdir_next)
   {
-    my $subdir = $s->name;
+    my $subdir = $stream->name;
     $subdir =~ s/^\.\///;
-    while (my ($pos, $size, $filename) = $s->file_next)
+    die unless $subdir =~ /([^-]+)-/;
+    $topdir = $1;
+    while (my ($pos, $size, $filename) = $stream->file_next)
     {
       last if !defined $pos;
       next if $filename ne $my_filename;
-      print "$pos $size $filename\n";
+      #print STDERR "read $subdir/$filename\n";
+      $stream->seek($pos);
+      my $buf;
+      while (my $dataref = $stream->read_until ($pos + $size)) {
+	$buf .= $$dataref;
+      }
+      my $z = new IO::Uncompress::Gunzip \$buf
+	or die "gzip failed: $GzipError\n";
+      while (my $line = <$z>) {
+	my (undef, undef, undef, $pos) = split(/\t/, $line, 5);
+	push @data, [$pos, $line];
+      }
+      $z->close
+	or die "gzip failed: $GzipError\n";
     }
+  }
+
+  if (@data) {
+    die unless $topdir;
+    @data = sort { $a->[0] <=> $b->[0] } @data;
+    open OUT, "| gzip -n | mrs-store ./$topdir $my_filename | mrs-output";
+    foreach my $data (@data) {
+      print OUT $data->[1];
+    }
+    close OUT
+      or die "pipe problem";
+  }
+  else {
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   }
   exit 0;
 }
