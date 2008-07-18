@@ -8,7 +8,8 @@ use strict;
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use IO::Compress::Gzip qw(gzip $GzipError);
+use IO::Compress::Gzip qw($GzipError);
+use IO::Uncompress::Gunzip qw($GunzipError);
 use Fcntl ':flock';
 
 
@@ -111,13 +112,13 @@ if ($ENV{MR_LEVEL} == 1)
 	$buf .= $$dataref;
       }
       my $z = new IO::Uncompress::Gunzip \$buf
-	or die "gzip failed: $GzipError\n";
+	or die "gunzip failed: $GunzipError\n";
       while (my $line = <$z>) {
 	my (undef, undef, undef, $pos) = split(/\t/, $line, 5);
 	push @data, [$pos, $line];
       }
       $z->close
-	or die "gzip failed: $GzipError\n";
+	or die "gunzip failed: $GunzipError\n";
     }
   }
 
