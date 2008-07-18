@@ -18,6 +18,7 @@ my $tmp = $ENV{MR_JOB_TMP};
 my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $BUCKET_SIZE = 1_000_000;
+my $MAX_READS = 2_000_000; # If we get more than this per bucket, abort (chr16 044)
 
 my %chr_lengths = qw(
 chr1 252194720
@@ -105,7 +106,11 @@ if ($ENV{MR_LEVEL} == 1)
     {
       last if !defined $pos;
       next if $filename ne $my_filename;
-      #print STDERR "read $subdir/$filename\n";
+      if (scalar(@data) > $MAX_READS) {
+	print STDERR "too many reads for $my_filename - dropping them all\n";
+	print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+	exit 0;
+      }
       $stream->seek($pos);
       my $buf;
       while (my $dataref = $stream->read_until ($pos + $size)) {
