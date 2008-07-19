@@ -90,6 +90,7 @@ if ($ENV{MR_LEVEL} == 1)
 {
   my ($chr, $bucket) = split (/ /, $ENV{MR_INPUT}, 2);
   my $my_filename = "$chr-$bucket.gff.gz";
+  print STDERR "start $chr-$bucket\n";
 
   my $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
   my $topdir;
@@ -103,7 +104,8 @@ if ($ENV{MR_LEVEL} == 1)
 
     if (!$topdir) {
       $topdir = $1;
-      open OUT, "|sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-store ./$topdir $my_filename | mrs-output";
+      open OUT, "|sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-store ./$topdir $my_filename | mrs-output"
+	or die;
     }
     while (my ($pos, $size, $filename) = $stream->file_next)
     {
@@ -118,7 +120,8 @@ if ($ENV{MR_LEVEL} == 1)
       my $z = new IO::Uncompress::Gunzip \$buf
 	or die "gunzip failed: $GunzipError\n";
       while (my $line = <$z>) {
-	print OUT $line;
+	print OUT $line
+	  or die;
 	$num_rec++;
       }
       $z->close
