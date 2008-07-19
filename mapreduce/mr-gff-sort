@@ -18,7 +18,6 @@ my $tmp = $ENV{MR_JOB_TMP};
 my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $BUCKET_SIZE = 1_000_000;
-my $MAX_READS = 2_000_000; # If we get more than this per bucket, abort (chr16 044)
 
 my %chr_lengths = qw(
 chr1 252194720
@@ -92,25 +91,25 @@ if ($ENV{MR_LEVEL} == 1)
   my ($chr, $bucket) = split (/ /, $ENV{MR_INPUT}, 2);
   my $my_filename = "$chr-$bucket.gff.gz";
 
-  my $ref = new Warehouse::Manifest (whc => $whc,
-    key => $input_manifest_key);
-  my @data;
+  my $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
   my $topdir;
+  my $num_rec = 0;
+
   while (my $stream = $ref->subdir_next)
   {
     my $subdir = $stream->name;
     $subdir =~ s/^\.\///;
     die unless $subdir =~ /([^-]+)-/;
-    $topdir = $1;
+
+    if (!$topdir) {
+      $topdir = $1;
+      open OUT, "|sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-store ./$topdir $my_filename | mrs-output";
+    }
     while (my ($pos, $size, $filename) = $stream->file_next)
     {
       last if !defined $pos;
       next if $filename ne $my_filename;
-      if (scalar(@data) > $MAX_READS) {
-	print STDERR "too many reads for $my_filename - dropping them all\n";
-	print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
-	exit 0;
-      }
+      #print "$subdir\n";
       $stream->seek($pos);
       my $buf;
       while (my $dataref = $stream->read_until ($pos + $size)) {
@@ -119,27 +118,17 @@ if ($ENV{MR_LEVEL} == 1)
       my $z = new IO::Uncompress::Gunzip \$buf
 	or die "gunzip failed: $GunzipError\n";
       while (my $line = <$z>) {
-	my (undef, undef, undef, $pos) = split(/\t/, $line, 5);
-	push @data, [$pos, $line];
+	print OUT $line;
+	$num_rec++;
       }
       $z->close
 	or die "gunzip failed: $GunzipError\n";
     }
   }
+  close OUT
+    or die "sort pipeline failed";
 
-  if (@data) {
-    die unless $topdir;
-    @data = sort { $a->[0] <=> $b->[0] } @data;
-    open OUT, "| gzip -n | mrs-store ./$topdir $my_filename | mrs-output";
-    foreach my $data (@data) {
-      print OUT $data->[1];
-    }
-    close OUT
-      or die "pipe problem";
-  }
-  else {
-    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
-  }
+  print STDERR "sorted $num_rec records\n";
   exit 0;
 }
 
