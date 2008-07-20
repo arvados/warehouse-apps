@@ -104,7 +104,7 @@ if ($ENV{MR_LEVEL} == 1)
 
     if (!$topdir) {
       $topdir = $1;
-      open OUT, qq{| /bin/bash -o pipefail -c "sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-fail ./$topdir $my_filename | mrs-output"}
+      open OUT, qq{| /bin/bash -o pipefail -c "sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-store ./$topdir $my_filename | mrs-output"}
 	or die;
     }
     while (my ($pos, $size, $filename) = $stream->file_next)
