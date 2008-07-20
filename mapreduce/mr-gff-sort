@@ -104,7 +104,7 @@ if ($ENV{MR_LEVEL} == 1)
 
     if (!$topdir) {
       $topdir = $1;
-      open OUT, "|sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-store ./$topdir $my_filename | mrs-output"
+      open OUT, "|sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-store ./$topdir $my_filename | mrs-output > $tmp/$my_filename.manifest"
 	or die;
     }
     while (my ($pos, $size, $filename) = $stream->file_next)
@@ -130,6 +130,12 @@ if ($ENV{MR_LEVEL} == 1)
   }
   close OUT
     or die "sort pipeline failed";
+  open(IN, "$tmp/$my_filename.manifest");
+  while (<IN>) {
+    print;
+  }
+  close(IN);
+  unlink "$tmp/$my_filename.manifest";
 
   print STDERR "sorted $num_rec records\n";
   exit 0;
