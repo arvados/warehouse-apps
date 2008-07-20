@@ -104,7 +104,7 @@ if ($ENV{MR_LEVEL} == 1)
 
     if (!$topdir) {
       $topdir = $1;
-      open OUT, "|sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-store ./$topdir $my_filename > $tmp/$my_filename.manifest"
+      open OUT, qq{| /bin/bash -o pipefail -c "sort -k4,4n -k10,10 --buffer-size=400M | gzip -n | mrs-fail ./$topdir $my_filename | mrs-output"}
 	or die;
     }
     while (my ($pos, $size, $filename) = $stream->file_next)
@@ -130,12 +130,6 @@ if ($ENV{MR_LEVEL} == 1)
   }
   close OUT
     or die "sort pipeline failed";
-
-  print STDERR "ready to output\n";
-
-  system("mrs-output < $tmp/$my_filename.manifest") == 0
-    or die "mrs-output failed";
-  unlink "$tmp/$my_filename.manifest";
 
   print STDERR "sorted $num_rec records\n";
   exit 0;
