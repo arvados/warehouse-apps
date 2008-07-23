@@ -70,8 +70,11 @@ sub parse_variants() {
 	$hits {$query} = "REDUNDANT"; 
       }
       elsif ($summary) {
-	$hits {$query} = "$summary; $chr; $strand; $pos_r; $pos_q;". 
+	$hits {$query} = "$summary; $chr; $strand; $pos_r; $pos_q; ". 
 	    "$bp_r; $bp_q";
+      }
+      elsif ($n == 0) {
+	$hits{$query} = "; $chr; $strand; $pos_r; $pos_q; $bp_r; $bp_q"
       }
       else {
 	$hits {$query} = "UNIQUE"; 
