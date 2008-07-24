@@ -355,6 +355,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
+    $ENV{"GZIP"} = "-n";
 
     my @srunargs = (
       "srun",
