@@ -28,7 +28,7 @@ while(<>) {
   my $chrpos0;
   my $chrpos1; 
 
-  if ($strand =~ m/M/) { 
+  if ($strand =~ m/P/) { 
     $chrpos0 = $chr_pos-1; 
     $chrpos1 = $chr_pos+$tr_len;
   }
