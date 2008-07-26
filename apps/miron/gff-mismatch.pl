@@ -81,7 +81,7 @@ sub find_diffs {
     push @diffs, $cur_pos + $pos;
     $seq = substr($seq, $pos+1);
     $ref = substr($ref, $pos+1);
-    $cur_pos = $pos;
+    $cur_pos = $cur_pos + $pos + 1;
   }
   return @diffs;
 }
