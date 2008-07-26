@@ -12,7 +12,7 @@ my $file = shift;
 
 $file = "" if !defined $file || $file eq '-';
 
-my $bfa = new BFA "/home/miron/homo_sapiens.bfa";
+my $bfa = new BFA($ENV{REFERENCE_FILE} || "/home/miron/homo_sapiens.bfa");
 
 my $did_init = 0;
 my $QUALITY_THRESHOLD = 0;

@@ -19,6 +19,7 @@ my $reffile = "$tmp/$reference_manifest_file";
 atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
 
 $ENV{PERLLIB} .= ":$src/apps/miron";
+$ENV{REFERENCE_FILE} = $reffile;
 system("$src/apps/miron/gff-mismatch.pl") == 0 or die "gff-mismatch.pl failed";
 
 exit 0;
