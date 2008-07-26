@@ -29,7 +29,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   $outname =~ s/\..*/.$ext.gz/;
 
   Safepipe::readfrom ("main::S",
-		      "mrs-fetch -h '$manifestkey' '$wantsubdir' '$name'",
+		      "mrs-fetch -h --no-gunzip '$manifestkey' '$wantsubdir' '$name'",
 		      "$ENV{KNOB_FUNCTION} '$wantsubdir' '$name'",
 		      "/bin/gzip -n",
 		      "mrs-store '$wantsubdir' '$outname'",
