@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:output a list of manifests
+###MR_INPUT:manifest
+###MR_KNOBS:PREFIXLENGTH=2
+
+use strict;
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $prefixlength = $ENV{KNOB_PREFIXLENGTH} || 2;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  foreach (0..2**($prefixlength*4)-1)
+  {
+    printf STDERR "+++mrjobstep 1 %0${prefixlength}x+++\n", $_;
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $prefix = $ENV{MR_INPUT};
+  my $whc = new Warehouse;
+
+  open OUT, "|bash -o pipefail -c 'mrs-store ./$prefix keys.txt | mrs-output'" or die;
+
+  my %manifestexists;
+  my $after;
+  my $keys;
+  while (($after, $keys) = $whc->{mogc}->list_keys ($prefix, $after, 100000))
+  {
+    last if !$keys || !@$keys;
+    foreach my $key (@$keys)
+    {
+      {
+	my $firstfew = $whc->fetch_block_ref ($key, { verify => 0, length => 8192 });
+	next if !$firstfew;
+	if ($$firstfew =~ /^(?:\.|\.\/\S+) ((?:[0-9a-f]{32}(?:\+\S+)+ )*)(?:0:\d+:\S+(?: \d+:\d+:\S+)*)?\n(\S)?/)
+	{
+	  if ($2 eq "." || length($1) > 64)
+	  {
+	    # only mention multi-subdir or multi-block manifests
+	    print OUT "$key\n";
+	  }
+	}
+      }
+    }
+  }
+
+  close OUT;
+}
+
