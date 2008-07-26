@@ -9,6 +9,9 @@ use Data::Dumper;
 use BFA;
 
 my $file = shift;
+
+$file = "" if !defined $file || $file eq '-';
+
 my $bfa = new BFA "/home/miron/homo_sapiens.bfa";
 
 my $did_init = 0;
@@ -59,6 +62,8 @@ while (<IN>) {
     print join("\t", $chr, $source, 'mismatch', $start + $diff_pos - 2, $start + $diff_pos - 2, $qual, $strand, $frame, "R $attrs{R} ; D " . substr($ref, $diff_pos - 2, 5) . " " . substr($seq, $diff_pos - 2, 5)), "\n";
   }
 }
+
+close(IN) or die;
 
 sub find_diffs {
   my ($seq, $ref) = @_;
