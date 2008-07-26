@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+
+my $tmp = $ENV{MR_JOB_TMP};
+
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+
+my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
+my $reference_manifest_file = $ENV{KNOB_REFERENCEFILE} or die;
+my $reffile = "$tmp/$reference_manifest_file";
+
+atomic_whget("$reference_manifest_key/$reference_manifest_file", $reffile);
+
+system("$src/apps/miron/gff-mismatch.pl") or die "gff-mismatch.pl failed";
+
+exit 0;
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}

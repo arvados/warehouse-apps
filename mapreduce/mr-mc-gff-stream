@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:stream all gff files in a manifest, apply mrs-* function, store 
+###MR_INPUT:manifest
+###MR_KNOBS:FUNCTION=mrs-mc-gff-mismatch
+###MR_KNOBS:EXT=gff
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+my $manifestkey = $ENV{MR_INPUT0};
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $manifestkey;
+  do "mrtask-queuefiles"; 
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my ($wantsubdir, $name) = split(/:/, $ENV{MR_INPUT}, 2);
+
+  my $outname = $name;
+  my $ext = $ENV{KNOB_EXT} || 'gff';
+  $outname =~ s/\..*/.$ext.gz/;
+
+  Safepipe::readfrom ("main::S",
+		      "mrs-fetch -h '$manifestkey' '$wantsubdir' '$name'",
+		      "$ENV{KNOB_FUNCTION} '$wantsubdir' '$name'",
+		      "/bin/gzip -n",
+		      "mrs-store '$wantsubdir' '$outname'",
+		      "mrs-output");
+  close "S" or die "close S: $!";
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+}
+
