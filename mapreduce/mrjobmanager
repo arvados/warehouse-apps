@@ -244,12 +244,11 @@ if ($skip_install)
 }
 else
 {
-  $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
-
   Log (undef, "Install revision ".$Job->{revision});
   my $nodelist = join(",", @node);
   $ENV{"MR_REVISION"} = $Job->{revision};
   $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
+  $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
   $ENV{"INSTALL_REPOS"} = $main::svn_repos;
   $ENV{"INSTALL_REVISION"} = $Job->{revision};
   my @srunargs = ("srun",
