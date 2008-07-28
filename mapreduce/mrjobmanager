@@ -252,7 +252,8 @@ else
   $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
   $ENV{"INSTALL_REPOS"} = $main::svn_repos;
   $ENV{"INSTALL_REVISION"} = $Job->{revision};
-  my @srunargs = ("--nodelist='$nodelist'",
+  my @srunargs = ("srun",
+		  "--nodelist='$nodelist'",
 		  "-D", "/tmp", "--job-name='$job_id'");
   my @execargs = ("sh", "-c",
 		  "mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
@@ -274,7 +275,7 @@ else
   my $cleanpid = fork();
   if ($cleanpid == 0)
   {
-    srun (["--nodelist=$nodelist", "-D", "/tmp"],
+    srun (["srun", "--nodelist=$nodelist", "-D", "/tmp"],
 	  [qw(rm -rf /tmp/mrcompute/work)]);
     exit (1);
   }
@@ -406,8 +407,8 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     }
     $execargs[-1] .=
 	"&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
-    srun(\@srunargs, \@execargs);
-    exit(1);
+    srun (\@srunargs, \@execargs);
+    exit (1);
   }
   close("writer");
   if (!defined $childpid)
