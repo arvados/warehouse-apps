@@ -253,8 +253,8 @@ else
   $ENV{"INSTALL_REPOS"} = $main::svn_repos;
   $ENV{"INSTALL_REVISION"} = $Job->{revision};
   my @srunargs = ("srun",
-		  "--nodelist='$nodelist'",
-		  "-D", "/tmp", "--job-name='$job_id'");
+		  "--nodelist=$nodelist",
+		  "-D", "/tmp", "--job-name=$job_id");
   my @execargs = ("sh", "-c",
 		  "mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
 
