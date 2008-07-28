@@ -256,12 +256,35 @@ else
 		  "-D", "/tmp", "--job-name='$job_id'");
   my @execargs = ("sh", "-c",
 		  "mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
-  my $ret = srun (\@srunargs, \@execargs, { fork => 1 });
-  Log (undef, "Install exited $ret");
 
-  srun (["--nodelist=$nodelist", "-D", "/tmp"],
-      [qw(rm -rf /tmp/mrcompute/work)],
-      { fork => 1 });
+  my $installpid = fork();
+  if ($installpid == 0)
+  {
+    srun (\@srunargs, \@execargs);
+    exit (1);
+  }
+  while (1)
+  {
+    last if $installpid == waitpid (-1, WNOHANG);
+    freeze_if_want_freeze ($installpid);
+    select (undef, undef, undef, 0.1);
+  }
+  Log (undef, "Install exited $?");
+
+  my $cleanpid = fork();
+  if ($cleanpid == 0)
+  {
+    srun (["--nodelist=$nodelist", "-D", "/tmp"],
+	  [qw(rm -rf /tmp/mrcompute/work)]);
+    exit (1);
+  }
+  while (1)
+  {
+    last if $cleanpid == waitpid (-1, WNOHANG);
+    freeze_if_want_freeze ($cleanpid);
+    select (undef, undef, undef, 0.1);
+  }
+  Log (undef, "Clean-work-dir exited $?");
 }
 
 
@@ -460,15 +483,7 @@ while (%proc)
 update_progress_stats();
 
 
-
-if ($main::please_freeze)
-{
-  freeze();
-  cleanup();
-  save_meta();
-  exit 0;
-}
-
+freeze_if_want_freeze();
 
 
 if (@jobstep_tomerge && !@jobstep_todo)
@@ -877,6 +892,33 @@ sub save_meta
 	    undef,
 	    $key, $job_id)
       if $have_slurm;
+}
+
+
+sub freeze_if_want_freeze
+{
+  if ($main::please_freeze)
+  {
+    if (@_)
+    {
+      # kill some srun procs before freeze+stop
+      map { $proc{$_} = {} } @_;
+      while (%proc)
+      {
+	killem (keys %proc);
+	select (undef, undef, undef, 0.1);
+	my $died;
+	while (($died = waitpid (-1, WNOHANG)) > 0)
+	{
+	  delete $proc{$died};
+	}
+      }
+    }
+    freeze();
+    cleanup();
+    save_meta();
+    exit 0;
+  }
 }
 
 
