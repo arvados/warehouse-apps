@@ -45,12 +45,12 @@ die "Didn't find a job whose id or output is $key\n" if !defined $targetjob;
 
 while (defined $targetjob)
 {
-    if ($did{$targetjob->{outputkey}})
+    if ($did{$targetjob->{id}})
     {
 	warn "Cycle detected; stopping.\n";
 	last;
     }
-    $did{$targetjob->{outputkey}} = 1;
+    $did{$targetjob->{id}} = 1;
 
     printf "#%d\@%s\n", $targetjob->{id}, $warehouse_name;
     print_times ($whc->job_stats ($targetjob->{id}));
