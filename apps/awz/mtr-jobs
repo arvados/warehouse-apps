@@ -1,0 +1,627 @@
+#!/usr/bin/perl
+
+use strict;
+use Warehouse;
+my $whc = new Warehouse;
+
+my %override;
+while ($ARGV[0] =~ /^(.*?)=(.*)$/)
+{
+    $override{$1} = $2;
+    shift @ARGV;
+}
+
+@ARGV == 4
+    or die qq{
+usage: $0 default-revision reference batchesperjob outputdir
+
+example: $0 2036 f4c53b5ea8ed51077c46116b5c591fae 600 .
+
+};
+
+my ($revision_default, $reference, $batchesperjob, $outputdir) = @ARGV;
+
+my %Job;
+my @Job;
+
+my $joblist = $whc->job_list;
+for (@$joblist)
+{
+    $Job{$_->{id}} = $_;
+}
+@Job = sort { $b->{id} <=> $a->{id} } values %Job;
+
+my $header = sprintf (" %-32s %-38s %-38s %-38s %-38s\n\n",
+		      qw(species/traces megablast megatri-count/megatri-count-m0n3 megatri-sum1/querydb megatri-sum2/reduce-cat));
+print $header;
+
+my $alltimes = {};
+my $alltimestring = "";
+
+my $html = "";
+my $all_species_jobs = $header;
+my %data_size_species;
+my %data_size_column;
+
+my %traces = qw{
+    anopheles_gambiae       8acd9332f0b7c299bd435d91cecf7f1e
+    callithrix_jacchus      503333295028639b6644654b15e44e4a
+    drosophila_melanogaster a1552c0998ae3a6a303502007a623c25
+    canis_familiaris        070a9a97d6d4163d554fdd2212b90288
+    gallus_gallus           6a8c30801a63c460f01b7fece00bda0e
+    homo_sapiens            309cb0a70f3fb773b2d2228c668de767
+    mus_musculus            3375774d2b79c637aa514ae7d0bd7784
+    pan_troglodytes         79c134434ba2bbc987ec7be7f91e43aa
+    takifugu_rubripes       1ab5d567801169762428c444ee7ad2b9
+    xenopus_tropicalis      cc2468dc5d437f6c4bd1773f9307704e
+};
+
+$html = "<table>\n";
+foreach my $species (sort keys %traces)
+{
+    my $megablast;
+    my $megatri_count;
+    my $megatri_sum1;
+    my $megatri_sum2;
+    my $megatri_count_m0n3;
+    my $querydb;
+    my $reduce_cat;
+    if (exists $override{"$species/megablast"})
+    {
+	$megablast = { id => "none",
+		       outputkey => $override{"$species/megablast"},
+		   };
+    }
+    $megablast = findjob ( { mrfunction => "megablast",
+			     revision => [ 2014, ],
+			     inputkey => $traces{$species},
+			     knobs => makeknobs ("megablast",
+						 "BATCHSIZE=500",
+						 "FILTER400BP=0",
+						 "MAXBATCHESPERJOB=$batchesperjob",
+						 "REFERENCE=$reference",
+						 "REFERENCEDIR=$species",
+						 ),
+			 } ) unless $megablast;
+
+    if ($megablast && $megablast->{outputkey})
+    {
+	if (exists $override{"$species/megatri-count"})
+	{
+	    $megatri_count = { id => "none",
+			       outputkey => $override{"$species/megatri-count"},
+			       };
+	}
+	$megatri_count = findjob ( { mrfunction => "awz-stream",
+				     revision => [ 2046, ],
+				     inputkey => $megablast->{outputkey},
+				     knobs => makeknobs ("megatri-count",
+							 "EXAMPLES=5",
+							 "FUNCTION=mrs-megatri-count",
+							 "M=0-1",
+							 "N=1-5",
+							 "OUTPUTNAME=megatri-count.txt",
+							 ),
+				 } ) unless $megatri_count;
+    }
+    if ($megatri_count && $megatri_count->{outputkey})
+    {
+	if (exists $override{"$species/megatri-sum1"})
+	{
+	    $megatri_sum1 = { id => "none",
+			      outputkey => $override{"$species/megatri-sum1"},
+			  };
+	}
+	$megatri_sum1 = findjob ( { mrfunction => "megatri-sum",
+				     revision => [ 2100, ],
+				     inputkey => $megatri_count->{outputkey},
+				     knobs => makeknobs ("megatri-sum1",
+							 "EXAMPLES=1000",
+							 ),
+				 } ) unless $megatri_sum1;
+    }
+    if ($megatri_sum1 && $megatri_sum1->{outputkey})
+    {
+	if (exists $override{"$species/megatri-sum2"})
+	{
+	    $megatri_sum2 = { id => "none",
+			      outputkey => $override{"$species/megatri-sum2"},
+			  };
+	}
+	$megatri_sum2 = findjob ( { mrfunction => "megatri-sum",
+				     revision => [ 2100, ],
+				     inputkey => $megatri_sum1->{outputkey},
+				     knobs => makeknobs ("megatri-sum2",
+							 "EXAMPLES=1000",
+							 ),
+				 } ) unless $megatri_sum2;
+    }
+    if ($megablast && $megablast->{outputkey})
+    {
+	if (exists $override{"$species/megatri-count-m0n3"})
+	{
+	    $megatri_count_m0n3 = { id => "none",
+				    outputkey => $override{"$species/megatri-count-m0n3"},
+				};
+	}
+	$megatri_count_m0n3 = findjob ( { mrfunction => "awz-stream",
+					  revision => [ 2056, ],
+					  inputkey => $megablast->{outputkey},
+					  knobs => makeknobs ("megatri-count",
+							      "EXAMPLES=1000000",
+							      "FUNCTION=mrs-megatri-count",
+							      "M=0",
+							      "N=3",
+							      "OUTPUTNAME=megatri-count.txt",
+							      ),
+				      } ) unless $megatri_count_m0n3;
+    }
+    if ($megatri_count_m0n3 && $megatri_count_m0n3->{outputkey})
+    {
+	if (exists $override{"$species/querydb"})
+	{
+	    $querydb = { id => "none",
+			 outputkey => $override{"$species/querydb"},
+		     };
+	}
+	$querydb = findjob ( { mrfunction => "awz-stream",
+			       revision => [ 2079, ],
+			       inputkey => $megatri_count_m0n3->{outputkey},
+			       knobs => makeknobs ("querydb",
+						   "FUNCTION=mrs-querydb",
+						   "M=0",
+						   "N=3",
+						   "OUTPUTNAME=megatri-count.txt",
+						   ),
+			   } ) unless $querydb;
+    }
+    if ($querydb && $querydb->{outputkey})
+    {
+	if (exists $override{"$species/reduce-cat"})
+	{
+	    $reduce_cat = { id => "none",
+			    outputkey => $override{"$species/reduce-cat"},
+			};
+	}
+	$reduce_cat = findjob ( { mrfunction => "reduce-cat",
+				  revision => [ 2084, ],
+				  inputkey => $querydb->{outputkey},
+				  knobs => makeknobs ("reduce-cat",
+						      "OUTPUTNAME=megatri-count.txt",
+						      ),
+			      } ) unless $reduce_cat;
+    }
+    $html .= "<tr>\n";
+    foreach my $suffix ("", "-m0n3")
+    {
+	my $megatri_job = $suffix ? $megatri_count_m0n3 : $megatri_count_m0n3;
+
+	for my $m (0, 1)
+	{
+	    do { next; } if $m == 0 && $suffix;
+	    do { $html .= "<td></td>\n"; next; } if !$megatri_job || !$megatri_job->{outputkey};
+
+	    my $hash = $megatri_job->{outputkey};
+
+	    my $normalized;
+	    my $examples;
+	    if ($suffix)
+	    {
+		my $symlink = do_mtrsum ($hash, $species);
+		if (!defined $symlink) { $html .= "<td></td>"; next; }
+		$normalized = do_mtrnormalize ($symlink, $species, $m, $suffix);
+	    }
+	    else
+	    {
+		if (!$megatri_sum2 || !$megatri_sum2->{outputkey}) { $html .= "<td></td>"; next; }
+		$hash = $megatri_sum2->{outputkey};
+		$normalized = do_mtrnormalize2 ($hash, $species, $m, $suffix);
+	    }
+
+	    if (!-e "$outputdir/mtr-normalized-$species-m$m$suffix.png" ||
+		-M "$outputdir/mtr-normalized-$species-m$m$suffix.png" >= -M "$outputdir/$normalized")
+	    {
+		#do_mtrgraph ($normalized, $species, $m, $suffix);
+	    }
+
+	    my @summary = `cut -f1,2,15- < $outputdir/$normalized`;
+	    $html .= "<td valign=\"top\"><img src=\"mtr-normalized-$species-m$m$suffix.png\"><br /><pre><small>\n";
+	    map {
+		chomp;
+		$_ = sprintf ("%2s %2s %14s %14s %14s %14s\n", split /\t/);
+		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"mtr-examples-$species-m$2-n$3.txt\">more</A>} if $suffix;
+		s{^(\s*(\d+)\s+(\d+).*)}{$1 <A href=\"http://templeton-controller.freelogy.org/whget.cgi/$hash/m$2n$3/examples.txt\">more</A>} if !$suffix;
+		$html .= $_;
+	    } @summary;
+	    $html .= "</small></pre></td>\n";
+	}
+    }
+
+    if ($reduce_cat && $reduce_cat->{outputkey})
+    {
+	my $hash = $reduce_cat->{outputkey};
+	for my $filter (qw(all genomic genomic-100bp-runs))
+	{
+	    if (!-e "$outputdir/$hash-$filter.txt")
+	    {
+		my $mtrgraphbycenter = $0;
+		$mtrgraphbycenter =~ s/[^\/]*$/mtr-graphbycenter.pl/;
+
+		system "$mtrgraphbycenter $filter $hash > $outputdir/$hash-$filter.txt";
+		if ($?)
+		{
+		    unlink "$outputdir/$hash-$filter.txt";
+		    die "whget $hash exit $?";
+		}
+	    }
+	    if (!-e "$outputdir/$hash-$filter.png")
+	    {
+		my $mtrgraphbycenter_R = $0;
+		$mtrgraphbycenter_R =~ s/[^\/]*$/mtr-graphbycenter.r/;
+
+		next if !-e $mtrgraphbycenter_R;
+
+		my $Species = $species;
+		$Species =~ s/_/ /g;
+		$Species =~ s/\b([a-z])/uc $1/eg;
+		#system "R --slave --vanilla --args imagefile='$outputdir/$hash-$filter.png' infile='$outputdir/$hash-$filter.txt' graph_w=8 graph_h=4 title='$Species\n$filter' legendtitle='Center' < $mtrgraphbycenter_R >/dev/null";
+		if ($?)
+		{
+		    unlink "$outputdir/$hash-$filter.png";
+		    die "R exit $?";
+		}
+	    }
+	    my $table = `cat $outputdir/$hash-$filter.txt`;
+	    $html .= "<td valign=\"top\"><img src=\"$hash-$filter.png\"><br /><pre><small>$table</small></pre></td>";
+	}
+    }
+
+    $html .= "</tr>\n";
+    my $species_jobs = sprintf (" %-32s %38s %38s %38s %38s\n %-32s %38s %38s %38s %38s\n",
+				$species,
+				id_and_output($megablast),
+				id_and_output($megatri_count),
+				id_and_output($megatri_sum1),
+				id_and_output($megatri_sum2),
+				$traces{$species},
+				"",
+				id_and_output($megatri_count_m0n3),
+				id_and_output($querydb),
+				id_and_output($reduce_cat),
+				);
+
+    $all_species_jobs .= $species_jobs;
+    print $species_jobs;
+
+
+    my $times = {};
+    foreach ($megablast, $megatri_count, $megatri_sum1, $megatri_sum2,
+	     $megatri_count_m0n3, $querydb, $reduce_cat)
+    {
+	my $jobtimes = get_job_times ($_);
+	map { $times->{$_} += $jobtimes->{$_} } keys %$jobtimes;
+    }
+    map { $alltimes->{$_} += $times->{$_} } keys %$times;
+    my $timestring = format_times ($species, $times);
+    $alltimestring .= $timestring;
+    print $timestring;
+
+
+    $data_size_species{$species} += $whc->manifest_data_size ($traces{$species});
+    $data_size_column{"input"} += $whc->manifest_data_size ($traces{$species});
+    foreach (qw(megablast megatri_count megatri_sum1 megatri_sum2
+		megatri_count_m0n3 querydb reduce_cat))
+    {
+	my $job = eval "\$$_";
+	my $key = $job->{outputkey};
+	next if !$key;
+	$data_size_species{$species} += $whc->manifest_data_size ($key);
+	$data_size_column{$_} += $whc->manifest_data_size ($key);
+    }
+    printf " %d bytes\n", $data_size_species{$species};
+
+
+    $all_species_jobs .= "\n";
+    print "\n";
+
+
+    $whc->write_cache;
+}
+$html .= "</table>\n";
+
+$all_species_jobs =~ s|\b([\da-f]{32})\b|<a href="http://templeton-controller.freelogy.org/whget.cgi/$1/">$1</a>|g;
+
+$html .= "<pre>";
+$html .= $all_species_jobs;
+$html .= $alltimestring;
+$html .= "<b>".format_times ("all", $alltimes)."</b>";
+$html .= "\n";
+$html .= format_sizes();
+$html .= "</pre>";
+
+open HTML, ">", $outputdir."/mtr-index.html" or die "create mtr-index.html: $!";
+print HTML $html;
+close HTML or die "close mtr-index.html: $!";
+
+print format_times ("all", $alltimes);
+
+
+sub id_and_output
+{
+    my $job = shift;
+    return "" if !$job;
+    return $job->{id}."/".$job->{outputkey} if $job->{outputkey};
+    my $steps = $job->{steps_done} + $job->{steps_running} + $job->{steps_todo};
+    my $pct = $steps==0 ? "" : " (".int(100*$job->{steps_done}/$steps)."%)";
+    return $job->{id}."/".$pct;
+}
+
+sub findjob
+{
+    my $want = shift;
+    my $failed;
+    my $queued;
+    for (@Job)
+    {
+	if ($_->{revision} >= $want->{revision}->[0]
+	    && ($_->{revision} <= $want->{revision}->[1] || !$want->{revision}->[1])
+	    && $_->{mrfunction} eq $want->{mrfunction}
+	    && $_->{knobs} eq $want->{knobs}
+	    && $_->{inputkey} eq $want->{inputkey})
+	{
+	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
+	    $failed = $_ if !$failed && $_->{success} eq '0';
+	    return $_ if $_->{outputkey};
+	}
+    }
+    mention_failed_job ($failed) if !$queued && $failed;
+    suggest_new_job ($want) if !$queued && !$want->{quiet};
+    return $queued;
+}
+
+sub suggest_new_job
+{
+    my $want = shift;
+    my $revision = $want->{revision}->[1] || $revision_default;
+    $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
+    my $knobs = $want->{knobs};
+    $knobs =~ s/=(.*?)(\\n|$)/='$1' /g;
+    print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' $knobs\n";
+}
+
+sub mention_failed_job
+{
+    my $job = shift;
+    print "# suggest investigating job id=".$job->{id}." -- failed with frozentokey=".$job->{frozentokey}." metakey=".$job->{metakey}."\n";
+}
+
+sub makeknobs
+{
+    my $function = shift @_;
+    my $knobs = "";
+    foreach (sort @_)
+    {
+	my ($k) = /^(.*)=/;
+	if (exists $override{"$function/$k"})
+	{
+	    $knobs .= $k."=".$override{"$function/$k"};
+	}
+	else
+	{
+	    $knobs .= $_;
+	}
+	$knobs .= "\\n";
+    }
+    $knobs =~ s/\\n$//s;
+    return $knobs;
+}
+
+sub do_mtrsum
+{
+    my $hash = shift;
+    my $species = shift;
+
+    my $mtrsum = $0;
+    $mtrsum =~ s/[^\/]*$/mtr-sum.pl/;
+    my $sumfile = "$outputdir/mtr-sum-$hash.txt";
+    if (!-s $sumfile)
+    {
+	return undef if $override{"mtrsum"} eq "skip";
+	my $opts = "";
+	$opts .= " EXAMPLES=".$override{"report/EXAMPLES"}
+	    if exists $override{"report/EXAMPLES"};
+	system "$mtrsum $opts $hash $outputdir/mtr-examples-$species > $sumfile";
+	if ($?)
+	{
+	    unlink ("$outputdir/mtr-sum-$hash.txt");
+	    die "\"$mtrsum $opts $hash ...\" failed: exit $?";
+	}
+    }
+    my $symlink = "$outputdir/mtr-symlink-$species.txt";
+    if (-e $symlink && !-l $symlink)
+    {
+	die "$symlink is not a symlink";
+    }
+    unlink ($symlink) if -l $symlink;
+    symlink ("mtr-sum-$hash.txt", $symlink)
+	or die "$symlink: $!";
+    return $symlink;
+}
+
+sub do_mtrnormalize
+{
+    my $symlink = shift;
+    my $species = shift;
+    my $m = shift;
+    my $suffix = shift;
+
+    my $mtrnormalize = $0;
+    $mtrnormalize =~ s/[^\/]*$/mtr-normalize.pl/;
+
+    my $normalized = "mtr-normalized-$species-m$m$suffix.txt";
+
+    system "$mtrnormalize $m < $symlink > $outputdir/$normalized";
+    if ($?)
+    {
+	die "$mtrnormalize pipe exit $?";
+    }
+    return $normalized;
+}
+
+sub do_mtrnormalize2
+{
+    my $hash = shift;
+    my $species = shift;
+    my $m = shift;
+    my $suffix = shift;
+
+    my $mtrnormalize2 = $0;
+    $mtrnormalize2 =~ s/[^\/]*$/mtr-normalize2.pl/;
+
+    my $normalized = "mtr-normalized-$species-m$m$suffix.txt";
+    return $normalized if (-e "$outputdir/$normalized");
+
+    system "$mtrnormalize2 $hash $m > $outputdir/$normalized";
+    if ($?)
+    {
+	die "$mtrnormalize2 pipe exit $?";
+    }
+    return $normalized;
+}
+
+sub do_mtrgraph
+{
+    my $normalized = shift;
+    my $species = shift;
+    my $m = shift;
+    my $suffix = shift;
+
+    my $mtrgraph = $0;
+    $mtrgraph =~ s/[^\/]*$/mtr-graph.r/;
+
+    my $Species = $species;
+    $Species =~ s/_/ /;
+    $Species =~ s/\b([a-z])/uc $1/eg;
+
+    my $imagefile = "mtr-normalized-$species-m$m$suffix.png";
+    system "R --slave --vanilla --args imagefile='$outputdir/$imagefile' infile='$outputdir/$normalized' organism='$Species' m='$m' < $mtrgraph >/dev/null";
+    if ($?)
+    {
+	die "R exit $?";
+    }
+
+    return $imagefile;
+}
+
+sub get_job_times
+{
+    my $job = shift;
+    my $atwhichfreeze = shift;
+    return {
+	nodeseconds => 0,
+	elapsed => 0,
+	slot_seconds => 0,
+	success_seconds => 0,
+	failure_seconds => 0,
+	} if !$job;
+    my $frozen = $whc->job_follow_thawedfrom ($job);
+    $frozen = $whc->job_stats ($frozen->{id});
+
+    my $times = get_job_times ($frozen, $job->{thawedfromkey});
+
+    $job = $whc->job_stats ($job->{id});
+    my $frozentimes;
+    if ($atwhichfreeze
+	&& $job->{meta_stats}->{frozentokeys}
+	&& ($frozentimes = $job->{meta_stats}->{frozentokeys}->{$atwhichfreeze}))
+    {
+	printf STDERR ("Adding stats from %d at t=%d: %d elapsed, %d success, %d failure, %d idle\n",
+		       $job->{id},
+		       $frozentimes->{frozentime},
+		       $frozentimes->{elapsed},
+		       $frozentimes->{success_seconds},
+		       $frozentimes->{failure_seconds},
+		       $frozentimes->{idle_seconds}) if $ENV{MTR_DEBUG};
+	foreach (keys %$times)
+	{
+	    $times->{$_} += $frozentimes->{$_};
+	}
+    }
+    else
+    {
+	if ($ENV{MTR_DEBUG})
+	{
+	    if ($atwhichfreeze)
+	    {
+		print STDERR "Adding stats from ".$job->{id}.", using entire job because frozentokey ".$atwhichfreeze." not found\n";
+	    }
+	    else
+	    {
+		print STDERR "Adding stats from ".$job->{id}."\n";
+	    }
+	}
+	foreach (keys %$times)
+	{
+	    $times->{$_} += ($job->{meta_stats}->{$_} || $job->{$_});
+	}
+    }
+    return $times;
+}
+
+sub format_times
+{
+    my $species = shift;
+    my $times = shift;
+
+    my $s = sprintf (" %-32s %d s (%s) job allocation, %d s (%s) node allocation",
+		     $species,
+		     $times->{elapsed}, fancytime ($times->{elapsed}),
+		     $times->{nodeseconds}, fancytime ($times->{nodeseconds}),
+		     );
+    $s .= sprintf (", %.1f%% success, %.1f%% failure, %.1f%% idle",
+		    $times->{success_seconds} * 100 / $times->{slot_seconds},
+		    $times->{failure_seconds} * 100 / $times->{slot_seconds},
+		    100 - ($times->{success_seconds} + $times->{failure_seconds}) * 100 / $times->{slot_seconds},
+		    )
+	if $times->{slot_seconds};
+    $s .= "\n";
+    return $s;
+}
+
+sub format_sizes
+{
+    my $total = 0;
+    my $s = "";
+    foreach my $species (sort keys %data_size_species)
+    {
+	$s .= sprintf (" %-32s %17s bytes\n", $species, addcommas($data_size_species{$species}));
+	$total += $data_size_species{$species};
+    }
+    $s .= "\n";
+    foreach my $column (sort keys %data_size_column)
+    {
+	$s .= sprintf (" %-32s %17s bytes\n", $column, addcommas($data_size_column{$column}));
+    }
+    $s .= "\n";
+    $s .= sprintf (" %-32s %17s bytes\n", "total", addcommas($total));
+    return $s;
+}
+
+sub addcommas
+{
+    my $n = shift;
+    while ($n =~ s/(.*\d)(\d\d\d)\b/$1,$2/) { }
+    return $n;
+}
+
+sub fancytime
+{
+    my $s = shift;
+    my $fancy = sprintf ("%dd%dh%dm%ds",
+			 int($s/86400),
+			 int(($s%86400)/3600),
+			 int(($s%3600)/60),
+			 int($s%60));
+    while ($fancy =~ s/^\b0\D//) { }
+    return $fancy;
+}
