@@ -165,7 +165,7 @@ foreach my $species (sort keys %traces)
 		     };
 	}
 	$querydb = findjob ( { mrfunction => "awz-stream",
-			       revision => [ 2079, ],
+			       revision => [ 2183, ],
 			       inputkey => $megatri_count_m0n3->{outputkey},
 			       knobs => makeknobs ("querydb",
 						   "FUNCTION=mrs-querydb",
