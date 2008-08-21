@@ -35,6 +35,9 @@ my $header = sprintf (" %-32s %-38s %-38s %-38s %-38s\n\n",
 		      qw(species/traces megablast megatri-count/megatri-count-m1n5 megatri-sum1/querydb megatri-sum2/reduce-cat));
 print $header;
 
+my @functionlist = qw(megablast megatri_count megatri_sum1 megatri_sum2
+		      megatri_count_m1n5 querydb reduce_cat);
+my $functiontimes = {};
 my $alltimes = {};
 my $alltimestring = "";
 
@@ -295,11 +298,14 @@ foreach my $species (sort keys %traces)
 
 
     my $times = {};
-    foreach ($megablast, $megatri_count, $megatri_sum1, $megatri_sum2,
-	     $megatri_count_m1n5, $querydb, $reduce_cat)
+    foreach my $function (@functionlist)
     {
-	my $jobtimes = get_job_times ($_);
+	my $job = eval "\$$function";
+	my $jobtimes = get_job_times ($job);
 	map { $times->{$_} += $jobtimes->{$_} } keys %$jobtimes;
+
+	$functiontimes->{$function} ||= {};
+	map { $functiontimes->{$function}->{$_} += $jobtimes->{$_} } keys %$jobtimes;
     }
     map { $alltimes->{$_} += $times->{$_} } keys %$times;
     my $timestring = format_times ($species, $times);
@@ -309,8 +315,7 @@ foreach my $species (sort keys %traces)
 
     $data_size_species{$species} += $whc->manifest_data_size ($traces{$species});
     $data_size_column{"input"} += $whc->manifest_data_size ($traces{$species});
-    foreach (qw(megablast megatri_count megatri_sum1 megatri_sum2
-		megatri_count_m1n5 querydb reduce_cat))
+    foreach (@functionlist)
     {
 	my $job = eval "\$$_";
 	my $key = $job->{outputkey};
@@ -331,12 +336,22 @@ $html .= "</table>\n";
 
 $all_species_jobs =~ s|\b([\da-f]{32})\b|<a href="http://templeton-controller.freelogy.org/whget.cgi/$1/">$1</a>|g;
 
+my $allfunctionstring = "";
+foreach my $function (@functionlist)
+{
+    my $timestring = format_times ($function, $functiontimes->{$function});
+    $allfunctionstring .= $timestring;
+    print $timestring;
+}
+
 $html .= "<pre>";
 $html .= $all_species_jobs;
 $html .= $alltimestring;
 $html .= "<b>".format_times ("all", $alltimes)."</b>";
 $html .= "\n";
 $html .= format_sizes();
+$html .= "\n\n";
+$html .= $allfunctionstring;
 $html .= "</pre>";
 
 open HTML, ">", $outputdir."/mtr-index.html" or die "create mtr-index.html: $!";
