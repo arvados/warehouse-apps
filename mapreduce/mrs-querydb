@@ -42,7 +42,7 @@ while (<>)
 	  = POST 'http://trace.ncbi.nlm.nih.gov/Traces/trace.cgi?cmd=raw',
 	  [query=>$query];
       my $res = LWP::UserAgent->new->request ($req);
-      if (!$res->is_success)
+      if (!$res->is_success && $res->content =~ m/No connection to/)
       {
 	if ($maxfailures-- > 0)
 	{
