@@ -8,7 +8,7 @@ my %args;
 getopts ("n:m:", \%args); 
 
 #sample input line  
-#example: m=1 n=5 ga gnl|ti|128860174 ana19b09.y1; agg}aag 5 335 (168 361 412 498 503), ; chr7; M; 117488075; 193;
+#example: m=0 n=5 ga gnl|ti|128860174 ana19b09.y1; g}a 5 335 (168 361 412 498 503), ; chr7; M; 117488075; 193;
 
 
 while(<>) {
@@ -63,7 +63,7 @@ while(<>) {
  
   my @edits = split (/,/,$runs); 
   foreach my $edit (@edits) {
-    if ($edit =~ m/(.}.) \d+ (\d+) \((.*)\)/ && $2 >= 100) {
+    if ($edit =~ m/(.}.) \d+ (\d+) \((.*)\)/ && $2 >= 0) {
       my $type = $1;
       my $length = $2; 
       my @runpos = split (/ /, $3); 
