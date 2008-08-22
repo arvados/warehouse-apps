@@ -5,7 +5,7 @@ use strict;
 use Getopt::Std; 
 
 my %args;
-getopts ("n:m:", \%args); 
+getopts ("t:", \%args); 
 
 #sample input line  
 #example: m=0 n=5 ga gnl|ti|128860174 ana19b09.y1; g}a 5 335 (168 361 412 498 503), ; chr7; M; 117488075; 193;
@@ -63,7 +63,7 @@ while(<>) {
  
   my @edits = split (/,/,$runs); 
   foreach my $edit (@edits) {
-    if ($edit =~ m/(.}.) \d+ (\d+) \((.*)\)/ && $2 >= 0) {
+    if ($edit =~ m/(.}.) \d+ (\d+) \((.*)\)/ && $2 >= $args{t}) {
       my $type = $1;
       my $length = $2; 
       my @runpos = split (/ /, $3); 
