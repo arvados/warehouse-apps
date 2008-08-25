@@ -4,6 +4,8 @@
 ###MR_DESCRIPTION:output a list of manifests
 ###MR_INPUT:manifest
 ###MR_KNOBS:PREFIXLENGTH=2
+###MR_KNOBS:MANIFESTONLY=yes
+###MR_KNOBS:BIGMANIFESTONLY=yes
 
 use strict;
 use Warehouse;
@@ -11,6 +13,9 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 
 my $prefixlength = $ENV{KNOB_PREFIXLENGTH} || 2;
+my $manifestonly = $ENV{KNOB_MANIFESTONLY} || 0;
+my $bigmanifestonly = $ENV{KNOB_BIGMANIFESTONLY} || 0;
+# bigmanifestonly === only multi-subdir and multi-block manifests
 
 if ($ENV{MR_LEVEL} == 0)
 {
@@ -39,11 +44,11 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	my $firstfew = $whc->fetch_block_ref ($key, { verify => 0, length => 8192 });
 	next if !$firstfew;
-	if ($$firstfew =~ /^(?:\.|\.\/\S+) ((?:[0-9a-f]{32}(?:\+\S+)+ )*)(?:0:\d+:\S+(?: \d+:\d+:\S+)*)?\n(\S)?/)
+	if (! ($manifestonly || $bigmanifestonly)
+	    || $$firstfew =~ /^(?:\.|\.\/\S+) ((?:[0-9a-f]{32}(?:\+\S+)+ )*)(?:0:\d+:\S+(?: \d+:\d+:\S+)*)?\n(\S)?/)
 	{
-	  if ($2 eq "." || length($1) > 64)
+	  if (!$bigmanifestonly || $2 eq "." || length($1) > 64)
 	  {
-	    # only mention multi-subdir or multi-block manifests
 	    print OUT "$key\n";
 	  }
 	}
