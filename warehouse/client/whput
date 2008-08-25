@@ -27,7 +27,7 @@ my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
 			 );
 my $manifest = "";
 
-if (-f $localbase)
+if ($localbase eq "-" || -f $localbase)
 {
     write_file ($localbase);
     exit 0;
@@ -59,7 +59,14 @@ else
 sub write_file
 {
     my $filename = shift;
-    open F, "<", $filename or die "Can't open $filename: $!";
+    if ($filename eq "-")
+    {
+	open F, "<&STDIN" or die "Can't dup stdin: $!";
+    }
+    else
+    {
+	open F, "<", $filename or die "Can't open $filename: $!";
+    }
     my $s = new Warehouse::Stream (whc => $whc);
     $s->clear;
     $s->write_start ("-");
