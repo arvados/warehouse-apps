@@ -1,0 +1,14 @@
+#!/usr/bin/perl
+
+use Warehouse;
+my $whc = new Warehouse;
+my %block;
+
+my $jobs = $whc->job_list;
+map { $block{$_->{metakey}} = 1 } @$jobs;
+
+foreach (sort keys %block)
+{
+    s/,/\n/gs;
+    print "$_\n" if /^[a-f0-9]{32}/;
+}
