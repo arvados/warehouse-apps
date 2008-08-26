@@ -198,7 +198,7 @@ foreach my $species (sort keys %traces)
 
 	for my $m (0, 1)
 	{
-	    do { next; } if $m == 0 && $suffix;
+	    do { next; } if $m == 1 && $suffix;
 	    do { $html .= "<td></td>\n"; next; } if !$megatri_job || !$megatri_job->{outputkey};
 
 	    my $hash = $megatri_job->{outputkey};
@@ -221,7 +221,7 @@ foreach my $species (sort keys %traces)
 	    if (!-e "$outputdir/mtr-normalized-$species-m$m$suffix.png" ||
 		-M "$outputdir/mtr-normalized-$species-m$m$suffix.png" >= -M "$outputdir/$normalized")
 	    {
-		#do_mtrgraph ($normalized, $species, $m, $suffix);
+		do_mtrgraph ($normalized, $species, $m, $suffix);
 	    }
 
 	    my @summary = `cut -f1,2,15- < $outputdir/$normalized`;
@@ -247,7 +247,7 @@ foreach my $species (sort keys %traces)
 		my $mtrgraphbycenter = $0;
 		$mtrgraphbycenter =~ s/[^\/]*$/mtr-graphbycenter.pl/;
 
-		system "$mtrgraphbycenter $filter $hash > $outputdir/$hash-$filter.txt";
+		system "$mtrgraphbycenter 0 3 $filter $hash > $outputdir/$hash-$filter.txt";
 		if ($?)
 		{
 		    unlink "$outputdir/$hash-$filter.txt";
@@ -264,11 +264,12 @@ foreach my $species (sort keys %traces)
 		my $Species = $species;
 		$Species =~ s/_/ /g;
 		$Species =~ s/\b([a-z])/uc $1/eg;
-		#system "R --slave --vanilla --args imagefile='$outputdir/$hash-$filter.png' infile='$outputdir/$hash-$filter.txt' graph_w=8 graph_h=4 title='$Species\n$filter' legendtitle='Center' < $mtrgraphbycenter_R >/dev/null";
+		my $cmd = "R --slave --vanilla --args imagefile='$outputdir/$hash-$filter.png' infile='$outputdir/$hash-$filter.txt' graph_w=8 graph_h=4 title='$Species\n$filter' legendtitle='Center' < $mtrgraphbycenter_R >/dev/null";
+		system $cmd;
 		if ($?)
 		{
 		    unlink "$outputdir/$hash-$filter.png";
-		    die "R exit $?";
+		    die "R exit $?\n$cmd\n...";
 		}
 	    }
 	    my $table = `cat $outputdir/$hash-$filter.txt`;

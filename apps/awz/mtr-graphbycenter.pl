@@ -1,14 +1,16 @@
 #!/usr/bin/perl
 
-if (@ARGV < 1 || @ARGV > 2)
+if (@ARGV < 3 || @ARGV > 4)
 {
     die <<EOF;
-usage: $0 filtertype [reduce-cat-outputkey]
+usage: $0 m n filtertype [reduce-cat-outputkey]
  filtertype = all | genomic | genomic-100bp-runs
 EOF
 ;
 }
 
+my $wantm = shift @ARGV;
+my $wantn = shift @ARGV;
 my $filtertype = shift @ARGV;
 my $filter_genomic = $filtertype =~ /genomic/;
 my $filter_100bp = $filtertype =~ /100bp/;
@@ -24,7 +26,7 @@ my %center;
 my $N;
 while (<>)
 {
-    if (/^\#example: m=1 n=5 (..).*;center_name:\s*(.*?);.*;source_type:\s*(.*?);.*/)
+    if (/^\#example: m=$wantm n=$wantn (..).*;center_name:\s*(.*?);.*;source_type:\s*(.*?);.*/)
     {
 	my $xy = $1;
 	my $center = $2;
