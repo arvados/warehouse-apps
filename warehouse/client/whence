@@ -26,11 +26,12 @@ options:
 EOF
 }
 
-my ($key, $warehouse_name) = split (/\@/, shift @ARGV);
-$warehouse_name = $Warehouse::warehouses->[0]->{name}
-    if !defined $warehouse_name;
+my $key = shift @ARGV;
 
-my $whc = new Warehouse (warehouse_name => $warehouse_name);
+my %opts;
+$opts{warehouse_name} = $1 if $key =~ s/\@(.+)//;
+
+my $whc = new Warehouse (%opts);
 my $joblist = $whc->job_list;
 my %did;
 my %id_to_job;
@@ -52,7 +53,7 @@ while (defined $targetjob)
     }
     $did{$targetjob->{id}} = 1;
 
-    printf "#%d\@%s\n", $targetjob->{id}, $warehouse_name;
+    printf "#%d\@%s\n", $targetjob->{id}, $whc->{warehouse_name};
     print_times ($whc->job_stats ($targetjob->{id}));
     printf "  mrfunction = %s r%d\n", $targetjob->{mrfunction}, $targetjob->{revision};
 
