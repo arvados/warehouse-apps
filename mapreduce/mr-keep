@@ -6,7 +6,6 @@
 ###MR_KNOBS:KEEP=2
 
 use strict; 
-use Image::Magick;
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
