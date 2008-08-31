@@ -9,6 +9,7 @@ map {
     push @$dirs, "$1/keep"
 	if m/^\/dev\/\S+ on (\S+) /
 	&& -d "$1/keep"
+	&& $1 ne "/"
     } `mount`;
 
 my $keepd = Warehouse::Keep->new (Directories => $dirs);
