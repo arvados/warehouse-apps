@@ -10,6 +10,8 @@ use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
 
+my $nnodes = $ENV{KNOB_KEEP} || 2;
+
 my $manifestkey = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0)
@@ -37,7 +39,7 @@ elsif ($ENV{MR_LEVEL} == 1)
       {
 	last if /^\d+:/;
 	my $keephash = $whc->store_in_keep (hash => $_,
-					    nnodes => $ENV{KNOB_KEEP})
+					    nnodes => $nnodes)
 	    or die "store_in_keep ($_) failed: ".$whc->errstr;
 	$_ = $keephash;
       }
