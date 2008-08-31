@@ -691,6 +691,9 @@ sub store_in_keep
  my $dataref = $whc->fetch_from_keep ($hash);
  die "could not fetch $hash from keep" if !defined $dataref;
 
+ my $dataref = $whc->fetch_from_keep ($hash, { nnodes => 3 });
+ die "could not verify $hash on 3 different nodes" if !defined $dataref;
+
 =cut
 
 
@@ -698,6 +701,8 @@ sub fetch_from_keep
 {
     my $self = shift;
     my $hash = shift;
+    my $opts = shift || {};
+
     my ($md5, @hints);
     ($md5, @hints) = split (/[-\+]/, $hash);
 
@@ -724,6 +729,7 @@ sub fetch_from_keep
 		if vec($kbits, $_, 1);
 	}
     }
+    my $successes = 0;
     foreach my $keep_id (@bucket)
     {
 	$self->{stats_keepread_attempts} ++;
@@ -738,7 +744,9 @@ sub fetch_from_keep
 	    {
 		$self->{stats_keepread_blocks} ++;
 		$self->{stats_keepread_bytes} += length $data;
-		return \$data;
+		++$successes;
+		return \$data if !$opts->{nnodes};
+		return \$data if $successes == $opts->{nnodes};
 	    }
 	    else
 	    {
