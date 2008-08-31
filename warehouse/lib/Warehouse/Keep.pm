@@ -4,7 +4,7 @@ package Warehouse::Keep;
 
 use HTTP::Daemon;
 use HTTP::Response;
-use Digest::MD5;
+use Digest::MD5 qw(md5_hex);
 use Warehouse;
 use Fcntl;
 
@@ -183,24 +183,6 @@ sub run
 		my $plainmessage = $2;
 		my $newdata = $3;
 
-		if ($newdata eq "")
-		{
-		    if (!$self->{whc})
-		    {
-			$c->send_response (HTTP::Response->new
-					   (500, "No client object",
-					    [], "No client object\n"));
-			next;
-		    }
-		    if (!defined ($newdata = $self->{whc}->fetch_block ($md5)))
-		    {
-			$c->send_response (HTTP::Response->new
-					   (404, "Data not found in cache",
-					    [], "Data not found in cache\n"));
-			next;
-		    }
-		}
-
 		my $verified = $plainmessage =~ /\S/;
 		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 		$checktime += 0;
@@ -217,7 +199,7 @@ sub run
 		}
 
 		my $dataref = $self->_fetch ($md5);
-		if ($dataref && $$dataref eq $newdata)
+		if ($dataref && ($newdata eq "" || $$dataref eq $newdata))
 		{
 		    $c->send_response (HTTP::Response->new
 				       (200, "OK",
@@ -237,6 +219,24 @@ sub run
 		    . "time=".$checktime."\n"
 		    . "\n"
 		    . "$signedmessage";
+
+		if ($newdata eq "")
+		{
+		    if (!$self->{whc})
+		    {
+			$c->send_response (HTTP::Response->new
+					   (500, "No client object",
+					    [], "No client object\n"));
+			next;
+		    }
+		    if (!defined ($newdata = $self->{whc}->fetch_block ($md5)))
+		    {
+			$c->send_response (HTTP::Response->new
+					   (404, "Data not found in cache",
+					    [], "Data not found in cache\n"));
+			next;
+		    }
+		}
 
 		if (!$self->_store ($md5, \$newdata, \$metadata))
 		{
@@ -275,7 +275,8 @@ sub _fetch
 	local $/ = undef;
 	my $data = <F>;
 	close F;
-	return \$data;
+	return \$data if md5_hex ($data) eq $md5;
+	warn "Checksum mismatch: $dir/$md5\n";
     }
     $self->{errstr} = "Not found: $md5";
     return undef;
