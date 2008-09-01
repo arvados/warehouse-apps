@@ -364,6 +364,14 @@ sub _mogilefs_write
     my $class = shift;
     $self->{stats_wrote_attempts} ++;
     my $mogfh = $self->{mogc}->new_file ($md5, $class);
+    if (!$mogfh)
+    {
+	$mogfh = $self->{mogc}->new_file ($md5, $class);
+    }
+    if (!$mogfh)
+    {
+	die "MogileFS new_file failed: ".$self->{mogc}->errstr;
+    }
     if (!print $mogfh $$dataref)
     {
 	close $mogfh;
