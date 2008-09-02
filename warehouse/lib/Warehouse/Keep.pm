@@ -146,7 +146,7 @@ sub run
 		  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
 		  "\n");
 
-	    if ($r->method eq "GET")
+	    if ($r->method eq "GET" || $r->method eq "HEAD")
 	    {
 		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
 		if (!$md5)
@@ -164,7 +164,8 @@ sub run
 		    last;
 		}
 		$c->send_response (HTTP::Response->new
-				   (200, "OK", [], $$dataref));
+				   (200, "OK", [],
+				    $r->method eq "GET" ? $$dataref : ""));
 	    }
 	    elsif ($r->method eq "PUT")
 	    {
