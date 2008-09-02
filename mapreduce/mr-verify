@@ -1,0 +1,51 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:find out whether all input blocks are intact
+###MR_INPUT:manifest
+###MR_KNOBS:KEEP=2
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $nnodes = $ENV{KNOB_KEEP};
+
+my $manifestkey = $ENV{MR_INPUT0};
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my $m = new Warehouse::Manifest (whc => $whc,
+				   key => $manifestkey);
+  $m->rewind;
+  while (my $instream = $m->subdir_next)
+  {
+    my $subdir = $instream->as_string;
+    chop ($subdir);
+    my ($name, @hash) = split (/ /, $subdir);
+    foreach (@hash)
+    {
+      last if /^\d+:/;
+      print STDERR "+++mrjobstep 1 $_+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $hash = $ENV{MR_INPUT};
+  my $dataref;
+  if ($nnodes)
+  {
+    $dataref = $whc->fetch_from_keep ($hash, { nnodes => $nnodes });
+  }
+  else
+  {
+    $dataref = $whc->fetch_block ($hash) || $whc->fetch_from_keep ($hash);
+  }
+  exit 1 if !$dataref;
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
