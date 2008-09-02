@@ -29,7 +29,7 @@ my ($key_or_name, $path) = $source =~ m|^(/?[^/]*)(/.*)?|;
 
 my $manifestkey;
 my $manifestname;
-if ($key_or_name =~ /^[0-9a-f]{32}(,[0-9a-f]{32})*$/)
+if ($key_or_name =~ /^[0-9a-f]{32}(\+[^,\s]+)?(,[0-9a-f]{32}(\+[^,\s]+)*)*$/)
 {
     $manifestkey = $key_or_name;
 }
