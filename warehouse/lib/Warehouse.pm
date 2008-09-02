@@ -1502,7 +1502,17 @@ sub job_follow_input
     my $targetjob = shift;
 
     $self->_refresh_job_list;
-    return $self->{job_by_output}->{$targetjob->{inputkey}};
+    my $previous = $self->{job_by_output}->{$targetjob->{inputkey}};
+    return $previous
+	if ($previous
+	    && (!$targetjob->{id} || $previous->{id} < $targetjob->{id}));
+    
+    foreach (@{$self->{job_list_arrayref}})
+    {
+	last if $_->{id} >= $targetjob->{id};
+	return $_ if $_->{outputkey} eq $targetjob->{inputkey};
+    }
+    return undef;
 }
 
 sub job_follow_thawedfrom
