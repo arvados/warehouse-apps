@@ -639,6 +639,20 @@ sub store_in_keep
     my %arg = @_;
     my $dataref = $arg{dataref};
     my ($md5, @hints);
+    if ($md5 =~ /,/)
+    {
+	my @hash;
+	my $min_nnodes;
+	foreach (split (/,/, $md5))
+	{
+	    my ($hash, $nnodes) = $self->store_in_keep (%arg);
+	    return undef if !$nnodes;
+	    push @hash, $hash;
+	    $min_nnodes = $nnodes
+		if !defined $min_nnodes || $min_nnodes > $nnodes;
+	}
+	return (join (",", @hash), $min_nnodes);
+    }
     ($md5, @hints) = split (/[-\+]/, $arg{hash}) if exists $arg{hash};
     if (!$md5)
     {
