@@ -538,19 +538,34 @@ if ($key)
 }
 else
 {
-    Log (undef, "no output key");
+  Log (undef, "no output key");
 }
 
 
 
 if ($key)
 {
-    dbh_do ("update mrjob set output=? where id=?", undef,
-	    $key, $job_id)
-	or croak ($dbh->errstr);
+  my @keepkey;
+  foreach my $hash (split ",", $key)
+  {
+    my $keephash = $whc->store_in_keep (hash => $hash,
+					nnodes => 3);
+    if (!$keephash)
+    {
+      Log (undef, "store_in_keep (\"$hash\") failed: ".$whc->errstr);
+      $keephash = $hash;
+    }
+    push @keepkey, $keephash;
+  }
+  my $keepkey = join (",", @keepkey);
+  Log (undef, "output+K key is $keepkey");
 
-    $whc->store_manifest_by_name ($key, undef, "/job$job_id")
-	or croak ($whc->errstr);
+  dbh_do ("update mrjob set output=? where id=?", undef,
+	  $key, $job_id)
+      or croak ($dbh->errstr);
+
+  $whc->store_manifest_by_name ($keepkey, undef, "/job$job_id")
+      or Log (undef, "store_manifest_by_name (\"$key\", \"/job$job_id\") failed: ".$whc->errstr);
 }
 
 
@@ -962,6 +977,8 @@ sub freeze
   Log (undef, "frozento key is $frozentokey");
   dbh_do ("update mrjob set frozentokey=? where id=?", undef,
 	  $frozentokey, $job_id);
+  my $kfrozentokey = $whc->store_in_keep (hash => $frozentokey, nnodes => 3);
+  Log (undef, "frozento+K key is $kfrozentokey");
   return $frozentokey;
 }
 
