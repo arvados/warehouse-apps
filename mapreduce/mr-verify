@@ -17,6 +17,11 @@ my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
 {
+  foreach (split (",", $manifestkey))
+  {
+    print STDERR "+++mrjobstep 1 $_+++\n";
+  }
+
   my $m = new Warehouse::Manifest (whc => $whc,
 				   key => $manifestkey);
   $m->rewind;
