@@ -282,7 +282,7 @@ sub _index
 	opendir (D, "$dir/") or next;
 	foreach (readdir D)
 	{
-	    next if $_ eq "." || $_ eq "..";
+	    next unless /^[0-9a-f]{32}$/;
 	    if (my $size = -s "$dir/$_") { $_ .= "+$size"; }
 	    $index .= "$_\n";
 	}
