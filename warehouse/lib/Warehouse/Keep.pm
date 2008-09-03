@@ -148,6 +148,13 @@ sub run
 
 	    if ($r->method eq "GET" || $r->method eq "HEAD")
 	    {
+		if ($r->url->path eq "/index")
+		{
+		    $c->send_response (HTTP::Response->new
+				       (200, "OK", [],
+					$self->_index));
+		    next;
+		}
 		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
 		if (!$md5)
 		{
@@ -262,6 +269,26 @@ sub run
 	last if $kill;
     }
     warn "Stopping";
+}
+
+
+sub _index
+{
+    my $self = shift;
+    my $dirs = $self->{Directories};
+    my $index = "";
+    for my $dir (@$dirs)
+    {
+	opendir (D, "$dir/") or next;
+	foreach (readdir D)
+	{
+	    next if $_ eq "." || $_ eq "..";
+	    if (my $size = -s "$dir/$_") { $_ .= "+$size"; }
+	    $index .= "$_\n";
+	}
+	closedir D;
+    }
+    return $index;
 }
 
 
