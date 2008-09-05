@@ -69,11 +69,13 @@ sub _init
     $self->{whc} or die "Manifest->new: whc not specified";
     if ($self->{key})
     {
-	my $data = join ("",
-			 map {
-			   $self->{whc}->fetch_block ($_) or die $self->{whc}->errstr
-			     }
-			 split (",", $self->{key}));
+	my $data;
+	foreach (split (",", $self->{key}))
+	{
+	    my $dataref = $self->{whc}->fetch_block_ref ($_);
+	    die $self->{whc}->errstr if !$dataref;
+	    $data .= $$dataref;
+	}
 	$self->{data} = \$data;
 	$self->rewind;
     }
