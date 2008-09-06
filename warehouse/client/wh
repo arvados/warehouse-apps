@@ -13,6 +13,9 @@ my $commands = {
     "job list" => \&job_list,
     "job new" => \&job_new,
     "job show" => \&job_show,
+    "keep" => \&keep,
+    "manifest list" => \&manifest_list,
+    "manifest name" => \&manifest_name,
 };
 
 my $cmd = shift @ARGV;
@@ -53,6 +56,12 @@ wh job new nodes=N photons=N thaw=ID
 wh job new nodes=N photons=N thawedfromkey=KEY
 
 wh job freeze id=ID [stop=1]
+
+wh manifest list [name=NAME] [key=KEY]
+wh manifest name name=NAME [oldkey=KEY] newkey=KEY
+wh manifest name name=NAME oldkey=KEY
+
+wh keep key=KEY [nnodes=N]
 
 };
 }
@@ -152,6 +161,37 @@ sub job_new
 
     my $jobid = $whc->job_new (%opt);
     if ($jobid) { print ($jobid . "\n"); }
+    else { warn ($whc->errstr . "\n"); }
+}
+
+sub keep
+{
+    my $key = $opt{key};
+    my $nnodes = $opt{nnodes} || 2;
+    my $keepkey = $whc->store_in_keep (hash => $key,
+				       nnodes => $nnodes);
+    if ($keepkey) { print "$keepkey\n"; }
+    else { warn ($whc->errstr . "\n"); }
+}
+
+sub manifest_list
+{
+    foreach my $keyname ($whc->list_manifests)
+    {
+	my ($key, $name) = @$keyname;
+	if ((!defined $opt{key} || $key eq $opt{key})
+	    &&
+	    (!defined $opt{name} || $name eq $opt{name}))
+	{
+	    print "$key $name\n";
+	}
+    }
+}
+
+sub manifest_name
+{
+    if ($whc->store_manifest_by_name ($opt{newkey}, $opt{oldkey}, $opt{name}))
+    { print "$opt{newkey}\n"; }
     else { warn ($whc->errstr . "\n"); }
 }
 
