@@ -521,6 +521,8 @@ sub fetch_block_ref
     $verifyflag = 1 if !defined $verifyflag;
     $nowarnflag = $options->{nowarn} if !defined $nowarnflag;
 
+    return \qq{} if $hash =~ /^d41d8cd98f00b204e9800998ecf8427e\b/;
+
     if ($hash =~ /\+K/)
     {
 	my $dataref = $self->fetch_from_keep ($hash);
@@ -546,7 +548,6 @@ sub fetch_block_ref
 	}
     }
     my $md5 = $hash;
-    return \qq{} if $md5 eq "d41d8cd98f00b204e9800998ecf8427e";
 
     my $data;
     if ((defined $sizehint ? $sizehint : 1)
