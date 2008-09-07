@@ -45,16 +45,20 @@ foreach (@manifest)
 }
 $stats{blocksexpected} = scalar keys %expect;
 
+my %got_on_host;
 my %got;
 foreach my $keep_host_port (@{$whc->{keeps}})
 {
+    $got_on_host{$keep_host_port} = {};
     my $url = "http://".$keep_host_port."/index";
     my $req = HTTP::Request->new (GET => $url);
     my $r = $ua->request ($req);
     die "$url failed: ".$r->status_line unless $r->is_success;
     foreach (split ("\n", $r->content))
     {
-	++$got{$_} if /\+/;
+	next unless /\+/;
+	++$got_on_host{$keep_host_port}->{$_};
+	++$got{$_};
     }
     print STDERR ".";
 }
@@ -101,10 +105,17 @@ foreach (keys %gotmd5)
     {
 	$stats{blocksgarbage}++;
 	$stats{bytesgarbage} += $md5size{$_} * $gotmd5{$_};
+	foreach my $keep_host_port (@{$whc->{keeps}})
+	{
+	    if ($got_on_host{$keep_host_port}->{$_."+".$md5size{$_}})
+	    {
+		print "$keep_host_port DELETE $_\n";
+	    }
+	}
     }
 }
 
-map { print "$_ = $stats{$_}\n" } sort keys %stats;
+map { print STDERR "$_ = $stats{$_}\n" } sort keys %stats;
 
 
 sub expecthowmany
