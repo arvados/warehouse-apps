@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Digest::MD5 qw(md5_hex);
+use LWP::UserAgent;
+use HTTP::Request::Common;
+
+my %opt;
+if ($ARGV[0] eq "--nodelete") { shift @ARGV; $opt{"nodelete"} = 1; }
+
+my $whc = new Warehouse;
+$whc->_hash_keeps();
+my $ua = new LWP::UserAgent;
+
+my %keep_host_port;
+foreach (@{$whc->{keeps}})
+{
+    $keep_host_port{$_} = 1;
+}
+
+my %method = ("VERIFY" => "HEAD",
+	      "DELETE" => "DELETE",
+	      "KEEP" => "PUT");
+
+while (<>)
+{
+    my ($host_port, $action, $hash) = split (" ");
+    die "Invalid node $host_port" unless $keep_host_port{$host_port};
+
+    my $method = $method{$action};
+    die "Invalid action $action" unless $method;
+
+    if ($method eq "DELETE" && $unsafe{$hash})
+    {
+	warn "$action $host_port $hash -- SKIPPED\n";
+	next;
+    }
+
+    warn "$action $host_port $hash\n";
+    next if $method eq "DELETE" && $opt{"nodelete"};
+
+    my $url = "http://".$host_port."/$hash";
+    my $req = HTTP::Request->new ($method => $url);
+
+    if ($method eq "PUT")
+    {
+	my $reqtext = time . " " . $hash;
+	my $signedreq = $whc->_sign ($reqtext);
+	$signedreq .= $$dataref if $dataref;
+	$req->header ('Content-Length' => length $signedreq);
+	$req->content ($signedreq);
+    }
+
+    my $r = $ua->request ($req);
+    if ($action eq "VERIFY" && !$r->is_success)
+    {
+	warn "$action $host_port $hash -- FAILED\n";
+	$unsafe{$hash} = 1;
+    }
+    elsif (!$r->is_success)
+    {
+	warn "$url failed: ".$r->status_line;
+    }
+}
