@@ -4,6 +4,8 @@ $Warehouse::blocksize = 64*1024*1024;
 
 $Warehouse::warehouse_servers
     = "warehouse.server.host.name:24848";
+$Warehouse::keep_controller_ip
+    = "ip.ad.dr.ess";		# allowed to delete blocks from Keep
 
 $Warehouse::mogilefs_trackers = "mogilefs.tracker.host.name:6001";
 $Warehouse::mogilefs_domain = "warehouse";

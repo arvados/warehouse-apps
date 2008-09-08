@@ -257,6 +257,58 @@ sub run
 				   (200, "OK",
 				    [], "$md5\n"));
 	    }
+	    elsif ($r->method eq "DELETE")
+	    {
+		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
+		if (!$md5)
+		{
+		    $c->send_response (HTTP::Response->new
+				       (400, "Bad request",
+					[], "Bad request\n"));
+		    last;
+		}
+
+		# XXX verify signature here XXX
+		$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
+		my $signedmessage = $1;
+		my $plainmessage = $2;
+		my $newdata = $3;
+
+		my $verified = $plainmessage =~ /\S/;
+		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
+		$checktime += 0;
+		if (!$verified ||
+		    time - $checktime > 300 ||
+		    time - $checktime < -300 ||
+		    $checkmd5 ne $md5)
+		{
+		    my $resp = HTTP::Response->new
+			(401, "SigFail",
+			 [], "Signature verification failed.\n");
+		    $c->send_response ($resp);
+		    last;
+		}
+		if ($c->peerhost() ne $Warehouse::keep_controller_ip)
+		{
+		    my $resp = HTTP::Response->new
+			(401, "Unauthorized",
+			 [], "Only the controller can do that.\n");
+		    $c->send_response ($resp);
+		    last;
+		}
+
+		if ($self->_delete ($md5))
+		{
+		    $c->send_response (HTTP::Response->new
+				       (200, "OK", [], "$md5\n"));
+		}
+		else
+		{
+		    $c->send_response (HTTP::Response->new
+				       (500, "Fail", [], $self->{errstr}));
+		    last;
+		}
+	    }
 	    else
 	    {
 		$c->send_response (HTTP::Response->new
@@ -289,6 +341,28 @@ sub _index
 	closedir D;
     }
     return $index;
+}
+
+
+sub _delete
+{
+    my $self = shift;
+    my $md5 = shift;
+    my $dirs = $self->{Directories};
+    my $fail = 0;
+    for my $dir (@$dirs)
+    {
+	if (unlink "$dir/$md5")
+	{
+	    unlink "$dir/$md5.meta";
+	}
+	elsif (-e "$dir/$md5")
+	{
+	    $fail = 1;
+	    $self->{errstr} = $!;
+	}
+    }
+    return $fail ? undef : 1;
 }
 
 
