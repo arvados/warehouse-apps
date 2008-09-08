@@ -44,7 +44,7 @@ while (<>)
     my $url = "http://".$host_port."/$hash";
     my $req = HTTP::Request->new ($method => $url);
 
-    if ($method eq "PUT")
+    if ($method eq "PUT" || $method eq "DELETE")
     {
 	my $reqtext = time . " " . $hash;
 	my $signedreq = $whc->_sign ($reqtext);
