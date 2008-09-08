@@ -96,6 +96,31 @@ foreach (keys %expectmd5)
 	$stats{blockstoofew}++;
 	warn "$_ expect $expectmd5{$_} got $gotmd5{$_}\n";
     }
+
+    my $nfound = 0;
+    my $nwouldfind = 0;
+    my ($keeps, @bucket) = $whc->_hash_keeps (undef, $_);
+    foreach my $bucket (@bucket)
+    {
+	if ($got_on_host{$keeps->[$bucket]}->{$_."+".$md5size{$_}})
+	{
+	    ++$nfound;
+	    if ($nfound > $expectmd5{$_})
+	    {
+		print $keeps->[$bucket] . " DELETE $_\n";
+		$stats{bytestoomanycheck} += $md5size{$_};
+	    }
+	    elsif ($gotmd5{$_} > $expectmd5{$_})
+	    {
+		print $keeps->[$bucket] . " VERIFY $_\n";
+	    }
+	}
+	elsif ($nfound + $nwouldfind < $expectmd5{$_})
+	{
+	    ++$nwouldfind;
+	    print $keeps->[$bucket] . " KEEP $_\n";
+	}
+    }
     $stats{"bytesexpected$expectmd5{$_}"} += $md5size{$_};
 }
 
