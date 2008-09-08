@@ -83,7 +83,7 @@ my %gotmd5;
 map { $gotmd5{$1} += $got{$_} if /^([0-9a-f]+)/ } keys %got;
 delete $gotmd5{"d41d8cd98f00b204e9800998ecf8427e"};
 
-foreach (keys %expectmd5)
+foreach (sort keys %expectmd5)
 {
     $stats{blocksmissing}++ unless $gotmd5{$_};
     if ($gotmd5{$_} > $expectmd5{$_})
@@ -124,7 +124,7 @@ foreach (keys %expectmd5)
     $stats{"bytesexpected$expectmd5{$_}"} += $md5size{$_};
 }
 
-foreach (keys %gotmd5)
+foreach (sort keys %gotmd5)
 {
     if (!$expectmd5{$_})
     {
