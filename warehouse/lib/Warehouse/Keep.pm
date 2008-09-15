@@ -171,7 +171,8 @@ sub run
 		    last;
 		}
 		$c->send_response (HTTP::Response->new
-				   (200, "OK", [],
+				   (200, "OK",
+				    ["X-block-size", length($$dataref)],
 				    $r->method eq "GET" ? $$dataref : ""));
 	    }
 	    elsif ($r->method eq "PUT")
@@ -255,7 +256,8 @@ sub run
 		}
 		$c->send_response (HTTP::Response->new
 				   (200, "OK",
-				    [], "$md5\n"));
+				    ["X-block-size", length($newdata)],
+				    "$md5\n"));
 	    }
 	    elsif ($r->method eq "DELETE")
 	    {
