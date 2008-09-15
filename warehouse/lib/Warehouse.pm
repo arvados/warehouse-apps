@@ -640,12 +640,13 @@ sub store_in_keep
     my %arg = @_;
     my $dataref = $arg{dataref};
     my ($md5, @hints);
-    if ($md5 =~ /,/)
+    if ($arg{hash} =~ /,/)
     {
 	my @hash;
 	my $min_nnodes;
-	foreach (split (/,/, $md5))
+	foreach (split (/,/, $arg{hash}))
 	{
+	    $arg{hash} = $_;
 	    my ($hash, $nnodes) = $self->store_in_keep (%arg);
 	    return undef if !$nnodes;
 	    push @hash, $hash;
@@ -665,6 +666,7 @@ sub store_in_keep
     my $signedreq = $self->_sign ($reqtext);
     $signedreq .= $$dataref if $dataref;
 
+    my $keepreportedsize;
     my $bits = "";
     my $nnodes = 0;
     my ($keeps, @bucket) = $self->_hash_keeps (undef, $md5);
@@ -683,6 +685,7 @@ sub store_in_keep
 	{
 	    $self->{stats_keepwrote_blocks} ++;
 	    $self->{stats_keepwrote_bytes} += length $signedreq;
+	    $keepreportedsize ||= $r->header ("X-Block-Size");
 	    vec ($bits, $bucket, 1) = 1;
 	    ++ $nnodes;
 	    last if $nnodes == $arg{nnodes};
@@ -697,10 +700,13 @@ sub store_in_keep
 	return undef;
     }
     my $hash = $md5;
+    $hash .= "+$keepreportedsize" if defined $keepreportedsize;
     foreach (@hints)
     {
 	$_ = 67108864 if $_ eq "0";
-	$hash .= "+$_" unless (/^K.*\@(.*)/ && $1 eq $self->{warehouse_name});
+	next if !/\D/ && defined $keepreportedsize;
+	next if /^K.*\@(.*)/ && $1 eq $self->{warehouse_name};
+	$hash .= "+$_";
     }
     $hash .= "+K".unpack("H*", $bits)."\@".$self->{warehouse_name};
     return $hash if !wantarray;
