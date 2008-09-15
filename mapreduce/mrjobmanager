@@ -201,8 +201,8 @@ if ($have_slurm)
 
 
 Log (undef, "start");
-$SIG{'INT'} = \&croak;
-$SIG{'QUIT'} = \&croak;
+$SIG{'INT'} = sub { $main::please_freeze = 1; };
+$SIG{'QUIT'} = sub { $main::please_freeze = 1; };
 $SIG{'TERM'} = \&croak;
 $SIG{'TSTP'} = sub { $main::please_freeze = 1; };
 $SIG{'ALRM'} = sub { $main::please_info = 1; };
@@ -300,6 +300,10 @@ foreach (split (/\n/, $Job->{knobs}))
 
 
 
+my $success;
+
+
+
 ONELEVEL:
 
 my $thisround_succeeded = 0;
@@ -333,7 +337,9 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   }
   if ($Jobstep->{attempts} > 9)
   {
-    croak ("jobstep $id failed $$Jobstep{attempts} times -- giving up");
+    Log ($id, "jobstep $id failed $$Jobstep{attempts} times -- giving up");
+    $success = 0;
+    last THISROUND;
   }
 
   pipe $reader{$id}, "writer" or croak ($!);
@@ -481,8 +487,6 @@ while (%proc)
 }
 
 update_progress_stats();
-
-
 freeze_if_want_freeze();
 
 
@@ -495,22 +499,23 @@ if (@jobstep_tomerge && !@jobstep_todo)
 }
 
 
-
-if ($thisround_succeeded > 0 || ($thisround_failed > 0 && $thisround_failed < 5))
+if (!defined $success)
 {
-  goto ONELEVEL if @jobstep_todo;
+  if (@jobstep_todo &&
+      $thisround_succeeded == 0 &&
+      ($thisround_failed == 0 || $thisround_failed > 4))
+  {
+    my $message = "stop because $thisround_failed tasks failed and none succeeded";
+    Log (undef, $message);
+    $success = 0;
+  }
+  if (!@jobstep_todo)
+  {
+    $success = 1;
+  }
 }
-elsif ($thisround_failed > 0)
-{
-  my $message = "stop because $thisround_failed tasks failed and none succeeded";
-  Log (undef, $message);
-  croak ($message);
-}
 
-
-
-my $success = 1;
-
+goto ONELEVEL if !defined $success;
 
 
 Log (undef, "reduce");
@@ -518,7 +523,7 @@ Log (undef, "reduce");
 $whc->write_start (1);
 for (@jobstep)
 {
-  next if !exists $_->{output};
+  next if !exists $_->{output} || $_->{exitcode} != 0;
   my $output = $_->{output};
   if (defined (my $outblock = $whc->fetch_block ($output)))
   {
