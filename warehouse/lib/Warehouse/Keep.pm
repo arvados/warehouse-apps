@@ -212,7 +212,7 @@ sub run
 		{
 		    $c->send_response (HTTP::Response->new
 				       (200, "OK",
-					["X-Block-Size", length($newdata)],
+					["X-Block-Size", length($$dataref)],
 					"$md5\n"));
 		    next;
 		}
