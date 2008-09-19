@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:stream all subdirs, apply mrs-* function, store 
+###MR_INPUT:manifest
+###MR_KNOBS:FUNCTION=mrs-awz-expand-degeneracies
+###MR_KNOBS:OUTPUTNAME=reads.bin
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+my $manifestkey = $ENV{MR_INPUT0};
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $manifestkey);
+  $manifest->rewind;
+  while (my $stream = $manifest->subdir_next)
+  {
+    my $step = $stream->as_string;
+    chomp $step;
+    print STDERR "+++mrjobstep 1 $step+++\n";
+  }
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $stream = $ENV{MR_INPUT};
+  my ($name, $blocks) = $stream =~ /^(\S+) ([0-9a-f]{32}\S* )*/;
+  $blocks =~ s/ $//;
+  my $whget = join ("; ", map { "whget $_ -" } split (" ", $blocks));
+  Safepipe::readfrom ("main::S",
+		      "$whget",
+		      "gzip -t || echo -n ungunzippable",
+		      );
+  my $ok = <S>;
+  close "S" or die "close S: $!";
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+
+  if ($ok eq "ungunzippable")
+  {
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  }
+  else
+  {
+    my $hash = $whc->store_block ($stream."\n");
+    print STDERR "+++mrout $hash+++\n";
+  }
+}
