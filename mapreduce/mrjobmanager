@@ -769,9 +769,9 @@ sub process_stderr
   my $success = shift;
   preprocess_stderr ($job);
   while ($jobstep[$job]->{stderr_jobsteps} =~
-	 s/\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n//)
+	 /\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n/g)
   {
-    next if !$success;
+    last if !$success;
     my ($merge, $level, $input) = ($1, $2, $3);
     my $newjobref;
     if ($merge)
