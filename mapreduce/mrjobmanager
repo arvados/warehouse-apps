@@ -755,9 +755,10 @@ sub process_stderr_for_output_key
 sub preprocess_stderr
 {
   my $job = shift;
+  $jobstep[$job]->{stderr_jobsteps} ||= [];
   $jobstep[$job]->{stderr} =~
-      s{(\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n)}{
-	$jobstep[$job]->{stderr_jobsteps} .= $1;
+      s{\+\+\+mrjobstep((\/(\d+|\*))? (\d+) (.*?))\+\+\+\n}{
+	push (@{ $jobstep[$job]->{stderr_jobsteps} }, $1);
 	"";
       }gse;
 }
@@ -768,10 +769,10 @@ sub process_stderr
   my $job = shift;
   my $success = shift;
   preprocess_stderr ($job);
-  while ($jobstep[$job]->{stderr_jobsteps} =~
-	 /\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n/gs)
+  foreach (@{ $jobstep[$job]->{stderr_jobsteps} })
   {
     last if !$success;
+    /^(?:\/(\d+|\*))? (\d+) (.*)/s;
     my ($merge, $level, $input) = ($1, $2, $3);
     my $newjobref;
     if ($merge)
