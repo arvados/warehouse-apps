@@ -798,6 +798,7 @@ sub process_stderr
       push @jobstep_todo, $#jobstep;
     }
   }
+  delete $jobstep[$job]->{stderr_jobsteps};
   map {
     Log ($job, "stderr $_");
   } split ("\n", $jobstep[$job]->{stderr});
