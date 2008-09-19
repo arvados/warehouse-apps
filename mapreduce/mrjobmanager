@@ -733,6 +733,7 @@ sub readfrompipes
     {
       print STDERR $buf if $ENV{MR_DEBUG};
       $jobstep[$job]->{stderr} .= $buf;
+      preprocess_stderr ($job);
       $gotsome = 1;
     }
   }
@@ -751,11 +752,23 @@ sub process_stderr_for_output_key
 }
 
 
+sub preprocess_stderr
+{
+  my $job = shift;
+  while ($jobstep[$job]->{stderr} =~
+	 s/(\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n)//)
+  {
+    $jobstep[$job]->{stderr_jobsteps} .= $1;
+  }
+}
+
+
 sub process_stderr
 {
   my $job = shift;
   my $success = shift;
-  while ($jobstep[$job]->{stderr} =~
+  preprocess_stderr ($job);
+  while ($jobstep[$job]->{stderr_jobsteps} =~
 	 s/\+\+\+mrjobstep(?:\/(\d+|\*))? (\d+) (.*?)\+\+\+\n//)
   {
     next if !$success;
