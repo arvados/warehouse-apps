@@ -33,6 +33,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $stream = $ENV{MR_INPUT};
   my ($name, $blocks) = $stream =~ /^(\S+) ([0-9a-f]{32}\S* )*/;
   $blocks =~ s/ $//;
+  $blocks =~ s/\+\S+//g;
   my $whget = join ("; ", map { "whget $_ -" } split (" ", $blocks));
   Safepipe::readfrom ("main::S",
 		      "$whget",
