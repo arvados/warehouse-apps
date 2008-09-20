@@ -1001,7 +1001,7 @@ sub freeze
 		    map
 		    {
 		      $_ . "=" . freezequote ($Jobstep->{$_})
-		    } grep { $_ ne "stderr" } keys %$Jobstep);
+		    } grep { $_ !~ /^stderr/ } keys %$Jobstep);
     $freezer->write_data ($str."\n\n");
   }
   if (@jobstep_tomerge)
