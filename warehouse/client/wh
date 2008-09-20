@@ -16,6 +16,7 @@ my $commands = {
     "keep" => \&keep,
     "manifest list" => \&manifest_list,
     "manifest name" => \&manifest_name,
+    "snap" => \&snap,
 };
 
 my $cmd = shift @ARGV;
@@ -62,6 +63,8 @@ wh manifest name name=NAME [oldkey=KEY] newkey=KEY
 wh manifest name name=NAME oldkey=KEY
 
 wh keep key=KEY [nnodes=N]
+
+wh snap
 
 };
 }
@@ -193,6 +196,62 @@ sub manifest_name
     if ($whc->store_manifest_by_name ($opt{newkey}, $opt{oldkey}, $opt{name}))
     { print "$opt{newkey}\n"; }
     else { warn ($whc->errstr . "\n"); }
+}
+
+sub snap
+{
+    my %got;
+
+    $whc->write_start or die "Write failed: ".$whc->errstr;
+    foreach my $keyname ($whc->list_manifests)
+    {
+	my ($key, $name) = @$keyname;
+	my $needthis = 0;
+	foreach (split (",", $key))
+	{
+	    if (!exists $got{$_}) { $needthis = $got{$_} = 1; }
+	}
+	next if !$needthis;
+
+	$whc->write_data (". ");
+	foreach (split (",", $key))
+	{
+	    $whc->write_data ($key." ");
+	}
+	$whc->write_data ("0::$name\n");
+    }
+
+    my $joblist = $whc->job_list (id_min => $opt{id}+0,
+				  id_max => $opt{id}+0);
+    if ($joblist)
+    {
+	foreach my $j (@$joblist)
+	{
+	    foreach (qw(inputkey outputkey metakey frozentokey))
+	    {
+		my $arg = $j->{$_};
+
+		next if $arg !~ /^[0-9a-f]{32}/;
+
+		my $needthis = 0;
+		foreach (split (",", $arg))
+		{
+		    s/^([0-9a-f]{32})(\+.*)?$/$1/;
+		    if (!exists $got{$_}) { $needthis = $got{$_} = 1; }
+		}
+
+		if ($needthis && $arg)
+		{
+		    $arg =~ s/,/ /g;
+		    $whc->write_data ("./".$j->{id}."/$_ $arg 0::$_\n");
+		}
+	    }
+	}
+    }
+    else { warn ("Nothing in job list: " . $whc->errstr . "\n"); }
+
+    my $snapkey = $whc->write_finish or die "Write failed: ".$whc->errstr;
+    print "$snapkey\n";
 }
 
 
