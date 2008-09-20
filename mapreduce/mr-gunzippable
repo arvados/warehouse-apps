@@ -34,10 +34,10 @@ elsif ($ENV{MR_LEVEL} == 1)
   my ($name, $blocks) = $stream =~ /^(\S+) ([0-9a-f]{32}\S* )*/;
   $blocks =~ s/ $//;
   $blocks =~ s/\+\S+//g;
-  my $whget = join ("; ", map { "whget $_ -" } split (" ", $blocks));
+  my $whget = join (" && ", map { "whget $_ -" } split (" ", $blocks));
   Safepipe::readfrom ("main::S",
 		      "$whget",
-		      "gzip -t || echo -n ungunzippable",
+		      "gzip -t || (cat >/dev/null; echo -n ungunzippable)",
 		      );
   my $ok = <S>;
   close "S" or die "close S: $!";
