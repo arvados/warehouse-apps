@@ -321,6 +321,7 @@ my @freeslot = (0..$#slot);
 my %reader;
 my ($id, $input, $attempts);
 my $progress_is_dirty = 1;
+my $progress_stats_updated = 0;
 
 update_progress_stats();
 
@@ -465,6 +466,10 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
       update_progress_stats();
       select (undef, undef, undef, 0.1);
     }
+    elsif (time - $progress_stats_updated >= 30)
+    {
+      update_progress_stats();
+    }
     if (($thisround_failed >= 8 && $thisround_succeeded == 0) ||
 	($thisround_failed >= 16 && $thisround_failed > $thisround_succeeded))
     {
@@ -595,6 +600,7 @@ exit 0;
 
 sub update_progress_stats
 {
+  $progress_stats_updated = time;
   return if !$progress_is_dirty;
   my ($todo, $done, $running) = (scalar @jobstep_todo,
 				 scalar @jobstep_done,
