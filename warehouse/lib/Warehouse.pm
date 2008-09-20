@@ -672,6 +672,7 @@ sub store_in_keep
     my ($keeps, @bucket) = $self->_hash_keeps (undef, $md5);
     foreach my $bucket (0..$#bucket)
     {
+	last if $bucket > 7;
 	my $keep_id = $bucket[$bucket];
 	$self->{stats_keepwrote_attempts} ++;
 	my $keep_host_port = $keeps->[$keep_id];
@@ -834,7 +835,7 @@ sub _hash_keeps
 	push @bucket, splice @avail, $pick, 1;
     }
 
-    return ($keeps, @bucket);
+    return ($keeps, @bucket, @avail);
 }
 
 
