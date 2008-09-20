@@ -449,7 +449,13 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	 (@slot > @freeslot && $todo_ptr+1 > $#jobstep_todo))
   {
     last THISROUND if $main::please_freeze;
-    $main::please_info = 0, freeze(), save_meta(1) if $main::please_info;
+    if ($main::please_info)
+    {
+      $main::please_info = 0;
+      freeze();
+      save_meta(1);
+      update_progress_stats();
+    }
     my $gotsome
 	= readfrompipes ()
 	+ reapchildren ();
