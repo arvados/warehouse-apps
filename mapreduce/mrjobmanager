@@ -767,7 +767,10 @@ sub process_stderr_for_output_key
 sub preprocess_stderr
 {
   my $job = shift;
-  $jobstep[$job]->{stderr_jobsteps} ||= [];
+
+  $jobstep[$job]->{stderr_jobsteps} = []
+      if !exists $jobstep[$job]->{stderr_jobsteps};
+
   $jobstep[$job]->{stderr} =~
       s{\+\+\+mrjobstep((\/(\d+|\*))? (\d+) (.*?))\+\+\+\n}{
 	push (@{ $jobstep[$job]->{stderr_jobsteps} }, $1);
@@ -786,7 +789,7 @@ sub process_stderr
     Log ($job, "stderr $_");
   } split ("\n", $jobstep[$job]->{stderr});
 
-  if (!$success || !$jobstep[$job]->{stderr_jobsteps})
+  if (!$success || !exists $jobstep[$job]->{stderr_jobsteps})
   {
     delete $jobstep[$job]->{stderr_jobsteps};
     return;
