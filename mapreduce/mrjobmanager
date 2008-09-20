@@ -308,6 +308,7 @@ ONELEVEL:
 
 my $thisround_succeeded = 0;
 my $thisround_failed = 0;
+my $thisround_failed_multiple = 0;
 
 @jobstep_todo = sort { $jobstep[$a]->{level} <=> $jobstep[$b]->{level}
 		       or $a <=> $b } @jobstep_todo;
@@ -470,10 +471,10 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     {
       update_progress_stats();
     }
-    if (($thisround_failed >= 8 && $thisround_succeeded == 0) ||
-	($thisround_failed >= 16 && $thisround_failed > $thisround_succeeded))
+    if (($thisround_failed_multiple >= 8 && $thisround_succeeded == 0) ||
+	($thisround_failed_multiple >= 16 && $thisround_failed_multiple > $thisround_succeeded))
     {
-      my $message = "Failure rate too high ($thisround_failed/"
+      my $message = "Repeated failure rate too high ($thisround_failed_multiple/"
 	  .($thisround_failed+$thisround_succeeded)
 	  .") -- giving up on this round";
       Log (undef, $message);
@@ -642,6 +643,7 @@ sub reapchildren
   if ($exitcode != 0)
   {
     ++$thisround_failed;
+    ++$thisround_failed_multiple if $Jobstep->{attempts} > 1;
     push @jobstep_todo, $jobstepid;
     Log ($jobstepid, "failure in $elapsed seconds");
   }
