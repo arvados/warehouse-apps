@@ -781,9 +781,19 @@ sub process_stderr
   my $job = shift;
   my $success = shift;
   preprocess_stderr ($job);
+
+  map {
+    Log ($job, "stderr $_");
+  } split ("\n", $jobstep[$job]->{stderr});
+
+  if (!$success || !$jobstep[$job]->{stderr_jobsteps})
+  {
+    delete $jobstep[$job]->{stderr_jobsteps};
+    return;
+  }
+
   foreach (@{ $jobstep[$job]->{stderr_jobsteps} })
   {
-    last if !$success;
     /^(?:\/(\d+|\*))? (\d+) (.*)/s;
     my ($merge, $level, $input) = ($1, $2, $3);
     my $newjobref;
@@ -812,9 +822,6 @@ sub process_stderr
     }
   }
   delete $jobstep[$job]->{stderr_jobsteps};
-  map {
-    Log ($job, "stderr $_");
-  } split ("\n", $jobstep[$job]->{stderr});
 }
 
 
