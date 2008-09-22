@@ -11,52 +11,44 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 
 my $nnodes = $ENV{KNOB_KEEP} || 2;
-
-my $manifestkey = $ENV{MR_INPUT0};
+my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  $ENV{MR_INPUT} = $manifestkey;
-  do "mrtask-queuesubdirs" or die "mrtask-queuesubdirs failed: $! $@";
+  my $manifest = new Warehouse::Manifest (whc => $whc,
+					  key => $ENV{MR_INPUT0});
+  $manifest->rewind;
+  while (my $stream = $manifest->subdir_next)
+  {
+    my $step = $stream->as_string;
+    chomp $step;
+    print STDERR "+++mrjobstep 1 $step+++\n";
+  }
 }
 
 elsif ($ENV{MR_LEVEL} == 1)
 {
-  my $wantsubdir = $ENV{MR_INPUT};
-  my $whc = new Warehouse;
+  my $subdir = $ENV{MR_INPUT};
 
-  my $manifest = new Warehouse::Manifest (whc => $whc,
-					  key => $manifestkey);
-  $manifest->rewind;
-  while (my $instream = $manifest->subdir_next)
+  my ($name, @hash) = split (/ /, $subdir);
+  foreach (@hash)
   {
-    if ($instream->name eq $wantsubdir)
+    last if /^\d+:/;
+    if (/\+K([0-9a-f]{2})\@(\w+)/ && $2 eq $whc->{warehouse_name})
     {
-      my $subdir = $instream->as_string;
-      chop ($subdir);
-      my ($name, @hash) = split (/ /, $subdir);
-      foreach (@hash)
+      # already stored in Keep -- try to fetch required number of copies
+      if ($whc->fetch_from_keep ($_, { nnodes => $nnodes }))
       {
-	last if /^\d+:/;
-	if (/\+K([0-9a-f]{2})\@(\w+)/ && $2 eq $whc->{warehouse_name})
-	{
-	  # already stored in Keep -- try to fetch required number of copies
-	  if ($whc->fetch_from_keep ($_, { nnodes => $nnodes }))
-	  {
-	    next;
-	  }
-	}
-	my $keephash = $whc->store_in_keep (hash => $_,
-					    nnodes => $nnodes)
-	    or die "store_in_keep ($_) failed: ".$whc->errstr;
-	$_ = $keephash;
+	next;
       }
-      my $fragkey = $whc->store_block ("$name @hash\n")
-	  or die "store_block failed: ".$whc->errstr;
-      print STDERR "+++mrout ".$fragkey."+++\n";
-      print STDERR $whc->iostats;
-      exit 0;
     }
+    my $keephash = $whc->store_in_keep (hash => $_,
+					nnodes => $nnodes)
+	or die "store_in_keep ($_) failed: ".$whc->errstr;
+    $_ = $keephash;
   }
-  die "Subdir not found: $wantsubdir";
+  my $fragkey = $whc->store_block ("$name @hash\n")
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout ".$fragkey."+++\n";
+  print STDERR $whc->iostats;
 }
