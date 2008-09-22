@@ -530,6 +530,13 @@ if (!defined $success)
 goto ONELEVEL if !defined $success;
 
 
+if ($have_slurm)
+{
+  Log (undef, "release job allocation");
+  system "scancel $ENV{SLURM_JOBID}";
+}
+
+
 Log (undef, "reduce");
 
 $whc->write_start (1);
