@@ -537,6 +537,7 @@ if ($have_slurm)
 }
 
 
+freeze();
 Log (undef, "reduce");
 
 $whc->write_start (1);
@@ -604,7 +605,6 @@ dbh_do ("update mrjob set finishtime=now(), success=?
 	$success, $job_id, $jobmanager_id)
     or croak ($dbh->errstr);
 
-freeze();
 save_meta();
 exit 0;
 
