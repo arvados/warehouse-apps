@@ -537,7 +537,11 @@ for (@jobstep)
 {
   next if !exists $_->{output} || $_->{exitcode} != 0;
   my $output = $_->{output};
-  if (defined (my $outblock = $whc->fetch_block ($output)))
+  if ($output !~ /^[0-9a-f]{32}/)
+  {
+    $whc->write_data ($output);
+  }
+  elsif (defined (my $outblock = $whc->fetch_block ($output)))
   {
     $whc->write_data ($outblock);
   }
@@ -758,7 +762,7 @@ sub readfrompipes
 sub process_stderr_for_output_key
 {
   my $job = shift;
-  while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//)
+  while ($jobstep[$job]->{stderr} =~ s/\+\+\+mrout (.*?)\+\+\+\n//s)
   {
     $jobstep[$job]->{output} = $1;
     $jobsteps_must_output_keys = 1;
