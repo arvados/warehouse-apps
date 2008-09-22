@@ -15,6 +15,7 @@ my %stats;
 
 my %expect;
 my %sawmanifestmd5;
+my %md5size;
 my @manifest = $whc->list_manifests;
 foreach (@manifest)
 {
@@ -34,6 +35,10 @@ foreach (@manifest)
 		my $expect = expecthowmany ($hash);
 		$hash =~ s/\+[^\d\+][^\+]*//g;
 		$expect{$hash} = $expect if $expect{$hash} < $expect;
+		if ($hash =~ /^(.*)\+(\d+)$/)
+		{
+		    $md5size{$1} = $2;
+		}
 	    }
 	}
 	foreach (split (",", $key))
@@ -64,10 +69,13 @@ foreach my $keep_host_port (@{$whc->{keeps}})
 }
 print STDERR "\n";
 
-my %md5size;
 foreach (keys %got)
 {
     /^([^\+]+).*\+(\d+)/ or die "$_ has no size hint";
+
+    if (exists $md5size{$1} && $md5size{$1} != $2)
+    { warn "Size mismatch: $1 is $2 or ".$md5size{$1}." bytes"; }
+
     $md5size{$1} = $2;
     $stats{bytes} += $2;
     $stats{blocks} ++;
@@ -85,8 +93,11 @@ delete $gotmd5{"d41d8cd98f00b204e9800998ecf8427e"};
 
 foreach (sort keys %expectmd5)
 {
-    $stats{blocksmissing}++ unless $gotmd5{$_};
-    if ($gotmd5{$_} > $expectmd5{$_})
+    if (!$gotmd5{$_})
+    {
+	$stats{blocksmissing}++;
+    }
+    elsif ($gotmd5{$_} > $expectmd5{$_})
     {
 	$stats{blockstoomany}++;
 	$stats{bytestoomany} += ($gotmd5{$_} - $expectmd5{$_}) * $md5size{$_};
@@ -94,7 +105,6 @@ foreach (sort keys %expectmd5)
     elsif ($gotmd5{$_} < $expectmd5{$_})
     {
 	$stats{blockstoofew}++;
-	warn "$_ expect $expectmd5{$_} got $gotmd5{$_}\n";
     }
 
     my $nfound = 0;
@@ -122,6 +132,7 @@ foreach (sort keys %expectmd5)
 	}
     }
     $stats{"bytesexpected$expectmd5{$_}"} += $md5size{$_};
+    $stats{"blocksexpected$expectmd5{$_}unknownsize"} ++ if !$md5size{$_};
 }
 
 foreach (sort keys %gotmd5)
