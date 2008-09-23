@@ -41,6 +41,5 @@ elsif ($ENV{MR_LEVEL} == 1)
   close "S" or die "close S: $!";
   while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
 
-  my $hash = $whc->store_block ($stream."\n");
-  print STDERR "+++mrout $hash+++\n";
+  print STDERR "+++mrout $stream\n+++\n";
 }
