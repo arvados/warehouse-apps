@@ -643,8 +643,7 @@ sub reapchildren
 
   my $exitcode = $?;
   my $exitinfo = "exit $exitcode";
-  if (!exists $Jobstep->{output} ||
-      $Jobstep->{output} !~ /^[0-9a-f]{32}/)
+  if (!exists $Jobstep->{output})
   {
     $exitinfo .= " with no output key";
     $exitcode = -1 if $exitcode == 0 && $jobsteps_must_output_keys;
