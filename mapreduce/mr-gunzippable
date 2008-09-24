@@ -49,7 +49,6 @@ elsif ($ENV{MR_LEVEL} == 1)
   }
   else
   {
-    my $hash = $whc->store_block ($stream."\n");
-    print STDERR "+++mrout $hash+++\n";
+    print STDERR "++mrout $stream\n+++\n";
   }
 }
