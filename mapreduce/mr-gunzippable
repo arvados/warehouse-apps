@@ -49,6 +49,6 @@ elsif ($ENV{MR_LEVEL} == 1)
   }
   else
   {
-    print STDERR "++mrout $stream\n+++\n";
+    print STDERR "+++mrout $stream\n+++\n";
   }
 }
