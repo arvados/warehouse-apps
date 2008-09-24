@@ -104,9 +104,12 @@ while (<>)
     }
 }
 
+my $blocks_in_keep = scalar keys %keep;
+
 print STDERR "\n\n";
 printf "%20s blocks\n", commas($nblocks);
 printf "%20s bytes in blocks\n", commas($bytes_in_blocks);
+printf "%20s blocks in keep\n", commas($blocks_in_keep);
 printf "%20s bytes in keep\n", commas($bytes_in_keep);
 printf "%20s average block size\n", commas(int($bytes_in_blocks/$nblocks));
 printf "%20s manifests\n", commas($manifestcount);
