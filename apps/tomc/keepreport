@@ -13,6 +13,7 @@ my $ua = new LWP::UserAgent;
 
 my %stats;
 
+print STDERR "Scanning manifests: ";
 my %expect;
 my %sawmanifestmd5;
 my %md5size;
@@ -22,17 +23,20 @@ foreach (@manifest)
     my ($key, $name) = @$_;
     if ($key =~ /\+K([0-9a-f]{2})/)
     {
-	++$stats{manifests} if $key =~ /^([0-9a-f]{32})\b/ && 1 == ++$sawmanifestmd5{$1};
+	print STDERR ".";
+	next if $key !~ /^([0-9a-f]{32})\b/;
 	++$stats{manifestnames};
+	next if 1 != ++$sawmanifestmd5{$1};
+	++$stats{manifests};
+
 	my $m = new Warehouse::Manifest (whc => $whc, key => $key);
 	$m->rewind;
 	while (my $s = $m->subdir_next)
 	{
-	    foreach my $hash (split (" ", $s->as_string))
+	    my $ss = $s->as_string;
+	    while ($ss =~ / ([0-9a-f]{32}\S*\+K\S+)/gs)
 	    {
-		next if $hash =~ /^\./;
-		last if $hash !~ /^[0-9a-f]{32}/;
-		next if $hash !~ /\+K/;
+		my $hash = $1;
 		my $expect = expecthowmany ($hash);
 		$hash =~ s/\+[^\d\+][^\+]*//g;
 		$expect{$hash} = $expect if $expect{$hash} < $expect;
@@ -50,7 +54,10 @@ foreach (@manifest)
     }
 }
 $stats{blocksexpected} = scalar keys %expect;
+print STDERR "\n";
 
+
+print STDERR "Getting indices: ";
 my %got_on_host;
 my %got;
 foreach my $keep_host_port (@{$whc->{keeps}})
@@ -60,11 +67,13 @@ foreach my $keep_host_port (@{$whc->{keeps}})
     my $req = HTTP::Request->new (GET => $url);
     my $r = $ua->request ($req);
     die "$url failed: ".$r->status_line unless $r->is_success;
-    foreach (split ("\n", $r->content))
+    my $index = $r->content;
+    while ($index =~ /(.*?)\n/gs)
     {
-	next unless /\+/;
-	++$got_on_host{$keep_host_port}->{$_};
-	++$got{$_};
+	my $hash = $1;
+	next if $hash !~ /\+/;
+	++$got_on_host{$keep_host_port}->{$hash};
+	++$got{$hash};
     }
     print STDERR ".";
 }
@@ -75,7 +84,9 @@ foreach (keys %got)
     /^([^\+]+).*\+(\d+)/ or die "$_ has no size hint";
 
     if (exists $md5size{$1} && $md5size{$1} != $2)
-    { warn "Size mismatch: $1 is $2 or ".$md5size{$1}." bytes"; }
+    { warn "Size mismatch: Keep has $1+$2, expected ".$md5size{$1}." bytes\n" }
+    else
+    { $gotmd5{$1} += $got{$_} }
 
     $md5size{$1} = $2;
     $stats{bytes} += $2;
@@ -94,16 +105,17 @@ delete $gotmd5{"d41d8cd98f00b204e9800998ecf8427e"};
 
 foreach (sort keys %expectmd5)
 {
-    if (!$gotmd5{$_})
+    my $got = $gotmd5{$_} + 0;
+    if (!$got)
     {
 	$stats{blocksmissing}++;
     }
-    elsif ($gotmd5{$_} > $expectmd5{$_})
+    elsif ($got > $expectmd5{$_})
     {
 	$stats{blockstoomany}++;
-	$stats{bytestoomany} += ($gotmd5{$_} - $expectmd5{$_}) * $md5size{$_};
+	$stats{bytestoomany} += ($got - $expectmd5{$_}) * $md5size{$_};
     }
-    elsif ($gotmd5{$_} < $expectmd5{$_})
+    elsif ($got < $expectmd5{$_})
     {
 	$stats{blockstoofew}++;
     }
@@ -121,7 +133,7 @@ foreach (sort keys %expectmd5)
 		print $keeps->[$bucket] . " DELETE $_\n";
 		$stats{bytestoomanycheck} += $md5size{$_};
 	    }
-	    elsif ($gotmd5{$_} > $expectmd5{$_})
+	    elsif ($got > $expectmd5{$_})
 	    {
 		print $keeps->[$bucket] . " VERIFY $_\n";
 	    }
@@ -129,7 +141,7 @@ foreach (sort keys %expectmd5)
 	elsif ($nfound + $nwouldfind < $expectmd5{$_})
 	{
 	    ++$nwouldfind;
-	    print $keeps->[$bucket] . " KEEP $_\n";
+	    print $keeps->[$bucket] . " KEEP $_ probe=$nwouldfind got=$got\n";
 	}
     }
     $stats{"bytesexpected$expectmd5{$_}"} += $md5size{$_};
