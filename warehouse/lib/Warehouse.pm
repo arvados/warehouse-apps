@@ -604,16 +604,31 @@ sub fetch_block_ref
 
     $self->{stats_read_attempts} ++;
     my $dataref = $self->_get_file_data ($md5, $verifyflag, $options);
+    if (defined $dataref)
+    {
+	$self->{stats_read_bytes} += length $$dataref;
+	$self->{stats_read_blocks} ++;
+    }
+
+    if (!defined $dataref && $hash !~ /\+K/)
+    {
+	# didn't try Keep earlier, and other methods failed, so try it now
+	$dataref = $self->fetch_from_keep ($hash);
+	if ($dataref && ($options->{offset} || exists $options->{length}))
+	{
+	    warn "Ack! offset/length unimplemented with Keep fallback";
+	    undef $dataref;
+	}
+    }
+
     if (!defined $dataref)
     {
-	warn "_get_file_data ($md5) failed: ".$self->{errstr}
+	warn "fetch_block_ref($md5) failed: ".$self->{errstr}
 	    unless $nowarnflag;
-	return undef;
     }
-    $self->{stats_read_bytes} += length $$dataref;
-    $self->{stats_read_blocks} ++;
 
-    if (length $$dataref <= $self->{memcached_size_threshold}
+    if ($dataref
+	&& length $$dataref <= $self->{memcached_size_threshold}
 	&& !exists $options->{length}
 	&& !$options->{offset})
     {
