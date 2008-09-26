@@ -88,9 +88,11 @@ foreach (keys %got)
     if (exists $md5size{$1} && $md5size{$1} != $2)
     { warn "Size mismatch: Keep has $1+$2, expected ".$md5size{$1}." bytes\n" }
     else
-    { $gotmd5{$1} += $got{$_} }
+    {
+	$gotmd5{$1} += $got{$_};
+	$md5size{$1} = $2;
+    }
 
-    $md5size{$1} = $2;
     $stats{bytes} += $2;
     $stats{blocks} ++;
     $stats{diskbytes} += $2 * $got{$_};
