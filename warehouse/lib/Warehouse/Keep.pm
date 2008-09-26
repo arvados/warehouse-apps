@@ -129,9 +129,55 @@ Listens for connections, and handles requests from clients.
 
 my $kill = 0;
 
+sub fork_index_server
+{
+    my $self = shift;
+
+    my $child = fork;
+    $self->{index_server_pid} = $child;
+    return if $child > 0;
+    return if !defined $child;
+
+    delete $self->{daemon};
+    my $daemon = new HTTP::Daemon
+	( LocalAddr => $self->{ListenAddress},
+	  LocalPort => $self->{ListenPort} + 1,
+	  Reuse => $self->{Reuse} );
+
+    local $| = 1;
+    while (my $c = $daemon->accept)
+    {
+	while (my $r = $c->get_request)
+	{
+	    print(scalar (localtime) .
+		  " " . $c->peerhost() .
+		  " R" .
+		  " " . $r->method .
+		  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
+		  "\n");
+
+	    if ($r->method eq "GET" || $r->method eq "HEAD")
+	    {
+		if ($r->url->path eq "/index")
+		{
+		    _index_callback_init ($self);
+		    $c->send_response (HTTP::Response->new
+				       (200, "OK", [],
+					\&_index_callback));
+		    last;
+		}
+	    }
+	}
+    }
+    exit 0;
+}
+
 sub run
 {
     my $self = shift;
+
+    $self->fork_index_server;
+
     local $SIG{INT} = sub { $Warehouse::Keep::kill = 1; };
     local $SIG{TERM} = sub { $Warehouse::Keep::kill = 1; };
     local $| = 1;
@@ -154,7 +200,7 @@ sub run
 		    $c->send_response (HTTP::Response->new
 				       (200, "OK", [],
 					\&_index_callback));
-		    next;
+		    last;
 		}
 		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
 		if (!$md5)
@@ -325,6 +371,7 @@ sub run
 	last if $kill;
     }
     warn "Stopping";
+    kill 1, $self->{index_server_pid} if $self->{index_server_pid} > 0;
 }
 
 
