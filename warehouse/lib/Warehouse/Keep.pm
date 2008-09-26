@@ -334,7 +334,7 @@ my @_callback_dirs;
 sub _index_callback_init
 {
     $_callback_self = shift;
-    @_callback_dirs = $_callback_self->{Directories};
+    @_callback_dirs = @ { $_callback_self->{Directories} };
     while (@_callback_dirs &&
 	   !(opendir (D, ($_callback_dir = shift @_callback_dirs))))
     { }
@@ -352,7 +352,7 @@ sub _index_callback
 	{
 	    return undef if !@_callback_dirs;
 	    $_callback_dir = shift @_callback_dirs;
-	    next unless opendir D, shift @_callback_dirs;
+	    next unless opendir D, $_callback_dir;
 	    last;
 	}
     }
