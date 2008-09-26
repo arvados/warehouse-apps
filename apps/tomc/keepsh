@@ -28,6 +28,7 @@ while (<>)
 {
     my ($host_port, $action, $hash) = split (" ");
     die "Invalid node $host_port" unless $keep_host_port{$host_port};
+    $hash =~ s/\+.*//;
 
     my $method = $method{$action};
     die "Invalid action $action" unless $method;
