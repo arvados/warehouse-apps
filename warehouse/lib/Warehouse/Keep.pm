@@ -88,6 +88,13 @@ sub _init
     $self->{Reuse} = 1
 	if !defined $self->{Reuse};
 
+    $self->{daemon} = new HTTP::Daemon
+	( LocalAddr => $self->{ListenAddress},
+	  LocalPort => $self->{ListenPort},
+	  Reuse => $self->{Reuse} );
+
+    $self->{daemon} or die "HTTP::Daemon::new failed: $!";
+
     $self->{whc} = new Warehouse;
 
     return $self;
@@ -131,6 +138,8 @@ sub fork_index_server
     return if $child > 0;
     return if !defined $child;
 
+    delete $self->{daemon};
+
     my $daemon = new HTTP::Daemon
 	( LocalAddr => $self->{ListenAddress},
 	  LocalPort => $self->{ListenPort} + 1,
@@ -170,13 +179,6 @@ sub run
     my $self = shift;
 
     $self->fork_index_server;
-
-    $self->{daemon} = new HTTP::Daemon
-	( LocalAddr => $self->{ListenAddress},
-	  LocalPort => $self->{ListenPort},
-	  Reuse => $self->{Reuse} );
-
-    $self->{daemon} or die "HTTP::Daemon::new failed: $!";
 
     local $SIG{INT} = sub { $Warehouse::Keep::kill = 1; };
     local $SIG{TERM} = sub { $Warehouse::Keep::kill = 1; };
