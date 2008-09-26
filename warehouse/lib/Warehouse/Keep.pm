@@ -150,9 +150,10 @@ sub run
 	    {
 		if ($r->url->path eq "/index")
 		{
+		    _index_callback_init ($self);
 		    $c->send_response (HTTP::Response->new
 				       (200, "OK", [],
-					$self->_index));
+					\_index_callback));
 		    next;
 		}
 		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
@@ -324,6 +325,53 @@ sub run
 	last if $kill;
     }
     warn "Stopping";
+}
+
+
+my $_callback_self;
+my $_callback_dir;
+my @_callback_dirs;
+sub _index_callback_init
+{
+    $_callback_self = shift;
+    @_callback_dirs = $_callback_self->{Directories};
+    while (@_callback_dirs &&
+	   !(opendir (D, ($_callback_dir = shift @_callback_dirs))))
+    { }
+}
+
+sub _index_callback
+{
+    my $file;
+    while (1)
+    {
+	$file = readdir D;
+	next if $file !~ /^[0-9a-f]{32}$/;
+	last if defined $file;
+	while (1)
+	{
+	    return undef if !@_callback_dirs;
+	    $_callback_dir = shift @_callback_dirs;
+	    next unless opendir D, shift @_callback_dirs;
+	    last;
+	}
+    }
+
+    my $index = $file;
+    my @stat = stat "$_callback_dir/$file";
+    if (@stat)
+    {
+	$index .= "+$stat[7]";
+	my $mtime = $stat[9];
+	@stat = stat "$_callback_dir/$file.meta";
+	if (@stat && $mtime < $stat[9])
+	{
+	    $mtime = $stat[9];
+	}
+	$index .= " $mtime";
+    }
+    $index .= "\n";
+    return $index;
 }
 
 
