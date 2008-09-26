@@ -168,6 +168,7 @@ sub fork_index_server
 		}
 	    }
 	}
+	$c->close;
     }
     exit 0;
 }

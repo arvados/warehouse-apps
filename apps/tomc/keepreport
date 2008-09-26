@@ -63,6 +63,7 @@ my %got;
 foreach my $keep_server (@{$whc->{keeps}})
 {
     $got_on_host{$keep_server} = {};
+    $keep_server =~ s/:(\d+)$/":".($1+1)/e;
     my $url = "http://".$keep_server."/index";
     my $req = HTTP::Request->new (GET => $url);
     my $r = $ua->request ($req);
