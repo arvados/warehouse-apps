@@ -3,8 +3,11 @@
 
 ###MR_DESCRIPTION:stream all subdirs, apply mrs-* function, store 
 ###MR_INPUT:manifest
-###MR_KNOBS:FUNCTION=mrs-awz-expand-degeneracies
-###MR_KNOBS:OUTPUTNAME=reads.bin
+###MR_KNOBS:NOCACHE=1
+
+BEGIN { $ENV{NOCACHE} ||= $ENV{MR_NOCACHE} }
+BEGIN { $ENV{NOCACHE_READ} ||= $ENV{MR_NOCACHE_READ} }
+BEGIN { $ENV{NOCACHE_WRITE} ||= $ENV{MR_NOCACHE_WRITE} }
 
 use strict; 
 use Warehouse;
@@ -51,4 +54,5 @@ elsif ($ENV{MR_LEVEL} == 1)
   {
     print STDERR "+++mrout $stream\n+++\n";
   }
+  print STDERR $whc->iostats;
 }

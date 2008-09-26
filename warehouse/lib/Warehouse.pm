@@ -19,6 +19,9 @@ do '/etc/warehouse/warehouse-client.conf'
 do '/etc/warehouse/memcached.conf.pl'
     or $no_memcached_conf = 1;
 
+$ENV{NOCACHE_READ} ||= $ENV{NOCACHE};
+$ENV{NOCACHE_WRITE} ||= $ENV{NOCACHE};
+
 =head1 NAME
 
 Warehouse -- Client library for the storage warehouse.
@@ -523,10 +526,10 @@ sub fetch_block_ref
 
     return \qq{} if $hash =~ /^d41d8cd98f00b204e9800998ecf8427e\b/;
 
-    if ($hash =~ /\+K/)
+    if ($hash =~ /\+K/ || $ENV{NOCACHE_READ})
     {
 	my $dataref = $self->fetch_from_keep ($hash);
-	return $dataref if $dataref;
+	return $dataref if $dataref || $ENV{NOCACHE_READ};
     }
 
     my $sizehint;
