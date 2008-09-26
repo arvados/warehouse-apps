@@ -346,7 +346,7 @@ sub _index_callback
     while (1)
     {
 	$file = readdir D;
-	next if $file !~ /^[0-9a-f]{32}$/;
+	next if defined ($file) && $file !~ /^[0-9a-f]{32}$/;
 	last if defined $file;
 	while (1)
 	{
