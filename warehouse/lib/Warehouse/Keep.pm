@@ -148,7 +148,7 @@ sub fork_index_server
 
     while (1)
     {
-	exit 0 unless signal 0, $$ppid;
+	exit 0 unless kill 0, $$ppid;
 
 	my $child = fork;
 	if (!defined $child) { sleep 1; next; }
