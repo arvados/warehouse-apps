@@ -132,6 +132,7 @@ my $kill = 0;
 sub fork_index_server
 {
     my $self = shift;
+    my $ppid = $$;
 
     my $child = fork;
     $self->{index_server_pid} = $child;
@@ -145,33 +146,41 @@ sub fork_index_server
 	  LocalPort => $self->{ListenPort} + 1,
 	  Reuse => $self->{Reuse} );
 
-    local $| = 1;
-    while (my $c = $daemon->accept)
+    while (1)
     {
-	while (my $r = $c->get_request)
-	{
-	    print(scalar (localtime) .
-		  " " . $c->peerhost() .
-		  " R" .
-		  " " . $r->method .
-		  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
-		  "\n");
+	exit 0 unless signal 0, $$ppid;
 
-	    if ($r->method eq "GET" || $r->method eq "HEAD")
+	my $child = fork;
+	if (!defined $child) { sleep 1; next; }
+	if ($child) { wait; next; }
+
+	local $| = 1;
+	while (my $c = $daemon->accept)
+	{
+	    while (my $r = $c->get_request)
 	    {
-		if ($r->url->path eq "/index")
+		print(scalar (localtime) .
+		      " " . $c->peerhost() .
+		      " R" .
+		      " " . $r->method .
+		      " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
+		      "\n");
+		
+		if ($r->method eq "GET" || $r->method eq "HEAD")
 		{
-		    _index_callback_init ($self);
-		    $c->send_response (HTTP::Response->new
-				       (200, "OK", [],
-					\&_index_callback));
-		    last;
+		    if ($r->url->path eq "/index")
+		    {
+			_index_callback_init ($self);
+			$c->send_response (HTTP::Response->new
+					   (200, "OK", [],
+					    \&_index_callback));
+			last;
+		    }
 		}
 	    }
+	    $c->close;
 	}
-	$c->close;
     }
-    exit 0;
 }
 
 sub run
