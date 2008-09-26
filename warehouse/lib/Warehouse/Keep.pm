@@ -153,7 +153,7 @@ sub run
 		    _index_callback_init ($self);
 		    $c->send_response (HTTP::Response->new
 				       (200, "OK", [],
-					\_index_callback));
+					\&_index_callback));
 		    next;
 		}
 		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
