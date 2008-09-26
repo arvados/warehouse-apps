@@ -335,7 +335,7 @@ sub _index
     for my $dir (@$dirs)
     {
 	opendir (D, "$dir/") or next;
-	foreach (readdir D)
+	while (local $_ = readdir D)
 	{
 	    next unless /^[0-9a-f]{32}$/;
 	    $index .= $_;
