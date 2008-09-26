@@ -207,7 +207,7 @@ sub run
 		    last;
 		}
 
-		my $dataref = $self->_fetch ($md5);
+		my $dataref = $self->_fetch ($md5, { touch => 1 });
 		if ($dataref && ($newdata eq "" || $$dataref eq $newdata))
 		{
 		    $c->send_response (HTTP::Response->new
@@ -338,8 +338,20 @@ sub _index
 	foreach (readdir D)
 	{
 	    next unless /^[0-9a-f]{32}$/;
-	    if (my $size = -s "$dir/$_") { $_ .= "+$size"; }
-	    $index .= "$_\n";
+	    $index .= $_;
+	    my @stat = stat "$dir/$_";
+	    if (@stat)
+	    {
+		$index .= "+$stat[7]";
+		my $mtime = $stat[9];
+		@stat = stat "$dir/$_.meta";
+		if (@stat && $mtime < $stat[9])
+		{
+		    $mtime = $stat[9];
+		}
+		$index .= " $mtime";
+	    }
+	    $index .= "\n";
 	}
 	closedir D;
     }
@@ -373,6 +385,7 @@ sub _fetch
 {
     my $self = shift;
     my $md5 = shift;
+    my $opt = shift;
     my $dirs = $self->{Directories};
     for my $dir (@$dirs)
     {
@@ -380,6 +393,13 @@ sub _fetch
 	local $/ = undef;
 	my $data = <F>;
 	close F;
+
+	if ($opt->{touch})
+	{
+	    sysopen (F, "$dir/$md5.meta", O_RDWR|O_CREAT);
+	    close F;
+	}
+
 	return \$data if md5_hex ($data) eq $md5;
 	warn "Checksum mismatch: $dir/$md5\n";
     }
