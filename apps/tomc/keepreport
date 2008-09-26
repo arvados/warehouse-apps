@@ -60,10 +60,10 @@ print STDERR "\n";
 print STDERR "Getting indices: ";
 my %got_on_host;
 my %got;
-foreach my $keep_host_port (@{$whc->{keeps}})
+foreach my $keep_server (@{$whc->{keeps}})
 {
-    $got_on_host{$keep_host_port} = {};
-    my $url = "http://".$keep_host_port."/index";
+    $got_on_host{$keep_server} = {};
+    my $url = "http://".$keep_server."/index";
     my $req = HTTP::Request->new (GET => $url);
     my $r = $ua->request ($req);
     die "$url failed: ".$r->status_line unless $r->is_success;
@@ -71,8 +71,9 @@ foreach my $keep_host_port (@{$whc->{keeps}})
     while ($index =~ /(.*?)\n/gs)
     {
 	my $hash = $1;
+	$hash =~ s/ .*//;
 	next if $hash !~ /\+/;
-	++$got_on_host{$keep_host_port}->{$hash};
+	++$got_on_host{$keep_server}->{$hash};
 	++$got{$hash};
     }
     print STDERR ".";
@@ -106,16 +107,18 @@ delete $gotmd5{"d41d8cd98f00b204e9800998ecf8427e"};
 foreach (sort keys %expectmd5)
 {
     my $got = $gotmd5{$_} + 0;
+    my $md5size = $md5size{$_};
+    my $expectmd5 = $expectmd5{$_};
     if (!$got)
     {
 	$stats{blocksmissing}++;
     }
-    elsif ($got > $expectmd5{$_})
+    elsif ($got > $expectmd5)
     {
 	$stats{blockstoomany}++;
-	$stats{bytestoomany} += ($got - $expectmd5{$_}) * $md5size{$_};
+	$stats{bytestoomany} += ($got - $expectmd5) * $md5size;
     }
-    elsif ($got < $expectmd5{$_})
+    elsif ($got < $expectmd5)
     {
 	$stats{blockstoofew}++;
     }
@@ -125,27 +128,28 @@ foreach (sort keys %expectmd5)
     my ($keeps, @bucket) = $whc->_hash_keeps (undef, $_);
     foreach my $bucket (@bucket)
     {
-	if ($got_on_host{$keeps->[$bucket]}->{$_."+".$md5size{$_}})
+	my $keep_server = $keeps->[$bucket];
+	if ($got_on_host{$keep_server}->{$_."+".$md5size})
 	{
 	    ++$nfound;
-	    if ($nfound > $expectmd5{$_})
+	    if ($nfound > $expectmd5)
 	    {
-		print $keeps->[$bucket] . " DELETE $_\n";
-		$stats{bytestoomanycheck} += $md5size{$_};
+		print "$keep_server DELETE $_\n";
+		$stats{bytestoomanycheck} += $md5size;
 	    }
-	    elsif ($got > $expectmd5{$_})
+	    elsif ($got > $expectmd5)
 	    {
-		print $keeps->[$bucket] . " VERIFY $_\n";
+		print "$keep_server VERIFY $_\n";
 	    }
 	}
-	elsif ($nfound + $nwouldfind < $expectmd5{$_})
+	elsif ($nfound + $nwouldfind < $expectmd5)
 	{
 	    ++$nwouldfind;
-	    print $keeps->[$bucket] . " KEEP $_ probe=$nwouldfind got=$got\n";
+	    print "$keep_server KEEP $_+$md5size probe=$nwouldfind got=$got\n";
 	}
     }
-    $stats{"bytesexpected$expectmd5{$_}"} += $md5size{$_};
-    $stats{"blocksexpected$expectmd5{$_}unknownsize"} ++ if !$md5size{$_};
+    $stats{"bytesexpected$expectmd5"} += $md5size;
+    $stats{"blocksexpected${expectmd5}unknownsize"} ++ if !$md5size;
 }
 
 foreach (sort keys %gotmd5)
@@ -154,11 +158,11 @@ foreach (sort keys %gotmd5)
     {
 	$stats{blocksgarbage}++;
 	$stats{bytesgarbage} += $md5size{$_} * $gotmd5{$_};
-	foreach my $keep_host_port (@{$whc->{keeps}})
+	foreach my $keep_server (@{$whc->{keeps}})
 	{
-	    if ($got_on_host{$keep_host_port}->{$_."+".$md5size{$_}})
+	    if ($got_on_host{$keep_server}->{$_."+".$md5size{$_}})
 	    {
-		print "$keep_host_port DELETE $_\n";
+		print "$keep_server DELETE $_\n";
 	    }
 	}
     }
