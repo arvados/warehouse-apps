@@ -54,5 +54,4 @@ elsif ($ENV{MR_LEVEL} == 1)
   {
     print STDERR "+++mrout $stream\n+++\n";
   }
-  print STDERR $whc->iostats;
 }
