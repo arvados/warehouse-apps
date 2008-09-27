@@ -63,9 +63,7 @@ my %got;
 foreach my $keep_server (@{$whc->{keeps}})
 {
     $got_on_host{$keep_server} = {};
-    my $index_server = $keep_server;
-    $index_server =~ s/:(\d+)$/":".($1+1)/e;
-    my $url = "http://".$index_server."/index";
+    my $url = "http://$keep_server/index";
     my $req = HTTP::Request->new (GET => $url);
     my $r = $ua->request ($req);
     die "$url failed: ".$r->status_line unless $r->is_success;
@@ -87,7 +85,14 @@ foreach (keys %got)
     /^([^\+]+).*\+(\d+)/ or die "$_ has no size hint";
 
     if (exists $md5size{$1} && $md5size{$1} != $2)
-    { warn "Size mismatch: Keep has $1+$2, expected ".$md5size{$1}." bytes\n" }
+    {
+	warn "Size mismatch: Keep has $1+$2, expected ".$md5size{$1}." bytes\n";
+	foreach my $keep_server (@{$whc->{keeps}})
+	{
+	    print "$keep_server VERIFY $1 gotsize=$2 wantsize=$md5size{$1}\n"
+		if $got_on_host{$keep_server}->{$_};
+	}
+    }
     else
     {
 	$gotmd5{$1} += $got{$_};
