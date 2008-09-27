@@ -19,8 +19,8 @@ do '/etc/warehouse/warehouse-client.conf'
 do '/etc/warehouse/memcached.conf.pl'
     or $no_memcached_conf = 1;
 
-$ENV{NOCACHE_READ} ||= $ENV{NOCACHE};
-$ENV{NOCACHE_WRITE} ||= $ENV{NOCACHE};
+$ENV{NOCACHE_READ} = 1 if $ENV{NOCACHE};
+$ENV{NOCACHE_WRITE} = 1 if $ENV{NOCACHE};
 
 =head1 NAME
 
