@@ -3,6 +3,11 @@
 
 ###MR_DESCRIPTION:output = input if blocks are fetchable
 ###MR_INPUT:manifest
+###MR_KNOBS:NOCACHE=1
+
+BEGIN { $ENV{NOCACHE} ||= $ENV{MR_NOCACHE} }
+BEGIN { $ENV{NOCACHE_READ} ||= $ENV{MR_NOCACHE_READ} }
+BEGIN { $ENV{NOCACHE_WRITE} ||= $ENV{MR_NOCACHE_WRITE} }
 
 use strict; 
 use Warehouse;
