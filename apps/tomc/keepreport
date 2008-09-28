@@ -134,27 +134,29 @@ foreach (sort keys %expectmd5)
 
     my $nfound = 0;
     my $nwouldfind = 0;
+    my $probe = 0;
     my ($keeps, @bucket) = $whc->_hash_keeps (undef, $_);
     foreach my $bucket (@bucket)
     {
+	++$probe;
 	my $keep_server = $keeps->[$bucket];
 	if ($got_on_host{$keep_server}->{$_."+".$md5size})
 	{
 	    ++$nfound;
 	    if ($nfound > $expectmd5)
 	    {
-		print "$keep_server DELETE $_\n";
+		print "$keep_server DELETE $_ probe=$probe got=$got\n";
 		$stats{bytestoomanycheck} += $md5size;
 	    }
 	    elsif ($got > $expectmd5)
 	    {
-		print "$keep_server VERIFY $_\n";
+		print "$keep_server VERIFY $_ probe=$probe got=$got\n";
 	    }
 	}
 	elsif ($nfound + $nwouldfind < $expectmd5)
 	{
 	    ++$nwouldfind;
-	    print "$keep_server KEEP $_+$md5size probe=$nwouldfind got=$got\n";
+	    print "$keep_server KEEP $_+$md5size probe=$probe got=$got\n";
 	}
     }
     $stats{"bytesexpected$expectmd5"} += $md5size;
