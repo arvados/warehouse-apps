@@ -63,8 +63,9 @@ if (!defined $manifestkey)
 # make up the manifest.
 
 my @manifesthash = split (",", $manifestkey);
-my $manifest = $whc->fetch_block (shift @manifesthash)
-    or die "fetch_block failed";
+my $manifest = $whc->fetch_block ($manifesthash[0]);
+die "fetch_block($manifesthash[0]) failed" if !defined $manifest;
+shift @manifesthash;
 
 if ($justrawmanifest)
 {
@@ -96,8 +97,10 @@ if ($justrawmanifest)
 	$ctx->add ($manifest) if $opt{v};
 	print M $manifest unless $opt{n};
 	last if !@manifesthash;
-	$manifest = $whc->fetch_block (shift @manifesthash)
-	    or die "fetch_block failed";
+
+	defined ($manifest = $whc->fetch_block ($manifesthash[0]))
+	    or die "fetch_block($manifesthash[0]) failed";
+	shift @manifesthash;
     }
     $opt{n} or close M or die "Error writing $localbase: $!";
     !$opt{v} or print STDERR $ctx->hexdigest."  $localbase\n";
