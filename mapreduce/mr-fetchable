@@ -37,7 +37,16 @@ elsif ($ENV{MR_LEVEL} == 1)
   my ($name, $blocks) = $stream =~ /^(\S+) ([0-9a-f]{32}\S* )*/;
   $blocks =~ s/ $//;
   $blocks =~ s/\+\S+//g;
-  my $whget = join (" && ", map { "whget $_ -" } split (" ", $blocks));
+  my @blocks = split (" ", $blocks);
+  @blocks = grep { $_ ne "d41d8cd98f00b204e9800998ecf8427e" } @blocks;
+
+  if (!@blocks)
+  {
+    print STDERR "+++mrout $stream\n+++\n";
+    exit 0;
+  }
+
+  my $whget = join (" && ", map { "whget $_ -" } @blocks);
   Safepipe::readfrom ("main::S",
 		      "$whget",
 		      "wc -c",
