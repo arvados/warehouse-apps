@@ -540,6 +540,7 @@ if ($have_slurm)
 freeze();
 Log (undef, "reduce");
 
+my $output_in_keep = 0;
 $whc->write_start (1);
 for (@jobstep)
 {
@@ -547,10 +548,12 @@ for (@jobstep)
   my $output = $_->{output};
   if ($output !~ /^[0-9a-f]{32}/)
   {
+    $output_in_keep ||= $output =~ / [0-9a-f]{32}\S*\+K/;
     $whc->write_data ($output);
   }
   elsif (defined (my $outblock = $whc->fetch_block ($output)))
   {
+    $output_in_keep ||= $outblock =~ / [0-9a-f]{32}\S*\+K/;
     $whc->write_data ($outblock);
   }
   else
@@ -588,6 +591,11 @@ if ($key)
   }
   my $keepkey = join (",", @keepkey);
   Log (undef, "output+K key is $keepkey");
+
+  if ($output_in_keep)
+  {
+    $key = $keepkey;
+  }
 
   dbh_do ("update mrjob set output=? where id=?", undef,
 	  $key, $job_id)
