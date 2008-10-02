@@ -5,10 +5,6 @@
 ###MR_INPUT:manifest
 ###MR_KNOBS:NOCACHE=1
 
-BEGIN { $ENV{NOCACHE} ||= $ENV{KNOB_NOCACHE} }
-BEGIN { $ENV{NOCACHE_READ} ||= $ENV{KNOB_NOCACHE_READ} }
-BEGIN { $ENV{NOCACHE_WRITE} ||= $ENV{KNOB_NOCACHE_WRITE} }
-
 use strict; 
 use Warehouse;
 use Warehouse::Manifest;

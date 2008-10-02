@@ -10,6 +10,10 @@ $ENV{PATH} .= ":$ENV{MR_REVISION_SRCDIR}/mapreduce";
 $ENV{PATH} .= ":$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce";
 $ENV{PERLLIB} .= "$ENV{MR_REVISION_SRCDIR}/warehouse/lib:$ENV{MR_REVISION_INSTALLDIR}/src/warehouse/lib:$ENV{MR_REVISION_SRCDIR}/mapreduce:$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce";
 
+$ENV{NOCACHE} ||= $ENV{KNOB_NOCACHE};
+$ENV{NOCACHE_READ} ||= $ENV{KNOB_NOCACHE_READ};
+$ENV{NOCACHE_WRITE} ||= $ENV{KNOB_NOCACHE_WRITE};
+
 $ENV{MR_JOB_TMP} = "/tmp/mrcompute/work";
 $ENV{MR_JOBSTEP_TMP} = "/tmp/mrcompute/work/$ENV{MR_SLOT}";
 system "rm -rf '$ENV{MR_JOBSTEP_TMP}'";
