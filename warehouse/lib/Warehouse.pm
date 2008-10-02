@@ -801,10 +801,13 @@ sub fetch_from_keep
 	if ($r->is_success)
 	{
 	    my $data = $r->content;
+	    my $datasize = length $data;
 	    if (Digest::MD5::md5_hex ($data) eq $md5)
 	    {
+		warn "Keep read $keep_host_port $md5 $datasize\n"
+		    if $ENV{DEBUG_KEEP};
 		$self->{stats_keepread_blocks} ++;
-		$self->{stats_keepread_bytes} += length $data;
+		$self->{stats_keepread_bytes} += $datasize;
 		++$successes;
 		return \$data if !$opts->{nnodes};
 		return \$data if $successes == $opts->{nnodes};
