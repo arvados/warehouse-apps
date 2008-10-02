@@ -16,10 +16,10 @@ my $q = new CGI;
 my $path_info = $ENV{PATH_INFO};# /1234abcd/subdir1/testfile
 $path_info =~ s,^/,,;		# 1234abcd/subdir1/testfile
 
-my $md5re = "[0-9a-f]{32}";
-my $hintre = "\+[\d\w\@]+";
-my $hashre = "$md5re(?:$hintre)*";
-my $keyre = "$hashre(?:,$hashre)*";
+my $md5re = q{[0-9a-f]{32}};
+my $hintre = q{\+[\d\w\@]+};
+my $hashre = qq{$md5re(?:$hintre)*};
+my $keyre = qq{$hashre(?:,$hashre)*};
 
 my $wantrawmanifest = 0;
 

@@ -2,10 +2,10 @@
 
 use strict;
 
-my $md5re = "[0-9a-f]{32}";
-my $hintre = "\+[\d\w\@]+";
-my $hashre = "$md5re(?:$hintre)*";
-my $keyre = "$hashre(?:,$hashre)*";
+my $md5re = q{[0-9a-f]{32}};
+my $hintre = q{\+[\d\w\@]+};
+my $hashre = qq{$md5re(?:$hintre)*};
+my $keyre = qq{$hashre(?:,$hashre)*};
 
 if ($ENV{PATH_INFO} =~ /^\/job\d|^\/$keyre(\/|\.txt$|$)/)
 {
