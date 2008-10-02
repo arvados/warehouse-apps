@@ -645,9 +645,14 @@ sub fetch_block_ref
 
 =head2 store_in_keep
 
- my $data = "foo";
+ my $hash = $whc->store_block ("foo");
  my ($hash_with_hints, $nnodes) = $whc->store_in_keep (hash => $hash,
 						       nnodes => 2);
+use Warehouse; $whc=new Warehouse;
+ my $data = "foo";
+ my ($hash_with_hints, $nnodes) = $whc->store_in_keep (dataref => \$data,
+						       nnodes => 2);
+print $hash_with_hints;
 
 =cut
 
@@ -673,10 +678,14 @@ sub store_in_keep
 	}
 	return (join (",", @hash), $min_nnodes);
     }
-    ($md5, @hints) = split (/[-\+]/, $arg{hash}) if exists $arg{hash};
-    if (!$md5)
+    if (exists $arg{hash})
+    {
+	($md5, @hints) = split (/[-\+]/, $arg{hash});
+    }
+    elsif (defined ($dataref))
     {
 	$md5 = Digest::MD5::md5_hex ($$dataref);
+	@hints = length($$dataref);
     }
     $arg{nnodes} ||= 1;
 
