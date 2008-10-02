@@ -227,7 +227,7 @@ sub snap
     {
 	foreach my $j (@$joblist)
 	{
-	    foreach (qw(inputkey outputkey metakey frozentokey))
+	    foreach (qw(inputkey outputkey metakey frozentokey thawedfromkey))
 	    {
 		my $arg = $j->{$_};
 
