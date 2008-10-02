@@ -23,7 +23,7 @@ my $keyre = qq{$hashre(?:,$hashre)*};
 
 my $wantrawmanifest = 0;
 
-if ($path_info =~ /^$keyre(\/=|\.txt)$/)
+if ($path_info =~ /^($keyre)(\/=|\.txt)$/)
 {
     $path_info = $1;
     $wantrawmanifest = 1;
