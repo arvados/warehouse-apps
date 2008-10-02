@@ -648,11 +648,9 @@ sub fetch_block_ref
  my $hash = $whc->store_block ("foo");
  my ($hash_with_hints, $nnodes) = $whc->store_in_keep (hash => $hash,
 						       nnodes => 2);
-use Warehouse; $whc=new Warehouse;
- my $data = "foo";
+ my $data = "bar";
  my ($hash_with_hints, $nnodes) = $whc->store_in_keep (dataref => \$data,
 						       nnodes => 2);
-print $hash_with_hints;
 
 =cut
 
