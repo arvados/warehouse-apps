@@ -296,6 +296,12 @@ sub store_block
     my $dataarg = shift;
     my $dataref = ref $dataarg ? $dataarg : \$dataarg;
 
+    if ($ENV{NOCACHE_WRITE})
+    {
+	return $self->store_in_keep (dataref => $dataref,
+				     nnodes => 2);
+    }
+
     my $mogilefs_class = shift || $self->{mogilefs_file_class};
     my $md5 = Digest::MD5::md5_hex ($$dataref);
     my $size = length $$dataref;
