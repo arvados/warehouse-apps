@@ -210,6 +210,7 @@ $main::please_freeze = 0;
 $main::please_info = 0;
 my $jobsteps_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
+grep { $ENV{$1} = $2 if /^(NOCACHE.*?)=(.*)/ } split ("\n", $$Job{knobs});
 
 
 my @jobstep;
