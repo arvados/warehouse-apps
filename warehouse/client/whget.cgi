@@ -16,9 +16,14 @@ my $q = new CGI;
 my $path_info = $ENV{PATH_INFO};# /1234abcd/subdir1/testfile
 $path_info =~ s,^/,,;		# 1234abcd/subdir1/testfile
 
+my $md5re = "[0-9a-f]{32}";
+my $hintre = "\+[\d\w\@]+";
+my $hashre = "$md5re(?:$hintre)*";
+my $keyre = "$hashre(?:,$hashre)*";
+
 my $wantrawmanifest = 0;
 
-if ($path_info =~ /^([0-9a-f]{32})(\/=|\.txt)$/)
+if ($path_info =~ /^$keyre(\/=|\.txt)$/)
 {
     $path_info = $1;
     $wantrawmanifest = 1;
@@ -47,11 +52,11 @@ else
 my $whc = new Warehouse ("warehouse_servers" => $remoteserver);
 
 my $manifestblock;
-if ($key =~ /^[0-9a-f]{32}$/) {
+if ($key =~ /^$hashre$/) {
     $manifestblock = $whc->fetch_block ($key)
 	or header_and_die (1, "fetch_block failed");
 }
-elsif ($key =~ /^[0-9a-f]{32}(,[0-9a-f]{32})+$/)
+elsif ($key =~ /^$keyre$/)
 {
     $manifestblock = $key;
 }
@@ -67,7 +72,7 @@ else
 }
 
 my @manifesthash;
-if ($manifestblock =~ /^[0-9a-f]{32}(,[0-9a-f]{32})*\n?$/)
+if ($manifestblock =~ /^$keyre\n?$/)
 {
     @manifesthash = split (",", $manifestblock);
     $manifestblock = $whc->fetch_block (shift @manifesthash)

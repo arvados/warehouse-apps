@@ -2,7 +2,12 @@
 
 use strict;
 
-if ($ENV{PATH_INFO} =~ /^\/job\d|^\/[0-9a-f]{32}(\/|\.txt$|$)/)
+my $md5re = "[0-9a-f]{32}";
+my $hintre = "\+[\d\w\@]+";
+my $hashre = "$md5re(?:$hintre)*";
+my $keyre = "$hashre(?:,$hashre)*";
+
+if ($ENV{PATH_INFO} =~ /^\/job\d|^\/$keyre(\/|\.txt$|$)/)
 {
     exec "whget.cgi";
 }
