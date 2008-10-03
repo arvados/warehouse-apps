@@ -276,7 +276,6 @@ sub _init
     $self->{meta_stats_hashref} = {};
     $self->{job_list_arrayref} = undef;
     $self->{job_list_fetched} = undef;
-    $self->_read_cache;
 
     return $self;
 }
@@ -1041,6 +1040,7 @@ sub list_manifests
 sub job_list
 {
     my $self = shift;
+    $self->_read_cache;
     if (@_) { return $self->_job_list (@_); }
     $self->_refresh_job_list;
     return $self->{job_list_arrayref};
@@ -1413,6 +1413,7 @@ sub block_might_exist
 sub write_cache
 {
     my $self = shift;
+    $self->_read_cache;
     my $storeme = {};
     map { $storeme->{$_} = $self->{$_} } qw(job_list_arrayref
 					    job_hashref
@@ -1429,6 +1430,7 @@ sub write_cache
 sub _read_cache
 {
     my $self = shift;
+    return if $self->{already_read_cache};
     my $stored;
     eval {
 	use Storable "lock_retrieve";
@@ -1438,11 +1440,13 @@ sub _read_cache
     {
 	map { $self->{$_} = $stored->{$_} } keys %$stored;
     }
+    $self->{already_read_cache} = 1;
 }
 
 sub _refresh_job_list
 {
     my $self = shift;
+    $self->_read_cache;
     if (!ref $self->{job_list_arrayref} || $self->{job_list_fetched} < time - 60)
     {
 	$self->{job_list_arrayref} = $self->_job_list;
@@ -1466,6 +1470,8 @@ sub job_stats
 {
     my $self = shift;
     my $jobid = shift;
+
+    $self->_read_cache;
     $self->_refresh_job_list;
     if (!ref $self->{job_hashref}->{$jobid})
     {
@@ -1560,6 +1566,7 @@ sub job_follow_input
     my $self = shift;
     my $targetjob = shift;
 
+    $self->_read_cache;
     $self->_refresh_job_list;
     my $previous = $self->{job_by_output}->{$targetjob->{inputkey}};
     return $previous
@@ -1579,6 +1586,7 @@ sub job_follow_thawedfrom
     my $self = shift;
     my $targetjob = shift;
 
+    $self->_read_cache;
     my $thawhash = $targetjob->{thawedfromkey};
     return undef if !$thawhash;
 
@@ -1614,6 +1622,7 @@ sub manifest_data_size
     my $self = shift;
     my $key = shift;
 
+    $self->_read_cache;
     if ($self->{manifest_stats_hashref}->{$key} &&
 	$self->{manifest_stats_hashref}->{$key}->{data_size})
     {
