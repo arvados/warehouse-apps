@@ -300,8 +300,8 @@ sub store_block
 
     if ($ENV{NOCACHE_WRITE} || $ENV{NOCACHE})
     {
-	return $self->store_in_keep (dataref => $dataref,
-				     nnodes => 2);
+	return scalar $self->store_in_keep (dataref => $dataref,
+					    nnodes => 2);
     }
 
     my $mogilefs_class = shift || $self->{mogilefs_file_class};
