@@ -274,6 +274,7 @@ sub _write_flush
 						  0, $writesize));
     if (!$hash)
     {
+      sleep 1;
       return undef;
     }
 
