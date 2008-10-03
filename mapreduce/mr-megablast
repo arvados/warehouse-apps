@@ -9,6 +9,7 @@
 ###MR_KNOBS:MAXBATCHES=0
 ###MR_KNOBS:MAXBATCHESPERJOB=0
 ###MR_KNOBS:FILTER400BP=1
+###MR_KNOBS:MBFLAGS=-f -s 400 -p 97 -W60 -F F -G25 -E10
 
 use strict; 
 use Warehouse;
@@ -25,6 +26,7 @@ $ENV{KNOB_MAXBATCHESPERJOB} += 0;
 $ENV{KNOB_MAXBATCHES} += 0;
 $ENV{KNOB_BATCHSIZE} += 0;
 $ENV{KNOB_BATCHSIZE} ||= 1000;
+$ENV{KNOB_MBFLAGS} ||= "-f -s 400 -p 97 -W60 -F F -G25 -E10";
 
 my $whc = new Warehouse;
 
@@ -172,7 +174,7 @@ if ($ENV{MR_LEVEL} == 2)
       ("main::MEGABLAST",
        "mrs-fetch -h '$traces_manifest_key' '$subdir' '$filename'",
        "mrs-selectbytes $batchstart $batchend",
-       "megablast -i stdin -d $refdir/$reffilename -f -s 400 -p 97 -F F -G25 -E10 -W60",
+       "megablast -i stdin -d $refdir/$reffilename $ENV{KNOB_MBFLAGS}",
        "gzip -1",
        "mrs-store '$subdir/$filename-$batchstart-$batchend' '$filename-$batchstart-$batchend.mega.gz'",
        "mrs-output",
