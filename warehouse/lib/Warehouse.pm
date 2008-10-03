@@ -682,7 +682,9 @@ sub store_in_keep
 	    $min_nnodes = $nnodes
 		if !defined $min_nnodes || $min_nnodes > $nnodes;
 	}
-	return (join (",", @hash), $min_nnodes);
+	my $hashes = join (",", @hash);
+	return $hashes if !wantarray;
+	return ($hashes, $min_nnodes);
     }
     if (exists $arg{hash})
     {
