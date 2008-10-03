@@ -1322,6 +1322,7 @@ sub _get_file_data
 	my $pathref;
 	if ($trycache)
 	{
+	    next if !$self->{memc};
 	    $pathref = $self->{memc}->get
 		($hash."\@".$self->{mogilefs_trackers})
 		unless $self->{memcached_size_threshold} < 0;
@@ -1329,7 +1330,11 @@ sub _get_file_data
 	}
 	else
 	{
-	    my @paths = $self->{mogc}->get_paths ($hash, { noverify => 1 });
+	    my @paths = eval
+	    {
+		$self->{mogc}->get_paths ($hash, { noverify => 1 });
+	    };
+	    return undef if !@paths;
 	    $pathref = \@paths;
 	    $self->{memc}->set
 		($hash."\@".$self->{mogilefs_trackers}, $pathref)
@@ -1394,7 +1399,7 @@ sub block_might_exist
 {
     my $self = shift;
     my $hash = shift;
-    my @paths = $self->{mogc}->get_paths ($hash, { noverify => 1 });
+    my @paths = eval { $self->{mogc}->get_paths ($hash, { noverify => 1 }) };
     return @paths ? 1 : 0;
 }
 
