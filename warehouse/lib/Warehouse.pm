@@ -234,38 +234,41 @@ sub _init
     $self->{ua} = LWP::UserAgent->new;
     $self->{ua}->timeout ($self->{timeout});
 
-    while (!$self->{mogc} && ++$attempts <= 5)
+    if (!$ENV{NOCACHE_READ} || !$ENV{NOCACHE_WRITE})
     {
-	$self->{mogc} = eval {
-	    MogileFS::Client->new
-		(hosts => [split(",", $self->{mogilefs_trackers})],
-		 domain => $self->{mogilefs_domain},
-		 timeout => $self->{timeout});
-	  };
-	last if $self->{mogc};
-	print STDERR "MogileFS connect failure #$attempts: $@\n";
-	    sleep $attempts;
-    }
-    die "Can't connect to MogileFS" if !$self->{mogc};
+	while (!$self->{mogc} && ++$attempts <= 5)
+	{
+	    $self->{mogc} = eval {
+		MogileFS::Client->new
+		    (hosts => [split(",", $self->{mogilefs_trackers})],
+		     domain => $self->{mogilefs_domain},
+		     timeout => $self->{timeout});
+	      };
+	    last if $self->{mogc};
+	    print STDERR "MogileFS connect failure #$attempts: $@\n";
+		sleep $attempts;
+	}
+	die "Can't connect to MogileFS" if !$self->{mogc};
 
-    if (@{$self->{memcached_servers}} &&
-	$self->{memcached_size_threshold} >= 0)
-    {
-	$self->{memc} = new Cache::Memcached {
-	    'servers' => $self->{memcached_servers},
-	    'debug' => 0,
-	};
-	$self->{memc}->enable_compress (0);
-    }
+	if (@{$self->{memcached_servers}} &&
+	    $self->{memcached_size_threshold} >= 0)
+	{
+	    $self->{memc} = new Cache::Memcached {
+		'servers' => $self->{memcached_servers},
+		'debug' => 0,
+	    };
+	    $self->{memc}->enable_compress (0);
+	}
 
-    if ($self->{memcached_size_threshold} + 1
-	< $self->{mogilefs_size_threshold})
-    {
-	warn("Warehouse: Blocks with "
-	     .$self->{memcached_size_threshold}
-	     ." < size < "
-	     .$self->{mogilefs_size_threshold}
-	     ." will not be stored in either memcached or mogilefs!\n");
+	if ($self->{memcached_size_threshold} + 1
+	    < $self->{mogilefs_size_threshold})
+	{
+	    warn("Warehouse: Blocks with "
+		 .$self->{memcached_size_threshold}
+		 ." < size < "
+		 .$self->{mogilefs_size_threshold}
+		 ." will not be stored in either memcached or mogilefs!\n");
+	}
     }
 
     $self->{job_hashref} = {};
