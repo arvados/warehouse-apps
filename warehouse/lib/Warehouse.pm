@@ -315,7 +315,9 @@ sub store_block
 	return $hash;
     }
 
-    if ($size <= $self->{memcached_size_threshold})
+    if ($size <= $self->{memcached_size_threshold}
+	&& !$ENV{NOCACHE}
+	&& !$ENV{NOCACHE_WRITE})
     {
 	$self->_store_block_memcached ($md5, $dataref);
     }
@@ -333,7 +335,8 @@ sub store_block
 	or do
 	{
 	    $self->{errstr} = $@;
-	    return undef;
+	    return $self->store_in_keep (dataref => $dataref,
+					 nnodes => 2);
 	}
     }
 
