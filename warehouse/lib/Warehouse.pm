@@ -1398,18 +1398,6 @@ sub block_might_exist
 
 
 
-=head2 job_stats
-
- my $job = $whc->job_stats (1234);
- if ($job && $job->{meta_stats})
- {
-     printf ("%d of %d slot seconds spent in successful jobsteps",
-	     $job->{meta_stats}->{slot_seconds},
-             $job->{meta_stats}->{success_seconds});
- }
-
-=cut
-
 sub write_cache
 {
     my $self = shift;
@@ -1465,6 +1453,19 @@ sub _refresh_job_list
 	$self->{job_list_fetched} = time;
     }
 }
+
+
+=head2 job_stats
+
+ my $job = $whc->job_stats (1234);
+ if ($job && $job->{meta_stats})
+ {
+     printf ("%d of %d slot seconds spent in successful jobsteps",
+	     $job->{meta_stats}->{slot_seconds},
+             $job->{meta_stats}->{success_seconds});
+ }
+
+=cut
 
 sub job_stats
 {
