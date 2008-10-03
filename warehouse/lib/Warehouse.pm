@@ -298,7 +298,7 @@ sub store_block
     my $dataarg = shift;
     my $dataref = ref $dataarg ? $dataarg : \$dataarg;
 
-    if ($ENV{NOCACHE_WRITE})
+    if ($ENV{NOCACHE_WRITE} || $ENV{NOCACHE})
     {
 	return $self->store_in_keep (dataref => $dataref,
 				     nnodes => 2);
@@ -534,10 +534,10 @@ sub fetch_block_ref
 
     return \qq{} if $hash =~ /^d41d8cd98f00b204e9800998ecf8427e\b/;
 
-    if ($hash =~ /\+K/ || $ENV{NOCACHE_READ})
+    if ($hash =~ /\+K/ || $ENV{NOCACHE_READ} || $ENV{NOCACHE})
     {
 	my $dataref = $self->fetch_from_keep ($hash);
-	return $dataref if $dataref || $ENV{NOCACHE_READ};
+	return $dataref if $dataref || $ENV{NOCACHE_READ} || $ENV{NOCACHE};
     }
 
     my $sizehint;
