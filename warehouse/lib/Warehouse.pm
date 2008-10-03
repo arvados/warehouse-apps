@@ -335,8 +335,8 @@ sub store_block
 	or do
 	{
 	    $self->{errstr} = $@;
-	    return $self->store_in_keep (dataref => $dataref,
-					 nnodes => 2);
+	    return scalar $self->store_in_keep (dataref => $dataref,
+						nnodes => 2);
 	}
     }
 
