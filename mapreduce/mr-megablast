@@ -99,7 +99,7 @@ if ($ENV{MR_LEVEL} == 1)
   my $have_any_reads = 0;	# any traces at all seen yet in this batch?
   while (defined ($_ = <TRACES>))
   {
-    if (/^>/)
+    if (/^[>\@]/)
     {
       ++$ntraces;
       if ($ENV{KNOB_FILTER400BP} && $bpcount < 400)
@@ -174,6 +174,8 @@ if ($ENV{MR_LEVEL} == 2)
       ("main::MEGABLAST",
        "mrs-fetch -h '$traces_manifest_key' '$subdir' '$filename'",
        "mrs-selectbytes $batchstart $batchend",
+#      q{perl -pe 's{^\@.*}{">$subdir.$filename.$batchstart.".++$n}e; s{^\+.*}{} && scalar <>'},
+       q{perl -pe 's{^\@}{>}; s{^\+.*}{}s && scalar <>'},
        "megablast -i stdin -d $refdir/$reffilename $ENV{KNOB_MBFLAGS}",
        "gzip -1",
        "mrs-store '$subdir/$filename-$batchstart-$batchend' '$filename-$batchstart-$batchend.mega.gz'",
