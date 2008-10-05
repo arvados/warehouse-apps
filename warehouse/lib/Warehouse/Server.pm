@@ -422,9 +422,16 @@ sub run
 		}
 
 		my $status;
-		my $sth = $self->{dbh}->prepare ("select mrjobmanager.pid pid from $mrdb.mrjob left join $mrdb.mrjobmanager on mrjobmanager.id=mrjob.jobmanager_id and mrjob.finishtime is null where mrjob.id=?");
-		$sth->execute ($jobspec{id});
-		if (my $job = $sth->fetchrow_hashref)
+		my $sth;
+		my $job;
+		if ($jobspec{stop}
+		    && $self->{dbh}->do ("update mrjob set jobmanager_id=-1 where id=? and jobmanager_id is null", undef, $jobspec{id}))
+		{
+		    $status = 200;
+		}
+		elsif ($sth = $self->{dbh}->prepare ("select mrjobmanager.pid pid from $mrdb.mrjob left join $mrdb.mrjobmanager on mrjobmanager.id=mrjob.jobmanager_id and mrjob.finishtime is null where mrjob.id=?")
+		       && $sth->execute ($jobspec{id})
+		       && ($job = $sth->fetchrow_hashref))
 		{
 		    if (my $pid = $job->{pid})
 		    {
