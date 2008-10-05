@@ -93,6 +93,7 @@ sub job_freeze
 					id_max => $opt{id}))
 	    && $#$joblist == 0)
 	{
+	    return 1 if !$joblist->[0]->{starttime}; # never started
 	    my $newfrozento = $joblist->[0]->{frozentokey};
 	    if ($newfrozento ne $oldfrozento)
 	    {
