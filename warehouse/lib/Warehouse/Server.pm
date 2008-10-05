@@ -427,7 +427,7 @@ sub run
 		my $sth;
 		my $job;
 		if ($jobspec{stop}
-		    && $self->{dbh}->do ("update mrjob set jobmanager_id=-1 where id=? and jobmanager_id is null", undef, $jobspec{id}))
+		    && 0 != $self->{dbh}->do ("update $mrdb.mrjob set jobmanager_id=-1 where id=? and jobmanager_id is null", undef, $jobspec{id}))
 		{
 		    $status = 200;
 		}
