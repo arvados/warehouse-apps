@@ -139,9 +139,11 @@ sub run
     local $SIG{INT} = sub { $Warehouse::Server::kill = 1; };
     local $SIG{TERM} = sub { $Warehouse::Server::kill = 1; };
     local $| = 1;
-    while (my $c = $self->{daemon}->accept)
+    my $c;
+    while (!$kill && ($c = $self->{daemon}->accept))
     {
-	while (my $r = $c->get_request)
+	my $r;
+	while (!$kill && ($r = $c->get_request))
 	{
 	    print(scalar (localtime) .
 		  " " . $c->peerhost() .
@@ -469,10 +471,8 @@ sub run
 		     [], "Not implemented.\n");
 		$c->send_response ($resp);
 	    }
-	    last if $kill;
 	}
 	$c->close;
-	last if $kill;
     }
 }
 
