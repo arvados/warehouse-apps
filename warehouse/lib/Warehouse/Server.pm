@@ -423,7 +423,7 @@ sub run
 		    $jobspec{$k} = _unescape($v);
 		}
 
-		my $status;
+		my $status = 500;
 		my $sth;
 		my $job;
 		if ($jobspec{stop}
@@ -431,7 +431,7 @@ sub run
 		{
 		    $status = 200;
 		}
-		elsif ($sth = $self->{dbh}->prepare ("select mrjobmanager.pid pid from $mrdb.mrjob left join $mrdb.mrjobmanager on mrjobmanager.id=mrjob.jobmanager_id and mrjob.finishtime is null where mrjob.id=?")
+		elsif (($sth = $self->{dbh}->prepare ("select mrjobmanager.pid pid from $mrdb.mrjob left join $mrdb.mrjobmanager on mrjobmanager.id=mrjob.jobmanager_id and mrjob.finishtime is null where mrjob.id=?"))
 		       && $sth->execute ($jobspec{id})
 		       && ($job = $sth->fetchrow_hashref))
 		{
