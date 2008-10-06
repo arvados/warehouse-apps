@@ -4,6 +4,12 @@
 
 use strict;
 
+eval {
+    # limit to 4GB virtual memory if libbsd-resource-perl is installed
+    use BSD::Resource;
+    setrlimit(RLIMIT_AS, 2**32, 2**32);
+};
+
 $ENV{PATH} .= ":$ENV{MR_REVISION_INSTALLDIR}/bin";
 $ENV{PATH} .= ":$ENV{MR_REVISION_SRCDIR}/warehouse/client";
 $ENV{PATH} .= ":$ENV{MR_REVISION_SRCDIR}/mapreduce";
