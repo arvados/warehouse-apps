@@ -131,18 +131,34 @@ sub job_show
 				  id_max => $opt{id}+0);
     if ($joblist)
     {
+	my @fieldlist = grep { !/=/ } @ARGV;
+	@fieldlist = qw(inputkey revision mrfunction stepspernode knobs)
+	    if !@fieldlist;
 	foreach my $j (@$joblist)
 	{
-	    foreach (qw(inputkey revision mrfunction nprocs))
+	    foreach (@fieldlist)
 	    {
-		my $arg = $j->{$_};
-		$arg = "\"$arg\"" if $arg =~ /[^-\.\w=]/;
-		print "$_=$arg ";
-	    }
-	    foreach (split (/\n/, freezeunquote ($j->{knobs})))
-	    {
-		$_ = "\"$_\"" if /[^-\.\w=]/;
-		print "$_ ";
+		if ($_ eq "knobs")
+		{
+		    foreach (split (/\n/, freezeunquote ($j->{knobs})))
+		    {
+			$_ = "\"$_\"" if /[^-\.\w=]/;
+			print "$_ ";
+		    }
+		}
+		else
+		{
+		    my $arg = $j->{$_};
+		    $arg = "\"$arg\"" if $arg =~ /[^-\.\w=]/;
+		    if (@fieldlist > 1)
+		    {
+			print "$_=$arg ";
+		    }
+		    else
+		    {
+			print $arg;
+		    }
+		}
 	    }
 	    print "\n";
 	}
