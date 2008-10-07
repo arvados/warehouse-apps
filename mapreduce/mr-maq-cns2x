@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:maq merge
+###MR_INPUT:manifest
+###MR_KNOBS:MAQ_DEB=ec9aba3c23989d66f813589e2d4450db
+
+use strict; 
+use Warehouse;
+use Safepipe;
+
+$ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  print STDERR "+++mrjobstep 1 fq+++\n";
+  print STDERR "+++mrjobstep 1 snp+++\n";
+  print STDERR "+++mrjobstep 1 win+++\n";
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $x = $ENV{MR_INPUT};
+
+  my $tmp = $ENV{MR_JOBSTEP_TMP};
+  chdir ($tmp) or die "chdir $tmp: $!";
+  mkdir "$x" or die "mkdir $x: $!";
+
+  fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
+  system ("dpkg --extract maq.deb .")
+      == 0 or die "dpkg exited $?";
+
+  system ("whget $ENV{MR_INPUT0}/ $tmp/")
+      == 0 or die "whget $ENV{MR_INPUT0}/ $tmp/ exited $?";
+
+  system ("./usr/bin/maq cns2$x ./consensus.cns >$x/cns.$x")
+      == 0 or die "maq cns2$x exited $?";
+
+  my $key = `whput $x/`;
+  $key =~ s/^(.*? |)([0-9a-f]{32}\S*).*/$2/s
+      or die "whput did not provide a manifest key";
+  print STDERR "+++mrout $key+++\n";
+  exit 0;
+}
+
+sub fetch_to_file
+{
+  my ($whc, $hash, $filename) = @_;
+  my $dataref = $whc->fetch_block_ref ($hash) or die "fetch $hash: ".$whc->errstr;
+  open F, ">", $filename or die "open $filename: $!";
+  print F $$dataref or die "write $filename: $!";
+  close F or die "close $filename: $!";
+  return 1;
+}
