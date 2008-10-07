@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
+use Fcntl ':flock';
 use Warehouse;
 my $whc = new Warehouse;
 
@@ -11,18 +12,15 @@ while ($ARGV[0] =~ /^(.*?)=(.*)$/)
     shift @ARGV;
 }
 
-@ARGV >= 2
+@ARGV == 2
     or die qq{
-usage: $0 default-revision inputstream inputstream ...
+usage: $0 default-revision workdir
 
-example: $0 2322 \
-            7a214d45877235393bd1f69f76158cf4 \
-            c536d3e1878e2204bbbc8083694cef56,2ac10d62000ae8e05f75e030523302d3 \
-         | egrep ^wh | sh -x
+example: $0 2322 /var/cache/maq-jobs-workdir
 
 };
 
-my ($revision_default, @inputstream) = @ARGV;
+my ($revision_default, $workdir) = @ARGV;
 
 my %Job;
 my @Job;
@@ -34,12 +32,64 @@ for (@$joblist)
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
-my %Flow;
-map { $Flow{$_} = {} } @inputstream;
 
-foreach my $in (@inputstream)
+opendir (D, $workdir) or die "$workdir: $!";
+for my $workfile (readdir D)
 {
-    my $flow = $Flow{$in};
+    next if $workfile =~ /\./;
+    fillflow ($workfile);
+}
+closedir D;
+
+
+my %Flow;
+sub fillflow
+{
+    my $in = shift;
+    return $Flow{$in} if $Flow{$in};
+
+    my $flow = $Flow{$in} = {};
+    $flow->{json} = {};
+
+    if (-l "$workdir/$in.stored")
+    {
+	my $inputhash = readlink "$workdir/$in.stored";
+	if (!-e "$workdir/$inputhash")
+	{
+	    open W, ">", "$workdir/$inputhash";
+	    close W;
+	}
+	if (open L, "<", "$workdir/$in.fetched")
+	{
+	    my ($url) = <L>;
+	    my @stat = stat L;
+	    my $localmtime = localtime ($stat[9]);
+	    $flow->{json}->{message} = "Downloaded from $url at $localmtime";
+	}
+    }
+    elsif (-e "$workdir/$in.isurl")
+    {
+	if (open L, "<", "$workdir/$in")
+	{
+	    my ($url) = <L>;
+	    if (flock L, LOCK_SH|LOCK_NB)
+	    {
+		$flow->{json}->{message} = "Source data at $url is queued for downloading.";
+		fork_downloader ("$workdir/$in");
+	    }
+	    else
+	    {
+		my @stat = stat "$workdir/$in.lock";
+		my $localmtime = localtime ($stat[9]);
+		$flow->{json}->{message} = "Started downloading from $url at $localmtime.";
+	    }
+	    close L;
+	}
+	return;
+    }
+
+    $flow->{json}->{input} = { id => $in };
+    $flow->{json}->{pipeline} = { label => "maq" };
 
     $flow->{sol2bfq} = findjob
 	( { mrfunction => "sol2bfq",
@@ -48,7 +98,6 @@ foreach my $in (@inputstream)
 	    knobs => makeknobs ("sol2bfq",
 				),
 	} ) unless $flow->{sol2bfq};
-
     if ($flow->{sol2bfq} && $flow->{sol2bfq}->{outputkey})
     {
 	$flow->{map} = findjob
@@ -116,8 +165,19 @@ foreach my $in (@inputstream)
 		     ),
 		} ) unless $flow->{indelsoa};
     }
+    $flow->{json}->{pipeline}->{job}
+	= [
+	   jsonjob ("Prepare input", $flow->{sol2bfq}),
+	   jsonjob ("Map", $flow->{map}),
+	   jsonjob ("Merge", $flow->{merge}),
+	   jsonjob ("Assemble", $flow->{assemble}),
+	   jsonjob ("Consensus", $flow->{cns2x}),
+	   jsonjob ("indels", $flow->{indelsoa}),
+	   ];
+    writejson ("$workdir/$in", $flow->{json});
 }
 
+my @inputstream = sort keys %Flow;
 printf (" %-10s" . (" %-38.38s" x scalar(@inputstream)) . "\n",
 	"",
 	@inputstream);
@@ -171,7 +231,9 @@ sub suggest_new_job
     $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
     my $knobs = $want->{knobs};
     $knobs =~ s{=(.*?)(\\n|$)}{='$1' }g;
-    print "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs\n";
+    my $cmd = "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs\n";
+    print "$cmd\n";
+    system "$cmd";
 }
 
 sub mention_failed_job
@@ -256,41 +318,86 @@ sub get_job_times
     return $times;
 }
 
-sub format_times
+sub jsonjob
 {
-    my $species = shift;
-    my $times = shift;
-
-    my $s = sprintf (" %-32s %d s (%s) job allocation, %d s (%s) node allocation",
-		     $species,
-		     $times->{elapsed}, fancytime ($times->{elapsed}),
-		     $times->{nodeseconds}, fancytime ($times->{nodeseconds}),
-		     );
-    $s .= sprintf (", %.1f%% success, %.1f%% failure, %.1f%% idle",
-		    $times->{success_seconds} * 100 / $times->{slot_seconds},
-		    $times->{failure_seconds} * 100 / $times->{slot_seconds},
-		    100 - ($times->{success_seconds} + $times->{failure_seconds}) * 100 / $times->{slot_seconds},
-		    )
-	if $times->{slot_seconds};
-    $s .= "\n";
-    return $s;
+    my $label = shift;
+    my $job = shift;
+    my $x = { "label" => $label };
+    if ($job)
+    {
+	if ($job->{id}) { $x->{id} = $job->{id} }
+	if ($job->{success}) { $x->{status} = "done" }
+	elsif (defined $job->{success}) { $x->{status} = "fail" }
+	elsif ($job->{finishtime}) { $x->{status} = "fail" }
+	elsif ($job->{starttime}) { $x->{status} = "run" }
+	elsif ($job->{submittime}) { $x->{status} = "queue" }
+    }
+    return $x;
 }
 
-sub addcommas
+sub writejson
 {
-    my $n = shift;
-    while ($n =~ s/(.*\d)(\d\d\d)\b/$1,$2/) { }
-    return $n;
+    my $file = shift;
+    my $json = shift;
+    open F, "+>>$file.tmp";
+    flock F, LOCK_EX or do { close F; return; };
+    seek F, 0, 0;
+    truncate F, 0;
+    print F "{\n\"workflow\": ".sprintjson("", $json)."\n}\n";
+    close F;
+    rename "$file.tmp", "$file";
 }
 
-sub fancytime
+sub sprintjson
 {
-    my $s = shift;
-    my $fancy = sprintf ("%dd%dh%dm%ds",
-			 int($s/86400),
-			 int(($s%86400)/3600),
-			 int(($s%3600)/60),
-			 int($s%60));
-    while ($fancy =~ s/^\b0\D//) { }
-    return $fancy;
+    my $indent = shift;
+    my $ob = shift;
+    $indent .= "    ";
+    if (ref $ob eq "HASH") { return "{ " . join (",\n$indent", map { qq{ "$_": }.sprintjson($indent, $ob->{$_}) } keys %$ob) . " }"; }
+    if (ref $ob eq "ARRAY") { return "[ " . join (",\n$indent", map { sprintjson($indent, $_) } @$ob) . " ]"; }
+    if (ref $ob eq "SCALAR") { return qq{"} . $$ob . qq{"}; }
+    return qq{"} . $ob . qq{"};
 }
+
+sub fork_downloader
+{
+    my $workfile = shift;
+    my $child = fork();
+    return if $child;
+    return if !defined $child;
+    exit 0 unless open L, "+>>", $workfile;
+    exit 0 unless flock L, LOCK_EX;
+    exit 1 unless open U, "<", "$workfile.isurl";
+    my ($url) = <U>;
+    $url =~ s/\'/\'\\\'\'/g;
+
+    open F, "+>>", "$workfile.lock" or exit 1; # update mtime
+    exit 0 unless flock F, LOCK_EX;
+    print F $url;
+    close F;
+
+    my $key = `wget -O - '$url' 2>>$workfile.wget-log | whput -`;
+    exit 1 if $?;
+    symlink "$key", "$workfile.stored";
+    rename "$workfile.lock", "$workfile.fetched";
+    exit 0;
+}
+
+
+__END__
+
+client          apache          downloader      status
+----------------------------------------------------------------
+submit url
+                w umd5.isurl
+                                                r umd5.isurl
+                w umd5
+                                w umd5
+                                l umd5
+                                r umd5.isurl
+                                w umd5.lock
+                                l umd5.lock
+                                download
+                                w umd5.stored@
+                                w umd5.fetched
+                                                r umd5.stored@
