@@ -50,6 +50,8 @@ wh help
 
 wh job list [id_min=ID] [id_max=ID]
 wh job show id=ID
+wh job show id=ID outputkey
+wh job show id=ID stepspernode mrfunction revision inputkey knobs ...
 
 wh job new nodes=N photons=N mrfunction=NAME revision=N inputkey=KEY \
            BARKNOB=foo BAZKNOB=baz
