@@ -153,17 +153,6 @@ sub fillflow
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
 		     ),
 		} ) unless $flow->{cns2x};
-	$flow->{indelsoa} = findjob
-	    ( { mrfunction => "maq-indelsoa",
-		revision => [ 2321, ],
-		inputkey => $flow->{assemble}->{outputkey},
-		knobs => makeknobs
-		    ("maq-indelsoa",
-		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
-		     "REFERENCE=99259f4330907e84fe7253bd4e52dd3e",
-		     "REFERENCEFILE=homo_sapiens.bfa",
-		     ),
-		} ) unless $flow->{indelsoa};
     }
     $flow->{json}->{pipeline}->[0]->{job}
 	= [
@@ -172,20 +161,9 @@ sub fillflow
 	   jsonjob ("Merge", $flow->{merge}),
 	   jsonjob ("Assemble", $flow->{assemble}),
 	   jsonjob ("Consensus", $flow->{cns2x}),
-	   jsonjob ("indels", $flow->{indelsoa}),
 	   ];
     writejson ("$workdir/$in", $flow->{json});
-}
-
-my @inputstream = sort keys %Flow;
-printf (" %-10s" . (" %-38.38s" x scalar(@inputstream)) . "\n",
-	"",
-	@inputstream);
-foreach my $function (qw(sol2bfq map merge assemble cns2x indelsoa))
-{
-    printf (" %-10s" . (" %-38s" x scalar(@inputstream)) . "\n",
-	    $function,
-	    map { id_and_output($Flow{$_}->{$function}) } @inputstream);
+    print "# finished $in\n";
 }
 
 sub id_and_output
