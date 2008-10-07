@@ -1,0 +1,291 @@
+#!/usr/bin/perl
+
+use strict;
+use Warehouse;
+my $whc = new Warehouse;
+
+my %override;
+while ($ARGV[0] =~ /^(.*?)=(.*)$/)
+{
+    $override{$1} = $2;
+    shift @ARGV;
+}
+
+@ARGV >= 2
+    or die qq{
+usage: $0 default-revision inputstream inputstream ...
+
+example: $0 2322 \
+            7a214d45877235393bd1f69f76158cf4 \
+            c536d3e1878e2204bbbc8083694cef56,2ac10d62000ae8e05f75e030523302d3 \
+         | egrep ^wh | sh -x
+
+};
+
+my ($revision_default, @inputstream) = @ARGV;
+
+my %Job;
+my @Job;
+
+my $joblist = $whc->job_list;
+for (@$joblist)
+{
+    $Job{$_->{id}} = $_;
+}
+@Job = sort { $b->{id} <=> $a->{id} } values %Job;
+
+my %Flow;
+map { $Flow{$_} = {} } @inputstream;
+
+foreach my $in (@inputstream)
+{
+    my $flow = $Flow{$in};
+
+    $flow->{sol2bfq} = findjob
+	( { mrfunction => "sol2bfq",
+	    revision => [ 2314, ],
+	    inputkey => $in,
+	    knobs => makeknobs ("sol2bfq",
+				),
+	} ) unless $flow->{sol2bfq};
+
+    if ($flow->{sol2bfq} && $flow->{sol2bfq}->{outputkey})
+    {
+	$flow->{map} = findjob
+	    ( { mrfunction => "maq-map",
+		revision => [ 2315, ],
+		inputkey => $flow->{sol2bfq}->{outputkey},
+		knobs => makeknobs
+		    ("maq-map",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     "REFERENCE=99259f4330907e84fe7253bd4e52dd3e",
+		     "REFERENCEFILE=homo_sapiens.bfa",
+		     ),
+		} ) unless $flow->{map};
+    }
+    if ($flow->{map} && $flow->{map}->{outputkey})
+    {
+	$flow->{merge} = findjob
+	    ( { mrfunction => "maq-merge",
+		revision => [ 2318, ],
+		inputkey => $flow->{map}->{outputkey},
+		knobs => makeknobs
+		    ("maq-merge",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     "REFERENCE=99259f4330907e84fe7253bd4e52dd3e",
+		     "REFERENCEFILE=homo_sapiens.bfa",
+		     ),
+		} ) unless $flow->{merge};
+    }
+    if ($flow->{merge} && $flow->{merge}->{outputkey})
+    {
+	$flow->{assemble} = findjob
+	    ( { mrfunction => "maq-assemble",
+		revision => [ 2319, ],
+		inputkey => $flow->{merge}->{outputkey},
+		knobs => makeknobs
+		    ("maq-assemble",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     "REFERENCE=99259f4330907e84fe7253bd4e52dd3e",
+		     "REFERENCEFILE=homo_sapiens.bfa",
+		     ),
+		} ) unless $flow->{assemble};
+    }
+    if ($flow->{assemble} && $flow->{assemble}->{outputkey})
+    {
+	$flow->{cns2x} = findjob
+	    ( { mrfunction => "maq-cns2x",
+		revision => [ 2320, ],
+		inputkey => $flow->{assemble}->{outputkey},
+		knobs => makeknobs
+		    ("maq-cns2x",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     ),
+		} ) unless $flow->{cns2x};
+	$flow->{indelsoa} = findjob
+	    ( { mrfunction => "maq-indelsoa",
+		revision => [ 2321, ],
+		inputkey => $flow->{assemble}->{outputkey},
+		knobs => makeknobs
+		    ("maq-indelsoa",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     "REFERENCE=99259f4330907e84fe7253bd4e52dd3e",
+		     "REFERENCEFILE=homo_sapiens.bfa",
+		     ),
+		} ) unless $flow->{indelsoa};
+    }
+}
+
+printf (" %-10s" . (" %-38.38s" x scalar(@inputstream)) . "\n",
+	"",
+	@inputstream);
+foreach my $function (qw(sol2bfq map merge assemble cns2x indelsoa))
+{
+    printf (" %-10s" . (" %-38s" x scalar(@inputstream)) . "\n",
+	    $function,
+	    map { id_and_output($Flow{$_}->{$function}) } @inputstream);
+}
+
+sub id_and_output
+{
+    my $job = shift;
+    return "" if !$job;
+    return $job->{id}."/".$job->{outputkey} if $job->{outputkey};
+    my $steps = $job->{steps_done} + $job->{steps_running} + $job->{steps_todo};
+    my $pct = $steps==0 ? "" : " (".int(100*$job->{steps_done}/$steps)."%)";
+    return $job->{id}."/".$pct;
+}
+
+sub findjob
+{
+    my $want = shift;
+    my $failed;
+    my $queued;
+    for (@Job)
+    {
+	if ($_->{revision} >= $want->{revision}->[0]
+	    && ($_->{revision} <= $want->{revision}->[1] || !$want->{revision}->[1])
+	    && $_->{mrfunction} eq $want->{mrfunction}
+	    && $_->{knobs} eq $want->{knobs}
+	    && $_->{inputkey} eq $want->{inputkey})
+	{
+	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
+	    $failed = $_ if !$failed && $_->{success} eq '0';
+	    return $_ if $_->{outputkey};
+	}
+    }
+    mention_failed_job ($failed) if !$queued && $failed;
+    suggest_new_job ($want) if !$queued && !$want->{quiet};
+    return $queued;
+}
+
+sub suggest_new_job
+{
+    my $want = shift;
+    my $revision = $want->{revision}->[1] || $revision_default;
+    $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
+    my $knobs = $want->{knobs};
+    $knobs =~ s/=(.*?)(\\n|$)/='$1' /g;
+    print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' $knobs\n";
+}
+
+sub mention_failed_job
+{
+    my $job = shift;
+    print "# suggest investigating job id=".$job->{id}." -- failed with frozentokey=".$job->{frozentokey}." metakey=".$job->{metakey}."\n";
+}
+
+sub makeknobs
+{
+    my $function = shift @_;
+    my $knobs = "";
+    foreach (sort @_)
+    {
+	my ($k) = /^(.*)=/;
+	if (exists $override{"$function/$k"})
+	{
+	    $knobs .= $k."=".$override{"$function/$k"};
+	}
+	else
+	{
+	    $knobs .= $_;
+	}
+	$knobs .= "\\n";
+    }
+    $knobs =~ s/\\n$//s;
+    return $knobs;
+}
+
+sub get_job_times
+{
+    my $job = shift;
+    my $atwhichfreeze = shift;
+    return {
+	nodeseconds => 0,
+	elapsed => 0,
+	slot_seconds => 0,
+	success_seconds => 0,
+	failure_seconds => 0,
+	} if !$job;
+    my $frozen = $whc->job_follow_thawedfrom ($job);
+    $frozen = $whc->job_stats ($frozen->{id});
+
+    my $times = get_job_times ($frozen, $job->{thawedfromkey});
+
+    $job = $whc->job_stats ($job->{id});
+    my $frozentimes;
+    if ($atwhichfreeze
+	&& $job->{meta_stats}->{frozentokeys}
+	&& ($frozentimes = $job->{meta_stats}->{frozentokeys}->{$atwhichfreeze}))
+    {
+	printf STDERR ("Adding stats from %d at t=%d: %d elapsed, %d success, %d failure, %d idle\n",
+		       $job->{id},
+		       $frozentimes->{frozentime},
+		       $frozentimes->{elapsed},
+		       $frozentimes->{success_seconds},
+		       $frozentimes->{failure_seconds},
+		       $frozentimes->{idle_seconds}) if $ENV{MTR_DEBUG};
+	foreach (keys %$times)
+	{
+	    $times->{$_} += $frozentimes->{$_};
+	}
+    }
+    else
+    {
+	if ($ENV{MTR_DEBUG})
+	{
+	    if ($atwhichfreeze)
+	    {
+		print STDERR "Adding stats from ".$job->{id}.", using entire job because frozentokey ".$atwhichfreeze." not found\n";
+	    }
+	    else
+	    {
+		print STDERR "Adding stats from ".$job->{id}."\n";
+	    }
+	}
+	foreach (keys %$times)
+	{
+	    $times->{$_} += ($job->{meta_stats}->{$_} || $job->{$_});
+	}
+    }
+    return $times;
+}
+
+sub format_times
+{
+    my $species = shift;
+    my $times = shift;
+
+    my $s = sprintf (" %-32s %d s (%s) job allocation, %d s (%s) node allocation",
+		     $species,
+		     $times->{elapsed}, fancytime ($times->{elapsed}),
+		     $times->{nodeseconds}, fancytime ($times->{nodeseconds}),
+		     );
+    $s .= sprintf (", %.1f%% success, %.1f%% failure, %.1f%% idle",
+		    $times->{success_seconds} * 100 / $times->{slot_seconds},
+		    $times->{failure_seconds} * 100 / $times->{slot_seconds},
+		    100 - ($times->{success_seconds} + $times->{failure_seconds}) * 100 / $times->{slot_seconds},
+		    )
+	if $times->{slot_seconds};
+    $s .= "\n";
+    return $s;
+}
+
+sub addcommas
+{
+    my $n = shift;
+    while ($n =~ s/(.*\d)(\d\d\d)\b/$1,$2/) { }
+    return $n;
+}
+
+sub fancytime
+{
+    my $s = shift;
+    my $fancy = sprintf ("%dd%dh%dm%ds",
+			 int($s/86400),
+			 int(($s%86400)/3600),
+			 int(($s%3600)/60),
+			 int($s%60));
+    while ($fancy =~ s/^\b0\D//) { }
+    return $fancy;
+}
