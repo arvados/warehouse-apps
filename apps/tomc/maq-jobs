@@ -97,6 +97,8 @@ foreach my $in (@inputstream)
 	    ( { mrfunction => "maq-cns2x",
 		revision => [ 2320, ],
 		inputkey => $flow->{assemble}->{outputkey},
+		stepspernode => 2,
+		nodes => 2,
 		knobs => makeknobs
 		    ("maq-cns2x",
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
@@ -155,18 +157,21 @@ sub findjob
 	}
     }
     mention_failed_job ($failed) if !$queued && $failed;
-    suggest_new_job ($want) if !$queued && !$want->{quiet};
+    suggest_new_job ($want) if !$queued && !$want->{quiet} && (!$failed || $override{retryfailed});
     return $queued;
 }
 
 sub suggest_new_job
 {
     my $want = shift;
+    my $nodes = $want->{nodes} || 1;
+    my $moreoptions = "";
+    $moreoptions .= " stepspernode=".$want->{stepspernode} if $want->{stepspernode};
     my $revision = $want->{revision}->[1] || $revision_default;
     $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
     my $knobs = $want->{knobs};
-    $knobs =~ s/=(.*?)(\\n|$)/='$1' /g;
-    print "wh job new nodes=1 photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."' $knobs\n";
+    $knobs =~ s{=(.*?)(\\n|$)}{='$1' }g;
+    print "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs\n";
 }
 
 sub mention_failed_job
