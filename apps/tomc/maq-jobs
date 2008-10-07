@@ -89,7 +89,7 @@ sub fillflow
     }
 
     $flow->{json}->{input} = { id => $in };
-    $flow->{json}->{pipeline} = { label => "maq" };
+    $flow->{json}->{pipeline} = [ { label => "maq" } ];
 
     $flow->{sol2bfq} = findjob
 	( { mrfunction => "sol2bfq",
@@ -165,7 +165,7 @@ sub fillflow
 		     ),
 		} ) unless $flow->{indelsoa};
     }
-    $flow->{json}->{pipeline}->{job}
+    $flow->{json}->{pipeline}->[0]->{job}
 	= [
 	   jsonjob ("Prepare input", $flow->{sol2bfq}),
 	   jsonjob ("Map", $flow->{map}),
@@ -331,6 +331,11 @@ sub jsonjob
 	elsif ($job->{finishtime}) { $x->{status} = "fail" }
 	elsif ($job->{starttime}) { $x->{status} = "run" }
 	elsif ($job->{submittime}) { $x->{status} = "queue" }
+	if ($x->{status} eq "run" || $x->{status} eq "fail")
+	{
+	    my $steps = $job->{steps_done} + $job->{steps_running} + $job->{steps_todo};
+	    $x->{progress} = $job->{steps_done} . "/" . $steps;
+	}
     }
     return $x;
 }
