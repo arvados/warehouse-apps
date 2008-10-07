@@ -309,7 +309,9 @@ sub jsonjob
 	elsif ($job->{finishtime}) { $x->{status} = "fail" }
 	elsif ($job->{starttime}) { $x->{status} = "run" }
 	elsif ($job->{submittime}) { $x->{status} = "queue" }
-	if ($x->{status} eq "run" || $x->{status} eq "fail")
+	if (($x->{status} eq "run" || $x->{status} eq "fail")
+	    &&
+	    $job->{steps_done} =~ /\d/)
 	{
 	    my $steps = $job->{steps_done} + $job->{steps_running} + $job->{steps_todo};
 	    $x->{progress} = $job->{steps_done} . "/" . $steps;
