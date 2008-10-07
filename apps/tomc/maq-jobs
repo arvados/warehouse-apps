@@ -144,7 +144,7 @@ sub fillflow
     {
 	$flow->{cns2x} = findjob
 	    ( { mrfunction => "maq-cns2x",
-		revision => [ 2327, ],
+		revision => [ 2328, ],
 		inputkey => $flow->{assemble}->{outputkey},
 		stepspernode => 2,
 		nodes => 2,
