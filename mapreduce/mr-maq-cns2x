@@ -35,7 +35,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   system ("whget $ENV{MR_INPUT0}/ $tmp/")
       == 0 or die "whget $ENV{MR_INPUT0}/ $tmp/ exited $?";
 
-  system ("./usr/bin/maq cns2$x ./consensus.cns >$x/cns.$x")
+  system ("./usr/bin/maq cns2$x ./consensus.cns >$x/cns.$x.txt")
       == 0 or die "maq cns2$x exited $?";
 
   my $key = `whput $x/`;
