@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:maq map
+###MR_INPUT:manifest
+###MR_KNOBS:MAQ_DEB=ec9aba3c23989d66f813589e2d4450db
+###MR_KNOBS:REFERENCE=99259f4330907e84fe7253bd4e52dd3e
+###MR_KNOBS:REFERENCEFILE=homo_sapiens.bfa
+
+use strict; 
+use Warehouse;
+use Safepipe;
+
+$ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
+$ENV{KNOB_REFERENCE} ||= "99259f4330907e84fe7253bd4e52dd3e";
+$ENV{KNOB_REFERENCEFILE} ||= "homo_sapiens.bfa";
+
+if ($ENV{MR_LEVEL}==0)
+{
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
+  do "mrtask-queuesubdirs";
+  exit 0;
+}
+
+if ($ENV{MR_LEVEL}==1)
+{
+  my ($wantsubdir) = $ENV{MR_INPUT};
+  my ($subdirbase) = $wantsubdir =~ /^\.\/?(.*)/;
+  my $whc = new Warehouse;
+
+  my $tmp = $ENV{MR_JOBSTEP_TMP};
+  chdir $tmp or die "chdir $tmp: $!";
+  mkdir "out" or die "mkdir $tmp/out: $!";
+
+  system ("whget $ENV{MR_INPUT0}/$subdirbase/ $tmp/")
+      == 0 or die "whget $ENV{MR_INPUT0}/$subdirbase/ $tmp/ exited $?";
+
+  if (`ls $tmp/*.bfq 2>/dev/null` !~ /\S/)
+  {
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+    exit 0;
+  }
+
+  system ("whget $ENV{KNOB_REFERENCE}/ $tmp/")
+      == 0 or die "whget $ENV{KNOB_REFERENCE}/ $tmp/ exited $?";
+
+  fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "$tmp/maq.deb");
+  system ("dpkg --extract maq.deb .")
+      == 0 or die "dpkg exited $?";
+
+  system ("./usr/bin/maq map -n 2 -e 70 -u out/unmap1\@$subdirbase.txt out/aln1\@$subdirbase.map $ENV{KNOB_REFERENCEFILE} fastq\@$subdirbase.bfq")
+      == 0 or die "maq exited $?";
+
+  my $key = `whput out/`;
+  $key =~ s/^(.*? |)([0-9a-f]{32}\S*).*/$2/s
+      or die "whput did not provide a manifest key";
+  print STDERR "+++mrout $key+++\n";
+  exit 0;
+}
+
+sub fetch_to_file
+{
+  my ($whc, $hash, $filename) = @_;
+  my $dataref = $whc->fetch_block_ref ($hash) or die "fetch $hash: ".$whc->errstr;
+  open F, ">", $filename or die "open $filename: $!";
+  print F $$dataref or die "write $filename: $!";
+  close F or die "close $filename: $!";
+  return 1;
+}
