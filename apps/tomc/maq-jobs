@@ -327,7 +327,7 @@ sub jsonjob
     {
 	if ($job->{id}) { $x->{id} = $job->{id} }
 	if ($job->{success}) { $x->{status} = "done" }
-	elsif (defined $job->{success}) { $x->{status} = "fail" }
+	elsif ($job->{success} eq "0") { $x->{status} = "fail" }
 	elsif ($job->{finishtime}) { $x->{status} = "fail" }
 	elsif ($job->{starttime}) { $x->{status} = "run" }
 	elsif ($job->{submittime}) { $x->{status} = "queue" }
