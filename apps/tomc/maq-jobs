@@ -128,6 +128,15 @@ sub fillflow
     }
     if ($flow->{merge} && $flow->{merge}->{outputkey})
     {
+	$flow->{mapview} = findjob
+	    ( { mrfunction => "maq-mapview",
+		revision => [ 2331, ],
+		inputkey => $flow->{merge}->{outputkey},
+		knobs => makeknobs
+		    ("maq-mapview",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     ),
+		} ) unless $flow->{mapview};
 	$flow->{assemble} = findjob
 	    ( { mrfunction => "maq-assemble",
 		revision => [ 2319, ],
@@ -159,6 +168,7 @@ sub fillflow
 	   jsonjob ("Prepare input", $flow->{sol2bfq}),
 	   jsonjob ("Map", $flow->{map}),
 	   jsonjob ("Merge", $flow->{merge}),
+	   jsonjob ("Mapview", $flow->{mapview}),
 	   jsonjob ("Assemble", $flow->{assemble}),
 	   jsonjob ("Consensus", $flow->{cns2x}),
 	   ];
