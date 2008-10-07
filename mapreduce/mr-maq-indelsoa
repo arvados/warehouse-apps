@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:maq merge
+###MR_INPUT:manifest
+###MR_KNOBS:MAQ_DEB=ec9aba3c23989d66f813589e2d4450db
+###MR_KNOBS:REFERENCE=99259f4330907e84fe7253bd4e52dd3e
+###MR_KNOBS:REFERENCEFILE=homo_sapiens.bfa
+
+use strict; 
+use Warehouse;
+
+$ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
+$ENV{KNOB_REFERENCE} ||= "99259f4330907e84fe7253bd4e52dd3e";
+$ENV{KNOB_REFERENCEFILE} ||= "homo_sapiens.bfa";
+
+my $whc = new Warehouse;
+
+my $x = "indelse";
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+chdir ($tmp) or die "chdir $tmp: $!";
+mkdir "$x" or die "mkdir $x: $!";
+
+fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
+system ("dpkg --extract maq.deb .")
+    == 0 or die "dpkg exited $?";
+
+system ("whget $ENV{MR_INPUT0}/ $tmp/")
+    == 0 or die "whget $ENV{MR_INPUT0}/ $tmp/ exited $?";
+
+system ("whget $ENV{KNOB_REFERENCE}/ $tmp/")
+    == 0 or die "whget $ENV{KNOB_REFERENCE}/ $tmp/ exited $?";
+
+system ("./usr/bin/maq indelsoa $ENV{KNOB_REFERENCEFILE} all.map >$x/cns.$x")
+    == 0 or die "maq indelsoa exited $?";
+
+my $key = `whput $x/`;
+$key =~ s/^(.*? |)([0-9a-f]{32}\S*).*/$2/s
+    or die "whput did not provide a manifest key";
+print STDERR "+++mrout $key+++\n";
+exit 0;
+
+sub fetch_to_file
+{
+  my ($whc, $hash, $filename) = @_;
+  my $dataref = $whc->fetch_block_ref ($hash) or die "fetch $hash: ".$whc->errstr;
+  open F, ">", $filename or die "open $filename: $!";
+  print F $$dataref or die "write $filename: $!";
+  close F or die "close $filename: $!";
+  return 1;
+}
