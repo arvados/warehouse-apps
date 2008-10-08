@@ -89,7 +89,7 @@ sub fillflow
     }
 
     $flow->{json}->{input} = { id => $in };
-    $flow->{json}->{pipeline} = [ { label => "maq" } ];
+    $flow->{json}->{pipeline} = [ { label => "maq/hg18" }, { label => "maq/55k" } ];
 
     $flow->{sol2bfq} = findjob
 	( { mrfunction => "sol2bfq",
@@ -171,6 +171,15 @@ sub fillflow
 	   jsonjob ("Mapview", $flow->{mapview}),
 	   jsonjob ("Assemble", $flow->{assemble}),
 	   jsonjob ("Consensus", $flow->{cns2x}),
+	   ];
+    $flow->{json}->{pipeline}->[1]->{job}
+	= [
+	   jsonjob ("Prepare input", undef),
+	   jsonjob ("Map", undef),
+	   jsonjob ("Merge", undef),
+	   jsonjob ("Mapview", undef),
+	   jsonjob ("Assemble", undef),
+	   jsonjob ("Consensus", undef),
 	   ];
     writejson ("$workdir/$in", $flow->{json});
     print "# finished $in\n";
