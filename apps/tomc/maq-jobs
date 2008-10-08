@@ -51,12 +51,17 @@ sub fillflow
     my $flow = $Flow{$in} = {};
     $flow->{json} = {};
 
+    $flow->{json}->{input} = { id => $in };
+    $flow->{json}->{pipeline} = [];
+
     if (-l "$workdir/$in.stored")
     {
 	my $inputhash = readlink "$workdir/$in.stored";
+	$flow->{json}->{input}->{id} = $inputhash;
+
 	if (!-e "$workdir/$inputhash")
 	{
-	    open W, ">", "$workdir/$inputhash";
+	    open W, ">>", "$workdir/$inputhash";
 	    close W;
 	}
 	if (open L, "<", "$workdir/$in.fetched")
@@ -69,10 +74,11 @@ sub fillflow
     }
     elsif (-e "$workdir/$in.isurl")
     {
-	if (open L, "<", "$workdir/$in")
+	if (open L, "<", "$workdir/$in.isurl")
 	{
 	    my ($url) = <L>;
-	    if (flock L, LOCK_SH|LOCK_NB)
+	    close L;
+	    if (!-e "$workdir/$in.lock")
 	    {
 		$flow->{json}->{message} = "Source data at $url is queued for downloading.";
 		fork_downloader ("$workdir/$in");
@@ -84,105 +90,138 @@ sub fillflow
 		$flow->{json}->{message} = "Started downloading from $url at $localmtime.";
 	    }
 	    close L;
+	    $flow->{json}->{input}->{id} = $url;
 	}
-	return;
     }
+    else
+    {
+	fillpipeline ($in, $flow,
+		      { label => "maq/hg18",
+			REFERENCE => "99259f4330907e84fe7253bd4e52dd3e",
+			REFERENCEFILE => "homo_sapiens.bfa",
+		    } );
+	fillpipeline ($in, $flow,
+		      { label => "maq/55k",
+			REFERENCE => "f7703aadfb55c12127c4d51693c85587",
+			REFERENCEFILE => "ref.bfa",
+		    } );
+    }
+    writejson ("$workdir/$in", $flow->{json});
+    print "# finished $in\n";
+}
 
-    $flow->{json}->{input} = { id => $in };
-    $flow->{json}->{pipeline} = [ { label => "maq/hg18" }, { label => "maq/55k" } ];
+sub fillpipeline
+{
+    my ($in, $flow, $pipeline) = @_;
+    my $ref = $pipeline->{REFERENCE};
+    my $reffile = $pipeline->{REFERENCEFILE};
 
-    $flow->{sol2bfq} = findjob
+    my $me = $flow->{$pipeline->{label}} = {};
+
+    $me->{sol2bfq} = findjob
 	( { mrfunction => "sol2bfq",
 	    revision => [ 2314, ],
 	    inputkey => $in,
-	    knobs => makeknobs ("sol2bfq",
-				),
-	} ) unless $flow->{sol2bfq};
-    if ($flow->{sol2bfq} && $flow->{sol2bfq}->{outputkey})
+	    knobs => makeknobs ("sol2bfq"),
+	} ) unless $me->{sol2bfq};
+
+    if ($me->{sol2bfq} && $me->{sol2bfq}->{outputkey})
     {
-	$flow->{map} = findjob
+	$me->{map} = findjob
 	    ( { mrfunction => "maq-map",
 		revision => [ 2315, ],
-		inputkey => $flow->{sol2bfq}->{outputkey},
+		inputkey => $me->{sol2bfq}->{outputkey},
 		knobs => makeknobs
 		    ("maq-map",
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
-		     "REFERENCE=99259f4330907e84fe7253bd4e52dd3e",
-		     "REFERENCEFILE=homo_sapiens.bfa",
+		     "REFERENCE=$ref",
+		     "REFERENCEFILE=$reffile",
 		     ),
-		} ) unless $flow->{map};
+		} ) unless $me->{map};
     }
-    if ($flow->{map} && $flow->{map}->{outputkey})
+    if ($me->{map} && $me->{map}->{outputkey})
     {
-	$flow->{merge} = findjob
+	$me->{merge} = findjob
 	    ( { mrfunction => "maq-merge",
 		revision => [ 2318, ],
-		inputkey => $flow->{map}->{outputkey},
+		inputkey => $me->{map}->{outputkey},
 		knobs => makeknobs
 		    ("maq-merge",
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
-		     "REFERENCE=99259f4330907e84fe7253bd4e52dd3e",
-		     "REFERENCEFILE=homo_sapiens.bfa",
+		     "REFERENCE=$ref",
+		     "REFERENCEFILE=$reffile",
 		     ),
-		} ) unless $flow->{merge};
+		} ) unless $me->{merge};
+	buildoutputs ($me->{merge}, "mapcheck.txt");
     }
-    if ($flow->{merge} && $flow->{merge}->{outputkey})
+    if ($me->{merge} && $me->{merge}->{outputkey})
     {
-	$flow->{mapview} = findjob
+	$me->{mapview} = findjob
 	    ( { mrfunction => "maq-mapview",
 		revision => [ 2331, ],
-		inputkey => $flow->{merge}->{outputkey},
+		inputkey => $me->{merge}->{outputkey},
 		knobs => makeknobs
 		    ("maq-mapview",
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
 		     ),
-		} ) unless $flow->{mapview};
-	$flow->{assemble} = findjob
+		} ) unless $me->{mapview};
+	buildoutputs ($me->{mapview}, "all.aln.txt");
+	$me->{assemble} = findjob
 	    ( { mrfunction => "maq-assemble",
 		revision => [ 2319, ],
-		inputkey => $flow->{merge}->{outputkey},
+		inputkey => $me->{merge}->{outputkey},
 		knobs => makeknobs
 		    ("maq-assemble",
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
-		     "REFERENCE=99259f4330907e84fe7253bd4e52dd3e",
-		     "REFERENCEFILE=homo_sapiens.bfa",
+		     "REFERENCE=$ref",
+		     "REFERENCEFILE=$reffile",
 		     ),
-		} ) unless $flow->{assemble};
+		} ) unless $me->{assemble};
     }
-    if ($flow->{assemble} && $flow->{assemble}->{outputkey})
+    if ($me->{assemble} && $me->{assemble}->{outputkey})
     {
-	$flow->{cns2x} = findjob
+	$me->{cns2x} = findjob
 	    ( { mrfunction => "maq-cns2x",
 		revision => [ 2328, ],
-		inputkey => $flow->{assemble}->{outputkey},
+		inputkey => $me->{assemble}->{outputkey},
 		stepspernode => 2,
 		nodes => 2,
 		knobs => makeknobs
 		    ("maq-cns2x",
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
 		     ),
-		} ) unless $flow->{cns2x};
+		} ) unless $me->{cns2x};
+	buildoutputs ($me->{cns2x},
+		      "cns.fq.txt", "cns.snp.txt", "cns.win.txt");
     }
-    $flow->{json}->{pipeline}->[0]->{job}
-	= [
-	   jsonjob ("Prepare input", $flow->{sol2bfq}),
-	   jsonjob ("Map", $flow->{map}),
-	   jsonjob ("Merge", $flow->{merge}),
-	   jsonjob ("Mapview", $flow->{mapview}),
-	   jsonjob ("Assemble", $flow->{assemble}),
-	   jsonjob ("Consensus", $flow->{cns2x}),
-	   ];
-    $flow->{json}->{pipeline}->[1]->{job}
-	= [
-	   jsonjob ("Prepare input", undef),
-	   jsonjob ("Map", undef),
-	   jsonjob ("Merge", undef),
-	   jsonjob ("Mapview", undef),
-	   jsonjob ("Assemble", undef),
-	   jsonjob ("Consensus", undef),
-	   ];
-    writejson ("$workdir/$in", $flow->{json});
-    print "# finished $in\n";
+
+    push (@ { $flow->{json}->{pipeline} },
+	  { label => $pipeline->{label},
+	    job => [
+		    jsonjob ("Prepare input", $me->{sol2bfq}),
+		    jsonjob ("Map", $me->{map}),
+		    jsonjob ("Merge", $me->{merge}),
+		    jsonjob ("Mapview", $me->{mapview}),
+		    jsonjob ("Assemble", $me->{assemble}),
+		    jsonjob ("Consensus", $me->{cns2x}),
+		    ] } );
+
+    print "# finished ".$pipeline->{label}." $in\n";
+}
+
+sub buildoutputs
+{
+    my ($job, @filename) = @_;
+    if ($job && $job->{outputkey})
+    {
+	my $manifest = $job->{outputkey};
+	my @outputfiles;
+	foreach (@filename)
+	{
+	    push @outputfiles, "<a href='http://templeton-controller.freelogy.org/whget.cgi/$manifest/$_'>$_</a>";
+	}
+	$job->{outputfiles} = [@outputfiles];
+    }
 }
 
 sub id_and_output
@@ -335,6 +374,10 @@ sub jsonjob
 	    my $steps = $job->{steps_done} + $job->{steps_running} + $job->{steps_todo};
 	    $x->{progress} = $job->{steps_done} . "/" . $steps;
 	}
+	if ($x->{status} eq "done" && $job->{outputfiles})
+	{
+	    $x->{outputfiles} = $job->{outputfiles};
+	}
     }
     return $x;
 }
@@ -381,6 +424,7 @@ sub fork_downloader
     close F;
 
     my $key = `wget -O - '$url' 2>>$workfile.wget-log | whput -`;
+    chomp $key;
     exit 1 if $?;
     symlink "$key", "$workfile.stored";
     rename "$workfile.lock", "$workfile.fetched";
@@ -393,6 +437,7 @@ __END__
 client          apache          downloader      status
 ----------------------------------------------------------------
 submit url
+                w umd5.isurl.tmp
                 w umd5.isurl
                                                 r umd5.isurl
                 w umd5
