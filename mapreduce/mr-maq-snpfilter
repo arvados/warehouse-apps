@@ -23,7 +23,7 @@ system ("dpkg --extract maq.deb .")
 system ("whget $ENV{MR_INPUT0}/ $tmp/")
     == 0 or die "whget $ENV{MR_INPUT0}/ $tmp/ exited $?";
 
-system ("./usr/bin/maq SNPfilter -q 40 -w 5 -N 2 -d 3 -D 256 -n 20 ./cns.snp.txt >out/cns.final.snp.txt")
+system ("./usr/bin/maq.pl SNPfilter -q 40 -w 5 -N 2 -d 3 -D 256 -n 20 ./cns.snp.txt >out/cns.final.snp.txt")
     == 0 or die "maq SNPfilter exited $?";
 
 my $key = `whput out/`;

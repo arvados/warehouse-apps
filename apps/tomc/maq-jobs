@@ -198,7 +198,7 @@ sub fillpipeline
     {
 	$me->{snpfilter} = findjob
 	    ( { mrfunction => "maq-snpfilter",
-		revision => [ 2342, ],
+		revision => [ 2346, ],
 		inputkey => $me->{cns2x}->{outputkey},
 		nodes => 1,
 		knobs => makeknobs
