@@ -23,7 +23,7 @@ fetch_to_file ($whc, $ENV{KNOB_ALL2STD_PL}, "all2std.pl");
 fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
-system ("bash -c 'set -o pipefail; whget $ENV{MR_INPUT0} - | zcat | perl all2std.pl sol2std | ./usr/bin/maq fastq2bfq -n 2000000 - out/fastq'")
+system ("bash -c 'set -o pipefail; whget $ENV{MR_INPUT0} - | gzip -cdf | perl all2std.pl sol2std | ./usr/bin/maq fastq2bfq -n 2000000 - out/fastq'")
     == 0 or die "whget|zcat|all2std.pl|maq pipeline exited $?";
 opendir D, "out" or die "opendir: $!";
 while (my $f = readdir D)
