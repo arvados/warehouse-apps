@@ -22,8 +22,6 @@ function init_form() {
 		submit_form();
 	}	
 	
-	retrieve_file_list();
-	
 	new PeriodicalExecuter(function(pe) {
 				submit_form();
 				}, 2);
@@ -45,6 +43,7 @@ function url_focus() {
 function go_button()
 {
   urlhidden_field.value = url_field.value;
+  $('permalink').href = './?'+url_field.value;
   submit_form();
 }
 
@@ -68,6 +67,7 @@ function process_response() {
 		if(json_response.workflow.input.id != $('urlhidden').value) {
 			$('url').value = json_response.workflow.input.id;
 			$('urlhidden').value = json_response.workflow.input.id;
+			$('permalink').href = './?'+json_response.workflow.input.id;
 			submit_form();
 		}
 		
@@ -143,6 +143,7 @@ window.onload = init_form;
 <div id="result_content">
 
 </div>
+  <small><a name="permalink" id="permalink" href="./?<!--#echo var="QUERY_STRING" -->">link to these results</a></small>
 </div>
 </body>
 </html>
