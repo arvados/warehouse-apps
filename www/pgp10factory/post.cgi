@@ -6,10 +6,10 @@ use Digest::MD5 'md5_hex';
 use Fcntl ':flock';
 use POSIX;
 
-my $workdir = "/tmp/pgp10factory";
+my $workdir = "./cache";
 mkdir $workdir;
 chmod 0777, $workdir;
-die "$workdir does not exist and could not be created" unless -w $workdir;
+die "$workdir could not be created / is not writeable" unless -d $workdir && -w $workdir;
 
 my $q = new CGI;
 print $q->header ("Content-type: text/plain");
