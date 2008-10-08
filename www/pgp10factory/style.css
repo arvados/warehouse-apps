@@ -1,0 +1,36 @@
+body {
+	font-family: Tahoma;
+	color: #404040;
+	text-align: center;
+}
+p,td,th {
+	font-size: 11px;
+}
+h3 {
+	margin: 0px;
+	padding-bottom: 3px;
+}
+
+#breakdown {
+	display: none;
+}
+
+#info_window {
+	background-image:url(images/info_window.png);
+	background-repeat: no-repeat;
+	display: none;
+	text-align: center;
+	width: 625px;
+	height: 125px;
+	padding: 5px;	
+}
+
+.pipeline {
+	display: block; 
+	margin-left: 5px; 
+	margin-bottom: 5px;
+	float:left; 
+	clear: none; 
+	width: 300px; 
+	border: 1px solid #333;
+}

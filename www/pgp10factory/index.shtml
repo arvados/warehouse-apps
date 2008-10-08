@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>pgp10factory</title>
+<link href="style.css" rel="stylesheet" type="text/css" />
+<script language="javascript" type="text/javascript">
+function init_form() {
+	curForm = document.form1;
+	url_field = $('url'); // document.getElementById('url');
+	field_set = 1;
+	
+	url_field.style.textAlign = 'center';
+	
+	if(url_field.value == 'Paste URL or MD5sum here' || url_field.value == '') {
+		url_field.style.color = '#AAAAAA';
+		url_field.value = 'Paste URL or MD5sum here';
+		field_set = 0;		
+	} else {
+		url_field.style.color = '#000000';
+		submit_form();
+	}	
+	
+	retrieve_file_list();
+	
+	new PeriodicalExecuter(function(pe) {
+				submit_form();
+				}, 2);
+				
+	new PeriodicalExecuter(function(pe) {
+				retrieve_file_list();
+				}, 60);
+
+}
+
+function set_url(value) {
+	url_field.value = value;
+	url_field.style.color = '#000';
+	submit_form();
+}
+
+function retrieve_file_list() {
+/*
+	var files = 'filelist.cgi';
+	new Ajax.Request(files, {
+			onSuccess: function(transport) {
+				$('files').update(transport.responseText);
+			}
+	});
+*/
+}
+
+function url_focus() {
+	if(url_field.value == '' || url_field.value == 'Paste URL or MD5sum here') {
+		url_field.style.color = '#000000';
+		url_field.value = '';
+	}	
+}
+
+function submit_form() {
+//	alert(url_field.value);
+	if(url_field.value != 'Paste URL or MD5sum here' && url_field.value != '') {
+		var url = 'post.cgi?q=' + encodeURIComponent(url_field.value);
+		// notice the use of a proxy to circumvent the Same Origin Policy.
+		
+		new Ajax.Request(url, {
+		  method: 'get',
+		  onSuccess: function(transport) {
+			var notice = $('notice');
+			json_response = transport.responseText.evalJSON();
+			process_response();
+		  }
+		});
+	}
+}
+
+function process_response() {
+	$('result_content').update();
+	if(json_response.workflow) {
+		if(json_response.workflow.input.id != $('url').value) {
+			$('url').value = json_response.workflow.input.id;
+			submit_form();
+		}
+		
+		if(json_response.workflow.message) {
+			$('info_content').update(''+json_response.workflow.message+'<br />');
+			if(json_response.workflow.input.srcurl) $('info_content').insert({bottom: '<br /><strong>Source Location</strong>: <a href=\"'+json_response.workflow.input.srcurl+'\" target=_blank>'+json_response.workflow.input.srcurl+"</a>"});
+			if(json_response.workflow.input.srcdate) $('info_content').insert({bottom: '<br /><strong>Source Date</strong>: '+json_response.workflow.input.srcdate+''});
+			$('info_window').style.display = 'block';
+		} else $('info_window').style.display = 'none';
+	
+		if(json_response.workflow.pipeline.length > 0) {
+			// Breakdown each pipeline
+			
+			for(i=0;i<json_response.workflow.pipeline.length;i++) {
+				var cur_line = json_response.workflow.pipeline[i];
+				$('result_content').insert({bottom: '<div id=\"pipeline_'+i+'\" class=\"pipeline\"><h2>'+cur_line.label+'</h2></div>'});
+				// Now check for jobs
+				if(cur_line.job.length > 0) {
+					$('pipeline_'+i).insert({bottom: '<table id=pipelinejobs_'+i+' align=center></table>'});
+					for(o=0;o<cur_line.job.length;o++) {
+						var cur_job = cur_line.job[o];
+						var image_tag = '';
+						
+						// Set the image file
+						if(!cur_job.status) {
+							image_tag = '';
+						} else {
+							image_tag = '<img src=\"images/'+cur_job.status+'.gif\" width=\"20\" height=\"20\" />';
+						}
+						
+						if(cur_job.id) var job_id = "<a href=/somewhere.cgi?id="+cur_job.id+">"+cur_job.id+"</a>"; else var job_id = '';
+						
+						// Check for Output files
+						var output_files = '';
+						if(cur_job.outputfiles && cur_job.outputfiles.length > 0) {
+							for(n=0;n<cur_job.outputfiles.length;n++) {
+								output_files += cur_job.outputfiles[n] + '<br />';
+							}
+						}
+						
+						$('pipelinejobs_'+i).insert({bottom: '<tr><td width=\"35\" align=\"left\" height=\"30\">'+image_tag+'</td><td align=\"left\">'+cur_job.label+'</td><td>'+job_id+'</td><td align=left style=\"padding-left: 4px;\">'+output_files+'</td></tr>'});
+					}
+				}
+			}
+		}
+	} else {
+		$('info_content').update('<br />Unable to find a resource to match your input');
+		$('info_window').style.display = 'block';
+	}
+}
+
+window.onload = init_form;
+</script>
+<script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"></script>
+</head>
+
+<body>
+<div style="width: 625px;">
+<h1>PGP-10 Factory</h1>
+<p>For testing purposes, please use one of the following:</p>
+<p id="files">
+</p>
+<input name="url" type="text" id="url" onFocus="url_focus()" value="<!--#echo var="QUERY_STRING" -->" size="75" />
+<br />
+<input type="submit" name="Submit" value="Go" onclick="submit_form()"/>
+<div style="clear: both; "></div><br />
+<div id="info_window" align="center">
+  <h3>Additional Info</h3>
+  <p style="margin: 0px; " id='info_content'><br />
+  The MD5 sum provided does not match. </p>
+</div>
+<div id="result_content">
+
+</div>
+</div>
+</body>
+</html>

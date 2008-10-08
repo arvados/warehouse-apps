@@ -1,2 +1,3 @@
-Options +ExecCGI
+Options +ExecCGI +Includes
 AddType cgi-script .cgi
+DirectoryIndex index.shtml
