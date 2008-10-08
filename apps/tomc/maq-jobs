@@ -265,6 +265,7 @@ sub findjob
 	{
 	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
 	    $failed = $_ if !$failed && $_->{success} eq '0';
+	    delete $_->{outputkey} if !$_->{success};
 	    return $_ if $_->{outputkey};
 	}
     }
