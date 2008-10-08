@@ -7,7 +7,8 @@
 <script language="javascript" type="text/javascript">
 function init_form() {
 	curForm = document.form1;
-	url_field = $('url'); // document.getElementById('url');
+	url_field = $('url');
+	urlhidden_field = $('urlhidden');
 	field_set = 1;
 	
 	url_field.style.textAlign = 'center';
@@ -26,28 +27,12 @@ function init_form() {
 	new PeriodicalExecuter(function(pe) {
 				submit_form();
 				}, 2);
-				
-	new PeriodicalExecuter(function(pe) {
-				retrieve_file_list();
-				}, 60);
-
 }
 
 function set_url(value) {
 	url_field.value = value;
 	url_field.style.color = '#000';
 	submit_form();
-}
-
-function retrieve_file_list() {
-/*
-	var files = 'filelist.cgi';
-	new Ajax.Request(files, {
-			onSuccess: function(transport) {
-				$('files').update(transport.responseText);
-			}
-	});
-*/
 }
 
 function url_focus() {
@@ -57,12 +42,15 @@ function url_focus() {
 	}	
 }
 
+function go_button()
+{
+  urlhidden_field.value = url_field.value;
+  submit_form();
+}
+
 function submit_form() {
-//	alert(url_field.value);
-	if(url_field.value != 'Paste URL or MD5sum here' && url_field.value != '') {
-		var url = 'post.cgi?q=' + encodeURIComponent(url_field.value);
-		// notice the use of a proxy to circumvent the Same Origin Policy.
-		
+	if(urlhidden_field.value != 'Paste URL or MD5sum here' && urlhidden_field.value != '') {
+		var url = 'post.cgi?q=' + encodeURIComponent(urlhidden_field.value);
 		new Ajax.Request(url, {
 		  method: 'get',
 		  onSuccess: function(transport) {
@@ -77,8 +65,9 @@ function submit_form() {
 function process_response() {
 	$('result_content').update();
 	if(json_response.workflow) {
-		if(json_response.workflow.input.id != $('url').value) {
+		if(json_response.workflow.input.id != $('urlhidden').value) {
 			$('url').value = json_response.workflow.input.id;
+			$('urlhidden').value = json_response.workflow.input.id;
 			submit_form();
 		}
 		
@@ -138,12 +127,13 @@ window.onload = init_form;
 <body>
 <div style="width: 625px;">
 <h1>PGP-10 Factory</h1>
-<p>For testing purposes, please use one of the following:</p>
+<p>Paste a URL to fetch new data, or paste an MD5 hash to use existing data:</p>
 <p id="files">
 </p>
 <input name="url" type="text" id="url" onFocus="url_focus()" value="<!--#echo var="QUERY_STRING" -->" size="75" />
+<input name="urlhidden" type="hidden" id="urlhidden" value="<!--#echo var="QUERY_STRING" -->" />
 <br />
-<input type="submit" name="Submit" value="Go" onclick="submit_form()"/>
+<input type="submit" name="Submit" value="Go" onclick="go_button()"/>
 <div style="clear: both; "></div><br />
 <div id="info_window" align="center">
   <h3>Additional Info</h3>
