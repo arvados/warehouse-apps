@@ -109,7 +109,7 @@ function process_response() {
 							image_tag = '<img src=\"images/'+cur_job.status+'.gif\" width=\"20\" height=\"20\" />';
 						}
 						
-						if(cur_job.id) var job_id = "<a href=/somewhere.cgi?id="+cur_job.id+">"+cur_job.id+"</a>"; else var job_id = '';
+						if(cur_job.id) var job_id = '&nbsp;&nbsp;'+cur_job.id; else var job_id = '';
 						
 						// Check for Output files
 						var output_files = '';
