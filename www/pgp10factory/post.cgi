@@ -60,13 +60,26 @@ sub do_url
 sub do_hash
 {
     my ($want) = @_;
-    if (open (F, "<", "$workdir/$want"))
+    if (-s "$workdir/$want" &&
+	open (F, "<", "$workdir/$want"))
     {
 	local $/ = undef;
 	my $data = <F>;
 	close F;
 	print $data;
-	exit 0;
+	return 1;
+    }
+    else
+    {
+	sysopen (F, "$workdir/$want", O_WRONLY|O_CREAT|O_EXCL);
+	print qq{
+{
+"workflow": {  "input": {  "id": "$want" },
+     "pipeline": [ ],
+     "message": "Processing for this input set should begin shortly." }
+}
+};
+return 1;
     }
 }
 
