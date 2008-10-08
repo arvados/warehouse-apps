@@ -194,6 +194,21 @@ sub fillpipeline
 	buildoutputs ($me->{cns2x},
 		      "cns.fq.txt", "cns.snp.txt", "cns.win.txt");
     }
+    if ($me->{cns2x} && $me->{cns2x}->{outputkey})
+    {
+	$me->{snpfilter} = findjob
+	    ( { mrfunction => "maq-snpfilter",
+		revision => [ 2342, ],
+		inputkey => $me->{cns2x}->{outputkey},
+		nodes => 1,
+		knobs => makeknobs
+		    ("maq-snpfilter",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     ),
+		} ) unless $me->{snpfilter};
+	buildoutputs ($me->{snpfilter},
+		      "cns.final.snp.txt");
+    }
 
     push (@ { $flow->{json}->{pipeline} },
 	  { label => $pipeline->{label},
@@ -204,6 +219,7 @@ sub fillpipeline
 		    jsonjob ("Mapview", $me->{mapview}),
 		    jsonjob ("Assemble", $me->{assemble}),
 		    jsonjob ("Consensus", $me->{cns2x}),
+		    jsonjob ("SNPfilter", $me->{snpfilter}),
 		    ] } );
 
     print "# finished ".$pipeline->{label}." $in\n";
