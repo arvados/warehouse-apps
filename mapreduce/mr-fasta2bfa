@@ -24,7 +24,7 @@ system ("dpkg --extract maq.deb .")
 
 my $remove_lc = $ENV{KNOB_REMOVE_LC} ? " | tr -d a-z" : "";
 
-system ("bash -c 'set -o pipefail; whget $ENV{MR_INPUT0} - $remove_lc >ref.fa && ./usr/bin/maq fasta2bfa ref.fa out/ref.bfa'")
+system ("bash -c 'set -o pipefail; whget $ENV{MR_INPUT0} - | gzip -cdf $remove_lc >ref.fa && ./usr/bin/maq fasta2bfa ref.fa out/ref.bfa'")
     == 0 or die "(whget && maq) exited $?";
 
 my $key = `whput out/`;
