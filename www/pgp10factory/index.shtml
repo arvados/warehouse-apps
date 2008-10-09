@@ -49,23 +49,20 @@ function go_button()
 
 function submit_form() {
 	if(urlhidden_field.value != 'Paste URL or MD5sum here' && urlhidden_field.value != '') {
-		var url = 'post.cgi?q=' + encodeURIComponent(urlhidden_field.value);
-		new Ajax.Request(url, {
-		  method: 'get',
+		new Ajax.Request('post.cgi', {
+		      parameters: { q: urlhidden_field.value },
 		  onSuccess: function(transport) {
-			var notice = $('notice');
 			json_response = transport.responseText.evalJSON();
-			process_response();
+			process_response(json_response);
 		  }
 		});
 	}
 }
 
-function process_response() {
+function process_response(json_response) {
 	$('result_content').update();
 	if(json_response.workflow) {
 		if(json_response.workflow.input.id != $('urlhidden').value) {
-			$('url').value = json_response.workflow.input.id;
 			$('urlhidden').value = json_response.workflow.input.id;
 			$('permalink').href = './?'+json_response.workflow.input.id;
 			submit_form();
@@ -136,9 +133,7 @@ window.onload = init_form;
 <input type="submit" name="Submit" value="Go" onclick="go_button()"/>
 <div style="clear: both; "></div><br />
 <div id="info_window" align="center">
-  <h3>Additional Info</h3>
-  <p style="margin: 0px; " id='info_content'><br />
-  The MD5 sum provided does not match. </p>
+  <p id="info_content"></p>
 </div>
 <div id="result_content">
 
