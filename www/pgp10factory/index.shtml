@@ -24,7 +24,7 @@ function init_form() {
 	
 	new PeriodicalExecuter(function(pe) {
 				submit_form();
-				}, 2);
+				}, 5);
 }
 
 function set_url(value) {
@@ -108,6 +108,8 @@ function process_response(json_response) {
 						$('pipelinejobs_'+i).insert({bottom: '<tr><td width=\"35\" align=\"left\" height=\"30\">'+image_tag+'</td><td align=\"left\">'+cur_job.label+'</td><td>'+job_id+'</td><td align=left style=\"padding-left: 4px;\">'+output_files+'</td></tr>'});
 					}
 				}
+				if (cur_line.image)
+				  $('pipeline_'+i).insert({bottom: '<img style=\"border: 1px solid #000; margin-bottom: 5px; margin-top: 5px;\" src=\"cache/'+cur_line.image+'\" />'});
 			}
 		}
 	} else {

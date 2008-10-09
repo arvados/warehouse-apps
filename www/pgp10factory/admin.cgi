@@ -51,7 +51,8 @@ for my $datahash (sort keys %dataset)
     print CGI->escapeHTML(substr($datahash,0,33));
     print qq{</a>};
     print qq{</code></td><td valign="top">};
-    print qq{<textarea rows="3" cols="50" id="$datahash" onpaste="showsavebutton('$datahash')" onkeypress="showsavebutton('$datahash')"></textarea>};
+    my $qcomment = CGI->escapeHTML($dataset{$datahash}->{comment});
+    print qq{<textarea rows="3" cols="50" id="$datahash" onpaste="showsavebutton('$datahash')" onkeypress="showsavebutton('$datahash')">$qcomment</textarea>};
     print qq{<br /><button style="display: none;" id="save-$datahash" onclick="do_save('$datahash')">Save</button>};
     print qq{<span style="color: #777;"><pre>}, join ("\n", "Downloaded from:", map { CGI->escapeHTML(scrub_auth($_)) } @{$dataset{$datahash}->{sources}}), qq{</pre></span>}
     if $dataset{$datahash}->{sources};

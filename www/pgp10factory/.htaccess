@@ -1,3 +1,7 @@
 Options +ExecCGI +Includes
 AddType cgi-script .cgi
 DirectoryIndex index.shtml
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !/cache/images/.
+RewriteCond %{REQUEST_FILENAME} cache
+RewriteRule . / [F]

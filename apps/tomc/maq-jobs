@@ -3,6 +3,7 @@
 use strict;
 use Fcntl ':flock';
 use Warehouse;
+use POSIX;
 my $whc = new Warehouse;
 
 my %override;
@@ -217,6 +218,7 @@ sub fillpipeline
 
     push (@ { $flow->{json}->{pipeline} },
 	  { label => $pipeline->{label},
+	    image => mapcheck_png ($me->{merge}),
 	    job => [
 		    jsonjob ("Prepare input", $me->{sol2bfq}),
 		    jsonjob ("Map", $me->{map}),
@@ -276,7 +278,7 @@ sub findjob
     }
     mention_failed_job ($failed) if !$queued && $failed;
     suggest_new_job ($want) if !$queued && !$want->{quiet} && (!$failed || $override{retryfailed});
-    return $queued;
+    return $queued || $failed;
 }
 
 sub suggest_new_job
@@ -461,6 +463,37 @@ sub fork_downloader
     exit 0;
 }
 
+
+sub mapcheck_png
+{
+    my $me = shift;
+    return "" if !$me;
+    my $datahash = $me->{outputkey};
+    return "" if !$datahash;
+    my $pngpath = "$workdir/images/$datahash.mapcheck.png";
+    if (-e $pngpath)
+    {
+	return "images/$datahash.mapcheck.png";
+    }
+    elsif (!-d "$workdir/images")
+    {
+	mkdir "$workdir/images";
+    }
+    if (sysopen F, "$pngpath.tmp", O_WRONLY|O_CREAT|O_EXCL)
+    {
+	my $child = fork();
+	if ($child || !defined $child) { close F; return ""; }
+
+	my $mapcheck_r = $0;
+	$mapcheck_r =~ s{[^/]*$}{maq-mapcheck.r};
+	system ("whget '$datahash/mapcheck.txt' - | egrep '^ *[0-9]' > '$pngpath.in'")
+	    == 0 or do { unlink "$pngpath.in", "$pngpath.tmp"; die "whget|egrep exited $?"; };
+	system (qq{R --no-save --args infile="$pngpath.in" graph_w=3 graph_h=4 imagefile="$pngpath" < $mapcheck_r})
+	    == 0 or do { unlink "$pngpath.in", "$pngpath.tmp"; die "R exited $?"; };
+	unlink "$pngpath.in", "$pngpath.tmp";
+	exit 0;
+    }
+}
 
 __END__
 
