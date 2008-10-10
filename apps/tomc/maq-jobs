@@ -99,14 +99,26 @@ sub fillflow
     else
     {
 	fillpipeline ($in, $flow,
-		      { label => "maq/hg18",
+		      { label => "sol/maq/hg18",
 			REFERENCE => "99259f4330907e84fe7253bd4e52dd3e",
 			REFERENCEFILE => "homo_sapiens.bfa",
 		    } );
 	fillpipeline ($in, $flow,
-		      { label => "maq/55k",
+		      { label => "sol/maq/55k",
 			REFERENCE => "f7703aadfb55c12127c4d51693c85587",
 			REFERENCEFILE => "ref.bfa",
+		    } );
+	fillpipeline ($in, $flow,
+		      { label => "std/maq/hg18",
+			REFERENCE => "99259f4330907e84fe7253bd4e52dd3e",
+			REFERENCEFILE => "homo_sapiens.bfa",
+			sol2bfq => ["INPUTFORMAT=std"],
+		    } );
+	fillpipeline ($in, $flow,
+		      { label => "std/maq/55k",
+			REFERENCE => "f7703aadfb55c12127c4d51693c85587",
+			REFERENCEFILE => "ref.bfa",
+			sol2bfq => ["INPUTFORMAT=std"],
 		    } );
     }
     if (open F, "<", "$workdir/$in.comment")
@@ -128,9 +140,12 @@ sub fillpipeline
 
     $me->{sol2bfq} = findjob
 	( { mrfunction => "sol2bfq",
-	    revision => [ 2314, ],
+	    revision => [ ($pipeline->{sol2bfq} ? 2356 : 2314), ],
 	    inputkey => $in,
-	    knobs => makeknobs ("sol2bfq"),
+	    knobs => makeknobs ("sol2bfq",
+				$pipeline->{sol2bfq}
+				? @{$pipeline->{sol2bfq}} : (),
+		),
 	} ) unless $me->{sol2bfq};
 
     if ($me->{sol2bfq} && $me->{sol2bfq}->{outputkey})
