@@ -23,7 +23,7 @@ my $keyre = qq{$hashre(?:,$hashre)*};
 
 my $wantrawmanifest = 0;
 
-if ($path_info =~ /^($keyre)(\/=|\.txt)$/)
+if ($path_info =~ /^($keyre)(\/=(\/.*)?|\.txt)$/)
 {
     $path_info = $1;
     $wantrawmanifest = 1;
@@ -81,15 +81,23 @@ if ($manifestblock =~ /^$keyre\n?$/)
 
 if ($wantrawmanifest)
 {
-  print $q->header (-type=>"text/plain");
-  print $manifestblock;
-  while (@manifesthash)
-  {
-    $manifestblock = $whc->fetch_block (shift @manifesthash)
-	or header_and_die (1, "fetch_block failed");
+    if ($ENV{PATH_INFO} =~ /(\/=|\.txt)$/i)
+    {
+	print $q->header (-type => "text/plain");
+    }
+    elsif ($ENV{PATH_INFO} =~ /\.gz$/i)
+    {
+	print $q->header (-type => "application/binary",
+			  -content-encoding => "gzip");
+    }
     print $manifestblock;
-  }
-  exit 0;
+    while (@manifesthash)
+    {
+	$manifestblock = $whc->fetch_block (shift @manifesthash)
+	    or header_and_die (1, "fetch_block failed");
+	print $manifestblock;
+    }
+    exit 0;
 }
 
 my $headerdone;
