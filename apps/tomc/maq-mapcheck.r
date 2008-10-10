@@ -8,9 +8,9 @@ for(x in commandArgs()) {
 
 postscript(paste("|convert ps:- ",imagefile,sep=""), width=as.numeric(graph_w),horizontal=F, height=as.numeric(graph_h), onefile=F);
 
-A <- read.table(infile,header=T,sep='')
-color <- gray(seq(0,1,by=.25))
+A <- read.table(infile,header=F,sep='')
+color <- gray(seq(0,1,by=.15))
 palette(color)
 par(xpd=T,mar=c(1,1,1,1));
-barplot(t(as.matrix(A[,20:24])), col=1:5,axes=F,ylim=c(0,1000),border='#eeeeee')
+barplot(t(as.matrix(A)),col=1:7,axes=F,ylim=c(0,1000),border='#eeeeee')
 dev.off();
