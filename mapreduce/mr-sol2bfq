@@ -5,6 +5,7 @@
 ###MR_INPUT:hash
 ###MR_KNOBS:ALL2STD_PL=3733b1cc64cf5f8e59511c0ecdc42d44
 ###MR_KNOBS:MAQ_DEB=ec9aba3c23989d66f813589e2d4450db
+###MR_KNOBS:INPUTFORMAT=solexa
 
 use strict; 
 use Warehouse;
@@ -12,6 +13,7 @@ use Safepipe;
 
 $ENV{KNOB_ALL2STD_PL} ||= "3733b1cc64cf5f8e59511c0ecdc42d44";
 $ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
+$ENV{KNOB_INPUTFORMAT} ||= "solexa";
 
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 chdir ($tmp) or die "chdir $tmp: $!";
@@ -19,11 +21,23 @@ mkdir "out" or die "mkdir out: $!";
 
 my $whc = new Warehouse;
 
-fetch_to_file ($whc, $ENV{KNOB_ALL2STD_PL}, "all2std.pl");
+my $formatfilter = "gzip -cdf";
+if ($ENV{KNOB_INPUTFORMAT} eq "solexa")
+{
+  fetch_to_file ($whc, $ENV{KNOB_ALL2STD_PL}, "all2std.pl");
+  $formatfilter .= " | perl all2std.pl sol2std";
+}
+elsif ($ENV{KNOB_INPUTFORMAT} eq "std")
+{
+}
+else
+{
+  die "Unsupported INPUTFORMAT knob";
+}
 fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
-system ("bash -c 'set -o pipefail; whget '$ENV{MR_INPUT0}' - | gzip -cdf | perl all2std.pl sol2std | ./usr/bin/maq fastq2bfq -n 2000000 - out/fastq'")
+system ("bash -c 'set -o pipefail; whget '$ENV{MR_INPUT0}' - | $formatfilter | ./usr/bin/maq fastq2bfq -n 2000000 - out/fastq'")
     == 0 or die "whget|zcat|all2std.pl|maq pipeline exited $?";
 opendir D, "out" or die "opendir: $!";
 while (my $f = readdir D)
