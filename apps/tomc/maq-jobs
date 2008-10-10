@@ -33,6 +33,8 @@ for (@$joblist)
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
+my %already_did_cmd;
+
 
 opendir (D, $workdir) or die "$workdir: $!";
 for my $workfile (readdir D)
@@ -293,7 +295,7 @@ sub suggest_new_job
     $knobs =~ s{=(.*?)(\\n|$)}{='$1' }g;
     my $cmd = "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs\n";
     print "$cmd\n";
-    system "$cmd";
+    system "$cmd" unless (++$already_did_cmd{$cmd} > 1);
 }
 
 sub mention_failed_job
