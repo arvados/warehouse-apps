@@ -2,6 +2,7 @@
 
 use strict;
 use CGI;
+use Digest::MD5 'md5_hex';
 
 my $workdir = "./cache";
 
@@ -52,7 +53,8 @@ for my $datahash (sort keys %dataset)
     print qq{</a>};
     print qq{</code></td><td valign="top">};
     my $qcomment = CGI->escapeHTML($dataset{$datahash}->{comment});
-    print qq{<textarea rows="3" cols="50" id="$datahash" onpaste="showsavebutton('$datahash')" onkeypress="showsavebutton('$datahash')">$qcomment</textarea>};
+    my $commenthash = md5_hex ($dataset{$datahash}->{comment});
+    print qq{<textarea rows="3" cols="50" id="$datahash" name="$datahash-$commenthash" onpaste="showsavebutton('$datahash')" onkeypress="showsavebutton('$datahash')">$qcomment</textarea>};
     print qq{<br /><button style="display: none;" id="save-$datahash" onclick="do_save('$datahash')">Save</button>};
     print qq{<span style="color: #777;"><pre>}, join ("\n", "Downloaded from:", map { CGI->escapeHTML(scrub_auth($_)) } @{$dataset{$datahash}->{sources}}), qq{</pre></span>}
     if $dataset{$datahash}->{sources};
