@@ -237,6 +237,7 @@ sub fillpipeline
 	  { label => $pipeline->{label},
 	    image => mapcheck_png ($me->{merge}),
 	    job => [
+		    jsonjob ("Request", { outputfiles => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$in/=/$in.gz'>input data</a>"], success => 1 }),
 		    jsonjob ("Prepare input", $me->{sol2bfq}),
 		    jsonjob ("Map", $me->{map}),
 		    jsonjob ("Merge", $me->{merge}),
@@ -503,7 +504,7 @@ sub mapcheck_png
 
 	my $mapcheck_r = $0;
 	$mapcheck_r =~ s{[^/]*$}{maq-mapcheck.r};
-	system ("whget '$datahash/mapcheck.txt' - | egrep '^ *[0-9]' > '$pngpath.in'")
+	system (qq{whget '$datahash/mapcheck.txt' - | egrep '^ *[0-9]' | perl -ne 'print ((split(":"))[2],"\\n")' > '$pngpath.in'})
 	    == 0 or do { unlink "$pngpath.in", "$pngpath.tmp"; die "whget|egrep exited $?"; };
 	system (qq{R --no-save --args infile="$pngpath.in" graph_w=3 graph_h=4 imagefile="$pngpath" < $mapcheck_r})
 	    == 0 or do { unlink "$pngpath.in", "$pngpath.tmp"; die "R exited $?"; };
