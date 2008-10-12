@@ -8,8 +8,17 @@ my $workdir = "./cache";
 
 print CGI->header;
 
-print qq{<script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"></script>\n};
-print qq{<script language="javascript" type="text/javascript" src="admin.js"></script>\n};
+print qq{
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+<title>pgp10factory admin</title>
+<script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"</script>
+<script language="javascript" type="text/javascript" src="admin.js"></script>
+</head><body>
+<h1>PGP-10 Factory - Admin</h1>
+};
 
 my %dataset;
 
@@ -60,7 +69,12 @@ for my $datahash (sort keys %dataset)
     if $dataset{$datahash}->{sources};
     print qq{</td></tr>\n};
 }
-print qq{</table>\n};
+
+print qq{
+</table>
+</body>
+</html>
+};
 
 sub scrub_auth
 {
