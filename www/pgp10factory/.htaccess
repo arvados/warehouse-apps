@@ -3,7 +3,7 @@ AddType cgi-script .cgi
 DirectoryIndex index.shtml
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !/cache/images/.
-RewriteCond %{REQUEST_FILENAME} cache
+RewriteCond %{REQUEST_FILENAME} cache|session/
 RewriteRule . / [F]
 
 <Files ~ "admin">

@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+
+use strict;
+use Fcntl ':flock';
+use Warehouse;
+use POSIX;
+my $whc = new Warehouse;
+
+@ARGV == 1
+    or die qq{
+usage: $0 workdir
+
+example: $0 /var/cache/maq-jobs-workdir
+
+};
+
+my ($workdir) = @ARGV;
+
+my %hash_is;
+
+opendir (D, $workdir) or die "$workdir: $!";
+for my $workfile (readdir D)
+{
+    next unless $workfile =~ /^([0-9a-f]{32}(?:,[0-9a-f]{32})*)(?:\.is(.*))?$/;
+    my $hash = $1;
+    my $is = $2;
+    $hash_is{$hash} ||= [];
+    push @ { $hash_is{$hash} }, $2 if defined $2;
+}
+closedir D;
+
+foreach my $hash (sort keys %hash_is)
+{
+    my @is = @ { $hash_is{$hash} };
+    if (@is)
+    {
+	print "$hash is @is\n" if $ENV{DEBUG};
+    }
+    else
+    {
+	my $chunk = `whget $hash - | gzip -cdf | head -c 20480`;
+	if ($chunk =~ /^(\@\S+\n[A-Z]+\n\+\S+\n\S+\n){4}/s)
+	{
+	    sysopen F, "$workdir/$hash.isreads", O_WRONLY|O_CREAT|O_EXCL;
+	    close F;
+	    print "$hash is fastq reads\n";
+	}
+	elsif ($chunk =~ /^((>[^\n]+|[-a-z\*]+)\n){4}/is)
+	{
+	    sysopen F, "$workdir/$hash.isgenome", O_WRONLY|O_CREAT|O_EXCL;
+	    close F;
+	    print "$hash is fasta genome\n";
+	}
+	else
+	{
+	    sysopen F, "$workdir/$hash.isunknown", O_WRONLY|O_CREAT|O_EXCL;
+	    close F;
+	    print "$hash is unknown\n";
+	}
+    }
+}

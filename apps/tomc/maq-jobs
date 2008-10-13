@@ -81,7 +81,13 @@ sub fillflow
 	{
 	    my ($url) = <L>;
 	    close L;
-	    if (!-e "$workdir/$in.lock")
+	    if (-e "$workdir/$in.fail")
+	    {
+		my @stat = stat "$workdir/$in.fail";
+		my $localmtime = localtime ($stat[9]);
+		$flow->{json}->{message} = "Download of $url <b>failed</b> at $localmtime";
+	    }
+	    elsif (!-e "$workdir/$in.lock")
 	    {
 		$flow->{json}->{message} = "Source data at $url is queued for downloading.";
 		fork_downloader ("$workdir/$in");
@@ -93,10 +99,30 @@ sub fillflow
 		$flow->{json}->{message} = "Started downloading from $url at $localmtime.";
 	    }
 	    close L;
-	    $flow->{json}->{input}->{id} = $url;
+	    $flow->{json}->{input}->{id} = $in;
 	}
     }
-    else
+    elsif (-e "$workdir/$in.isgenome")
+    {
+	my $me = $flow->{"Prepare for maq"};
+	$me->{fasta2bfa} = findjob
+	    ( { mrfunction => "fasta2bfa",
+		revision => [ 2334, ],
+		inputkey => $in,
+		knobs => makeknobs
+		    ("fasta2bfa",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		    ),
+	      } );
+	$flow->{json}->{pipeline} = [ {
+	    label => "Convert to BFA",
+	    job => [
+		jsonjob ("Request", { outputfiles => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$in/=/$in.gz'>input data</a>"], success => 1 }),
+		jsonjob ("Convert to BFA", $me->{fasta2bfa}),
+		] } ];
+	print "# finished ".$flow->{json}->{pipeline}->[0]->{label}." $in\n";
+    }
+    elsif (-e "$workdir/$in.isreads")
     {
 	fillpipeline ($in, $flow,
 		      { label => "sol/maq/hg18",
@@ -468,14 +494,18 @@ sub fork_downloader
     my ($url) = <U>;
     $url =~ s/\'/\'\\\'\'/g;
 
-    open F, "+>>", "$workfile.lock" or exit 1; # update mtime
-    exit 0 unless flock F, LOCK_EX;
-    print F $url;
+    sysopen (F, "$workfile.lock", O_WRONLY|O_CREAT|O_EXCL) or exit 1;
+    syswrite F, $url;
     close F;
 
     my $key = `wget -O - '$url' 2>>$workfile.wget-log | whput -`;
     chomp $key;
-    exit 1 if $?;
+    if ($?)
+    {
+	sysopen (F, "$workfile.fail", O_WRONLY|O_CREAT|O_EXCL);
+	close F;
+	exit 0;
+    }
     symlink "$key", "$workfile.stored";
     rename "$workfile.lock", "$workfile.fetched";
     exit 0;
