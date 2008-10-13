@@ -21,6 +21,14 @@ mkdir "out" or die "mkdir out: $!";
 
 my $whc = new Warehouse;
 
+my $whget_command = "whget '$ENV{MR_INPUT0}' -";
+my $in = $whc->fetch_block_ref ((split(",", $ENV{MR_INPUT0}))[0])
+    or die "fetch_block_ref($ENV{MR_INPUT0}) failed";;
+if ($$in =~ m{^\.(/\S+)? ([0-9a-f]{32}\S* )+\d+:\d+:(\S+)\n$}s)
+{
+  $whget_command = "whget '$ENV{MR_INPUT0}/$3' -";
+}
+
 my $formatfilter = "gzip -cdf";
 if ($ENV{KNOB_INPUTFORMAT} eq "solexa")
 {
@@ -37,7 +45,7 @@ else
 fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
-system ("bash -c 'set -o pipefail; whget '$ENV{MR_INPUT0}' - | $formatfilter | ./usr/bin/maq fastq2bfq -n 2000000 - out/fastq'")
+system ("bash -c 'set -o pipefail; $whget_command | $formatfilter | ./usr/bin/maq fastq2bfq -n 2000000 - out/fastq'")
     == 0 or die "whget|zcat|all2std.pl|maq pipeline exited $?";
 opendir D, "out" or die "opendir: $!";
 while (my $f = readdir D)
