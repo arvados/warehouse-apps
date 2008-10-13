@@ -18,13 +18,21 @@ mkdir "out" or die "mkdir out: $!";
 
 my $whc = new Warehouse;
 
+my $whget_command = "whget $ENV{MR_INPUT0} -";
+my $in = $whc->fetch_block_ref ($ENV{MR_INPUT0})
+    or die "fetch_block_ref($ENV{MR_INPUT0}) failed";;
+if ($$in =~ m{^\.(/\S+)? ([0-9a-f]{32}\S* )+\d+:\d+:(\S+)\n$}s)
+{
+  $whget_command = "whget '$ENV{MR_INPUT0}/$3' -";
+}
+
 fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
 
 my $remove_lc = $ENV{KNOB_REMOVE_LC} ? " | tr -d a-z" : "";
 
-system ("bash -c 'set -o pipefail; whget $ENV{MR_INPUT0} - | gzip -cdf $remove_lc >ref.fa && ./usr/bin/maq fasta2bfa ref.fa out/ref.bfa'")
+system ("bash -c 'set -o pipefail; $whget_command | gzip -cdf $remove_lc >ref.fa && ./usr/bin/maq fasta2bfa ref.fa out/ref.bfa'")
     == 0 or die "(whget && maq) exited $?";
 
 my $key = `whput out/`;
