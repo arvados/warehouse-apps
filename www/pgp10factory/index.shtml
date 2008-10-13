@@ -4,6 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
 <title>pgp10factory</title>
 <link href="style.css" rel="stylesheet" type="text/css" />
+<script language="javascript" type="text/javascript" src="sha1.js"></script>
 <script language="javascript" type="text/javascript">
 function init_form() {
 	curForm = document.form1;
@@ -25,6 +26,7 @@ function init_form() {
 	new PeriodicalExecuter(function(pe) {
 				submit_form();
 				}, 5);
+	$('jsonhash').value = '';
 }
 
 function set_url(value) {
@@ -48,15 +50,20 @@ function go_button()
 }
 
 function submit_form() {
-	if(urlhidden_field.value != 'Paste URL or MD5sum here' && urlhidden_field.value != '') {
-		new Ajax.Request('post.cgi', {
-		      parameters: { q: urlhidden_field.value },
-		  onSuccess: function(transport) {
-			json_response = transport.responseText.evalJSON();
-			process_response(json_response);
-		  }
-		});
-	}
+    if(urlhidden_field.value != 'Paste URL or MD5sum here' && urlhidden_field.value != '') {
+	new Ajax.Request('post.cgi', {
+		parameters: { q: urlhidden_field.value },
+		onSuccess: function(transport) {
+		    json_response = transport.responseText.evalJSON();
+		    var newhash = sha1Hash(transport.responseText);
+		    if (newhash != $('jsonhash').value)
+			{
+			    $('jsonhash').value = newhash;
+			    process_response(json_response);
+			}
+		}
+	});
+    }
 }
 
 function process_response(json_response) {
@@ -131,8 +138,9 @@ window.onload = init_form;
 </p>
 <input name="url" type="text" id="url" onFocus="url_focus()" value="<!--#echo var="QUERY_STRING" -->" size="75" />
 <input name="urlhidden" type="hidden" id="urlhidden" value="<!--#echo var="QUERY_STRING" -->" />
+<input name="jsonhash" type="hidden" id="jsonhash" />
 <br />
-<input type="submit" name="Submit" value="Go" onclick="go_button()"/>
+<input type="submit" name="Submit" value="Go" onclick="go_button()" />
 <div style="clear: both; "></div><br />
 <div id="info_window" align="center">
   <p id="info_content"></p>
