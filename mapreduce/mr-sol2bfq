@@ -23,10 +23,10 @@ my $whc = new Warehouse;
 
 my $whget_command = "whget '$ENV{MR_INPUT0}' -";
 my $in = $whc->fetch_block_ref ((split(",", $ENV{MR_INPUT0}))[0])
-    or die "fetch_block_ref($ENV{MR_INPUT0}) failed";;
+    or die "fetch_block_ref($ENV{MR_INPUT0}) failed";
 if ($$in =~ m{^\.(/\S+)? ([0-9a-f]{32}\S* )+\d+:\d+:(\S+)\n$}s)
 {
-  $whget_command = "whget '$ENV{MR_INPUT0}/$3' -";
+  $whget_command = "whget '$ENV{MR_INPUT0}$1/$3' -";
 }
 
 my $formatfilter = "gzip -cdf";
