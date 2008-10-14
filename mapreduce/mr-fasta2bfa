@@ -18,12 +18,12 @@ mkdir "out" or die "mkdir out: $!";
 
 my $whc = new Warehouse;
 
-my $whget_command = "whget $ENV{MR_INPUT0} -";
-my $in = $whc->fetch_block_ref ($ENV{MR_INPUT0})
+my $whget_command = "whget '$ENV{MR_INPUT0}' -";
+my $in = $whc->fetch_block_ref ((split(",", $ENV{MR_INPUT0}))[0])
     or die "fetch_block_ref($ENV{MR_INPUT0}) failed";;
 if ($$in =~ m{^\.(/\S+)? ([0-9a-f]{32}\S* )+\d+:\d+:(\S+)\n$}s)
 {
-  $whget_command = "whget '$ENV{MR_INPUT0}/$3' -";
+  $whget_command = "whget '$ENV{MR_INPUT0}$1/$3' -";
 }
 
 fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
