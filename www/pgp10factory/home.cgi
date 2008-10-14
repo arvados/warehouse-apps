@@ -9,6 +9,7 @@ my $workdir = "./cache";
 
 my $q = new CGI;
 session::init($q);
+my $sessionid = session::id();
 print CGI->header (-cookie => [session::togo()]);
 
 print qq{
@@ -19,10 +20,11 @@ print qq{
 <title>pgp10factory home</title>
 <link href="style.css" rel="stylesheet" type="text/css" />
 <script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"</script>
+<script language="javascript" type="text/javascript" src="pipeline_render.js"></script>
 <script language="javascript" type="text/javascript" src="home.js"></script>
 </head><body>
 <div style="width: 625px; text-align: left;">
-<h1>PGP-10 Factory</h1>
+<h1>PGP-10 Factory - Home</h1>
 
 <p>Paste a URL to download data via http or https:<br />
 <input name="url" type="text" id="url" value="" size="50" />
@@ -41,6 +43,17 @@ print qq{
 <p id="info_content"></p>
 </div>
 <div id="mystuff"></div>
+<div id="pipeline" style="clear: both;">
+<p>
+<input id="wantreads" name="reads" size="50" /> reads<br />
+<input id="wantgenome" name="reads" size="50" /> genome<br />
+<button onclick="pipeline_submit();">View results</button>
+</p>
+<table><tr><td><p id="pipeline_id"></p></td></tr>
+<tr><td><p id="pipeline_message"></p></td></tr>
+<tr><td><div id="result_content"></div></td></tr>
+</table>
+</div>
 </div>
 </body>
 </html>

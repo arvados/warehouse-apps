@@ -12,7 +12,9 @@ sub init
 {
     my ($q) = @_;
     my %cookies = fetch CGI::Cookie;
-    if ($cookies{'session'}->value =~ /^[0-9a-f]{16}$/ && -d "session/$&")
+    if ($cookies{'session'} &&
+	$cookies{'session'}->value =~ /^[0-9a-f]{16}$/ &&
+	-d "session/$&")
     {
 	$sessionid = $&;
 	@_togo = (new CGI::Cookie (-name => 'session',

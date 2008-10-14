@@ -15,15 +15,19 @@ die "$workdir could not be created / is not writeable" unless -d $workdir && -w 
 
 my $q = new CGI;
 session::init($q);
-print $q->header (-type => "text/plain",
-		  -cookie => [session::togo()]);
 my $sessionid = session::id();
 
 my $want = $q->param ('q');
-if ($want =~ /([0-9a-f]{32}(,[0-9a-f]{32})*)$/)
+if ($want =~ /^([0-9a-f]{32}(,[0-9a-f]{32})*)$/)
 {
     sysopen F, "$workdir/$1", O_WRONLY|O_CREAT|O_EXCL;
     sysopen F, "./session/$sessionid/$1", O_WRONLY|O_CREAT|O_EXCL;
+    print $q->header (-type => "text/plain",
+		      -cookie => [session::togo()]);
+    print "OK";
 }
-
-print "OK";
+else
+{
+    print $q->header (-status => "400 Invalid request");
+    print die;
+}

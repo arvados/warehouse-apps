@@ -19,10 +19,11 @@ print $q->header (-type => "text/plain",
 		  -cookie => [session::togo()]);
 my $sessionid = session::id();
 
-print qq{<table style="background-color: #ddd; border-collapse: collapse; border: 1px solid #000;"><tr><td align="left" style="padding: 5px; border: 1px solid #000;">reads</td><td align="left" style="padding: 5px; border: 1px solid #000;">genomes</td><td align="left" style="padding: 5px; border: 1px solid #000;">unknown</td><td align="left" style="padding: 5px; border: 1px solid #000;">pending</td></tr>};
+print qq{<table style="background-color: #ddd; border-collapse: collapse; border: 1px solid #000;"><tr><td align="left" style="padding: 5px; border: 1px solid #000;">reads</td><td align="left" style="padding: 5px; border: 1px solid #000;">genomes</td><td align="left" style="padding: 5px; border: 1px solid #000;">pipelines</td><td align="left" style="padding: 5px; border: 1px solid #000;">unknown</td><td align="left" style="padding: 5px; border: 1px solid #000;">pending</td></tr>};
 
 my %reads;
 my %genomes;
+my %pipelines;
 my %unknown;
 my %pending;
 my @urls;
@@ -54,6 +55,10 @@ while ($_ = readdir S)
 	    {
 		++$genomes{$datahash};
 	    }
+	    elsif (-e "$workdir/$datahash.ispipeline")
+	    {
+		++$pipelines{$datahash};
+	    }
 	    else
 	    {
 		++$unknown{$datahash};
@@ -66,12 +71,17 @@ while ($_ = readdir S)
     }
 }
 print qq{<tr>};
-foreach (\%reads, \%genomes, \%unknown, \%pending)
+foreach (\%reads, \%genomes, \%pipelines, \%unknown, \%pending)
 {
     my @hashes = sort keys %$_;
     if ($_ eq \%reads || $_ eq \%genomes)
     {
-	map { s{^(.{16})(.*)(.{16})$}{qq{<a href="./?$_">$1}.($2?"...":$2).qq{$3</a>}}e } @hashes;
+	my $what = $_ eq \%reads ? "reads" : "genome";
+	map { s{^(.{8})(.*)(.{8})$}{qq{<a onclick="choose$what('$_');return false;" href="./?$_">$1}.($2?"...":$2).qq{$3</a>}}e } @hashes;
+    }
+    else
+    {
+	map { s{^(.{8})(.+)(.{8})$}{$1...$3} } @hashes;
     }
     print qq{<td valign="top" align="left" style="padding: 5px; border: 1px solid #000;">} . join (qq{<br />}, @hashes) . qq{</td>};
 }

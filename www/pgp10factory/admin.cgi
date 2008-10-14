@@ -39,7 +39,7 @@ while (my $f = readdir D)
 		push @ { $dataset{$datahash}->{sources} }, $url;
 	    }
 	}
-	else
+	elsif (-e "$workdir/$f.isreads")
 	{
 	    my $datahash = $f;
 	    $dataset{$datahash} ||= {};
@@ -56,6 +56,7 @@ print qq{<table>\n};
 print qq{<tr><td><b>data set</b></td><td><b>comment</b></td></tr>\n};
 for my $datahash (sort keys %dataset)
 {
+    next unless -e "$workdir/$datahash.isreads";
     print qq{<tr><td valign="top"><code>};
     print qq{<a href="./?$datahash">};
     print CGI->escapeHTML(substr($datahash,0,33));
@@ -65,7 +66,7 @@ for my $datahash (sort keys %dataset)
     my $commenthash = md5_hex ($dataset{$datahash}->{comment});
     print qq{<textarea rows="3" cols="50" id="$datahash" name="$datahash-$commenthash" onpaste="showsavebutton('$datahash')" onkeypress="showsavebutton('$datahash')">$qcomment</textarea>};
     print qq{<br /><button style="display: none;" id="save-$datahash" onclick="do_save('$datahash')">Save</button>};
-    print qq{<span style="color: #777;"><pre>}, join ("\n", "Downloaded from:", map { CGI->escapeHTML(scrub_auth($_)) } @{$dataset{$datahash}->{sources}}), qq{</pre></span>}
+    print qq{<span style="color: #777;"><pre>}, join ("\n", "Downloaded from:", map { CGI->escapeHTML(scrub_auth($_)) } grep { /\S/ } (@{$dataset{$datahash}->{sources}})[0..5]), qq{</pre></span>}
     if $dataset{$datahash}->{sources};
     print qq{</td></tr>\n};
 }

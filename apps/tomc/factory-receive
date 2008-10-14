@@ -39,7 +39,11 @@ foreach my $hash (sort keys %hash_is)
     else
     {
 	my $chunk = `whget $hash - | gzip -cdf | head -c 20480`;
-	if ($chunk =~ /^(\@\S+\n[A-Z]+\n\+\S+\n\S+\n){4}/s)
+	if ($chunk =~ m{^\.(/\S+)? ([0-9a-f]{32}[^\'\s]*) [0-9a-f]}s)
+	{
+	    $chunk = `whget '$2' - | gzip -cdf | head -c 20480`;
+	}
+	if ($chunk =~ m{^(\@\S+\n[A-Z]+\n\+\S+\n\S+\n){4}}s)
 	{
 	    sysopen F, "$workdir/$hash.isreads", O_WRONLY|O_CREAT|O_EXCL;
 	    close F;

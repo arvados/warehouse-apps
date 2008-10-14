@@ -112,6 +112,7 @@ sub fillflow
 		knobs => makeknobs
 		    ("fasta2bfa",
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     "REMOVE_LC=0",
 		    ),
 	      } );
 	$flow->{json}->{pipeline} = [ {
@@ -147,6 +148,43 @@ sub fillflow
 			sol2bfq => ["INPUTFORMAT=std"],
 		    } );
     }
+    elsif (-e "$workdir/$in.ispipeline")
+    {
+	$flow->{json}->{id} = $in;
+
+	sysopen F, "$workdir/$in.ispipeline", O_RDONLY;
+	my @spec = <F>;
+	chomp @spec;
+	my $whatpipeline = shift @spec;
+	$whatpipeline =~ s/^pipeline=//;
+	my %override_was = %override;
+	my %spec;
+	foreach (@spec)
+	{
+	    my ($k, $v) = split ('=', $_, 2);
+	    if ($k =~ m{/}) { $override{$k} = $v; }
+	    else { $spec{$k} = $v; }
+	}
+	if ($whatpipeline eq "maq")
+	{
+	    if ($spec{"reads"} && $spec{"genome"})
+	    {
+		fillpipeline ($spec{"reads"}, $flow,
+			      { label => "maq",
+				genome => $spec{"genome"}
+			      });
+	    }
+	    else
+	    {
+		$flow->{json}->{message} = "Need to specify reads and genome1";
+	    }
+	}
+	else
+	{
+	    $flow->{json}->{message} = "Unknown pipeline: \"$whatpipeline\".";
+	}
+	%override = %override_was;
+    }
     if (open F, "<", "$workdir/$in.comment")
     {
 	local $/ = undef;
@@ -159,10 +197,32 @@ sub fillflow
 sub fillpipeline
 {
     my ($in, $flow, $pipeline) = @_;
+
     my $ref = $pipeline->{REFERENCE};
     my $reffile = $pipeline->{REFERENCEFILE};
+    my @jsonjob_reference;
 
     my $me = $flow->{$pipeline->{label}} = {};
+
+    if (!$ref && $pipeline->{genome})
+    {
+	$me->{fasta2bfa} = findjob
+	    ( { mrfunction => "fasta2bfa",
+		revision => [ 2334, ],
+		inputkey => $pipeline->{genome},
+		knobs => makeknobs
+		    ("fasta2bfa",
+		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     "REMOVE_LC=0",
+		     ),
+	      } );
+	if ($me->{fasta2bfa} && $me->{fasta2bfa}->{outputkey})
+	{
+	    $ref = $me->{fasta2bfa}->{outputkey};
+	    $reffile = "ref.bfa";
+	}
+	@jsonjob_reference = (jsonjob ("Prepare reference", $me->{fasta2bfa}));
+    }
 
     $me->{sol2bfq} = findjob
 	( { mrfunction => "sol2bfq",
@@ -174,7 +234,7 @@ sub fillpipeline
 		),
 	} ) unless $me->{sol2bfq};
 
-    if ($me->{sol2bfq} && $me->{sol2bfq}->{outputkey})
+    if ($ref && $me->{sol2bfq} && $me->{sol2bfq}->{outputkey})
     {
 	$me->{map} = findjob
 	    ( { mrfunction => "maq-map",
@@ -264,7 +324,8 @@ sub fillpipeline
 	    image => mapcheck_png ($me->{merge}),
 	    job => [
 		    jsonjob ("Request", { outputfiles => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$in/=/$in.gz'>input data</a>"], success => 1 }),
-		    jsonjob ("Prepare input", $me->{sol2bfq}),
+		    @jsonjob_reference,
+		    jsonjob ("Prepare reads", $me->{sol2bfq}),
 		    jsonjob ("Map", $me->{map}),
 		    jsonjob ("Merge", $me->{merge}),
 		    jsonjob ("Mapview", $me->{mapview}),
@@ -498,7 +559,7 @@ sub fork_downloader
     syswrite F, $url;
     close F;
 
-    my $key = `wget -O - '$url' 2>>$workfile.wget-log | whput -`;
+    my $key = `wget -O - '$url' 2>>$workfile.wget-log | whput --in-manifest -`;
     chomp $key;
     if ($?)
     {
@@ -506,6 +567,7 @@ sub fork_downloader
 	close F;
 	exit 0;
     }
+    $key =~ s/\+[^,]*//g;
     symlink "$key", "$workfile.stored";
     rename "$workfile.lock", "$workfile.fetched";
     exit 0;
