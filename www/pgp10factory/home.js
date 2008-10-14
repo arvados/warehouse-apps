@@ -3,7 +3,7 @@ var pe;
 function download_check(pe)
 {
     if ($('requestid').value)
-	new Ajax.Request('queue-download.cgi', {
+	new Ajax.Request('ajax-add-url.cgi', {
 		parameters: { q: $('requestid').value },
 		    onSuccess: function(req) {
 		    json = req.responseText.evalJSON();
@@ -14,7 +14,7 @@ function download_check(pe)
 
 function download_button()
 {
-    new Ajax.Request('queue-download.cgi', {
+    new Ajax.Request('ajax-add-url.cgi', {
 	    parameters: { q: $('url').value },
 	    onSuccess: function(req) {
 		json = req.responseText.evalJSON();
@@ -25,7 +25,7 @@ function download_button()
 
 function addexisting_button()
 {
-    new Ajax.Request('add-to-session.cgi', {
+    new Ajax.Request('ajax-add-hash.cgi', {
 	    parameters: { q: $('hash').value }
     });
 }
@@ -58,7 +58,7 @@ function choosegenome(hash)
 
 function pipeline_submit()
 {
-    new Ajax.Request('add-to-pipelines.cgi', {
+    new Ajax.Request('ajax-add-pipeline.cgi', {
 	    parameters: {
 		reads: $('wantreads').value,
 		genome: $('wantgenome').value
