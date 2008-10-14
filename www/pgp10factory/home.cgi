@@ -26,15 +26,16 @@ print qq{
 <div style="width: 625px; text-align: left;">
 <h1>PGP-10 Factory - Home</h1>
 
-<p>Paste a URL to download data via http or https:<br />
-<input name="url" type="text" id="url" value="" size="50" />
-<button onclick="download_button()">Download to warehouse</button>
-<br />Use "http://user:password\@host/path/file" if the server requires HTTP authentication.
-</p>
+<input type="hidden" id="panel_showhide" value="download">
 
-<p>Paste an MD5 signature to add warehouse data to your stuff below:<br />
-<input name="hash" type="text" id="hash" value="" size="50" />
-<button onclick="addexisting_button()">Add to my session</button>
+<table id="toptabs"><tr><th width="1"><a href="#" onclick="panel_showhide('download');">Download/Import</a></th><th width="1"><a href="#" onclick="panel_showhide('manage');">Manage&nbsp;Data</a></th><th width="1"><a href="#" onclick="panel_showhide('build');">Build&nbsp;Pipelines</a></th><th width="*" style="background-color: #fff; border: none;"></th></tr>
+<tr><td colspan="4">
+
+<div id="panel_download">
+
+<p>Paste a URL to download data via http or https:<br />
+<input name="url" type="text" id="url" value="" size="50" /><button onclick="download_button()">Download to warehouse</button>
+<br />Use "http://user:password\@host/path/file" if the server requires HTTP authentication.
 </p>
 
 <input name="requestid" type="hidden" id="requestid" />
@@ -42,11 +43,25 @@ print qq{
 <div id="info_window" align="center">
 <p id="info_content"></p>
 </div>
+
+<p>Paste an MD5 signature to add warehouse data to your stuff below:<br />
+<input name="hash" type="text" id="hash" value="" size="50" /><button onclick="addexisting_button()">Add to my session</button>
+</p>
+
+
+</div>
+<div id="panel_manage" style="display: none;">
+
 <div id="mystuff"></div>
+
+</div>
+<div id="panel_build" style="display: none;">
+
+
 <div id="pipeline" style="clear: both;">
 <p>
-<input id="wantreads" name="reads" size="50" /> reads<br />
-<input id="wantgenome" name="reads" size="50" /> genome<br />
+<select id="selectreads" name="reads" size="1" onclick="select_populate('selectreads', 'reads')"><option value="">Select reads</option></select><br />
+<select id="selectgenome" name="genome" size="1" onclick="select_populate('selectgenome', 'genome')"><option value="">Select genome</option></select><br />
 <button onclick="pipeline_submit();">View results</button>
 </p>
 <table><tr><td><p id="pipeline_id"></p></td></tr>
@@ -54,6 +69,10 @@ print qq{
 <tr><td><div id="result_content"></div></td></tr>
 </table>
 </div>
+
+</div>
+</td></tr></table>
+
 </div>
 </body>
 </html>

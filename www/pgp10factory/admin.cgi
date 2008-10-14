@@ -56,7 +56,7 @@ print qq{<table>\n};
 print qq{<tr><td><b>data set</b></td><td><b>comment</b></td></tr>\n};
 for my $datahash (sort keys %dataset)
 {
-    next unless -e "$workdir/$datahash.isreads";
+    next unless -e "$workdir/$datahash.isreads" || "$workdir/$datahash.isgenome";
     print qq{<tr><td valign="top"><code>};
     print qq{<a href="./?$datahash">};
     print CGI->escapeHTML(substr($datahash,0,33));

@@ -19,74 +19,82 @@ print $q->header (-type => "text/plain",
 		  -cookie => [session::togo()]);
 my $sessionid = session::id();
 
-print qq{<table style="background-color: #ddd; border-collapse: collapse; border: 1px solid #000;"><tr><td align="left" style="padding: 5px; border: 1px solid #000;">reads</td><td align="left" style="padding: 5px; border: 1px solid #000;">genomes</td><td align="left" style="padding: 5px; border: 1px solid #000;">pipelines</td><td align="left" style="padding: 5px; border: 1px solid #000;">unknown</td><td align="left" style="padding: 5px; border: 1px solid #000;">pending</td></tr>};
-
-my %reads;
-my %genomes;
-my %pipelines;
-my %unknown;
-my %pending;
+my %objects = (reads => {},
+	       genomes => {},
+	       pipelines => {},
+	       unknown => {},
+	       pending => {},
+    );
 my @urls;
 
+my %todo;
 opendir S, "./session/$sessionid";
-while ($_ = readdir S)
+for (sort (readdir S))
 {
     next if /^\.\.?$/;
-    if (/^([0-9a-f]{32}(?:,[0-9a-f]{32})*)(?:\.(.*))?$/) {
+    if (/(.*)\.isurl$/)
+    {
+	my $datahash = readlink "$workdir/$1.stored";
+	$todo{$datahash} = 1 if $datahash;
+    }
+    elsif (/^([0-9a-f]{32}(?:,[0-9a-f]{32})*)$/)
+    {
+	$todo{$_} = 1;
+    }
+}
+closedir S;
+for (sort keys %todo)
+{
+    next if /^\.\.?$/;
+    if (/^([0-9a-f]{32}(?:,[0-9a-f]{32})*)$/) {
 	my $hash = $1;
-	my $ext = $2;
-	my $datahash;
-	if (!defined $ext)
-	{
-	    $datahash = $hash;
-	}
-	elsif ($ext eq "isurl")
-	{
-	    push @urls, $hash;
-	    $datahash = readlink "$workdir/$hash.stored";
-	}
+	my $datahash = $hash;
 	if ($datahash)
 	{
 	    if (-e "$workdir/$datahash.isreads")
 	    {
-		++$reads{$datahash};
+		++$objects{reads}->{$datahash};
 	    }
 	    elsif (-e "$workdir/$datahash.isgenome")
 	    {
-		++$genomes{$datahash};
+		++$objects{genomes}->{$datahash};
 	    }
 	    elsif (-e "$workdir/$datahash.ispipeline")
 	    {
-		++$pipelines{$datahash};
+		++$objects{pipelines}->{$datahash};
 	    }
 	    else
 	    {
-		++$unknown{$datahash};
+		++$objects{unknown}->{$datahash};
 	    }
 	}
 	else
 	{
-	    ++$pending{$hash};
+	    ++$objects{pending}->{$hash};
 	}
     }
 }
-print qq{<tr>};
-foreach (\%reads, \%genomes, \%pipelines, \%unknown, \%pending)
-{
-    my @hashes = sort keys %$_;
-    if ($_ eq \%reads || $_ eq \%genomes)
-    {
-	my $what = $_ eq \%reads ? "reads" : "genome";
-	map { s{^(.{8})(.*)(.{8})$}{qq{<a onclick="choose$what('$_');return false;" href="./?$_">$1}.($2?"...":$2).qq{$3</a>}}e } @hashes;
-    }
-    else
-    {
-	map { s{^(.{8})(.+)(.{8})$}{$1...$3} } @hashes;
-    }
-    print qq{<td valign="top" align="left" style="padding: 5px; border: 1px solid #000;">} . join (qq{<br />}, @hashes) . qq{</td>};
-}
-print qq{</tr>};
 
+print qq{<table id="manage_data">};
+
+foreach my $obtype (qw(reads genomes pipelines unknown pending))
+{
+    my @hashes = sort keys % { $objects{$obtype} };
+    print qq{<tr><th colspan="4">$obtype</th></tr>};
+    foreach my $label (@hashes)
+    {
+	my $datahash = $label;
+	$label =~ s{^(.{35})(.+)$}{$1...};
+	my $comment = "";
+	if (open (F, "<", "./session/$sessionid/$datahash.comment") ||
+	    open (F, "<", "$workdir/$datahash.comment"))
+	{
+	    local $/ = undef;
+	    $comment = $q->escapeHTML (scalar <F>);
+	}
+	print qq{<tr><td>$label</td><td><input type="text" name="$datahash" id="$datahash" size=40 value="$comment" onpaste="showsavebutton('$datahash')" onkeypress="showsavebutton('$datahash')" /></td><td><button id="save-$datahash" style="display: none;" onclick="comment_save('$datahash')">Save</button><input type="hidden" id="hidden-$datahash" /></td></tr>\n};
+    }
+}
 print qq{</table>};
 
 
