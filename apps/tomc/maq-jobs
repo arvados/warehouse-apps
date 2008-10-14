@@ -553,13 +553,14 @@ sub fork_downloader
     exit 0 unless flock L, LOCK_EX;
     exit 1 unless open U, "<", "$workfile.isurl";
     my ($url) = <U>;
-    $url =~ s/\'/\'\\\'\'/g;
+    my $url_quoted = $url;
+    $url_quoted =~ s/\'/\'\\\'\'/g;
 
     sysopen (F, "$workfile.lock", O_WRONLY|O_CREAT|O_EXCL) or exit 1;
     syswrite F, $url;
     close F;
 
-    my $key = `wget -O - '$url' 2>>$workfile.wget-log | whput --in-manifest -`;
+    my $key = `wget -O - '$url_quoted' 2>>$workfile.wget-log | whput --in-manifest -`;
     chomp $key;
     if ($?)
     {
@@ -570,7 +571,19 @@ sub fork_downloader
     $key =~ s/\+[^,]*//g;
     symlink "$key", "$workfile.stored";
     rename "$workfile.lock", "$workfile.fetched";
+    if (sysopen F, "$workdir/$key.comment", O_WRONLY|O_CREAT|O_EXCL)
+    {
+	syswrite F, scrub_auth ($url);
+	close F;
+    }
     exit 0;
+}
+
+sub scrub_auth
+{
+    local $_ = shift;
+    s{^([^/]+//)[^/]+\@}{$1***:***\@};
+    $_;
 }
 
 
