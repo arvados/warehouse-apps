@@ -40,18 +40,17 @@ else
     $whc->write_data ($manifest);
     my $manifest_key = $whc->write_finish;
 
-    print "Manifest key is: $manifest_key\n";
-
+    print "$manifest_key\n";
 
     if (my $manifestname = $opt{"name"})
     {
-	print "storing: $manifestname => $manifest_key\n";
+	print STDERR "storing: $manifestname => $manifest_key\n" if $opt{"verbose"};
 
 	my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
 	$whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
 
 	my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
-	print "fetch says: $manifestname => $checkkey\n";
+	print STDERR "$manifestname => $checkkey\n" if $opt{"verbose"};
     }
 }
 
@@ -68,8 +67,9 @@ sub write_file
 	open F, "<", $filename or die "Can't open $filename: $!";
     }
     my $s = new Warehouse::Stream (whc => $whc);
+    $s->name (".");
     $s->clear;
-    $s->write_start ("-");
+    $s->write_start ($opt{"use-filename"} || (split("/", $filename))[-1]);
     my $buf;
     my $ok;
     while ($ok = read F, $buf, 2**26)
@@ -79,8 +79,18 @@ sub write_file
     die "Error reading $filename: $!" if !defined $ok;
     close F;
     $s->write_finish;
-    my $k = $s->as_key;
-    print "$k\n";
+    if ($opt{"in-manifest"})
+    {
+	$whc->write_start;
+	$whc->write_data ($s->as_string);
+	my $k = join (",", $whc->write_finish);
+	print "$k\n";
+    }
+    else
+    {
+	my $k = $s->as_key;
+	print "$k\n";
+    }
 }
 
 
@@ -187,10 +197,13 @@ sub usage
 usage:
     $0 [options] localdir
     $0 [options] localfile
+    $0 [options] -
 options:
     --warehouse-controllers=host:port
     --mogilefs-trackers=host:port,host:port
     --name=/manifestname
+    --in-manifest
+    --use-filename=read-from-stdin.txt
 
 };
 }
