@@ -48,34 +48,75 @@ function download_update(json) {
 
 function fewerpipelines()
 {
-    for (var i=1; i<999; i++)
-	if ($('pipeline_cell_'+i)) {
-	    if ($('pipeline_cell_'+i).style.display == 'none') {
-		$('pipeline_cell_'+(i-1)).style.display = 'none';
-		return;
-	    }
-	} else
-	    return;
+    for (var i=1;
+	 i<999 && $('pipeline_cell_'+i);
+	 i++)
+	if ($('pipeline_cell_'+i).style.display == 'none') {
+	    $('pipeline_cell_'+(i-1)).style.display = 'none';
+	    break;
+	}
+    pipeline_layout_stash();
 }
 
 function morepipelines()
 {
-    for (var i=0; i<999; i++)
-	if ($('pipeline_cell_'+i)) {
-	    if ($('pipeline_cell_'+i).style.display == 'none') {
-		$('pipeline_cell_'+i).style.display = '';
-		return;
-	    }
-	} else
-	    return;
+    for (var i=0;
+	 i<999 && $('pipeline_cell_'+i);
+	 i++)
+	if ($('pipeline_cell_'+i).style.display == 'none') {
+	    $('pipeline_cell_'+i).style.display = '';
+	    break;
+	}
+    pipeline_layout_stash();
+}
+
+function pipeline_layout_stash()
+{
+    var layout = [];
+    for (var i = 0;
+	 i < 999 &&
+	     $('pipeline_cell_'+i) &&
+	     $('pipeline_cell_'+i).style.display != 'none';
+	 i++)
+	layout.push ({
+		reads: $('selectedreads_'+i).value,
+		genome: $('selectedgenome_'+i).value,
+		position: i
+		    });
+    var newjson = layout.toJSON();
+    if (newjson != $('layout_stash').value) {
+	$('layout_stash').value = newjson;
+	$('layout_save').innerHTML = 'Save this layout';
+	$('layout_save').disabled = false;
+	$('layout_link').update ('');
+    }
+}
+
+function pipeline_layout_save()
+{
+    pipeline_layout_stash();
+    new Ajax.Request('ajax-add-layout.cgi', {
+	    parameters: { layout: $('layout_stash').value },
+	    onSuccess: function(response) {
+		$('layout_save').disabled = true;
+		$('layout_link').innerHTML = '<a href=\"./home.cgi?'+response.responseText+'\">Link to this layout</a>';
+	    }});
 }
 
 function pipeline_submit(position)
 {
+    $('selectedreads_'+position).value = $('selectreads_'+position).value;
+    $('selectedgenome_'+position).value = $('selectgenome_'+position).value;
+    pipeline_layout_stash();
+    pipeline_request(position);
+}
+
+function pipeline_request(position)
+{
     new Ajax.Request('ajax-add-pipeline.cgi', {
 	    parameters: {
-		reads: $('selectreads_'+position).value,
-		genome: $('selectgenome_'+position).value,
+		reads: $('selectedreads_'+position).value,
+		genome: $('selectedgenome_'+position).value,
 		position: position
 		    },
 	    onSuccess: function(response) {
@@ -116,6 +157,11 @@ function pipeline_update(response)
     }
 }
 
+function enable_updatebutton(position)
+{
+    $('updatebutton_'+position).disabled=false;
+}
+
 function home_update(pe)
 {
     for (var i=0; $('pipeline_id_'+i); i++)
@@ -130,8 +176,10 @@ function home_update(pe)
 function panel_showhide(id)
 {
     var panels = Array ('download', 'manage', 'build');
-    for (i=0; i<panels.length; i++)
+    for (i=0; i<panels.length; i++) {
 	$('panel_'+panels[i]).style.display = (panels[i] == id ? 'block' : 'none');
+	$('tab_'+panels[i]).style.backgroundColor = (panels[i] == id ? '#fff' : '#ddd');
+    }
     $('panel_showhide').value = id;
     return false;
 }
@@ -177,24 +225,55 @@ function comment_save(datahash)
     });
 }
 
-function select_populate(id, withwhat)
+function select_populate(position, withwhat)
 {
-    if ($(id).value != '')
+    var widget = 'select'+withwhat+'_'+position;
+    var stash = 'selected'+withwhat+'_'+position;
+    if ($(widget).value != '')
 	return;
     new Ajax.Request ('ajax-get.cgi', {
 	    method: 'post',
-	    parameters: { what: withwhat, id: id, as: 'select' },
+	    parameters: { what: withwhat, widget: widget, stash: stash, as: 'select' },
 	    onSuccess:
 	    function(response)	{
-		var id = response.request.parameters.id;
-		$(id).innerHTML = response.responseText;
+		var widget = response.request.parameters.widget;
+		var stash = response.request.parameters.stash;
+		$(widget).innerHTML = response.responseText;
+		$(widget).value = $(stash).value;
 	    }
     });
 }
 
+function initialize_from_layout_stash()
+{
+    if (!$('layout_stash') || $('layout_stash').value == '')
+	return false;
+    var layout = $('layout_stash').value.evalJSON();
+    for(var i=0;
+	i < 999 &&
+	    $('pipeline_id_'+i);
+	i++) {
+	if (i >= layout.length)
+	    $('pipeline_cell_'+i).style.display = 'none';
+	else {
+	    if (layout[i].reads != '' && layout[i].genome != '') {
+		$('selectedreads_'+i).value = layout[i].reads;
+		$('selectedgenome_'+i).value = layout[i].genome;
+		select_populate(i, 'reads');
+		select_populate(i, 'genome');
+		pipeline_request(i);
+	    }
+	    $('pipeline_cell_'+i).style.display = '';
+	}
+    }
+    panel_showhide ('build');
+    return true;
+}
+
 window.onload = function() {
-    if ($('panel_showhide'))
-	panel_showhide ($('panel_showhide').value);
+    if (!initialize_from_layout_stash())
+	if ($('panel_showhide'))
+	    panel_showhide ($('panel_showhide').value);
     pe = new PeriodicalExecuter (home_update, 5);
     home_update(pe);
 };

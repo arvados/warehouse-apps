@@ -19,6 +19,14 @@ my $sessionid = session::id();
 
 
 my $json = $q->param ("layout");
-open F, ">", "/tmp/json.tmp";
-print F $json;
-print "d41d8cd98f00b204e9800998ecf8427e";
+my $jsonhash = md5_hex ($json);
+if ((sysopen (F, "$workdir/$jsonhash.islayout", O_WRONLY|O_CREAT|O_EXCL) &&
+     sysopen (F, "$workdir/$jsonhash", O_WRONLY|O_CREAT|O_EXCL) &&
+     syswrite (F, $json) == length $json &&
+     close F)
+    ||
+    (open (F, "<", "$workdir/$jsonhash") &&
+     scalar <F> eq $json))
+{
+    print "$jsonhash";
+}

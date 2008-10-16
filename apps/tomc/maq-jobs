@@ -177,7 +177,7 @@ sub fillflow
 	    }
 	    else
 	    {
-		$flow->{json}->{message} = "Need to specify reads and genome1";
+		$flow->{json}->{message} = "Need to specify reads and genome";
 	    }
 	}
 	else
@@ -186,6 +186,12 @@ sub fillflow
 	}
 	%override = %override_was;
     }
+    else
+    {
+	print "# skipped $in, don\'t know what it is.\n";
+	next;
+    }
+
     if (open F, "<", "$workdir/$in.comment")
     {
 	local $/ = undef;
