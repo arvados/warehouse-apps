@@ -27,7 +27,7 @@ push @pipelinespec, "sol2bfq/INPUTFORMAT=std" if $q->param ("std");
 
 my $spec = join ("\n", @pipelinespec)."\n";
 my $specmd5 = md5_hex ($spec);
-$json = qq{{ "workflow": { "id": "$specmd5", "message": "Pipeline submitted to local queue." } }\n};
+my $json = qq{{ "workflow": { "id": "$specmd5", "message": "Pipeline submitted to local queue." } }\n};
 
 if (sysopen F, "$workdir/$specmd5.ispipeline", O_WRONLY|O_CREAT|O_EXCL)
 {
@@ -38,7 +38,7 @@ if (!sysopen F, "$workdir/$specmd5", O_WRONLY|O_CREAT|O_EXCL)
     if (sysopen F, "$workdir/$specmd5", O_RDONLY)
     {
 	local $/ = undef;
-	my $json = <F>;
+	$json = <F>;
 	close F;
     }
 }
