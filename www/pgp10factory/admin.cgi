@@ -14,7 +14,7 @@ print qq{
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
 <title>pgp10factory admin</title>
-<script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"</script>
+<script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"></script>
 <script language="javascript" type="text/javascript" src="admin.js"></script>
 </head><body>
 <h1>PGP-10 Factory - Admin</h1>

@@ -75,7 +75,7 @@ for (sort keys %todo)
     }
 }
 
-print qq{<table id="manage_data">};
+print qq{<table class="manage_data">};
 
 foreach my $obtype (qw(reads genomes pipelines unknown pending))
 {

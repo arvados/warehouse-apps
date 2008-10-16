@@ -1,13 +1,13 @@
-function pipeline_render(json) {
-    $('result_content').update();
+function pipeline_render(id, json) {
     if(json.workflow) {
+	$('result_content_'+id).update();
 	for(i=0;i<json.workflow.pipeline.length;i++) {
 	    var cur_line = json.workflow.pipeline[i];
-	    $('result_content').insert({bottom: '<div id=\"pipeline_'+i+'\" class=\"pipeline\" style=\"text-align: center;\"><h2>'+cur_line.label+'</h2></div>'});
+	    $('result_content_'+id).insert({bottom: '<div id=\"pipeline_'+id+'_'+i+'\" class=\"pipeline\" style=\"text-align: center;\"><h2>'+cur_line.label+'</h2></div>'});
 
 	    // Now check for jobs
 	    if(cur_line.job.length > 0) {
-		$('pipeline_'+i).insert({bottom: '<table id=\"pipelinejobs_'+i+'\" align=\"center\"></table>'});
+		$('pipeline_'+id+'_'+i).insert({bottom: '<table id=\"pipelinejobs_'+id+'_'+i+'\" align=\"center\"></table>'});
 		for(o=0;o<cur_line.job.length;o++) {
 		    var cur_job = cur_line.job[o];
 		    var image_tag = '';
@@ -30,11 +30,17 @@ function pipeline_render(json) {
 			}
 		    }
 						
-		    $('pipelinejobs_'+i).insert({bottom: '<tr><td width=\"35\" align=\"left\" height=\"30\">'+image_tag+'</td><td align=\"left\">'+cur_job.label+'</td><td>'+job_id+'</td><td align=left style=\"padding-left: 4px;\">'+output_files+'</td></tr>'});
+		    $('pipelinejobs_'+id+'_'+i).insert({bottom: '<tr><td width=\"35\" align=\"left\" height=\"30\">'+image_tag+'</td><td align=\"left\">'+cur_job.label+'</td><td>'+job_id+'</td><td align=left style=\"padding-left: 4px;\">'+output_files+'</td></tr>'});
 		}
 	    }
 	    if (cur_line.image)
-		$('pipeline_'+i).insert({bottom: '<img style=\"border: 1px solid #000; margin-bottom: 5px; margin-top: 5px;\" src=\"cache/'+cur_line.image+'\" />'});
+		$('pipeline_'+id+'_'+i).insert({bottom: '<img style=\"border: 1px solid #000; margin-bottom: 5px; margin-top: 5px;\" src=\"cache/'+cur_line.image+'\" />'});
 	}
     }
+}
+
+function pipeline_retryjob(id)
+{
+    new Ajax.Request('ajax-retryjob.cgi', { parameters: { id: id } });
+    $('retry-'+id).disabled = true;
 }

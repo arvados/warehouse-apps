@@ -46,48 +46,80 @@ function download_update(json) {
     $('info_window').style.display = 'none';
 }
 
-function pipeline_submit()
+function fewerpipelines()
+{
+    for (var i=1; i<999; i++)
+	if ($('pipeline_cell_'+i)) {
+	    if ($('pipeline_cell_'+i).style.display == 'none') {
+		$('pipeline_cell_'+(i-1)).style.display = 'none';
+		return;
+	    }
+	} else
+	    return;
+}
+
+function morepipelines()
+{
+    for (var i=0; i<999; i++)
+	if ($('pipeline_cell_'+i)) {
+	    if ($('pipeline_cell_'+i).style.display == 'none') {
+		$('pipeline_cell_'+i).style.display = '';
+		return;
+	    }
+	} else
+	    return;
+}
+
+function pipeline_submit(position)
 {
     new Ajax.Request('ajax-add-pipeline.cgi', {
 	    parameters: {
-		reads: $('selectreads').value,
-		genome: $('selectgenome').value
+		reads: $('selectreads_'+position).value,
+		genome: $('selectgenome_'+position).value,
+		position: position
 		    },
-	    onSuccess: function(req) {
-		json = req.responseText.evalJSON();
-		pe.pipeline_id = json.id;
-		pipeline_check (pe);
+	    onSuccess: function(response) {
+		var json = response.responseText.evalJSON();
+		var position = response.request.parameters.position;
+		$('pipeline_id_'+position).update (json.workflow.id);
+		pipeline_update (response);
 	    }
     });
-    $('result_content').update();
+    $('result_content_'+position).update();
 }
 
-function pipeline_check(pe)
+function pipeline_check(pe, position)
 {
-    if (pe.pipeline_id) {
-	new Ajax.Request('post.cgi', {
-		parameters: { q: pe.pipeline_id },
+    if ($('pipeline_id_'+position).innerHTML) {
+	    new Ajax.Request('post.cgi', {
+		    parameters: {
+			q: $('pipeline_id_'+position).innerHTML,
+			position: position },
 		    onSuccess: function(req) {
-		    pipeline_update (req);
-		}
-	});
+			pipeline_update (req);
+		    }
+	    });
     }
 }
 
-function pipeline_update(req)
+function pipeline_update(response)
 {
-    var json = req.responseText.evalJSON();
+    var json = response.responseText.evalJSON();
+    var position = response.request.parameters.position;
     if (json && json.workflow.id) {
-	$('pipeline_id').update ('Pipeline id:<br>'+json.workflow.id);
+	$('pipeline_id_'+position).update (json.workflow.id);
 	if (json.workflow.message)
-	    $('pipeline_message').update (json.workflow.message);
-	pipeline_render (json);
+	    $('pipeline_message_'+position).update (json.workflow.message);
+	else
+	    $('pipeline_message_'+position).update ();
+	pipeline_render (position, json);
     }
 }
 
 function home_update(pe)
 {
-    pipeline_check(pe);
+    for (var i=0; $('pipeline_id_'+i); i++)
+	pipeline_check(pe, i);
     download_check(pe);
     if (!pe.save_buttons_showing)
 	new Ajax.Request('ajax-mystuff.cgi', {

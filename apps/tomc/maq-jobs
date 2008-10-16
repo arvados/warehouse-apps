@@ -33,13 +33,14 @@ for (@$joblist)
 }
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
-my %already_did_cmd;
+my %new_job_id;
 
 
 opendir (D, $workdir) or die "$workdir: $!";
 for my $workfile (readdir D)
 {
     next if $workfile =~ /\./;
+    next if $workfile !~ /^[0-9a-f]{32}/;
     fillflow ($workfile);
 }
 closedir D;
@@ -382,11 +383,16 @@ sub findjob
 	}
     }
     mention_failed_job ($failed) if !$queued && $failed;
-    suggest_new_job ($want) if !$queued && !$want->{quiet} && (!$failed || $override{retryfailed});
+    return start_new_job ($want)
+	if (!$queued &&
+	    !$want->{quiet} &&
+	    (!$failed
+	     || -e "$workdir/retryfailed-".$failed->{id}
+	     || $override{retryfailed}));
     return $queued || $failed;
 }
 
-sub suggest_new_job
+sub start_new_job
 {
     my $want = shift;
     my $nodes = $want->{nodes} || 1;
@@ -397,8 +403,17 @@ sub suggest_new_job
     my $knobs = $want->{knobs};
     $knobs =~ s{=(.*?)(\\n|$)}{='$1' }g;
     my $cmd = "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs\n";
+    return if $new_job_id{$cmd};
     print "$cmd\n";
-    system "$cmd" unless (++$already_did_cmd{$cmd} > 1);
+    my $id = `$cmd`;
+    chomp $id;
+    print "$id\n";
+    return if $id !~ /^\d+$/;
+    $new_job_id{$cmd} = $id;
+    my $newjoblist = $whc->job_list (id_min => $id, id_max => $id);
+    ($Job{$id}) = $newjoblist->[0];
+    push @Job, $newjoblist->[0];
+    return $Job{$id};
 }
 
 sub mention_failed_job
@@ -506,6 +521,15 @@ sub jsonjob
 	if ($x->{status} eq "done" && $job->{outputfiles})
 	{
 	    $x->{outputfiles} = $job->{outputfiles};
+	}
+	if ($x->{status} eq "fail" && $job->{metakey})
+	{
+	    my $id = $job->{id};
+	    my $meta = $job->{metakey};
+	    $x->{outputfiles} = [
+		qq{<a href="http://templeton-controller.freelogy.org/whget.cgi/$meta.txt">view errors</a>},
+		qq{<button id="retry-$id" onclick="pipeline_retryjob($id);">retry job</button>},
+		];
 	}
     }
     return $x;

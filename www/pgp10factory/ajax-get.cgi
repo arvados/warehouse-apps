@@ -46,7 +46,7 @@ closedir S;
 for my $hash (sort keys %todo)
 {
     my $shortname = $hash;
-    $shortname =~ s/(.{33}).*/$1.../;
+    $shortname =~ s/(.{8}).*/$1.../;
 
     my $comment = "";
     if (open (F, "<", "./session/$sessionid/$hash.comment") ||

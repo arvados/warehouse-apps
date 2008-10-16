@@ -35,28 +35,37 @@ h3 {
 	border: 1px solid #333;
 }
 
-#toptabs {
+.workflow table td {
+    border: 0;
+    padding: 0;
+}
+
+.toptabs {
     border-collapse: collapse;
 }
-#toptabs th {
+.toptabs th {
     border: 1px solid #000;
     padding: 10px;
     background-color: #ddd;
 }
-#toptabs td {
+.toptabs td {
     border: 1px solid #000;
     padding: 10px;
 }
 
-#manage_data {
+.manage_data {
     border-collapse: collapse;
 }
-#manage_data th {
+.manage_data th {
     border: 1px solid #000;
     padding: 5px;
     background-color: #eee;
 }
-#manage_data td {
+.manage_data td {
     border: none;
     padding: 0;
+}
+
+select {
+    font-size: 8pt;
 }

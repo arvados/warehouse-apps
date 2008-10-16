@@ -19,7 +19,7 @@ print qq{
 <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
 <title>pgp10factory home</title>
 <link href="style.css" rel="stylesheet" type="text/css" />
-<script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"</script>
+<script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"></script>
 <script language="javascript" type="text/javascript" src="pipeline_render.js"></script>
 <script language="javascript" type="text/javascript" src="home.js"></script>
 </head><body>
@@ -28,7 +28,7 @@ print qq{
 
 <input type="hidden" id="panel_showhide" value="download">
 
-<table id="toptabs"><tr><th width="1"><a href="#" onclick="panel_showhide('download');">Download/Import</a></th><th width="1"><a href="#" onclick="panel_showhide('manage');">Manage&nbsp;Data</a></th><th width="1"><a href="#" onclick="panel_showhide('build');">Build&nbsp;Pipelines</a></th><th width="*" style="background-color: #fff; border: none;"></th></tr>
+<table class="toptabs"><tr><th width="1"><a href="#" onclick="panel_showhide('download');">Download/Import</a></th><th width="1"><a href="#" onclick="panel_showhide('manage');">Manage&nbsp;Data</a></th><th width="1"><a href="#" onclick="panel_showhide('build');">Build&nbsp;Pipelines</a></th><th width="*" style="background-color: #fff; border: none;"></th></tr>
 <tr><td colspan="4">
 
 <div id="panel_download">
@@ -59,15 +59,33 @@ print qq{
 
 
 <div id="pipeline" style="clear: both;">
+<button onclick="fewerpipelines();">Fewer pipelines</button>
+<button onclick="morepipelines();">More pipelines</button>
+<br />
+<table><tr>
+};
+for (my $PID = 0; $PID < 16; $PID++)
+{
+    my $hiddenstyle = $PID >= 3 ? qq{ style="display: none;"} : "";
+    print qq{
+<td valign="top" id="pipeline_cell_$PID"$hiddenstyle>
 <p>
-<select id="selectreads" name="reads" size="1" onclick="select_populate('selectreads', 'reads')"><option value="">Select reads</option></select><br />
-<select id="selectgenome" name="genome" size="1" onclick="select_populate('selectgenome', 'genome')"><option value="">Select genome</option></select><br />
-<button onclick="pipeline_submit();">View results</button>
+<select id="selectreads_$PID" name="reads_$PID" size="1" onclick="select_populate('selectreads_$PID', 'reads')"><option value="">Select reads</option></select><br />
+<select id="selectgenome_$PID" name="genome_$PID" size="1" onclick="select_populate('selectgenome_$PID', 'genome')"><option value="">Select genome</option></select><br />
+<button onclick="pipeline_submit($PID);">View results</button>
 </p>
-<table><tr><td><p id="pipeline_id"></p></td></tr>
-<tr><td><p id="pipeline_message"></p></td></tr>
-<tr><td><div id="result_content"></div></td></tr>
+<div class="workflow">
+<table id="pipelinejobs_$PID"><tr><td><p id="pipeline_id_$PID"></p></td></tr>
+<tr><td><p id="pipeline_message_$PID"></p></td></tr>
+<tr><td><div id="result_content_$PID"></div></td></tr>
 </table>
+</div>
+</td>
+};
+}
+
+print qq{
+</tr></table>
 </div>
 
 </div>

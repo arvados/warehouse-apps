@@ -125,6 +125,12 @@ function process_response(json_response) {
 	}
 }
 
+function pipeline_retryjob(id)
+{
+    new Ajax.Request('ajax-retryjob.cgi', { parameters: { id: id } });
+    $('retry-'+id).disabled = true;
+}
+
 window.onload = init_form;
 </script>
 <script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"></script>
