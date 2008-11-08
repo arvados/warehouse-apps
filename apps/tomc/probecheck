@@ -1,0 +1,93 @@
+#!/usr/bin/perl
+
+# usage: $0 [--falsealign] [--nocorrect] < ratargs42.probes > out.txt
+
+my %warned;
+my %stat;
+my %probe;
+my @align;
+
+my %wantoutput;
+while (@ARGV && $ARGV[0] =~ s/^--//)
+{
+    $wantoutput{$ARGV[0]} = 1;
+    shift @ARGV;
+}
+
+while(<>)
+{
+    my ($id_part, $chr, $pos0, $pos1) = (split)[0,1,8,9];
+    my ($refchr, $refpos0, $refpos1, $id, $part)
+	= $id_part =~ /^(.*?):(.*?):(.*?):(.*?)(?:-([AB]))?$/;
+    warn "no -A or -B: $id\n" if !$part && !$warned{"input_$id"}++;
+    $probe{$id} ||= {};
+    push @align, [$refchr, $refpos0, $refpos1, $id, $part, $chr, $pos0, $pos1, $pos0>$pos1, $., $_];
+    $probe{$id}->{align} .= $_;
+    if ($refpos0 == $pos0) { $probe{$id}->{foundrefpos0} = 1; }
+    if ($refpos1 == $pos1-1) { $probe{$id}->{foundrefpos1} = 1; }
+    if ($refpos0 == $pos1) { $probe{$id}->{foundrefpos0} = 1; }
+    if ($refpos1 == $pos0-1) { $probe{$id}->{foundrefpos1} = 1; }
+    ++$stat{alignments};
+}
+
+my @align_bypos = sort { $a->[5] cmp $b->[5] or $a->[6] <=> $b->[6] } @align;
+
+my%foundfalseprobe;
+my %sawprobe;
+my $chr;
+for (my $alignid=0; $alignid<=$#align_bypos; $alignid++)
+{
+    my $align = $align_bypos[$alignid];
+    %sawprobe = (), $chr = $align->[5] if $chr ne $align->[5];
+    my $id = $align->[3];
+    $sawprobe{$id} ||= [];
+    while ($sawprobe{$id}->[0] &&
+	   $sawprobe{$id}->[0]->[6] < $align->[6] - 2025)
+    {
+	shift @{$sawprobe{$id}};
+    }
+    for my $prev (@{$sawprobe{$id}})
+    {
+	if ($prev->[4] ne $align->[4] &&
+	    ($prev->[6] < $prev->[7]) == ($align->[6] < $align->[7]) &&
+	    $prev->[6] >= $align->[6] - 2000)
+	{
+	    if (($align->[1] == $prev->[7] &&
+		 $align->[2] == $align->[6]-1)
+		||
+		($align->[1] == $prev->[6] &&
+		 $align->[2] == $align->[7]-1))
+	    {
+		++$stat{foundcheck};
+	    }
+	    else
+	    {
+		++$foundfalseprobe{$id};
+		++$stat{foundfalsealign};
+		print $prev->[-1].$align->[-1] if $wantoutput{falsealign};
+	    }
+	}
+    }
+    push @{$sawprobe{$id}}, $align;
+}
+
+$stat{foundfalseprobe} = scalar keys %foundfalseprobe;
+
+foreach my $id (keys %probe)
+{
+    if ($probe{$id}->{foundrefpos0} && $probe{$id}->{foundrefpos1})
+    {
+	++$stat{found};
+    }
+    else
+    {
+	print $probe{$id}->{align} if $wantoutput{nocorrect};
+    }
+    ++$stat{probes};
+}
+warn "$stat{alignments} alignments\n";
+warn "$stat{probes} probes\n";
+warn "$stat{found} found\n";
+warn "$stat{foundcheck} foundcheck\n";
+warn "$stat{foundfalsealign} foundfalsealign\n";
+warn "$stat{foundfalseprobe} foundfalseprobe\n";
