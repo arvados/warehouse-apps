@@ -2,27 +2,46 @@
 
 # usage: $0 [--falsealign] [--nocorrect] < ratargs42.probes > out.txt
 
-my %warned;
-my %stat;
-my %probe;
-my @align;
-
-my %wantoutput;
-while (@ARGV && $ARGV[0] =~ s/^--//)
+my %opt = (
+	   maxinterval => 2000,
+	   maxmismatch => 25,
+	   minidentity => 0,
+	   minmatchlength => 1,
+	   );
+while (@ARGV && $ARGV[0] =~ /^--(.*?)(?:=(.*))?$/)
 {
-    $wantoutput{$ARGV[0]} = 1;
+    $opt{$1} = defined($2) ? $2 : 1;
     shift @ARGV;
 }
 
+my %warned;
+my %stat = (
+	    alignments => 0,
+	    probes => 0,
+	    found => 0,
+	    foundcheck => 0,
+	    foundfalsealign => 0,
+	    foundfalseprobe => 0,
+	    );
+my %probe;
+my @align;
+
 while(<>)
 {
-    my ($id_part, $chr, $pos0, $pos1) = (split)[0,1,8,9];
+    my @allfields = split;
+
+    my ($id_part, $chr, $pos0, $pos1) = @allfields[0,1,8,9];
     my ($refchr, $refpos0, $refpos1, $id, $part)
 	= $id_part =~ /^(.*?):(.*?):(.*?):(.*?)(?:-([AB]))?$/;
     warn "no -A or -B: $id\n" if !$part && !$warned{"input_$id"}++;
     $probe{$id} ||= {};
-    push @align, [$refchr, $refpos0, $refpos1, $id, $part, $chr, $pos0, $pos1, $pos0>$pos1, $., $_];
     $probe{$id}->{align} .= $_;
+
+    next if $allfields[2] < $opt{minidentity};
+    next if $allfields[3] < $opt{minmatchlength};
+    next if $allfields[4] > $opt{maxmismatch};
+
+    push @align, [$refchr, $refpos0, $refpos1, $id, $part, $chr, $pos0, $pos1, $pos0>$pos1, $., $_];
     if ($refpos0 == $pos0) { $probe{$id}->{foundrefpos0} = 1; }
     if ($refpos1 == $pos1-1) { $probe{$id}->{foundrefpos1} = 1; }
     if ($refpos0 == $pos1) { $probe{$id}->{foundrefpos0} = 1; }
@@ -41,8 +60,9 @@ for (my $alignid=0; $alignid<=$#align_bypos; $alignid++)
     %sawprobe = (), $chr = $align->[5] if $chr ne $align->[5];
     my $id = $align->[3];
     $sawprobe{$id} ||= [];
+    my $align_start = min (@{$align}[6,7]);
     while ($sawprobe{$id}->[0] &&
-	   $sawprobe{$id}->[0]->[6] < $align->[6] - 2025)
+	   $align_start - max (@{$sawprobe{$id}->[0]}[6,7]) > $opt{maxinterval})
     {
 	shift @{$sawprobe{$id}};
     }
@@ -50,7 +70,7 @@ for (my $alignid=0; $alignid<=$#align_bypos; $alignid++)
     {
 	if ($prev->[4] ne $align->[4] &&
 	    ($prev->[6] < $prev->[7]) == ($align->[6] < $align->[7]) &&
-	    $prev->[6] >= $align->[6] - 2000)
+	    $align_start - max (@{$prev}[6,7]) <= $opt{maxinterval})
 	{
 	    if (($align->[1] == $prev->[7] &&
 		 $align->[2] == $align->[6]-1)
@@ -64,7 +84,7 @@ for (my $alignid=0; $alignid<=$#align_bypos; $alignid++)
 	    {
 		++$foundfalseprobe{$id};
 		++$stat{foundfalsealign};
-		print $prev->[-1].$align->[-1] if $wantoutput{falsealign};
+		report_falsealign ($prev, $align);
 	    }
 	}
     }
@@ -81,7 +101,7 @@ foreach my $id (keys %probe)
     }
     else
     {
-	print $probe{$id}->{align} if $wantoutput{nocorrect};
+	print $probe{$id}->{align} if $opt{nocorrect};
     }
     ++$stat{probes};
 }
@@ -91,3 +111,29 @@ warn "$stat{found} found\n";
 warn "$stat{foundcheck} foundcheck\n";
 warn "$stat{foundfalsealign} foundfalsealign\n";
 warn "$stat{foundfalseprobe} foundfalseprobe\n";
+
+
+sub report_falsealign
+{
+    return if !$opt{falsealign};
+    my ($a, $b) = @_;
+    my $int0 = max(@{$a}[6,7]) + 1;
+    my $int1 = min(@{$b}[6,7]) - 1;
+    my $id = $a->[3];
+    my $chr = $a->[5];
+    my $pos1 = $a->[7];
+    print $a->[-1].$b->[-1];
+}
+
+sub min
+{
+    my $r = shift;
+    for (@_) { $r = $_ if $r > $_ }
+    return $r;
+}
+sub max
+{
+    my $r = shift;
+    for (@_) { $r = $_ if $r < $_ }
+    return $r;
+}
