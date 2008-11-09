@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+my $in = shift;
+if ($in =~ /\.gz$/) { open STDIN, "-|", "gunzip", "-cn", $in }
+else { open STDIN, "<", $in }
+
+my $startx = shift;
+my $stopx = shift;
+my $dir = shift;
+
+my $fasta;
+my $x = 1;
+while (<STDIN>)
+{
+    next if /^>/;
+    s/\r?\n//;
+    if ($startx <= $x + length) {
+	$fasta .= substr ($_, $startx-$x, $stopx+1-$startx);
+	$startx = $x + length;
+    }
+    $x += length;
+    last if $x > $stopx;
+}
+
+if ($dir =~ /\+/) { printf "%s\n", $fasta }
+if ($dir =~ /-/) { printf "%s\n", rc($fasta) }
+
+sub rc
+{
+    local $_ = shift;
+    tr/ACGTacgt/TGCAtgca/;
+    scalar reverse $_;
+}
+
