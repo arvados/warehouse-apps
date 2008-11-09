@@ -22,7 +22,7 @@ while (<STDIN>)
     last if $x > $stopx;
 }
 
-if ($dir =~ /\+/) { printf "%s\n", $fasta }
+if ($dir =~ /\+/ || !defined $dir) { printf "%s\n", $fasta }
 if ($dir =~ /-/) { printf "%s\n", rc($fasta) }
 
 sub rc
