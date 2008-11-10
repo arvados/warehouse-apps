@@ -3,7 +3,7 @@
 # usage: $0 [--falsealign] [--nocorrect] < ratargs42.probes > out.txt
 
 my %opt = (
-	   maxinterval => 2000,
+	   maxinterval => 1000,
 	   maxmismatch => 25,
 	   minidentity => 0,
 	   minmatchlength => 1,
@@ -31,6 +31,7 @@ while(<>)
     my @allfields = split;
 
     my ($id_part, $chr, $pos0, $pos1) = @allfields[0,1,8,9];
+    my ($querystring, $hitstring) = @allfields[12,13];
     my ($refchr, $refpos0, $refpos1, $id, $part)
 	= $id_part =~ /^(.*?):(.*?):(.*?):(.*?)(?:-([AB]))?$/;
     warn "no -A or -B: $id\n" if !$part && !$warned{"input_$id"}++;
@@ -41,11 +42,14 @@ while(<>)
     next if $allfields[3] < $opt{minmatchlength};
     next if $allfields[4] > $opt{maxmismatch};
 
-    push @align, [$refchr, $refpos0, $refpos1, $id, $part, $chr, $pos0, $pos1, $pos0>$pos1, $., $_];
-    if ($refpos0 == $pos0) { $probe{$id}->{foundrefpos0} = 1; }
-    if ($refpos1 == $pos1-1) { $probe{$id}->{foundrefpos1} = 1; }
-    if ($refpos0 == $pos1) { $probe{$id}->{foundrefpos0} = 1; }
-    if ($refpos1 == $pos0-1) { $probe{$id}->{foundrefpos1} = 1; }
+    push @align, [$refchr, $refpos0, $refpos1, $id, $part, $chr, $pos0, $pos1, $pos0>$pos1, $querystring, $hitstring, $., $_];
+    if ($chr eq $refchr)
+    {
+	if ($refpos0 == $pos0) { $probe{$id}->{foundrefpos0} = 1; }
+	if ($refpos1 == $pos1-1) { $probe{$id}->{foundrefpos1} = 1; }
+	if ($refpos0 == $pos1) { $probe{$id}->{foundrefpos0} = 1; }
+	if ($refpos1 == $pos0-1) { $probe{$id}->{foundrefpos1} = 1; }
+    }
     ++$stat{alignments};
 }
 
@@ -79,6 +83,7 @@ for (my $alignid=0; $alignid<=$#align_bypos; $alignid++)
 		 $align->[2] == $align->[7]-1))
 	    {
 		++$stat{foundcheck};
+		report_correct ($prev, $align);
 	    }
 	    else
 	    {
@@ -119,9 +124,28 @@ sub report_falsealign
     my ($a, $b) = @_;
     my $int0 = max(@{$a}[6,7]) + 1;
     my $int1 = min(@{$b}[6,7]) - 1;
+    my $int = $int1 - $int0 + 1;
     my $id = $a->[3];
     my $chr = $a->[5];
     my $pos1 = $a->[7];
+    my $exact = 1;
+    for my $align ($a, $b)
+    {
+	my $qs = $align->[9];
+	my $hs = $align->[10];
+	my $part = $align->[4];
+	if ($part eq "A") { $exact &&= ( (split(/\t/,$align->[-1]))[7] == 25 && substr($qs, -5, 5) eq substr($hs, -5, 5) ); }
+	if ($part eq "B") { $exact &&= ( (split(/\t/,$align->[-1]))[6] == 1 && substr($qs, 0, 5) eq substr($hs, 0, 5) ); }
+    }
+    $exact += 0;
+    print "$exact\t$int\t".$a->[-1];
+    print "$exact\t$int\t".$b->[-1];
+}
+
+sub report_correct
+{
+    return if !$opt{correct};
+    my ($a, $b) = @_;
     print $a->[-1].$b->[-1];
 }
 
