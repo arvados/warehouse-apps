@@ -149,11 +149,16 @@ function pipeline_update(response)
     var position = response.request.parameters.position;
     if (json && json.workflow.id) {
 	$('pipeline_id_'+position).update (json.workflow.id);
+	if (json.workflow.downloadall)
+	    $('pipeline_id_'+position).insert ('<BR /><A href="download.cgi/'+json.workflow.downloadall+'.tar">download input+output tarball</A>');
+	else
+	    $('pipeline_id_'+position).insert ('<BR />&nbsp;');
+
 	if (json.workflow.message)
 	    $('pipeline_message_'+position).update (json.workflow.message);
 	else
 	    $('pipeline_message_'+position).update ();
-	pipeline_render (position, json);
+	pipeline_render (position, json, sha1Hash(response.responseText));
     }
 }
 

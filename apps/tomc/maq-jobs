@@ -360,9 +360,10 @@ sub fillpipeline
 		    jsonjob ("SNPfilter", $me->{snpfilter}),
 		    ] } );
 
-    if ($me->{outputs})
+    if ($me->{outputs} && $me->{snpfilter} && $me->{snpfilter}->{outputkey})
     {
 	writefile ("$workdir/$id.outputs", map { "$_\n" } @{$me->{outputs}});
+	$flow->{json}->{downloadall} = $id;
     }
 
     print "# finished ".$pipeline->{label}." $in\n";

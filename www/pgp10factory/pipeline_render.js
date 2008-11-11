@@ -1,5 +1,6 @@
-function pipeline_render(id, json) {
-    if(json.workflow) {
+function pipeline_render(id, json, renderhash) {
+    if(json.workflow && renderhash != $('renderhash_'+id).value) {
+	$('renderhash_'+id).value = renderhash;
 	$('result_content_'+id).update();
 	for(i=0;i<json.workflow.pipeline.length;i++) {
 	    var cur_line = json.workflow.pipeline[i];

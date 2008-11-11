@@ -36,6 +36,7 @@ print qq{
 <title>pgp10factory home</title>
 <link href="style.css" rel="stylesheet" type="text/css" />
 <script language="javascript" type="text/javascript" src="prototype-1.6.0.3.js"></script>
+<script language="javascript" type="text/javascript" src="sha1.js"></script>
 <script language="javascript" type="text/javascript" src="pipeline_render.js"></script>
 <script language="javascript" type="text/javascript" src="home.js"></script>
 </head><body>
@@ -93,6 +94,7 @@ for (my $PID = 0; $PID < 16; $PID++)
 <select id="selectgenome_$PID" name="genome_$PID" size="1" onclick="select_populate($PID, 'genome');" onchange="enable_updatebutton($PID);"><option value="">Select genome</option></select><br />
 <input type="hidden" id="selectedreads_$PID" name="selectedreads_$PID" />
 <input type="hidden" id="selectedgenome_$PID" name="selectedgenome_$PID" />
+<input type="hidden" id="renderhash_$PID" name="renderhash_$PID" />
 <button id="updatebutton_$PID" onclick="pipeline_submit($PID);">Update</button>
 </p>
 <div class="workflow">
