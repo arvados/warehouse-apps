@@ -76,11 +76,13 @@ for (my $alignid=0; $alignid<=$#align_bypos; $alignid++)
 	    ($prev->[6] < $prev->[7]) == ($align->[6] < $align->[7]) &&
 	    $align_start - max (@{$prev}[6,7]) <= $opt{maxinterval})
 	{
-	    if (($align->[1] == $prev->[7] &&
-		 $align->[2] == $align->[6]-1)
-		||
-		($align->[1] == $prev->[6] &&
-		 $align->[2] == $align->[7]-1))
+	    if ($align->[0] eq $align->[5]
+		&&
+		(($align->[1] == $prev->[7] &&
+		  $align->[2] == $align->[6]-1)
+		 ||
+		 ($align->[1] == $prev->[6] &&
+		  $align->[2] == $align->[7]-1)))
 	    {
 		++$stat{foundcheck};
 		report_correct ($prev, $align);
