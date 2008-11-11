@@ -4,6 +4,7 @@ use strict;
 use Fcntl ':flock';
 use Warehouse;
 use POSIX;
+use Digest::MD5 'md5_hex';
 my $whc = new Warehouse;
 
 my %override;
@@ -57,6 +58,8 @@ sub fillflow
 
     $flow->{json}->{input} = { id => $in };
     $flow->{json}->{pipeline} = [];
+
+    $flow->{input_in_manifest} = !-e "$workdir/$in.nomanifest";
 
     if (-l "$workdir/$in.stored")
     {
@@ -116,35 +119,42 @@ sub fillflow
 		     "REMOVE_LC=0",
 		    ),
 	      } );
+	my $inputpath = $flow->{in_manifest} ? "$in/" : "$in/=/$in.gz";
 	$flow->{json}->{pipeline} = [ {
 	    label => "Convert to BFA",
 	    job => [
-		jsonjob ("Request", { outputfiles => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$in/=/$in.gz'>input data</a>"], success => 1 }),
+		jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
 		jsonjob ("Convert to BFA", $me->{fasta2bfa}),
 		] } ];
 	print "# finished ".$flow->{json}->{pipeline}->[0]->{label}." $in\n";
     }
     elsif (-e "$workdir/$in.isreads")
     {
-	fillpipeline ($in, $flow,
+	my $rhg18 = "99259f4330907e84fe7253bd4e52dd3e";
+	my $r55k = "f7703aadfb55c12127c4d51693c85587";
+	fillpipeline (make_pipeline_id("maq", $in, $rhg18),
+		      $in, $flow,
 		      { label => "sol/maq/hg18",
-			REFERENCE => "99259f4330907e84fe7253bd4e52dd3e",
+			REFERENCE => $rhg18,
 			REFERENCEFILE => "homo_sapiens.bfa",
 		    } );
-	fillpipeline ($in, $flow,
+	fillpipeline (make_pipeline_id("maq", $in, $r55k),
+		      $in, $flow,
 		      { label => "sol/maq/55k",
-			REFERENCE => "f7703aadfb55c12127c4d51693c85587",
+			REFERENCE => $r55k,
 			REFERENCEFILE => "ref.bfa",
 		    } );
-	fillpipeline ($in, $flow,
+	fillpipeline (make_pipeline_id("maq/std", $in, $rhg18),
+		      $in, $flow,
 		      { label => "std/maq/hg18",
-			REFERENCE => "99259f4330907e84fe7253bd4e52dd3e",
+			REFERENCE => $rhg18,
 			REFERENCEFILE => "homo_sapiens.bfa",
 			sol2bfq => ["INPUTFORMAT=std"],
 		    } );
-	fillpipeline ($in, $flow,
+	fillpipeline (make_pipeline_id("maq/std", $in, $r55k),
+		      $in, $flow,
 		      { label => "std/maq/55k",
-			REFERENCE => "f7703aadfb55c12127c4d51693c85587",
+			REFERENCE => $r55k,
 			REFERENCEFILE => "ref.bfa",
 			sol2bfq => ["INPUTFORMAT=std"],
 		    } );
@@ -170,7 +180,9 @@ sub fillflow
 	{
 	    if ($spec{"reads"} && $spec{"genome"})
 	    {
-		fillpipeline ($spec{"reads"}, $flow,
+		fillpipeline ($in,
+			      $spec{"reads"},
+			      $flow,
 			      { label => "maq",
 				genome => $spec{"genome"}
 			      });
@@ -185,6 +197,10 @@ sub fillflow
 	    $flow->{json}->{message} = "Unknown pipeline: \"$whatpipeline\".";
 	}
 	%override = %override_was;
+    }
+    elsif (-e "$workdir/$in.islayout")
+    {
+	next;
     }
     else
     {
@@ -203,13 +219,15 @@ sub fillflow
 
 sub fillpipeline
 {
-    my ($in, $flow, $pipeline) = @_;
+    my ($id, $in, $flow, $pipeline) = @_;
 
     my $ref = $pipeline->{REFERENCE};
     my $reffile = $pipeline->{REFERENCEFILE};
     my @jsonjob_reference;
 
     my $me = $flow->{$pipeline->{label}} = {};
+
+    $me->{outputs} = ["$in input"];
 
     if (!$ref && $pipeline->{genome})
     {
@@ -268,7 +286,7 @@ sub fillpipeline
 		     "REFERENCEFILE=$reffile",
 		     ),
 		} ) unless $me->{merge};
-	buildoutputs ($me->{merge}, "mapcheck.txt");
+	buildoutputs ($me, "merge", "mapcheck.txt");
     }
     if ($me->{merge} && $me->{merge}->{outputkey})
     {
@@ -281,7 +299,7 @@ sub fillpipeline
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
 		     ),
 		} ) unless $me->{mapview};
-	buildoutputs ($me->{mapview}, "all.aln.txt");
+	buildoutputs ($me, "mapview", "all.aln.txt");
 	$me->{assemble} = findjob
 	    ( { mrfunction => "maq-assemble",
 		revision => [ 2319, ],
@@ -307,7 +325,7 @@ sub fillpipeline
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
 		     ),
 		} ) unless $me->{cns2x};
-	buildoutputs ($me->{cns2x},
+	buildoutputs ($me, "cns2x",
 		      "cns.fq.txt", "cns.snp.txt", "cns.win.txt");
     }
     if ($me->{cns2x} && $me->{cns2x}->{outputkey})
@@ -322,15 +340,16 @@ sub fillpipeline
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
 		     ),
 		} ) unless $me->{snpfilter};
-	buildoutputs ($me->{snpfilter},
+	buildoutputs ($me, "snpfilter",
 		      "cns.final.snp.txt");
     }
 
+    my $inputpath = $flow->{in_manifest} ? "$in/" : "$in/=/$in.gz";
     push (@ { $flow->{json}->{pipeline} },
 	  { label => $pipeline->{label},
 	    image => mapcheck_png ($me->{merge}),
 	    job => [
-		    jsonjob ("Request", { outputfiles => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$in/=/$in.gz'>input data</a>"], success => 1 }),
+		    jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
 		    @jsonjob_reference,
 		    jsonjob ("Prepare reads", $me->{sol2bfq}),
 		    jsonjob ("Map", $me->{map}),
@@ -341,21 +360,30 @@ sub fillpipeline
 		    jsonjob ("SNPfilter", $me->{snpfilter}),
 		    ] } );
 
+    if ($me->{outputs})
+    {
+	writefile ("$workdir/$id.outputs", map { "$_\n" } @{$me->{outputs}});
+    }
+
     print "# finished ".$pipeline->{label}." $in\n";
 }
 
 sub buildoutputs
 {
-    my ($job, @filename) = @_;
+    my ($pipeline, $joblabel, @filename) = @_;
+    my $job = $pipeline->{$joblabel};
     if ($job && $job->{outputkey})
     {
 	my $manifest = $job->{outputkey};
-	my @outputfiles;
+	my @outputlinks;
 	foreach (@filename)
 	{
-	    push @outputfiles, "<a href='http://templeton-controller.freelogy.org/whget.cgi/$manifest/$_'>$_</a>";
+	    push @outputlinks, "<a href='http://templeton-controller.freelogy.org/whget.cgi/$manifest/$_'>$_</a>";
 	}
-	$job->{outputfiles} = [@outputfiles];
+	$job->{outputlinks} = [@outputlinks];
+
+	$pipeline->{outputs} ||= [];
+	push @{$pipeline->{outputs}}, $job->{outputkey} . " $joblabel";
     }
 }
 
@@ -524,9 +552,9 @@ sub jsonjob
 	    my $steps = $job->{steps_done} + $job->{steps_running} + $job->{steps_todo};
 	    $x->{progress} = $job->{steps_done} . "/" . $steps;
 	}
-	if ($x->{status} eq "done" && $job->{outputfiles})
+	if ($x->{status} eq "done" && $job->{outputlinks})
 	{
-	    $x->{outputfiles} = $job->{outputfiles};
+	    $x->{outputfiles} = $job->{outputlinks};
 	}
 	if ($x->{status} eq "fail" && $job->{metakey})
 	{
@@ -539,6 +567,18 @@ sub jsonjob
 	}
     }
     return $x;
+}
+
+sub writefile
+{
+    my $file = shift;
+    open F, "+>>$file.tmp";
+    flock F, LOCK_EX or do { close F; return; };
+    seek F, 0, 0;
+    truncate F, 0;
+    print F @_;
+    close F;
+    rename "$file.tmp", "$file";
 }
 
 sub writejson
@@ -646,6 +686,12 @@ sub mapcheck_png
 	unlink "$pngpath.in", "$pngpath.tmp";
 	exit 0;
     }
+}
+
+sub make_pipeline_id
+{
+    my ($pipeline, $reads, $ref) = @_;
+    return md5_hex ("pipeline=$pipeline\nreads=$reads\ngenome=$ref\n");
 }
 
 __END__
