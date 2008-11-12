@@ -19,11 +19,54 @@ my $sessionid = session::id();
 my $whc = new Warehouse;
 
 my ($hash) = $ENV{PATH_INFO} =~ m{([0-9a-f]{32})};
-my $bigmanifest = readfile ("$workdir/$hash.bigmanifest");
-if (!defined $bigmanifest &&
-    open F, "<", "$workdir/$hash.outputs")
+
+my @pipelines;
+
+if (-e "$workdir/$hash.islayout")
 {
-    $bigmanifest = "";
+    my $layout = readfile ("$workdir/$hash");
+    while ($layout =~ m{"reads": "([0-9a-f,]+)", "genome": "([0-9a-f,]+)"}g)
+    {
+	push @pipelines, {
+	    id => md5_hex ("pipeline=maq\nreads=$1\ngenome=$2\n"),
+	    reads => $1,
+	    genome => $2,
+	};
+    }
+}
+elsif (-e "$workdir/$hash.ispipeline")
+{
+    my $pipeline = readfile ("$workdir/$hash");
+    my ($reads) = $pipeline =~ /reads=(.*)/;
+    my ($genome) = $pipeline =~ /genome=(.*)/;
+    push @pipelines, {
+	id => $hash,
+	reads => $reads,
+	genome => $genome,
+    };
+}
+else
+{
+    print CGI->header (-status => "404 not found",
+		       -type => "text/plain");
+    print "404 Not Found\n\n$hash\n";
+    exit 0;
+}
+
+for (@pipelines)
+{
+    $_->{bigmanifest} =
+	(readfile ("$workdir/".$_->{id}.".bigmanifest")
+	 ||
+	 build_bigmanifest ($_->{id}));
+}
+printtar ($hash, @pipelines);
+
+sub build_bigmanifest
+{
+    my $hash = shift;
+    open F, "<", "$workdir/$hash.outputs" or return;
+    my $bigmanifest = "";
     for (<F>)
     {
 	chomp;
@@ -54,8 +97,8 @@ if (!defined $bigmanifest &&
     }ge;
     writefile ("$workdir/$hash.bigmanifest", $bigmanifest);
     my ($bighash) = $whc->store_in_keep (dataref => \$bigmanifest);
+    return $bigmanifest;
 }
-printtar ($hash, $bigmanifest);
 
 sub is_gz
 {
@@ -90,12 +133,35 @@ sub readfile
 sub printtar
 {
     my $tarballname = shift;
-    my $manifestdata = shift;
+    my @pipelines = @_;
 
     my $tarballsize = 0;
-    my $m = new Warehouse::Manifest (whc => $whc, data => \$manifestdata);
+    for my $pipeline (@pipelines)
+    {
+	$tarballsize += tarsize ($pipeline);
+    }
+    
+    print CGI->header (
+	-cookie => [session::togo()],
+	-type => "application/x-tar",
+	-attachment => "$tarballname.tar",
+	"Content-length" => $tarballsize + tarpad_eof ($tarballsize),
+	);
 
+    for my $pipeline (@pipelines)
+    {
+	tarpipeline ($pipeline);
+    }
+    print "\0" x tarpad_eof ($tarballsize);
+}
+
+sub tarsize
+{
+    my $pipeline = shift;
+    my $manifestdata = $pipeline->{bigmanifest};
+    my $m = new Warehouse::Manifest (whc => $whc, data => \$manifestdata);
     $m->rewind;
+    my $tarballsize = 0;
     while (my $s = $m->subdir_next)
     {
 	while (my ($pos, $size, $filename) = $s->file_next)
@@ -109,22 +175,24 @@ sub printtar
 	    }
 	}
     }
+    return $tarballsize;
+}
+
+sub tarpad_eof
+{
+    my $tarballsize = shift;
     $tarballsize += 1024;
-    my $endpad = "\0" x 1024;
-    my $pad = 0x1000 - ($tarballsize & 0xfff);
-    if ($pad != 0x1000)
-    {
-	$tarballsize += $pad;
-	$endpad .= "\0" x $pad;
-    }
+    my $pad = 0x1000 - (($tarballsize + 1024) & 0xfff);
+    return 1024 if $pad == 0x1000;
+    return 1024 + $pad;
+}
 
-    print CGI->header (
-	-cookie => [session::togo()],
-	-type => "application/x-tar",
-	-attachment => "$tarballname.tar",
-	"Content-length" => $tarballsize,
-	);
-
+sub tarpipeline
+{
+    my $pipeline = shift;
+    my $manifestdata = $pipeline->{bigmanifest};
+    my $pipelinedir = $pipeline->{id};
+    my $m = new Warehouse::Manifest (whc => $whc, data => \$manifestdata);
     $m->rewind;
     while (my $s = $m->subdir_next)
     {
@@ -134,7 +202,7 @@ sub printtar
 	{
 	    last if !defined $pos;
 
-	    my $tarfilename = "$tarballname$dir/$filename";
+	    my $tarfilename = "$pipelinedir$dir/$filename";
 	    substr ($tarfilename, 99) = "" if 99 < length $tarfilename;
 
 	    my $tarheader = "\0" x 512;
@@ -166,7 +234,6 @@ sub printtar
 	    }
 	}
     }
-    print $endpad;
 }
 
 sub tarchecksum
