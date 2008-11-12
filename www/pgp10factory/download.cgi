@@ -11,6 +11,7 @@ use Warehouse::Stream;
 do "session.pm";
 
 my $workdir = "./cache";
+mkdir "$workdir/datablocks";
 
 my $q = new CGI;
 session::init($q);
@@ -77,7 +78,12 @@ sub build_bigmanifest
 	    my $length;
 	    for (split (",", $_))
 	    {
-		my ($blockhash) = $whc->store_in_keep (hash => $_);
+		my $blockhash = readlink "$workdir/datablocks/$_.keep";
+		if (!$blockhash)
+		{
+		    ($blockhash) = $whc->store_in_keep (hash => $_) or die;
+		    symlink $blockhash, "$workdir/datablocks/$_.keep";
+		}
 		push @block, $blockhash;
 		$length += $1 if $blockhash =~ m{\+([0-9]+)};
 	    }
@@ -91,8 +97,15 @@ sub build_bigmanifest
     $bigmanifest =~ s{^(\S+ (\S+).*:)-\n}{
 	$1 . "reads.txt" . (is_gz($2) ? ".gz" : "") . "\n";
     }e;
-    $bigmanifest =~ s{ ([0-9a-f]{32}\S*)}{
-	my ($blockhash) = $whc->store_in_keep (hash => $1);
+    $bigmanifest =~ s{ (([0-9a-f]{32})\S*)}{
+	my $hash = $1;
+	my $md5 = $2;
+	my $blockhash = readlink "$workdir/datablocks/$md5.keep";
+	if (!$blockhash)
+	{
+	    ($blockhash) = $whc->store_in_keep (hash => $hash);
+	    symlink $blockhash, "$workdir/datablocks/$md5.keep";
+	}
 	" " . $blockhash;
     }ge;
     writefile ("$workdir/$hash.bigmanifest", $bigmanifest);
@@ -103,9 +116,14 @@ sub build_bigmanifest
 sub is_gz
 {
     my ($blockhash) = @_;
+    my ($md5) = $blockhash =~ /^([0-9a-f]{32})/;
+    my $is_gz = readlink "$workdir/datablocks/$md5.gzip";
+    return $is_gz if defined $is_gz;
+
     my $data = $whc->fetch_block ($blockhash);
-    if ($data =~ /^[ -\177]{1024}/) { return 0; }
-    else { return 1; }
+    $is_gz = ($data =~ /^[ -\177]{1024}/) ? 1 : 0;
+    symlink $is_gz, "$workdir/datablocks/$md5.gzip";
+    return $is_gz;
 }
 
 sub writefile
