@@ -48,7 +48,6 @@ if (!defined $bigmanifest &&
     $bigmanifest =~ s{^(\S+ (\S+).*:)-\n}{
 	$1 . "reads.txt" . (is_gz($2) ? ".gz" : "") . "\n";
     }e;
-    $bigmanifest =~ s{^.*:cns.fq.txt\n}{}gm;
     $bigmanifest =~ s{ ([0-9a-f]{32}\S*)}{
 	my ($blockhash) = $whc->store_in_keep (hash => $1);
 	" " . $blockhash;
