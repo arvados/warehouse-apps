@@ -99,7 +99,7 @@ function pipeline_layout_save()
 	    parameters: { layout: $('layout_stash').value },
 	    onSuccess: function(response) {
 		$('layout_save').disabled = true;
-		$('layout_link').innerHTML = '<a href=\"./home.cgi?'+response.responseText+'\">Link to this layout</a>';
+		$('layout_link').innerHTML = '&nbsp; &nbsp; <a href=\"./home.cgi?'+response.responseText+'\">Link to this layout</a> &nbsp; - &nbsp; <a href=\"./download.cgi/'+response.responseText+'\">Download input+output tarball</a>';
 	    }});
 }
 
@@ -127,6 +127,7 @@ function pipeline_request(position)
 	    }
     });
     $('result_content_'+position).update();
+    $('renderhash_'+position).value = '';
 }
 
 function pipeline_check(pe, position)
