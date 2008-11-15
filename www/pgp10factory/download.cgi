@@ -97,6 +97,19 @@ sub build_bigmanifest
     $bigmanifest =~ s{^(\S+ (\S+).*:)-\n}{
 	$1 . "reads.txt" . (is_gz($2) ? ".gz" : "") . "\n";
     }e;
+    if (grep { !m{\.g?z$} } ($bigmanifest =~ m{ \d+:\d+:\S+}g))
+    {
+	my ($bighash) = $whc->store_block (\$bigmanifest) or die;
+	my $ptpath = "/usr/local/polony-tools/current";
+	my $gziphash = `$ptpath/mapreduce/mrjobmanager revision='$ptpath' mrfunction='gzip' inputkey='$bighash' 2>/tmp/pgp10factory-localjob.log`;
+	if ($gziphash =~ /^[0-9a-f]{32}/)
+	{
+	    if (my $gzipmanifest = $whc->fetch_block($gziphash))
+	    {
+		$bigmanifest = $gzipmanifest;
+	    }
+	}
+    }
     $bigmanifest =~ s{ (([0-9a-f]{32})\S*)}{
 	my $hash = $1;
 	my $md5 = $2;
@@ -108,8 +121,8 @@ sub build_bigmanifest
 	}
 	" " . $blockhash;
     }ge;
-    writefile ("$workdir/$hash.bigmanifest", $bigmanifest);
     my ($bighash) = $whc->store_in_keep (dataref => \$bigmanifest);
+    writefile ("$workdir/$hash.bigmanifest", $bigmanifest);
     return $bigmanifest;
 }
 
@@ -129,7 +142,7 @@ sub is_gz
 sub writefile
 {
     my $file = shift;
-    open F, "+>>$file.tmp";
+    open F, "+>>", "$file.tmp";
     flock F, LOCK_EX|LOCK_NB or do { close F; return; };
     seek F, 0, 0;
     truncate F, 0;
