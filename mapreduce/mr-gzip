@@ -14,63 +14,69 @@ my $manifestkey = $ENV{MR_INPUT0};
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey;
-  do "mrtask-queuesubdirs";
+  do "mrtask-queuelines";
 }
 
 elsif ($ENV{MR_LEVEL} == 1)
 {
-  my $wantsubdir = $ENV{MR_INPUT};
+  my $line = $ENV{MR_INPUT};
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
 
-  my $manifest = new Warehouse::Manifest (whc => $whc,
-					  key => $manifestkey);
-  $manifest->rewind;
-  while (my $instream = $manifest->subdir_next)
+  my $instream = new Warehouse::Stream (whc => $whc,
+					subdir => $line);
+  my $already_gzipped = 1;
+  $instream->rewind;
+  while (my ($pos, $size, $filename) = $instream->file_next)
   {
-    if ($instream->name eq $wantsubdir)
-    {
-      my $outstream = new Warehouse::Stream (whc => $whc);
-      $outstream->name ($instream->name);
-      $outstream->clear;
+    last if !defined $pos;
+    $already_gzipped=0, last if $filename !~ /\.g?z$/;
+  }
+  if ($already_gzipped)
+  {
+    print STDERR "+++mrout $line+++\n";
+    exit 0;
+  }
 
-      while (my ($pos, $size, $filename) = $instream->file_next)
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  $outstream->name ($instream->name);
+  $outstream->clear;
+
+  $instream->rewind;
+  while (my ($pos, $size, $filename) = $instream->file_next)
+  {
+    last if !defined $pos;
+    if ($filename =~ /\.g?z$/i) # already compressed, just copy
+    {
+      $outstream->write_start ($filename);
+      $instream->seek ($pos);
+      while (my $dataref = $instream->read_until ($pos + $size))
       {
-	last if !defined $pos;
-	if ($filename =~ /\.g?z$/i) # already compressed, just copy
-	{
-	  $outstream->write_start ($filename);
-	  $instream->seek ($pos);
-	  while (my $dataref = $instream->read_until ($pos + $size))
-	  {
-	    $outstream->write_data ($dataref);
-	  }
-	  $outstream->write_finish;
-	}
-	else
-	{
-	  my $compressed;
-	  my $z = new IO::Compress::Gzip \$compressed, Minimal=>1
-	      or die "gzip failed: $GzipError\n";
-	  $instream->seek ($pos);
-	  while (my $dataref = $instream->read_until ($pos + $size))
-	  {
-	    print $z $$dataref;
-	  }
-	  $z->close
-	      or die "gzip failed: $GzipError\n";
-	  $outstream->write_start ($filename.".gz");
-	  $outstream->write_data (\$compressed)
-	      or die "write failed: ".$outstream->errstr;
-	  $outstream->write_finish;
-	}
+	$outstream->write_data ($dataref);
       }
-      my $fragkey = $whc->store_block ($outstream->as_string)
-	  or die "store_block failed: ".$whc->errstr;
-      print STDERR "+++mrout ".$fragkey."+++\n";
-      print STDERR $whc->iostats;
-      exit 0;
+      $outstream->write_finish;
+    }
+    else
+    {
+      my $compressed;
+      my $z = new IO::Compress::Gzip \$compressed, Minimal=>1
+	  or die "gzip failed: $GzipError\n";
+      $instream->seek ($pos);
+      while (my $dataref = $instream->read_until ($pos + $size))
+      {
+	print $z $$dataref;
+      }
+      $z->close
+	  or die "gzip failed: $GzipError\n";
+      $outstream->write_start ($filename.".gz");
+      $outstream->write_data (\$compressed)
+	  or die "write failed: ".$outstream->errstr;
+      $outstream->write_finish;
     }
   }
-  die "Subdir not found: $wantsubdir";
+  my $fragkey = $whc->store_block ($outstream->as_string)
+      or die "store_block failed: ".$whc->errstr;
+  print STDERR "+++mrout ".$fragkey."+++\n";
+  print STDERR $whc->iostats;
+  exit 0;
 }
