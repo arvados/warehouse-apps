@@ -592,6 +592,7 @@ if ($key)
   }
   my $keepkey = join (",", @keepkey);
   Log (undef, "output+K key is $keepkey");
+  print "$keepkey\n" if $success;
 
   if ($output_in_keep)
   {
