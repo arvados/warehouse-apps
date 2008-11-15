@@ -280,6 +280,6 @@ window.onload = function() {
     if (!initialize_from_layout_stash())
 	if ($('panel_showhide'))
 	    panel_showhide ($('panel_showhide').value);
-    pe = new PeriodicalExecuter (home_update, 5);
+    pe = new PeriodicalExecuter (home_update, 10);
     home_update(pe);
 };
