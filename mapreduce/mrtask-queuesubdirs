@@ -17,7 +17,7 @@ my $whc = new Warehouse
 my $nextlevel = $ENV{MR_LEVEL} + 1;
 my $key = $ENV{MR_INPUT};
 
-if ($key !~ /^[0-9a-f]{32}(,[0-9a-f]{32})*$/)
+if ($key !~ /^[0-9a-f]{32}(\+\S*)*(,[0-9a-f]{32}(\+\S*)*)*$/)
 {
   $key = $whc->fetch_manifest_key_by_name ($key)
       or die $whc->errstr;
