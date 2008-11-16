@@ -35,7 +35,7 @@ if (-e "$workdir/$hash.islayout")
 	};
     }
 }
-elsif (-e "$workdir/$hash.ispipeline")
+elsif (-e "$workdir/$hash.ispipeline" && readlink "$workdir/$hash.download")
 {
     my $pipeline = readfile ("$workdir/$hash");
     my ($reads) = $pipeline =~ /reads=(.*)/;
@@ -56,60 +56,19 @@ else
 
 for (@pipelines)
 {
-    $_->{bigmanifest} =
-	(readfile ("$workdir/".$_->{id}.".bigmanifest")
-	 ||
-	 build_bigmanifest ($_->{id}));
+    my $downloadhash = readlink ("$workdir/".$_->{id}.".download");
+    $_->{bigmanifest} = keepit ($downloadhash);
 }
 printtar ($hash, @pipelines);
 
-sub build_bigmanifest
+sub keepit
 {
-    my $hash = shift;
-    open F, "<", "$workdir/$hash.outputs" or return;
-    my $bigmanifest = "";
-    for (<F>)
+    my $bigmanifesthash = shift;
+    if (my $manifest = readfile ("$workdir/$hash.bigmanifest"))
     {
-	chomp;
-	s/ .*//;
-	if (-e "$workdir/$_.nomanifest")
-	{
-	    my @block;
-	    my $length;
-	    for (split (",", $_))
-	    {
-		my $blockhash = readlink "$workdir/datablocks/$_.keep";
-		if (!$blockhash)
-		{
-		    ($blockhash) = $whc->store_in_keep (hash => $_) or die;
-		    symlink $blockhash, "$workdir/datablocks/$_.keep";
-		}
-		push @block, $blockhash;
-		$length += $1 if $blockhash =~ m{\+([0-9]+)};
-	    }
-	    $bigmanifest .= ". @block 0:$length:-\n";
-	}
-	else
-	{
-	    $bigmanifest .= $whc->fetch_block ($_);
-	}
+	return $manifest;
     }
-    $bigmanifest =~ s{^(\S+ (\S+).*:)-\n}{
-	$1 . "reads.txt" . (is_gz($2) ? ".gz" : "") . "\n";
-    }e;
-    if (grep { !m{\.g?z$} } ($bigmanifest =~ m{ \d+:\d+:\S+}g))
-    {
-	my ($bighash) = $whc->store_block (\$bigmanifest) or die;
-	my $ptpath = "/usr/local/polony-tools/current";
-	my $gziphash = `$ptpath/mapreduce/mrjobmanager revision='$ptpath' mrfunction='gzip' inputkey='$bighash' 2>/tmp/pgp10factory-localjob.log`;
-	if ($gziphash =~ /^[0-9a-f]{32}/)
-	{
-	    if (my $gzipmanifest = $whc->fetch_block($gziphash))
-	    {
-		$bigmanifest = $gzipmanifest;
-	    }
-	}
-    }
+    my $bigmanifest = $whc->fetch_block ($bigmanifesthash);
     $bigmanifest =~ s{ (([0-9a-f]{32})\S*)}{
 	my $hash = $1;
 	my $md5 = $2;
@@ -124,19 +83,6 @@ sub build_bigmanifest
     my ($bighash) = $whc->store_in_keep (dataref => \$bigmanifest);
     writefile ("$workdir/$hash.bigmanifest", $bigmanifest);
     return $bigmanifest;
-}
-
-sub is_gz
-{
-    my ($blockhash) = @_;
-    my ($md5) = $blockhash =~ /^([0-9a-f]{32})/;
-    my $is_gz = readlink "$workdir/datablocks/$md5.gzip";
-    return $is_gz if defined $is_gz;
-
-    my $data = $whc->fetch_block ($blockhash);
-    $is_gz = ($data =~ /^[ -\177]{1024}/) ? 1 : 0;
-    symlink $is_gz, "$workdir/datablocks/$md5.gzip";
-    return $is_gz;
 }
 
 sub writefile
