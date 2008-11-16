@@ -388,6 +388,7 @@ sub fillpipeline
     if ($me->{gzip} && $me->{gzip}->{outputkey})
     {
 	symlink $me->{gzip}->{outputkey}, "$workdir/$id.download";
+	symlink $me->{gzip}->{finishtime_s}, "$workdir/$id.finishtime_s";
 	$flow->{json}->{downloadall} = $id;
     }
 

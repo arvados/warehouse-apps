@@ -169,6 +169,8 @@ sub tarpipeline
     my $pipeline = shift;
     my $manifestdata = $pipeline->{bigmanifest};
     my $pipelinedir = $pipeline->{id};
+    my $timestamp = readlink ("$workdir/".$pipeline->{id}.".finishtime_s")
+	|| scalar time;
     my $m = new Warehouse::Manifest (whc => $whc, data => \$manifestdata);
     $m->rewind;
     while (my $s = $m->subdir_next)
@@ -188,7 +190,7 @@ sub tarpipeline
 	    substr ($tarheader, 108, 7) = sprintf ("%07o", 0); # uid
 	    substr ($tarheader, 116, 7) = sprintf ("%07o", 0); # gid
 	    substr ($tarheader, 124, 11) = sprintf ("%011o", $size);
-	    substr ($tarheader, 136, 11) = sprintf ("%011o", scalar time);
+	    substr ($tarheader, 136, 11) = sprintf ("%011o", $timestamp);
 	    substr ($tarheader, 156, 1) = "\0"; # typeflag
 	    substr ($tarheader, 257, 5) = "ustar"; # magic
 	    substr ($tarheader, 263, 2) = "00"; # version
