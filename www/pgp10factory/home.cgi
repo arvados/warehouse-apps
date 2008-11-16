@@ -98,7 +98,7 @@ for (my $PID = 0; $PID < 16; $PID++)
 <button id="updatebutton_$PID" onclick="pipeline_submit($PID);">Update</button>
 </p>
 <div class="workflow">
-<table id="pipelinejobs_$PID"><tr><td><p id="pipeline_id_$PID"></p></td></tr>
+<table id="pipelinejobs_$PID"><tr><td><span id="pipeline_id_$PID"></span><span id="pipeline_download_$PID"></span></td></tr>
 <tr><td><p id="pipeline_message_$PID"></p></td></tr>
 <tr><td><div id="result_content_$PID"></div></td></tr>
 </table>

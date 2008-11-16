@@ -146,20 +146,21 @@ function pipeline_check(pe, position)
 
 function pipeline_update(response)
 {
+    var renderhash = sha1Hash (response.responseText);
     var json = response.responseText.evalJSON();
     var position = response.request.parameters.position;
     if (json && json.workflow.id) {
 	$('pipeline_id_'+position).update (json.workflow.id);
 	if (json.workflow.downloadall)
-	    $('pipeline_id_'+position).insert ('<BR /><A href="download.cgi/'+json.workflow.downloadall+'.tar">download input+output tarball</A>');
+	    $('pipeline_download_'+position).update ('<BR /><A href="download.cgi/'+json.workflow.downloadall+'.tar">download input+output tarball</A>');
 	else
-	    $('pipeline_id_'+position).insert ('<BR />&nbsp;');
+	    $('pipeline_download_'+position).update ('<BR />&nbsp;');
 
 	if (json.workflow.message)
 	    $('pipeline_message_'+position).update (json.workflow.message);
 	else
 	    $('pipeline_message_'+position).update ();
-	pipeline_render (position, json, sha1Hash(response.responseText));
+	pipeline_render (position, json, renderhash);
     }
 }
 
