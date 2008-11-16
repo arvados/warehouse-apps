@@ -24,10 +24,18 @@ example: $0 2322 /var/cache/maq-jobs-workdir
 
 my ($revision_default, $workdir) = @ARGV;
 
+mkdir "$workdir/datablocks";
+
 my %Job;
 my @Job;
 
 my $joblist = $whc->job_list;
+if (!$joblist || !@$joblist)
+{
+    warn "job_list returned nothing; quitting after 10 seconds";
+    sleep 10;
+    exit 1;
+}
 for (@$joblist)
 {
     $Job{$_->{id}} = $_;
@@ -128,7 +136,7 @@ sub fillflow
 		] } ];
 	print "# finished ".$flow->{json}->{pipeline}->[0]->{label}." $in\n";
     }
-    elsif (-e "$workdir/$in.isreads")
+    elsif (-e "$workdir/$in.isreads" && 0)
     {
 	my $rhg18 = "99259f4330907e84fe7253bd4e52dd3e";
 	my $r55k = "f7703aadfb55c12127c4d51693c85587";
@@ -344,6 +352,22 @@ sub fillpipeline
 		      "cns.final.snp.txt");
     }
 
+    if ($me->{snpfilter} && $me->{snpfilter}->{outputkey})
+    {
+	my $bigmanifesthash = buildbigmanifest
+	    ($id, map {
+		/^\S+/;
+		$&;
+	     } @{$me->{outputs}});
+	$me->{gzip} = findjob
+	    ( { mrfunction => "gzip",
+		revision => [ 2394, ],
+		inputkey => $bigmanifesthash,
+		nodes => 1,
+		knobs => makeknobs ("maq-gzip"),
+	      } ) unless $me->{gzip} || !$bigmanifesthash;
+    }
+
     my $inputpath = $flow->{in_manifest} ? "$in/" : "$in/=/$in.gz";
     push (@ { $flow->{json}->{pipeline} },
 	  { label => $pipeline->{label},
@@ -358,15 +382,91 @@ sub fillpipeline
 		    jsonjob ("Assemble", $me->{assemble}),
 		    jsonjob ("Consensus", $me->{cns2x}),
 		    jsonjob ("SNPfilter", $me->{snpfilter}),
+		    jsonjob ("gzip", $me->{gzip}),
 		    ] } );
 
-    if ($me->{outputs} && $me->{snpfilter} && $me->{snpfilter}->{outputkey})
+    if ($me->{gzip} && $me->{gzip}->{outputkey})
     {
-	writefile ("$workdir/$id.outputs", map { "$_\n" } @{$me->{outputs}});
+	symlink $me->{gzip}->{outputkey}, "$workdir/$id.download";
 	$flow->{json}->{downloadall} = $id;
     }
 
     print "# finished ".$pipeline->{label}." $in\n";
+}
+
+sub buildbigmanifest
+{
+    my ($pipeline_id, @outputs) = @_;
+    my $bigmanifesthash;
+    my $bigmanifest = "";
+    if ($bigmanifesthash = readlink "$workdir/$pipeline_id.bigmanifesthash")
+    {
+	return $bigmanifesthash;
+    }
+    for (@outputs)
+    {
+	if (-e "$workdir/$_.nomanifest")
+	{
+	    my @block;
+	    my $length = 0;
+	    for (split (",", $_))
+	    {
+		my $blockhash = blockhash_with_size ($_);
+		return undef if !$blockhash;
+		push @block, $blockhash;
+		$length += $1 if $blockhash =~ m{\+([0-9]+)};
+	    }
+	    $bigmanifest .= ". @block 0:$length:-\n";
+	}
+	else
+	{
+	    $bigmanifest .= $whc->fetch_block ($_);
+	}
+    }
+    $bigmanifest =~ s{^(\S+ (\S+).*:)-\n}{
+	$1 . "reads.txt" . (block_is_gz($2) ? ".gz" : "") . "\n";
+    }e;
+    $bigmanifest =~ s/\n.{600}.*?:cns\.fq\.txt\n/\n/;
+    $bigmanifesthash = $whc->store_block (\$bigmanifest);
+    symlink $bigmanifesthash, "$workdir/$pipeline_id.bigmanifesthash";
+    return $bigmanifesthash;
+}
+
+sub blockhash_with_size
+{
+    my $blockhash = shift;
+    my $size;
+    if ($blockhash =~ /\+(\d+)/) { return $blockhash; }
+    if ($blockhash =~ /^[0-9a-f]{32}/)
+    {
+	my $md5 = $1;
+	my $size = readlink "$workdir/datablocks/$md5.size";
+	if (!$size)
+	{
+	    my $dataref = $whc->fetch_block_ref ($md5);
+	    if ($dataref)
+	    {
+		$size = length $$dataref;
+		symlink $size, "$workdir/datablocks/$md5.size";
+	    }
+	}
+    }
+    return $blockhash if !$size;
+    $blockhash =~ s/(^[0-9a-f]+)/$1+$size/;
+    return $blockhash;
+}
+
+sub block_is_gz
+{
+    my ($blockhash) = @_;
+    my ($md5) = $blockhash =~ /^([0-9a-f]{32})/;
+    my $is_gz = readlink "$workdir/datablocks/$md5.gzip";
+    return $is_gz if defined $is_gz;
+
+    my $data = $whc->fetch_block ($blockhash);
+    $is_gz = ($data =~ /^[ -\177]{1024}/) ? 1 : 0;
+    symlink $is_gz, "$workdir/datablocks/$md5.gzip";
+    return $is_gz;
 }
 
 sub buildoutputs
