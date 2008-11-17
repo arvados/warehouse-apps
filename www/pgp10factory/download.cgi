@@ -57,14 +57,15 @@ else
 for (@pipelines)
 {
     my $downloadhash = readlink ("$workdir/".$_->{id}.".download");
-    $_->{bigmanifest} = keepit ($downloadhash);
+    $_->{bigmanifest} = keepit ($_->{id}, $downloadhash);
 }
 printtar ($hash, @pipelines);
 
 sub keepit
 {
+    my $pipelinehash = shift;
     my $bigmanifesthash = shift;
-    if (my $manifest = readfile ("$workdir/$hash.bigmanifest"))
+    if (my $manifest = readfile ("$workdir/$pipelinehash.bigmanifest"))
     {
 	return $manifest;
     }
@@ -81,7 +82,7 @@ sub keepit
 	" " . $blockhash;
     }ge;
     my ($bighash) = $whc->store_in_keep (dataref => \$bigmanifest);
-    writefile ("$workdir/$hash.bigmanifest", $bigmanifest);
+    writefile ("$workdir/$pipelinehash.bigmanifest", $bigmanifest);
     return $bigmanifest;
 }
 
