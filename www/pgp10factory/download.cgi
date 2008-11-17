@@ -28,22 +28,25 @@ if (-e "$workdir/$hash.islayout")
     my $layout = readfile ("$workdir/$hash");
     while ($layout =~ m{"reads": "([0-9a-f,]+)", "genome": "([0-9a-f,]+)"}g)
     {
+	my $text = "pipeline=maq\nreads=$1\ngenome=$2\n";
 	push @pipelines, {
-	    id => md5_hex ("pipeline=maq\nreads=$1\ngenome=$2\n"),
+	    id => md5_hex ($text),
 	    reads => $1,
 	    genome => $2,
+	    text => $text,
 	};
     }
 }
 elsif (-e "$workdir/$hash.ispipeline" && readlink "$workdir/$hash.download")
 {
-    my $pipeline = readfile ("$workdir/$hash");
-    my ($reads) = $pipeline =~ /reads=(.*)/;
-    my ($genome) = $pipeline =~ /genome=(.*)/;
+    my $text = readfile ("$workdir/$hash");
+    my ($reads) = $text =~ /reads=(.*)/;
+    my ($genome) = $text =~ /genome=(.*)/;
     push @pipelines, {
 	id => $hash,
 	reads => $reads,
 	genome => $genome,
+	text => $text,
     };
 }
 else
@@ -58,8 +61,34 @@ for (@pipelines)
 {
     my $downloadhash = readlink ("$workdir/".$_->{id}.".download");
     $_->{bigmanifest} = keepit ($_->{id}, $downloadhash);
+    buildreadme ($_);
 }
 printtar ($hash, @pipelines);
+
+sub buildreadme
+{
+    my $pipeline = shift;
+    my $readme = qq{== Pipeline ID ==\n\n}.$pipeline->{id}.qq{\n\n};
+    $readme .= qq{== Pipeline Specification ==\n\n}.$pipeline->{text}.qq{\n};
+    for my $input (qw(reads genome))
+    {
+	if ($pipeline->{$input})
+	{
+	    my $Input = ucfirst $input;
+	    $Input =~ s/^Genome$/Reference/;
+	    my $inputhash = $pipeline->{$input};
+	    $readme .= qq{== $Input ==\n\n$inputhash\n\n};
+	    my $comment = readfile ("./session/$sessionid/$inputhash.comment")
+		|| readfile ("$workdir/$inputhash.comment");
+	    if ($comment)
+	    {
+		chomp $comment;
+		$readme .= qq{$comment\n\n};
+	    }
+	}
+    }
+    $pipeline->{readme} = $readme;
+}
 
 sub keepit
 {
@@ -140,20 +169,27 @@ sub tarsize
     my $m = new Warehouse::Manifest (whc => $whc, data => \$manifestdata);
     $m->rewind;
     my $tarballsize = 0;
+    if ($pipeline->{readme})
+    {
+	$tarballsize += length $pipeline->{readme};
+	$tarballsize += 512 + tarpad ($tarballsize);
+    }
     while (my $s = $m->subdir_next)
     {
 	while (my ($pos, $size, $filename) = $s->file_next)
 	{
 	    last if !defined $pos;
-	    $tarballsize += $size + 512;
-	    my $pad = 512 - ($size & 511);
-	    if ($pad != 512)
-	    {
-		$tarballsize += $pad;
-	    }
+	    $tarballsize += 512 + $size + tarpad ($size);
 	}
     }
     return $tarballsize;
+}
+
+sub tarpad
+{
+    my $tarballsize = shift;
+    return 0 if $tarballsize & 511 == 0;
+    return 512 - ($tarballsize & 511);
 }
 
 sub tarpad_eof
@@ -174,6 +210,15 @@ sub tarpipeline
 	|| scalar time;
     my $m = new Warehouse::Manifest (whc => $whc, data => \$manifestdata);
     $m->rewind;
+    if (length $pipeline->{readme})
+    {
+	my $tarfilename = "$pipelinedir/README.txt";
+	my $size = length ($pipeline->{readme});
+	my $header = tarheader ($tarfilename, $size, $timestamp);
+	print $header;
+	print $pipeline->{readme};
+	print "\0" x tarpad ($size);
+    }
     while (my $s = $m->subdir_next)
     {
 	my $dir = $s->name;
@@ -183,37 +228,43 @@ sub tarpipeline
 	    last if !defined $pos;
 
 	    my $tarfilename = "$pipelinedir$dir/$filename";
-	    substr ($tarfilename, 99) = "" if 99 < length $tarfilename;
-
-	    my $tarheader = "\0" x 512;
-	    substr ($tarheader, 0, length($tarfilename)) = $tarfilename;
-	    substr ($tarheader, 100, 7) = sprintf ("%07o", 0644); # mode
-	    substr ($tarheader, 108, 7) = sprintf ("%07o", 0); # uid
-	    substr ($tarheader, 116, 7) = sprintf ("%07o", 0); # gid
-	    substr ($tarheader, 124, 11) = sprintf ("%011o", $size);
-	    substr ($tarheader, 136, 11) = sprintf ("%011o", $timestamp);
-	    substr ($tarheader, 156, 1) = "\0"; # typeflag
-	    substr ($tarheader, 257, 5) = "ustar"; # magic
-	    substr ($tarheader, 263, 2) = "00"; # version
-	    substr ($tarheader, 265, 8) = "mogilefs";	# user
-	    substr ($tarheader, 297, 8) = "mogilefs";	# group
-	    substr ($tarheader, 329, 7) = "0000000";
-	    substr ($tarheader, 337, 7) = "0000000";
-	    substr ($tarheader, 148, 7) = sprintf ("%07o", tarchecksum($tarheader));
-	    print $tarheader;
+	    my $header = tarheader ($tarfilename, $size, $timestamp);
+	    print $header;
 
 	    $s->seek ($pos);
 	    while (my $dataref = $s->read_until ($pos + $size))
 	    {
 		print $$dataref;
 	    }
-	    my $pad = 512 - ($size & 511);
-	    if ($pad != 512)
-	    {
-		print "\0" x $pad;
-	    }
+	    my $pad = tarpad ($size);
+	    print "\0" x $pad if $pad;
 	}
     }
+}
+
+sub tarheader
+{
+    my ($tarfilename, $size, $timestamp) = @_;
+
+    substr ($tarfilename, 99) = "" if 99 < length $tarfilename;
+
+    my $header = "\0" x 512;
+    substr ($header, 0, length($tarfilename)) = $tarfilename;
+    substr ($header, 100, 7) = sprintf ("%07o", 0644); # mode
+    substr ($header, 108, 7) = sprintf ("%07o", 0); # uid
+    substr ($header, 116, 7) = sprintf ("%07o", 0); # gid
+    substr ($header, 124, 11) = sprintf ("%011o", $size);
+    substr ($header, 136, 11) = sprintf ("%011o", $timestamp);
+    substr ($header, 156, 1) = "\0";	   # typeflag
+    substr ($header, 257, 5) = "ustar"; # magic
+    substr ($header, 263, 2) = "00";	   # version
+    substr ($header, 265, 4) = "root";  # user
+    substr ($header, 297, 4) = "root";  # group
+    substr ($header, 329, 7) = "0000000";
+    substr ($header, 337, 7) = "0000000";
+    substr ($header, 148, 7) = sprintf ("%07o", tarchecksum($header));
+
+    return $header;
 }
 
 sub tarchecksum
