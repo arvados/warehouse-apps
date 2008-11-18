@@ -48,7 +48,7 @@ foreach my $hash (sort keys %hash_is)
 	    sysopen F, "$workdir/$hash.nomanifest", O_WRONLY|O_CREAT|O_EXCL;
 	    close F;
 	}
-	if ($chunk =~ m{^(\@\S+\n[A-Z]+\n\+\S+\n\S+\n){4}}s)
+	if ($chunk =~ m{^(\@\S+\n[A-Z]+\n\+\S*\n\S+\n){4}}s)
 	{
 	    sysopen F, "$workdir/$hash.isreads", O_WRONLY|O_CREAT|O_EXCL;
 	    close F;
