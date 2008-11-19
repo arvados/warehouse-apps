@@ -9,6 +9,7 @@ use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
 use MAQ::map;
+use MAQ::mapsort;
 use Fcntl ':flock';
 
 
@@ -93,7 +94,8 @@ if ($ENV{MR_LEVEL} == 1)
 
   my $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
   my $topdir;
-  my @recs;
+  my $maq_sort = new MAQ::mapsort;
+  my $nrecs = 0;
 
   while (my $stream = $ref->subdir_next)
   {
@@ -115,26 +117,24 @@ if ($ENV{MR_LEVEL} == 1)
       }
       my $maq_in = new MAQ::map(\$buf, "r", 'noheader');
       while (my %rec = $maq_in->read) {
-	push @recs, \%rec;
+	$nrecs++;
+	$maq_sort->insert(%rec);
       }
+      warn "read $nrecs...\n";
       $maq_in->close
 	or die "MAQ read failed\n";
     }
   }
-  @recs = sort { $a->{pos} <=> $b->{pos} } @recs;
+  print STDERR "read $nrecs records\n";
   my $out;
   open $out, qq{| /bin/bash -o pipefail -c "mrs-store ./$topdir $my_filename | mrs-output"}
     or die;
-  my $maq_out = new MAQ::map($out, "w", 'noheader');
-  foreach my $rec (@recs) {
-    $maq_out->write(%$rec);
-  }
-  $maq_out->close
+  $maq_sort->emit($out)
     or die "MAQ write failed\n";
   close $out
     or die "sort pipeline failed";
 
-  print STDERR "sorted $#recs records\n";
+  print STDERR "sorted $nrecs records\n";
   exit 0;
 }
 

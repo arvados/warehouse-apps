@@ -107,9 +107,13 @@ sub write {
     $self->{_nrec}--;
   }
 
+  $self->{_out}->write(pack_rec(%r));
+}
+
+sub pack_rec {
+  my %r = @_;
   my $buffer = pack "a64aaaaaaaalllZ36",
     ($r{seq}, $r{size}, $r{map_qual}, $r{info1}, $r{info2}, $r{c1}, $r{c2}, $r{flag}, $r{alt_qual}, $r{seqid}, $r{pos}, $r{dist}, $r{name});
-  $self->{_out}->write($buffer);
 }
 
 sub close {
