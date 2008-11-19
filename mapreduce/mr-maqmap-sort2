@@ -120,7 +120,7 @@ if ($ENV{MR_LEVEL} == 1)
 	$nrecs++;
 	$maq_sort->insert(%rec);
       }
-      warn "read $nrecs...\n";
+      #warn "read $nrecs...\n";
       $maq_in->close
 	or die "MAQ read failed\n";
     }
