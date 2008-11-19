@@ -1,0 +1,159 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:sort GFF files per chromosome and bucket
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use MAQ::map;
+use Fcntl ':flock';
+
+
+my $tmp = $ENV{MR_JOB_TMP};
+
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+my $input_manifest_key = $ENV{MR_INPUT0} or die;
+my $BUCKET_SIZE = 1_000_000;
+
+my %chr_lengths = qw(
+chr1 252194720
+chr1_random 1696544
+chr2 247810178
+chr2_random 189296
+chr3 203491870
+chr3_random 764255
+chr4 195098531
+chr4_random 859514
+chr5 184475030
+chr5_random 146574
+chr6 174317998
+chr6_random 1913087
+chr7 161997859
+chr7_random 560666
+chr8 149200329
+chr8_random 962700
+chr9 143078724
+chr9_random 1169376
+chr10 138082239
+chr10_random 115555
+chr11 137141439
+chr11_random 219614
+chr12 134996532
+chr13 116425847
+chr13_random 190610
+chr14 108495964
+chr15 102345701
+chr15_random 800047
+chr16 90603807
+chr16_random 107609
+chr17 80350244
+chr17_random 2669980
+chr18 77639504
+chr18_random 4362
+chr19 65087892
+chr19_random 307910
+chr20 63684691
+chr21 47883217
+chr21_random 1713301
+chr22 50685268
+chr22_random 262479
+chrX 158012036
+chrX_random 1753565
+chrY 58928420
+chrM 16909
+chr22_h2_hap1 64950
+chr6_cox_hap1 4826347
+chr5_h2_hap1 1830782
+chr6_qbl_hap2 4657265
+);
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # queue a level 1 jobstep for each chromosome and bucket
+
+  foreach my $chr (sort keys %chr_lengths) {
+    for (my $bucket = 0 ; $bucket * $BUCKET_SIZE < $chr_lengths{$chr} ; $bucket++) {
+      my $bucket0 = sprintf "%03d", $bucket;
+      print STDERR "+++mrjobstep 1 $chr $bucket0+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($chr, $bucket) = split (/ /, $ENV{MR_INPUT}, 2);
+  my $my_filename = "$chr-$bucket.maph";
+  print STDERR "start $chr-$bucket\n";
+
+  my $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
+  my $topdir;
+  my @recs;
+
+  while (my $stream = $ref->subdir_next)
+  {
+    my $subdir = $stream->name;
+    $subdir =~ s/^\.\///;
+    die unless $subdir =~ /([^-]+)-/;
+
+    if (!$topdir) {
+      $topdir = $1;
+    }
+    while (my ($pos, $size, $filename) = $stream->file_next)
+    {
+      last if !defined $pos;
+      next if $filename ne $my_filename;
+      $stream->seek($pos);
+      my $buf;
+      while (my $dataref = $stream->read_until ($pos + $size)) {
+	$buf .= $$dataref;
+      }
+      my $maq_in = new MAQ::map(\$buf, "r", 'noheader');
+      while (my %rec = $maq_in->read) {
+	push @recs, \%rec;
+      }
+      $maq_in->close
+	or die "MAQ read failed\n";
+    }
+  }
+  @recs = sort { $a->{pos} <=> $b->{pos} } @recs;
+  my $out;
+  open $out, qq{| /bin/bash -o pipefail -c "mrs-store ./$topdir $my_filename | mrs-output"}
+    or die;
+  my $maq_out = new MAQ::map($out, "w", 'noheader');
+  foreach my $rec (@recs) {
+    $maq_out->write(%$rec);
+  }
+  $maq_out->close
+    or die "MAQ write failed\n";
+  close $out
+    or die "sort pipeline failed";
+
+  print STDERR "sorted $#recs records\n";
+  exit 0;
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
