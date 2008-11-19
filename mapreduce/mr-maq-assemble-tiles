@@ -92,7 +92,7 @@ if ($ENV{MR_LEVEL} == 1)
       $maq_in->close or die;
     }
   }
-  my $MAQ_assemble = "$MAQ_path assemble -q $ENV{KNOB_QMIN} -Q $ENV{KNOB_QMAX} out/$chr-$bucket1.cns $ENV{KNOB_REFERENCEFILE} -";
+  my $MAQ_assemble = "$MAQ_path assemble -q $ENV{KNOB_QMIN} -Q $ENV{KNOB_QMAX} out/$chr-$bucket1.cns $ENV{KNOB_REFERENCEFILE} - 2> out/cns.log";
   if ($bucket0 ne "-") {
     my $in;
     my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path mapmerge - $my_filename0 $my_filename1 | $MAQ_path rmdup - - | $MAQ_assemble"};
@@ -101,11 +101,14 @@ if ($ENV{MR_LEVEL} == 1)
   }
   else {
     my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path rmdup - $my_filename1 | $MAQ_assemble"};
-    system($cmd) == 0
-      or die "rmdup/assemble failed";
+    system($cmd) == 0 or die "rmdup/assemble failed";
   }
-  #system (qq{| /bin/bash -o pipefail -c "mrs-store ./$topdir $chr-$bucket1.cns | mrs-output"}) == 0
-  #  or die "store failed";
+  system ("mrs-store ./$topdir $chr-$bucket1.cns < out/$chr-$bucket1.cns > out/manifest") == 0
+    or die "store failed";
+  system ("mrs-store ./$topdir $chr-$bucket1.log < out/cns.log >> out/manifest") == 0
+    or die "store failed";
+  system ("mrs-output < out/manifest") == 0
+    or die "store failed";
 
   exit 0;
 }
