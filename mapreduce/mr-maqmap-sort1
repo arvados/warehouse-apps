@@ -8,7 +8,6 @@ use strict;
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use IO::Compress::Gzip qw(gzip $GzipError);
 use MAQ::map;
 use Fcntl ':flock';
 
