@@ -27,7 +27,7 @@ my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $BUCKET_SIZE = 1_000_000;
 
 chdir ($tmp) or die "chdir $tmp: $!";
-mkdir "out" or die "mkdir out: $!";
+mkdir "out";
 
 my $whc = new Warehouse;
 
@@ -65,7 +65,7 @@ if ($ENV{MR_LEVEL} == 1)
     $subdir =~ s/^\.\///;
 
     if (!$topdir) {
-      $topdir = $1;
+      $topdir = $subdir;
     }
     while (my ($pos, $size, $filename) = $stream->file_next)
     {
@@ -92,6 +92,7 @@ if ($ENV{MR_LEVEL} == 1)
       $maq_in->close or die;
     }
   }
+  die "no topdir" unless $topdir;
   my $MAQ_assemble = "$MAQ_path assemble -q $ENV{KNOB_QMIN} -Q $ENV{KNOB_QMAX} out/$chr-$bucket1.cns $ENV{KNOB_REFERENCEFILE} - 2> out/cns.log";
   if ($bucket0 ne "-") {
     my $in;
@@ -103,11 +104,7 @@ if ($ENV{MR_LEVEL} == 1)
     my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path rmdup - $my_filename1 | $MAQ_assemble"};
     system($cmd) == 0 or die "rmdup/assemble failed";
   }
-  system ("mrs-store ./$topdir $chr-$bucket1.cns < out/$chr-$bucket1.cns > out/manifest") == 0
-    or die "store failed";
-  system ("mrs-store ./$topdir $chr-$bucket1.log < out/cns.log >> out/manifest") == 0
-    or die "store failed";
-  system ("mrs-output < out/manifest") == 0
+  system (qq{/bin/bash -o pipefail -c "mrs-store ./$topdir $chr-$bucket1.cns < out/$chr-$bucket1.cns | mrs-output}) == 0
     or die "store failed";
 
   exit 0;
