@@ -30,6 +30,9 @@ my %output;
 while (<>) {
   chomp;
   my ($name, $chr, $pos, $strand, $insert, $pflag, $mapqual, $se_mapqual, $alt_mapqual, $mismatches, $mismatch_qual, $mm_0, $mm_1, $length, $seq, $qual, $mm_bitmap_hex) = split(/\t/);
+  # lossage: insert, se_mapqual, alt_mapqual, mismatches, mismatch_qual, mm_0, mm_1
+  # also, omit anything with flag != 18
+  # (in MAQ terms: m1->dist, m1->seq[MAX_READLEN-1], m1->alt_qual, m1->info1, m1->info2, m1->c[0], m1->c[1])
   if ($pflag != 18) {
     next;
   }

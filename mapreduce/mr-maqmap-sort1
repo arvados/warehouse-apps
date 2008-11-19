@@ -1,0 +1,141 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:sort MAQ map files part 1
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use IO::Compress::Gzip qw(gzip $GzipError);
+use MAQ::map;
+use Fcntl ':flock';
+
+
+my $tmp = $ENV{MR_JOB_TMP};
+
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+my $maq_manifest_key = $ENV{MR_INPUT0} or die;
+my $MAQ_bin_key = '225ad960b8c87dd2c2b4091194ea4461';
+my $BUCKET_SIZE = 1_000_000;
+
+my $MAQ_path="$tmp/maq";
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # queue a level 1 jobstep for each file in the input manifest
+
+  my $ref = new Warehouse::Manifest (whc => $whc,
+				     key => $maq_manifest_key);
+  while (my $s = $ref->subdir_next)
+  {
+    my $subdir = $s->name;
+    $subdir =~ s/^\.\///;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      next if $filename !~ /(.*).map$/;
+      $filename = $1;
+      print STDERR "+++mrjobstep 1 $subdir $filename+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($subdir, $filename) = split (/ /, $ENV{MR_INPUT}, 2);
+
+  my $maqfile = "$tmp/${filename}.map";
+  atomic_whget("$maq_manifest_key/$subdir/${filename}.map", $maqfile);
+
+  atomic_whget($MAQ_bin_key, $MAQ_path);
+  chmod 0755, $MAQ_path;
+
+  my $maq_in = new MAQ::map($maqfile, "r");
+  my $cur_chr;
+  my $cur_bucket;
+  my @manifest_lines;
+  my $stream_name = "./$subdir-$filename";
+  my $stream = new Warehouse::Stream (whc => $whc);
+  $stream->clear;
+  $stream->name ($stream_name);
+  my @recs = ();
+  
+  while (my %inrec = $maq_in->read) {
+    my $chr = $inrec{chr};
+    my $pos = $inrec{pos} >> 1;
+
+    my $bucket = sprintf "%03d", int($pos / $BUCKET_SIZE);
+    if ($chr ne $cur_chr || $bucket ne $cur_bucket) {
+      print STDERR "$chr\n" if $chr ne $cur_chr;
+      if (@recs) {
+	write_MAQ($stream, @recs);
+	@recs = ();
+
+	# break into multiple streams to reduce block retrieval overhead
+	if ($bucket % 20 == 19) {
+	  push @manifest_lines, $stream->as_string;
+	  $stream->clear;
+	  $stream->name($stream_name);
+	}
+      }
+      $stream->write_start("$chr-$bucket.maph");
+
+      $cur_chr = $chr;
+      $cur_bucket = $bucket;
+    }
+    push @recs, \%inrec;
+  }
+  if (@recs) {
+    write_MAQ($stream, @recs);
+    @recs = ();
+  }
+  $maq_in->close or
+    die "MAQ input failure";
+  push @manifest_lines, $stream->as_string;
+  my $hash = $whc->store_block (join("", @manifest_lines));
+  print STDERR "+++mrout $hash+++\n";
+
+  unlink $maqfile;
+  exit 0;
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub write_MAQ {
+  my $stream = shift;
+  my @recs = @_;
+
+  my $buffer = "";
+  my $maq_out = new MAQ::map(\$buffer, 'w', 'noheader');
+  foreach my $rec (@recs) {
+    $rec->{seqid} = 0;
+    $maq_out->write(%$rec);
+  }
+  $maq_out->close
+    or die;
+  $stream->write_data($buffer);
+  $stream->write_finish;
+}
