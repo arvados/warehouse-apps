@@ -236,8 +236,9 @@ while (0 < length $manifest)
 
 		    print STDERR "fetch $hash[0]\n"
 			if $opt{v} >= 3;
-		    $data = $whc->fetch_block (shift @hash)
-			or die "fetch_block failed";
+		    my $nexthash = shift @hash;
+		    $data = $whc->fetch_block ($nexthash)
+			or die "fetch_block($nexthash) failed";
 		}
 
 		$ctx->add (substr ($data, 0, $pos + $size - $streampos))
