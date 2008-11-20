@@ -9,6 +9,9 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use IO::Compress::Gzip qw($GzipError);
 
+# don't try to hold all compressed data in RAM when uncompressed file size > 128M.
+my $PIPE_SIZE_THRESHOLD = 2**27;
+
 my $manifestkey = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0)
@@ -55,6 +58,49 @@ elsif ($ENV{MR_LEVEL} == 1)
 	$outstream->write_data ($dataref);
       }
       $outstream->write_finish;
+    }
+    elsif ($size > $PIPE_SIZE_THRESHOLD)
+    {
+      use IO::Pipe;
+      my $pipe = new IO::Pipe;
+      my $pid;
+      if ($pid = fork()) {
+	# parent
+	$pipe->reader();
+	$outstream->write_start ($filename.".gz");
+	my $buf;
+	while (my $bufsize = $pipe->read ($buf, 2**20))
+	{
+	  die "assert failed" unless $bufsize == length $buf;
+	  $outstream->write_data (\$buf)
+	      or die "write failed: ".$outstream->errstr;
+	  $readsize += $bufsize;
+	}
+	$outstream->write_finish;
+	wait;
+	die "gzip child exited with status $?" if $?;
+      }
+      elsif (defined $pid)
+      {
+	# child
+	$pipe->writer();
+	my $z = new IO::Compress::Gzip $pipe, Minimal=>1
+	    or die "gzip failed: $GzipError";
+	my $wrote = 0;
+	$instream->seek ($pos);
+	while (my $dataref = $instream->read_until ($pos + $size))
+	{
+	  $wrote += length($$dataref) if print $z $$dataref;
+	}
+	$z->close or die "gzip failed: $GzipError";
+	$pipe->close or die "pipe close failed: $!";
+	$wrote==$size or die "Only wrote $wrote bytes to gzip, file size was $size";
+	exit 0;
+      }
+      else
+      {
+	die "fork failed";
+      }
     }
     else
     {
