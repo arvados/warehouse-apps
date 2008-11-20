@@ -29,10 +29,6 @@ my $BUCKET_SIZE = 1_000_000;
 chdir ($tmp) or die "chdir $tmp: $!";
 mkdir "out";
 
-# remove legacy stuff
-system("rm *.maph");
-system("rm out/*.cns");
-
 my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
