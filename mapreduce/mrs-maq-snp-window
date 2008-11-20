@@ -1,0 +1,13 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $BUCKET_SIZE = 1_000_000;
+my $bucket = shift;
+my $min = $bucket * $BUCKET_SIZE;
+my $max = ($bucket+1) * $BUCKET_SIZE;
+while (<>) {
+  my ($chr, $pos) = split /\t/;
+  print if $pos > $min && $pos < $max;
+}

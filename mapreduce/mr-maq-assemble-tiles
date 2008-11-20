@@ -29,6 +29,10 @@ my $BUCKET_SIZE = 1_000_000;
 chdir ($tmp) or die "chdir $tmp: $!";
 mkdir "out";
 
+# remove legacy stuff
+system("rm *.maph");
+system("rm out/*.cns");
+
 my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
@@ -93,19 +97,22 @@ if ($ENV{MR_LEVEL} == 1)
     }
   }
   die "no topdir" unless $topdir;
-  my $MAQ_assemble = "$MAQ_path assemble -q $ENV{KNOB_QMIN} -Q $ENV{KNOB_QMAX} out/$chr-$bucket1.cns $ENV{KNOB_REFERENCEFILE} - 2> out/cns.log";
+  my $MAQ_assemble = "$MAQ_path assemble -q $ENV{KNOB_QMIN} -Q $ENV{KNOB_QMAX} - $ENV{KNOB_REFERENCEFILE} - 2> out/cns.log";
+  my $MAQ_snp = "$MAQ_path cns2snp - | mrs-maq-snp-window $bucket1";
+  my $MRS_STORE = "mrs-store ./$topdir $chr-$bucket1.snp | mrs-output";
   if ($bucket0 ne "-") {
     my $in;
-    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path mapmerge - $my_filename0 $my_filename1 | $MAQ_path rmdup - - | $MAQ_assemble"};
+    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path mapmerge - $my_filename0 $my_filename1 | $MAQ_path rmdup - - | $MAQ_assemble | $MAQ_snp | $MRS_STORE"};
     system ($cmd) == 0
-      or die "merge/rmdup/assemble failed";
+      or die "merge/rmdup/assemble/window failed";
+    unlink $my_filename0;
+    unlink $my_filename1;
   }
   else {
-    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path rmdup - $my_filename1 | $MAQ_assemble"};
-    system($cmd) == 0 or die "rmdup/assemble failed";
+    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path rmdup - $my_filename1 | $MAQ_assemble | $MAQ_snp | $MRS_STORE"};
+    system($cmd) == 0 or die "rmdup/assemble/window failed";
+    unlink $my_filename1;
   }
-  system (qq{/bin/bash -o pipefail -c "mrs-store ./$topdir $chr-$bucket1.cns < out/$chr-$bucket1.cns | mrs-output"}) == 0
-    or die "store failed";
 
   exit 0;
 }
