@@ -129,8 +129,8 @@ sub job_list
 
 sub job_show
 {
-    my $joblist = $whc->job_list (id_min => $opt{id}+0,
-				  id_max => $opt{id}+0);
+    my $joblist = $whc->job_list (id_min => $opt{id} || $opt{id_min},
+				  id_max => $opt{id} || $opt{id_max});
     if ($joblist)
     {
 	my @fieldlist = grep { !/=/ } @ARGV;
