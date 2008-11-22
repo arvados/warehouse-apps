@@ -20,16 +20,54 @@ chdir ($tmp) or die "chdir $tmp: $!";
 mkdir "out" or die "mkdir out: $!";
 
 my $whc = new Warehouse;
+my $whget_command;
+my $formatfilter = "gzip -cdf";
 
-my $whget_command = "whget '$ENV{MR_INPUT0}' -";
-my $in = $whc->fetch_block_ref ((split(",", $ENV{MR_INPUT0}))[0])
-    or die "fetch_block_ref($ENV{MR_INPUT0}) failed";
-if ($$in =~ m{^\.(/\S+)? ([0-9a-f]{32}\S* )+\d+:\d+:(\S+)\n$}s)
+if ($ENV{MR_LEVEL} == 0)
 {
-  $whget_command = "whget '$ENV{MR_INPUT0}$1/$3' -";
+  $whget_command = "whget '$ENV{MR_INPUT0}' -";
+  my $in = $whc->fetch_block_ref ((split(",", $ENV{MR_INPUT0}))[0])
+      or die "fetch_block_ref($ENV{MR_INPUT0}) failed";
+  if ($$in =~ m{ ^\.(/\S+)?\ ([0-9a-f]{32}\S*\ )+\d+:\d+:(\S+)\n$ }sx)
+  {
+    $whget_command = "whget '$ENV{MR_INPUT0}$1/$3' -";
+  }
+  elsif ($$in =~ m{ ^\.(/\S+)?	# stream name
+			( (?:\ [0-9a-f]{32}\S*) +) # data blocks
+			( (\ \d+:\d+:(\S+)_1\.fastq\.gz\ \d+:\d+:(\S+)_2\.fastq\.gz) +)
+			\n$ }sx)
+  {
+    # paired reads
+
+    my $datablocks = $2;
+    my @files = split (/ /, $3);
+    shift @files if $files[0] eq "";
+    $datablocks =~ s/^ //;
+    while (@files >= 2)
+    {
+      print STDERR "+++mrjobstep 1 $datablocks $files[0] $files[1]+++\n";
+      splice @files, 0, 2;
+    }
+    exit 0;
+  }
+  elsif ($$in =~ m{ ^\.(/\S+)?	# stream name
+			( (?:\ [0-9a-f]{32}\S*) +) # data blocks
+			( (\ \d+:\d+:(\S+)\.fastq\.gz) + )
+			\n$ }sx)
+  {
+    # unpaired reads
+    my $datablocks = $2;
+    my @files = split (/ /, $3);
+    shift @files if $files[0] eq "";
+    $datablocks =~ s/^ //;
+    for (@files)
+    {
+      print STDERR "+++mrjobstep 1 $datablocks $_+++\n";
+    }
+    exit 0;
+  }
 }
 
-my $formatfilter = "gzip -cdf";
 if ($ENV{KNOB_INPUTFORMAT} eq "solexa")
 {
   fetch_to_file ($whc, $ENV{KNOB_ALL2STD_PL}, "all2std.pl");
@@ -42,9 +80,63 @@ else
 {
   die "Unsupported INPUTFORMAT knob";
 }
+
 fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
+
+if ($ENV{MR_LEVEL} == 1)
+{
+  my $instream = new Warehouse::Stream (whc => $whc, subdir => ". $ENV{MR_INPUT}\n");
+
+  my $base;
+  $instream->rewind;
+  while (my ($pos, $size, $filename) = $instream->file_next)
+  {
+    last if !defined $pos;
+    if (!defined $base) { $base = $filename; $base =~ s/\.fastq(\.gz)?$//; }
+    else
+    {
+      substr ($filename, length $base) = "" if length $filename > length $base;
+      substr ($base, length $filename) = "" if length $filename < length $base;
+      while ($base ne $filename || $base =~ /[-_\.]$/)
+      {
+	substr ($base, -1) = "";
+	substr ($filename, -1) = "";
+      }
+    }
+  }
+
+  $instream->rewind;
+  while (my ($pos, $size, $filename) = $instream->file_next)
+  {
+    last if !defined $pos;
+    $filename =~ s/\.gz$//;
+    $instream->seek ($pos);
+    open PIPE, "|-", "bash -c 'set -o pipefail; $formatfilter | ./usr/bin/maq fastq2bfq -n 2000000 - out/$filename'";
+    while (my $dataref = $instream->read_until ($pos + $size))
+    {
+      print PIPE $$dataref;
+    }
+    close PIPE or die "close(PIPE): exit status $?, $!";
+  }
+  opendir D, "out" or die "opendir: $!";
+  for my $f (readdir D)
+  {
+    if ($f =~ /^(.*)\@(\d+)\.bfq/)
+    {
+      mkdir "out/$base\@$2";
+      rename "out/$f", "out/$base\@$2/$f" or die "rename out/$f out/$base\@$2/$f: $!";
+    }
+  }
+  my $key = `whput out/`;
+  chomp $key;
+  my $outref = $whc->fetch_block_ref ($key) or die $whc->errstr;
+  $$outref =~ s{^\. *\n}{}s;	# whput prints empty directories
+  print STDERR "+++mrout $$outref+++\n";
+  exit 0;
+}
+
 system ("bash -c 'set -o pipefail; $whget_command | $formatfilter | ./usr/bin/maq fastq2bfq -n 2000000 - out/fastq'")
     == 0 or die "whget|zcat|all2std.pl|maq pipeline exited $?";
 opendir D, "out" or die "opendir: $!";
