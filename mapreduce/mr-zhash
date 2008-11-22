@@ -4,6 +4,9 @@
 ###MR_DESCRIPTION:uncompress any *.gz and output a *.txt (filename based on hash function) for each subdir
 ###MR_INPUT:manifest
 ###MR_KNOBS:HASH=md5
+###MR_KNOBS:UNCOMPRESS=1
+
+$ENV{KNOB_UNCOMPRESS} = 1 if !defined $ENV{KNOB_UNCOMPRESS};
 
 use Warehouse;
 use Warehouse::Manifest;
@@ -17,13 +20,12 @@ my $manifestkey = $ENV{MR_INPUT0};
 if ($ENV{MR_LEVEL} == 0)
 {
   $ENV{MR_INPUT} = $manifestkey;
-  do "mrtask-queuesubdirs";
+  do "mrtask-queuelines";
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
 }
 
 elsif ($ENV{MR_LEVEL} == 1)
 {
-  my $wantsubdir = $ENV{MR_INPUT};
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
 	my @valid_functions = ('md5','sha1','sha224','sha256','sha384','sha512');
@@ -39,61 +41,50 @@ elsif ($ENV{MR_LEVEL} == 1)
 	# Default to md5
 	$function = 'md5' if (!$function_ok);
 
-  my $manifest = new Warehouse::Manifest (whc => $whc,
-					  key => $manifestkey);
-  $manifest->rewind;
-  while (my $instream = $manifest->subdir_next)
+  my $instream = new Warehouse::Stream (whc => $whc,
+					subdir => $ENV{MR_INPUT});
+  my $outstream = new Warehouse::Stream (whc => $whc);
+  $outstream->name ($instream->name);
+  $outstream->clear;
+  $outstream->write_start ("$function.txt");
+
+  while (my ($pos, $size, $filename) = $instream->file_next)
   {
-    if ($instream->name eq $wantsubdir)
-    {
-      my $outstream = new Warehouse::Stream (whc => $whc);
-      $outstream->name ($instream->name);
-      $outstream->clear;
-      $outstream->write_start ("$function.txt");
+    last if !defined $pos;
 
-      while (my ($pos, $size, $filename) = $instream->file_next)
-      {
-	last if !defined $pos;
-
-	my $ctx;
-	if ($function eq 'md5') {
-		$ctx = Digest::MD5->new;
-	} else {
-		$ctx = Digest::SHA->new($function);
-	}
-
-	$instream->seek ($pos);
-
-	if ($filename =~ s/\.g?z$//i)
-	{
-	  my $zblob = "";
-	  while (my $dataref = $instream->read_until ($pos + $size))
-	  {
-	    $zblob .= $$dataref;
-	  }
-	  my $inblob;
-	  gunzip \$zblob => \$inblob
-	      or die $GunzipError;
-	  $ctx->add ($inblob);
-	}
-	else
-	{
-	  while (my $dataref = $instream->read_until ($pos + $size))
-	  {
-	    $ctx->add ($$dataref);
-	  }
-	}
-	$outstream->write_data ($ctx->hexdigest . "  " . $filename . "\n");
-      }
-
-      $outstream->write_finish;
-
-      my $fragkey = $whc->store_block ($outstream->as_string)
-	  or die "store_block failed: ".$whc->errstr;
-      print STDERR "+++mrout ".$fragkey."+++\n";
-      print STDERR $whc->iostats;
-      exit 0;
+    my $ctx;
+    if ($function eq 'md5') {
+      $ctx = Digest::MD5->new;
+    } else {
+      $ctx = Digest::SHA->new($function);
     }
+
+    $instream->seek ($pos);
+
+    if ($ENV{KNOB_UNCOMPRESS} && $filename =~ s/\.g?z$//i)
+    {
+      my $zblob = "";
+      while (my $dataref = $instream->read_until ($pos + $size))
+      {
+	$zblob .= $$dataref;
+      }
+      my $inblob;
+      gunzip \$zblob => \$inblob
+	  or die $GunzipError;
+      $ctx->add ($inblob);
+    }
+    else
+    {
+      while (my $dataref = $instream->read_until ($pos + $size))
+      {
+	$ctx->add ($$dataref);
+      }
+    }
+    $outstream->write_data ($ctx->hexdigest . "  " . $filename . "\n");
   }
-  die "Subdir not found: $wantsubdir";
+
+  $outstream->write_finish;
+  print STDERR "+++mrout ".$outstream->as_string."+++\n";
+  print STDERR $whc->iostats;
+  exit 0;
 }
