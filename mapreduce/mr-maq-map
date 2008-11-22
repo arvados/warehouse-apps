@@ -6,6 +6,8 @@
 ###MR_KNOBS:MAQ_DEB=ec9aba3c23989d66f813589e2d4450db
 ###MR_KNOBS:REFERENCE=99259f4330907e84fe7253bd4e52dd3e
 ###MR_KNOBS:REFERENCEFILE=homo_sapiens.bfa
+###MR_KNOBS:PAIR_MIN_DISTANCE=0
+###MR_KNOBS:PAIR_MAX_DISTANCE=250
 
 use strict; 
 use Warehouse;
@@ -14,6 +16,8 @@ use Safepipe;
 $ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
 $ENV{KNOB_REFERENCE} ||= "99259f4330907e84fe7253bd4e52dd3e";
 $ENV{KNOB_REFERENCEFILE} ||= "homo_sapiens.bfa";
+$ENV{KNOB_PAIR_MIN_DISTANCE} ||= 0;
+$ENV{KNOB_PAIR_MAX_DISTANCE} ||= 250;
 
 if ($ENV{MR_LEVEL}==0)
 {
@@ -35,7 +39,10 @@ if ($ENV{MR_LEVEL}==1)
   system ("whget $ENV{MR_INPUT0}/$subdirbase/ $tmp/")
       == 0 or die "whget $ENV{MR_INPUT0}/$subdirbase/ $tmp/ exited $?";
 
-  if (`ls $tmp/*.bfq 2>/dev/null` !~ /\S/)
+  opendir D, "." or die "opendir .: $!";
+  my @files = grep { /\.bfq$/ } readdir D;
+  closedir D;
+  if (!@files)
   {
     print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
     exit 0;
@@ -48,7 +55,7 @@ if ($ENV{MR_LEVEL}==1)
   system ("dpkg --extract maq.deb .")
       == 0 or die "dpkg exited $?";
 
-  system ("./usr/bin/maq map -n 2 -e 70 -u out/unmap1\@$subdirbase.txt out/aln1\@$subdirbase.map $ENV{KNOB_REFERENCEFILE} fastq\@$subdirbase.bfq")
+  system ("./usr/bin/maq map -n 2 -e 70 -i $ENV{KNOB_PAIR_MIN_DISTANCE} -a $ENV{KNOB_PAIR_MAX_DISTANCE} -u out/unmap1\@$subdirbase.txt out/aln1\@$subdirbase.map $ENV{KNOB_REFERENCEFILE} @files")
       == 0 or die "maq exited $?";
 
   my $key = `whput out/`;
