@@ -1,0 +1,6 @@
+#!/bin/sh
+
+for k in $*
+do
+ whget $k -
+done | gzip -cdf | less

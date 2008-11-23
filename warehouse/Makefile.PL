@@ -12,6 +12,7 @@ WriteMakefile
 		   'client/whcopy',
 		   'client/whence',
 		   'client/whget',
+		   'client/whless',
 		   'client/whput',
 		   'client/whget.cgi',
 		   'server/memcached-install.sh',
