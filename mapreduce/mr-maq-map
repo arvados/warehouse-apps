@@ -55,7 +55,7 @@ if ($ENV{MR_LEVEL}==1)
   system ("dpkg --extract maq.deb .")
       == 0 or die "dpkg exited $?";
 
-  system ("./usr/bin/maq map -n 2 -e 70 -i $ENV{KNOB_PAIR_MIN_DISTANCE} -a $ENV{KNOB_PAIR_MAX_DISTANCE} -u out/unmap1\@$subdirbase.txt out/aln1\@$subdirbase.map $ENV{KNOB_REFERENCEFILE} @files")
+  system ("./usr/bin/maq map -n 2 -e 70 -i $ENV{KNOB_PAIR_MIN_DISTANCE} -a $ENV{KNOB_PAIR_MAX_DISTANCE} -u out/unmap1\@$subdirbase.txt out/aln1\@$subdirbase.map $ENV{KNOB_REFERENCEFILE} @files 2>out/stderr\@$subdirbase.txt")
       == 0 or die "maq exited $?";
 
   my $key = `whput out/`;
