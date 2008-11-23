@@ -6,14 +6,17 @@
 ###MR_KNOBS:MAQ_DEB=ec9aba3c23989d66f813589e2d4450db
 ###MR_KNOBS:REFERENCE=99259f4330907e84fe7253bd4e52dd3e
 ###MR_KNOBS:REFERENCEFILE=homo_sapiens.bfa
+###MR_KNOBS:MAX_MERGE=100
 
-use strict; 
+use strict;
 use Warehouse;
+use Warehouse::Manifest;
 use Safepipe;
 
 $ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
 $ENV{KNOB_REFERENCE} ||= "99259f4330907e84fe7253bd4e52dd3e";
 $ENV{KNOB_REFERENCEFILE} ||= "homo_sapiens.bfa";
+$ENV{KNOB_MAX_MERGE} ||= 100;
 
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 chdir ($tmp) or die "chdir $tmp: $!";
@@ -25,11 +28,40 @@ fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
 
-system ("whget $ENV{MR_INPUT0}/ $tmp/")
-    == 0 or die "whget $ENV{MR_INPUT0}/ $tmp/ exited $?";
-
 system ("whget $ENV{KNOB_REFERENCE}/ $tmp/")
     == 0 or die "whget $ENV{KNOB_REFERENCE}/ $tmp/ exited $?";
+
+my @files;
+my $m = new Warehouse::Manifest (whc => $whc,
+				 key => $ENV{MR_INPUT0});
+$m->rewind;
+while (my $s = $m->subdir_next)
+{
+  $s->rewind;
+  while (my ($pos, $size, $filename) = $s->file_next)
+  {
+    last if !defined $pos;
+    if ($filename =~ m{ ^[^/]+\.map$ }x)
+    {
+      open F, ">", $filename or die "open $filename: $!";
+      $s->seek ($pos);
+      while (my $dataref = $s->read_until ($pos+$size))
+      {
+	print F $$dataref;
+      }
+      close F or die "close $filename: $!";
+      push @files, $filename;
+    }
+    if (@files >= $ENV{KNOB_MAX_MERGE})
+    {
+      system ("./usr/bin/maq mapmerge out/all.map *.map")
+	  == 0 or die "maq mapmerge exited $?";
+      unlink @files;
+      rename "out/all.map", "merged.map" or die "rename out/all.map -> merged.map: $!";
+      @files = ("merged.map");
+    }
+  }
+}
 
 system ("./usr/bin/maq mapmerge out/all.map *.map")
     == 0 or die "maq mapmerge exited $?";
