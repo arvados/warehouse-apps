@@ -134,8 +134,7 @@ if ($ENV{MR_LEVEL} == 1)
       rename "out/$f", "out/$base\@$2/$f" or die "rename out/$f out/$base\@$2/$f: $!";
     }
   }
-  my $key = `whput out/`;
-  chomp $key;
+  my ($key) = `whput out/` =~ /([0-9a-f]{32}\S*)/s;
   my $outref = $whc->fetch_block_ref ($key) or die $whc->errstr;
   $$outref =~ s{^\. *\n}{}s;	# whput prints empty directories
   print STDERR "+++mrout $$outref+++\n";
