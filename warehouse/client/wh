@@ -138,31 +138,30 @@ sub job_show
 	    if !@fieldlist;
 	foreach my $j (@$joblist)
 	{
+	    my @out;
 	    foreach (@fieldlist)
 	    {
 		if ($_ eq "knobs")
 		{
 		    foreach (split (/\n/, freezeunquote ($j->{knobs})))
 		    {
-			$_ = "\"$_\"" if /[^-\.\w=]/;
-			print "$_ ";
+			push @out, shellquote($_);
 		    }
 		}
 		else
 		{
 		    my $arg = $j->{$_};
-		    $arg = "\"$arg\"" if $arg =~ /[^-\.\w=]/;
 		    if (@fieldlist > 1)
 		    {
-			print "$_=$arg ";
+			push @out, "$_=".shellquote($arg);
 		    }
 		    else
 		    {
-			print $arg;
+			push @out, $arg;
 		    }
 		}
 	    }
-	    print "\n";
+	    print "@out\n";
 	}
     }
     else { warn ($whc->errstr . "\n"); }
@@ -271,6 +270,18 @@ sub snap
 
     my $snapkey = $whc->write_finish or die "Write failed: ".$whc->errstr;
     print "$snapkey\n";
+}
+
+
+sub shellquote
+{
+    my $arg = shift;
+    if ($arg =~ /[^-\.\w=\@\+]/)
+    {
+	$arg =~ s{[\"\`]}{\\$&}gx;
+	$arg = "\"$arg\"";
+    }
+    $arg;
 }
 
 
