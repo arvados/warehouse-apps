@@ -1458,7 +1458,7 @@ sub _refresh_job_list
 		$self->{job_hashref}->{$_->{id}} = $_;
 		$_->{cache_fetched} = time;
 	    }
-	    $self->{job_by_output}->{$_->{outputkey}} = $_ if $_->{outputkey} && $_->{success};
+	    $self->{job_by_output}->{striphints($_->{outputkey})} = $_ if $_->{outputkey} && $_->{success};
 	}
 	$self->{job_list_fetched} = time;
     }
@@ -1579,7 +1579,7 @@ sub job_follow_input
 
     $self->_read_cache;
     $self->_refresh_job_list;
-    my $previous = $self->{job_by_output}->{$targetjob->{inputkey}};
+    my $previous = $self->{job_by_output}->{striphints($targetjob->{inputkey})};
     return $previous
 	if ($previous
 	    && (!$targetjob->{id} || $previous->{id} < $targetjob->{id}));
@@ -1590,6 +1590,15 @@ sub job_follow_input
 	return $_ if $_->{outputkey} eq $targetjob->{inputkey};
     }
     return undef;
+}
+
+sub striphints
+{
+    for (@_)
+    {
+	s/\+([^,]*)//g;
+    }
+    return wantarray ? @_ : join (",", @_);
 }
 
 sub job_follow_thawedfrom
