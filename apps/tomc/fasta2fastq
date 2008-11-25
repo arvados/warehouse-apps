@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+
+use strict;
+use Warehouse;
+use Warehouse::Stream;
+
+my $whc = new Warehouse;
+my $fasta;
+my @reads;
+my @nreads;
+my $nreads = 0;
+
+while(<>)
+{
+    flush() if /^>/;
+    $fasta .= $_;
+}
+flush();
+print ($nreads, " reads\n");
+print (scalar (grep { $_ } @nreads), " read lengths\n");
+my $s = new Warehouse::Stream (whc => $whc);
+$s->clear;
+$s->name (".");
+for (my $len=0; $len<=$#nreads; $len++)
+{
+    if ($nreads[$len])
+    {
+	$s->write_start (sprintf "fasta-%05d.fastq", $len);
+	$s->write_data ($reads[$len]);
+	$s->write_finish;
+    }
+}
+$whc->write_start;
+$whc->write_data ($s->as_string);
+my ($k) = $whc->write_finish;
+print "$k\n";
+
+sub flush
+{
+    if (defined $fasta)
+    {
+	my $fastq;
+	$fastq = $fasta;
+	$fastq =~ s/^>/\@/;
+	my ($head, $acgt) = split ("\n", $fasta, 2);
+	$head =~ s/^>/\+/;
+	$fastq .= $head."\n";
+	$acgt =~ tr/[a-zA-Z]/I/;
+	$fastq .= $acgt;
+	$acgt =~ s/\n//g;
+	$reads[length($acgt)] .= $fastq;
+	$nreads[length($acgt)] ++;
+	$nreads ++;
+	$fasta = "";
+    }
+}
