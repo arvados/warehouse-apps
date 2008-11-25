@@ -39,7 +39,7 @@ if ($ENV{MR_LEVEL} == 0)
     {
       if (m{ ^\.(/\S+)?	# stream name
 		 ( (?:\ [0-9a-f]{32}\S*) +) # data blocks
-		 ( (\ \d+:\d+:(\S+)_1\.fastq\.gz\ \d+:\d+:(\S+)_2\.fastq\.gz) +)
+		 ( (\ \d+:\d+:(\S+)_1\.fastq(\.gz)?\ \d+:\d+:(\S+)_2\.fastq(\.gz)?) +)
 		 $ }sx)
       {
 	# paired reads
@@ -55,7 +55,7 @@ if ($ENV{MR_LEVEL} == 0)
       }
       elsif ($$in =~ m{ ^\.(/\S+)?	# stream name
 			    ( (?:\ [0-9a-f]{32}\S*) +) # data blocks
-			    ( (\ \d+:\d+:(\S+)\.fastq\.gz) + )
+			    ( (\ \d+:\d+:(\S+)\.fastq(\.gz)?) + )
 			    $ }sx)
       {
 	# unpaired reads
@@ -69,6 +69,7 @@ if ($ENV{MR_LEVEL} == 0)
 	}
       }
     }
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
     exit 0;
   }
 }
