@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+my $gff_in = shift;
+my $fasta_dir = shift;
+
+open STDIN, "<", $gff_in unless $gff_in eq "-";
+
+my $chr = {};
+while (<STDIN>)
+{
+    chomp;
+    my @gtf = split;
+    if ($gtf[0] ne $chr->{name}) { $chr = readchr($gtf[0]); }
+    my $str = substr ($chr->{data}, $gtf[3]-1, 1+$gtf[4]-$gtf[3]);
+    $str = rc($str) if $gtf[6] eq '-';
+    my %desc;
+    while (/([\w_]+) "(.*?)"/g) { $desc{$1}=$2; }
+    print ">".$desc{"transcript_id"}.".".$desc{"exon_number"}.":chr".$gtf[0].":".$gtf[3].":".$gtf[4].":".$gtf[6]."\n";
+    $str =~ s/(.{50})/$1\n/g;
+    chomp $str;
+    print $str;
+    print "\n";
+}
+
+sub readchr
+{
+    my $chrname = shift;
+    my $chr = { name => $chrname };
+    if (-e "$fasta_dir/chr$chrname.fa") { open FASTA, "<", "$fasta_dir/chr$chrname.fa"; }
+    elsif (-e "$fasta_dir/chr$chrname.fa.gz") { open FASTA, "-|", "zcat", "$fasta_dir/chr$chrname.fa.gz"; }
+    elsif (-e "$fasta_dir/hs_ref_chr$chrname.fa.gz") { open FASTA, "-|", "zcat", "$fasta_dir/hs_ref_chr$chrname.fa.gz"; }
+    elsif (-e "$fasta_dir/hs_alt_chr${chrname}_HuRef.fa.gz") { open FASTA, "-|", "zcat", "$fasta_dir/hs_alt_chr${chrname}_HuRef.fa.gz"; }
+    else { die "No reference file for $chrname"; }
+    local $/ = undef;
+    print STDERR "Reading chr$chrname.fa ... ";
+    $chr->{data} = <FASTA>;
+    print STDERR "preparing ... ";
+    $chr->{data} =~ s/^>.*?\n//;
+    $chr->{data} =~ s/\r?\n//g;
+    print STDERR "done\n";
+    return $chr;
+}
+
+sub rc
+{
+    local $_ = shift;
+    tr/ACGTacgt/TGCAtgca/;
+    scalar reverse $_;
+}
+
