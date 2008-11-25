@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+$ENV{NOCACHE} = 1;
+
+use strict;
+use Warehouse;
+my $whc = new Warehouse;
+
+open STDIN, "-|", "cat wget-log*";
+
+my %bigmanifest;
+my $filename;
+my $tot;
+my @files;
+my $pos = 0;
+while (<STDIN>)
+{
+    if (/RETR (\S+)/)
+    {
+	$filename = $1;
+    }
+    elsif (/^([0-9a-f]{32}\S*)/)
+    {
+	my $manifest = $whc->fetch_block ($1);
+	chomp $manifest;
+	$manifest =~ s/ \d+:.*/ @files\n/;
+	$bigmanifest{"@files"} = $manifest;
+	my $hash = $whc->store_block ($manifest);
+	my $name = $files[0];
+	$name =~ s/-s_.*//;
+	$name =~ s/^\d+:\d+://;
+	$whc->store_manifest_by_name ($hash, $whc->fetch_manifest_key_by_name ($name), $name)
+	    or warn "name(\"$hash\",...,\"$name\") failed: ".$whc->errstr;
+	print "$hash <= $name\n";
+	@files = ();
+	$pos=0;
+    }
+    elsif(/Length: \d/)
+    {
+	s/,//g;
+	/(\d+)/;
+	my $size = $1;
+	push @files, "$pos:$size:$filename";
+	$tot += $size;
+	$pos += $size;
+	$filename = "";
+    }
+}
+my $bigmanifest = join ("", map { $bigmanifest{$_} } sort keys %bigmanifest);
+my $hash = $whc->store_block ($bigmanifest);
+print "$hash <= all ($tot bytes)\n";
+

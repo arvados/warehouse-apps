@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+
+open STDIN, "<", "all.md5s";
+#open STDOUT, "|-", "bash";
+
+$base="ftp://ftp.ncbi.nih.gov/pub/TraceDB/ShortRead/SRA000271/fastq/";
+@file=<STDIN>;
+chop @file;
+for(@file){
+    s/.* //;
+    /(.*)-s_/;
+    $run{$1}||=[];
+    push @{$run{$1}}, $_;
+}
+for (sort keys %run)
+{
+    $rfile=$run{$_};
+    print "set -o pipefail; (wget --progress=dot:mega -O- $base"
+	.join(" $base", @$rfile)
+	.") | NOCACHE=1 whput --in-manifest --use-filename=$_.fastq.gz - | tee SRA000271-$_\n"
+}
