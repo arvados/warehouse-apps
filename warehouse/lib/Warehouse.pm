@@ -1672,8 +1672,6 @@ sub job_follow_thawedfrom
     return $targetjob;
 }
 
-
-
 =head2 manifest_data_size
 
     my $bytes = $whc->manifest_data_size ($key);
