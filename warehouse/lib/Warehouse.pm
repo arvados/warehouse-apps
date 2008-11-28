@@ -8,6 +8,9 @@ use Cache::Memcached;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Date::Parse;
+use IO::File;
+use IO::Handle;
+use GnuPG::Interface;
 use Warehouse::Stream;
 
 $memcached_max_data = 1000000;
@@ -1240,13 +1243,53 @@ sub _sign
     my $self = shift;
     my $text = shift;
 
-    # fake signature -- server won't notice anyway
-    return "-----BEGIN PGP SIGNED MESSAGE-----\n"
-	. "Faked\n\n"
-	. $text
-	. "\n-----BEGIN PGP SIGNATURE-----\n"
-	. "Faked\n"
-	. "-----END PGP SIGNATURE-----\n";
+    my $gnupg = GnuPG::Interface->new();
+
+    $gnupg->options->hash_init( armor    => 1,
+                                homedir => '/etc/warehouse/.gnupg',
+                              );
+
+    my ( $input, $output, $error, $status_fh ) =
+       ( IO::Handle->new(),
+         IO::Handle->new(),
+         IO::Handle->new(),
+         IO::Handle->new(),
+       );
+
+    my $handles = GnuPG::Handles->new( stdin  => $input,
+                                       stdout => $output,
+                                       stderr => $error,
+                                       status => $status );
+
+    my $pid = $gnupg->clearsign( handles => $handles );
+
+    print $input $text;
+    close $input;
+
+    my $signed_text = join('',<$output>);
+    my $error_output = join('',<$error>);
+    my $status_output = join('',<$status>);
+
+    close $output;
+    close $error;
+    close $status;
+
+    waitpid $pid, 0;
+
+    if ($error_output ne '') {
+      # Something went wrong during signing. 
+      # fake signature for backwards compatibility
+      return "-----BEGIN PGP SIGNED MESSAGE-----\n"
+      . "Faked\n\n"
+    	. $text
+      . "\n-----BEGIN PGP SIGNATURE-----\n"
+      . "Error siging:\n$error_output\n\n" 
+      . "Faked signature on " . `/bin/hostname` . " at " . `/bin/date +"%Y-%m-%d %H:%M:%S"` . "\n"
+      . "-----END PGP SIGNATURE-----\n";
+    }
+
+    return $signed_text;
+
 }
 
 
