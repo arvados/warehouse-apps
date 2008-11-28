@@ -1715,9 +1715,6 @@ sub manifest_data_size
     return $data_size;
 }
 
-
-
-
 sub errstr
 {
     my $self = shift;
