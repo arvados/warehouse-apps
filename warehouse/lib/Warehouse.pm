@@ -10,7 +10,6 @@ use HTTP::Request::Common;
 use Date::Parse;
 use IO::File;
 use IO::Handle;
-use GnuPG::Interface;
 use Warehouse::Stream;
 
 $memcached_max_data = 1000000;
@@ -1243,6 +1242,9 @@ sub _sign
     my $self = shift;
     my $text = shift;
 
+    eval "use GnuPG::Interface";
+    return $self->_fakesign ($text, "no GnuPG::Interface") if $@;
+
     my $gnupg = GnuPG::Interface->new();
 
     $gnupg->options->hash_init( armor    => 1,
@@ -1279,19 +1281,26 @@ sub _sign
     if ($error_output ne '') {
       # Something went wrong during signing. 
       # fake signature for backwards compatibility
-      return "-----BEGIN PGP SIGNED MESSAGE-----\n"
-      . "Faked\n\n"
-    	. $text
-      . "\n-----BEGIN PGP SIGNATURE-----\n"
-      . "Error siging:\n$error_output\n\n" 
-      . "Faked signature on " . `/bin/hostname` . " at " . `/bin/date +"%Y-%m-%d %H:%M:%S"` . "\n"
-      . "-----END PGP SIGNATURE-----\n";
+      return $self->_fakesign ($text, $error_output);
     }
 
     return $signed_text;
 
 }
 
+sub _fakesign
+{
+    my $self = shift;
+    my $text = shift;
+    my $error_output = shift;
+    return "-----BEGIN PGP SIGNED MESSAGE-----\n"
+	. "Faked\n\n"
+    	. $text
+	. "\n-----BEGIN PGP SIGNATURE-----\n"
+	. "Error signing:\n$error_output\n\n" 
+	. "Faked signature on " . `/bin/hostname` . " at " . `/bin/date +"%Y-%m-%d %H:%M:%S"` . "\n"
+	. "-----END PGP SIGNATURE-----\n";
+}
 
 
 =head2 iostats
