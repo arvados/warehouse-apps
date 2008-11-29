@@ -8,7 +8,6 @@ use Cache::Memcached;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Date::Parse;
-use IO::File;
 use IO::Handle;
 use Warehouse::Stream;
 
@@ -1251,7 +1250,7 @@ sub _sign
                                 homedir => '/etc/warehouse/.gnupg',
                               );
 
-    my ( $input, $output, $error, $status_fh ) =
+    my ( $input, $output, $error, $status ) =
        ( IO::Handle->new(),
          IO::Handle->new(),
          IO::Handle->new(),

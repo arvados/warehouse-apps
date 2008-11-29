@@ -6,6 +6,8 @@ use HTTP::Daemon;
 use HTTP::Response;
 use Digest::MD5;
 use DBI;
+use IO::Handle;
+use GnuPG::Interface;
 
 =head1 NAME
 
@@ -139,8 +141,8 @@ sub run
     local $SIG{INT} = sub { $Warehouse::Server::kill = 1; };
     local $SIG{TERM} = sub { $Warehouse::Server::kill = 1; };
     local $| = 1;
-    my $c;
-    while (!$kill && ($c = $self->{daemon}->accept))
+    my ($c, $peer_addr);
+    while (!$kill && (($c, $peer_addr) = $self->{daemon}->accept))
     {
 	my $r;
 	while (!$kill && ($r = $c->get_request))
@@ -203,18 +205,19 @@ sub run
 		my $result;
 		my $signedmessage = $r->content;
 
-		# XXX verify signature here XXX
+		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = $plainmessage =~ /\S/;
+		my $verified = $self->_verify($signedmessage);
 
 		if (!$verified)
 		{
-		    my $resp = HTTP::Response->new
-			(401, "SigFail",
-			 [], "Signature verification failed.\n");
-		    $c->send_response ($resp);
-		    last;
+				$self->_log($r->date . ": Bad signature from $peer_addr");
+#		    my $resp = HTTP::Response->new
+#			(401, "SigFail",
+#			 [], "Signature verification failed.\n");
+#		    $c->send_response ($resp);
+#		    last;
 		}
 
 		my $ok = 1;
@@ -302,18 +305,19 @@ sub run
 		my $result;
 		my $signedmessage = $r->content;
 
-		# XXX verify signature here XXX
+		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = $plainmessage =~ /\S/;
+		my $verified = $self->_verify($signedmessage);
 
 		if (!$verified)
 		{
-		    my $resp = HTTP::Response->new
-			(401, "SigFail",
-			 [], "Signature verification failed.\n");
-		    $c->send_response ($resp);
-		    last;
+				$self->_log($r->date . ": Bad signature from $peer_addr");
+#		    my $resp = HTTP::Response->new
+#			(401, "SigFail",
+#			 [], "Signature verification failed.\n");
+#		    $c->send_response ($resp);
+#		    last;
 		}
 
 		my $mrdb = $self->{MapReduceDB};
@@ -400,18 +404,19 @@ sub run
 		my $result;
 		my $signedmessage = $r->content;
 
-		# XXX verify signature here XXX
+		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = $plainmessage =~ /\S/;
+		my $verified = $self->_verify($signedmessage);
 
 		if (!$verified)
 		{
-		    my $resp = HTTP::Response->new
-			(401, "SigFail",
-			 [], "Signature verification failed.\n");
-		    $c->send_response ($resp);
-		    last;
+				$self->_log($r->date . ": Bad signature from $peer_addr");
+#		    my $resp = HTTP::Response->new
+#			(401, "SigFail",
+#			 [], "Signature verification failed.\n");
+#		    $c->send_response ($resp);
+#		    last;
 		}
 
 		my $mrdb = $self->{MapReduceDB};
@@ -534,6 +539,56 @@ sub _unescape
     local $_ = shift;
     s/\\(.)/$_unescapemap{$1}/ge;
     $_;
+}
+
+sub _verify
+{
+
+	my $text = shift;
+	my $gnupg = GnuPG::Interface->new();
+
+  $gnupg->options->hash_init( armor    => 1,
+                              homedir => '/etc/warehouse/.gnupg',
+                            );
+  my ( $input, $output, $error, $status ) =
+     ( IO::Handle->new(),
+       IO::Handle->new(),
+       IO::Handle->new(),
+       IO::Handle->new(),
+     );
+
+  my $handles = GnuPG::Handles->new( stdin  => $input,
+                                     stdout => $output,
+                                     stderr => $error,
+                                     status => $status );
+
+  my $pid = $gnupg->verify( handles => $handles );
+
+  print $input $text;
+  close $input;
+
+  my $returned_text = join('',<$output>);
+  my $error_output = join('',<$error>);
+  my $status_output = join('',<$status>);
+
+  close $output;
+  close $error;
+  close $status;
+
+  waitpid $pid, 0;
+
+  if (($status_output =~ /VALIDSIG/) && ($status_output =~ /GOODSIG/)) {
+    return 1;
+  } else {
+    return 0;
+  }
+		
+}
+
+sub _log
+{
+	my $message = shift;
+	print "$message\n";
 }
 
 1;
