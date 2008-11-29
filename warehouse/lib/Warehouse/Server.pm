@@ -2,12 +2,15 @@
 
 package Warehouse::Server;
 
+use Warehouse;
 use HTTP::Daemon;
 use HTTP::Response;
 use Digest::MD5;
 use DBI;
 use IO::Handle;
 use GnuPG::Interface;
+use POSIX qw(strftime);
+
 
 =head1 NAME
 
@@ -64,7 +67,6 @@ Port number to listen on.  Default is 24848.
 =back
 
 =cut
-
 
 sub new
 {
@@ -141,12 +143,16 @@ sub run
     local $SIG{INT} = sub { $Warehouse::Server::kill = 1; };
     local $SIG{TERM} = sub { $Warehouse::Server::kill = 1; };
     local $| = 1;
-    my ($c, $peer_addr);
-    while (!$kill && (($c, $peer_addr) = $self->{daemon}->accept))
+		Warehouse::_log("Warehouse Server.pm starting up!");
+
+    my $c;
+    while (!$kill && ($c = $self->{daemon}->accept))
     {
 	my $r;
 	while (!$kill && ($r = $c->get_request))
 	{
+			my $now_string = strftime "%Y-%m-%d %H:%M:%S", localtime;
+
 	    print(scalar (localtime) .
 		  " " . $c->peerhost() .
 		  " R" .
@@ -208,11 +214,11 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = $self->_verify($signedmessage);
+		my $verified = Warehouse::_verify($signedmessage);
 
 		if (!$verified)
 		{
-				$self->_log($r->date . ": Bad signature from $peer_addr");
+				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
@@ -308,11 +314,11 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = $self->_verify($signedmessage);
+		my $verified = Warehouse::_verify($signedmessage);
 
 		if (!$verified)
 		{
-				$self->_log($r->date . ": Bad signature from $peer_addr");
+				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
@@ -407,11 +413,11 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = $self->_verify($signedmessage);
+		my $verified = Warehouse::_verify($signedmessage);
 
 		if (!$verified)
 		{
-				$self->_log($r->date . ": Bad signature from $peer_addr");
+				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
@@ -539,56 +545,6 @@ sub _unescape
     local $_ = shift;
     s/\\(.)/$_unescapemap{$1}/ge;
     $_;
-}
-
-sub _verify
-{
-
-	my $text = shift;
-	my $gnupg = GnuPG::Interface->new();
-
-  $gnupg->options->hash_init( armor    => 1,
-                              homedir => '/etc/warehouse/.gnupg',
-                            );
-  my ( $input, $output, $error, $status ) =
-     ( IO::Handle->new(),
-       IO::Handle->new(),
-       IO::Handle->new(),
-       IO::Handle->new(),
-     );
-
-  my $handles = GnuPG::Handles->new( stdin  => $input,
-                                     stdout => $output,
-                                     stderr => $error,
-                                     status => $status );
-
-  my $pid = $gnupg->verify( handles => $handles );
-
-  print $input $text;
-  close $input;
-
-  my $returned_text = join('',<$output>);
-  my $error_output = join('',<$error>);
-  my $status_output = join('',<$status>);
-
-  close $output;
-  close $error;
-  close $status;
-
-  waitpid $pid, 0;
-
-  if (($status_output =~ /VALIDSIG/) && ($status_output =~ /GOODSIG/)) {
-    return 1;
-  } else {
-    return 0;
-  }
-		
-}
-
-sub _log
-{
-	my $message = shift;
-	print "$message\n";
 }
 
 1;

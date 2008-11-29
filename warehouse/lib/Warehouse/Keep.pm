@@ -2,11 +2,13 @@
 
 package Warehouse::Keep;
 
+use Warehouse;
 use HTTP::Daemon;
 use HTTP::Response;
 use Digest::MD5 qw(md5_hex);
 use Warehouse;
 use Fcntl;
+use POSIX qw(strftime);
 
 =head1 NAME
 
@@ -141,6 +143,8 @@ sub run
     {
 	while (my $r = $c->get_request)
 	{
+			my $now_string = strftime "%Y-%m-%d %H:%M:%S", localtime;
+			Warehouse::_log("hello!"):
 	    print(scalar (localtime) .
 		  " " . $c->peerhost() .
 		  " R" .
@@ -191,17 +195,22 @@ sub run
 		    last;
 		}
 
-		# XXX verify signature here XXX
+		# verify signature
 		$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
 		my $signedmessage = $1;
 		my $plainmessage = $2;
 		my $newdata = $3;
 
-		my $verified = $plainmessage =~ /\S/;
+		my $verified = Warehouse::_verify($signedmessage);
+
+		if (!$verified)
+		{
+				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
+		}
 		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 		$checktime += 0;
-		if (!$verified ||
-		    time - $checktime > 300 ||
+#		if (!$verified ||
+		if (time - $checktime > 300 ||
 		    time - $checktime < -300 ||
 		    $checkmd5 ne $md5)
 		{
@@ -276,17 +285,22 @@ sub run
 		    last;
 		}
 
-		# XXX verify signature here XXX
+		# verify signature
 		$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
 		my $signedmessage = $1;
 		my $plainmessage = $2;
 		my $newdata = $3;
 
-		my $verified = $plainmessage =~ /\S/;
+		my $verified = Warehouse::_verify($signedmessage);
+
+		if (!$verified)
+		{
+				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
+		}
 		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 		$checktime += 0;
-		if (!$verified ||
-		    time - $checktime > 300 ||
+#		if (!$verified ||
+		if (time - $checktime > 300 ||
 		    time - $checktime < -300 ||
 		    $checkmd5 ne $md5)
 		{

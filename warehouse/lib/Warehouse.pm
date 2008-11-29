@@ -10,6 +10,9 @@ use HTTP::Request::Common;
 use Date::Parse;
 use IO::Handle;
 use Warehouse::Stream;
+use Unix::Syslog qw(:macros);
+use Unix::Syslog qw(:subs);
+use POSIX qw(strftime);
 
 $memcached_max_data = 1000000;
 $no_warehouse_client_conf = 0;
@@ -1725,6 +1728,64 @@ sub errstr
 {
     my $self = shift;
     return $self->{errstr};
+}
+
+sub _verify
+{
+
+	&_log("verifying");
+	my $text = shift;
+	my $gnupg = GnuPG::Interface->new();
+
+  $gnupg->options->hash_init( armor    => 1,
+                              homedir => '/etc/warehouse/.gnupg',
+                            );
+  my ( $input, $output, $error, $status ) =
+     ( IO::Handle->new(),
+       IO::Handle->new(),
+       IO::Handle->new(),
+       IO::Handle->new(),
+     );
+
+  my $handles = GnuPG::Handles->new( stdin  => $input,
+                                     stdout => $output,
+                                     stderr => $error,
+                                     status => $status );
+
+  my $pid = $gnupg->verify( handles => $handles );
+
+  print $input $text;
+  close $input;
+
+  my $returned_text = join('',<$output>);
+  my $error_output = join('',<$error>);
+  my $status_output = join('',<$status>);
+
+  close $output;
+  close $error;
+  close $status;
+
+  waitpid $pid, 0;
+
+  if (($status_output =~ /VALIDSIG/) && ($status_output =~ /GOODSIG/)) {
+		&_log("Good signature");
+    return 1;
+  } else {
+		&_log("Data: $text");
+		&_log("Error: $error_output");
+		&_log("Status: $status_output");
+    return 0;
+  }
+		
+}
+
+sub _log
+{
+#  my $self = shift;
+	my $message = shift;
+  openlog(": ", LOG_PID, LOG_DAEMON);
+  syslog(LOG_INFO, $message);
+  closelog;
 }
 
 1;
