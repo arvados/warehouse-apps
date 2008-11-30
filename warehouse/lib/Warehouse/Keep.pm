@@ -8,7 +8,6 @@ use HTTP::Response;
 use Digest::MD5 qw(md5_hex);
 use Warehouse;
 use Fcntl;
-use POSIX qw(strftime);
 
 =head1 NAME
 
@@ -143,7 +142,6 @@ sub run
     {
 	while (my $r = $c->get_request)
 	{
-			my $now_string = strftime "%Y-%m-%d %H:%M:%S", localtime;
 	    print(scalar (localtime) .
 		  " " . $c->peerhost() .
 		  " R" .
@@ -200,12 +198,11 @@ sub run
 		my $plainmessage = $2;
 		my $newdata = $3;
 
-		my $verified = Warehouse::_verify($signedmessage);
-
+		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
 
 		if (!$verified)
 		{
-				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
+				Warehouse::_log($c->peerhost() . " Bad signature");
 		}
 		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 		$checktime += 0;
@@ -291,11 +288,11 @@ sub run
 		my $plainmessage = $2;
 		my $newdata = $3;
 
-		my $verified = Warehouse::_verify($signedmessage);
+		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
 
 		if (!$verified)
 		{
-				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
+				Warehouse::_log($c->peerhost() . " Bad signature");
 		}
 		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 		$checktime += 0;

@@ -13,7 +13,6 @@ use Warehouse::Stream;
 use GnuPG::Interface;
 use Unix::Syslog qw(:macros);
 use Unix::Syslog qw(:subs);
-use POSIX qw(strftime);
 
 $memcached_max_data = 1000000;
 $no_warehouse_client_conf = 0;
@@ -1770,12 +1769,13 @@ sub _verify
 
   if (($status_output =~ /VALIDSIG/) && ($status_output =~ /GOODSIG/)) {
     &_log("Good signature") if $ENV{DEBUG_GPG};
-    return 1;
+		my ($keyid) = $status_output =~ /GOODSIG .{8}(.{8}) /;
+    return (1,$keyid);
   } else {
     &_log("Data: $text");
     &_log("Error: $error_output");
     &_log("Status: $status_output");
-    return 0;
+    return (0,'');
   }
 }
 
@@ -1796,10 +1796,10 @@ sub _log
   my $message = shift;
   # Log to syslog
   openlog(": ", LOG_PID, LOG_DAEMON);
-  syslog(LOG_INFO, $message);
+  syslog(LOG_INFO, "$message");
   closelog;
   # Now also print to STDOUT to facilitate debugging.
-  print "$message\n";
+  print scalar (localtime) . " $message\n";
 }
 
 1;

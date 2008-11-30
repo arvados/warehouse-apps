@@ -8,7 +8,6 @@ use HTTP::Response;
 use Digest::MD5;
 use DBI;
 use IO::Handle;
-use POSIX qw(strftime);
 
 
 =head1 NAME
@@ -142,7 +141,7 @@ sub run
     local $SIG{INT} = sub { $Warehouse::Server::kill = 1; };
     local $SIG{TERM} = sub { $Warehouse::Server::kill = 1; };
     local $| = 1;
-		Warehouse::_log("Warehouse Server.pm starting up!");
+		Warehouse::_log("Warehouse Server.pm starting up");
 
     my $c;
     while (!$kill && ($c = $self->{daemon}->accept))
@@ -150,8 +149,6 @@ sub run
 	my $r;
 	while (!$kill && ($r = $c->get_request))
 	{
-			my $now_string = strftime "%Y-%m-%d %H:%M:%S", localtime;
-
 	    print(scalar (localtime) .
 		  " " . $c->peerhost() .
 		  " R" .
@@ -213,11 +210,11 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = Warehouse::_verify($signedmessage);
+		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
 
 		if (!$verified)
 		{
-				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
+				Warehouse::_log($c->peerhost() . " Bad signature");
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
@@ -239,26 +236,40 @@ sub run
 
 		    my $sth;
 		    my $ok;
-		    if ($oldkey eq "NULL")
+		    if (($oldkey eq "NULL") && ($newkey ne '') && ($name ne ''))
 		    {
 			$sth = $self->{dbh}->prepare
-			    ("insert into manifests (mkey, name) values (?, ?)");
-			$ok = $sth->execute ($newkey, $name);
+			    ("insert into manifests (mkey, name, keyid) values (?, ?, ?)");
+			$ok = $sth->execute ($newkey, $name, $keyid);
 		    }
 		    elsif ($newkey eq "NULL")
-		    {
+		    { {
+			if (!$self->_check_keyid($name,$oldkey,$keyid,$c)) {
+				$ok = 0;
+				last;
+			}
+				
 			$sth = $self->{dbh}->prepare
 			    ("delete from manifests where name=? and mkey=?");
 
 			$ok = $sth->execute ($name, $oldkey)
 			    && $sth->rows == 1;
-		    }
+		    } }
+		    elsif (($newkey ne '') && ($oldkey ne '') && ($name ne ''))
+		    { {
+			if (!$self->_check_keyid($name,$oldkey,$keyid,$c)) {
+				$ok = 0;
+				last;
+			}
+			$sth = $self->{dbh}->prepare
+			    ("update manifests set mkey=?,keyid=? where mkey=? and name=?");
+			$ok = $sth->execute ($newkey, $keyid, $oldkey, $name)
+			    && $sth->rows == 1;
+		    } }
 		    else
 		    {
-			$sth = $self->{dbh}->prepare
-			    ("update manifests set mkey=? where mkey=? and name=?");
-			$ok = $sth->execute ($newkey, $oldkey, $name)
-			    && $sth->rows == 1;
+			# Error
+			$ok = 0;
 		    }
 
 		    if ($ok)
@@ -313,11 +324,11 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = Warehouse::_verify($signedmessage);
+		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
 
 		if (!$verified)
 		{
-				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
+				Warehouse::_log($c->peerhost() . " Bad signature");
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
@@ -412,11 +423,11 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my $verified = Warehouse::_verify($signedmessage);
+		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
 
 		if (!$verified)
 		{
-				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
+				Warehouse::_log($c->peerhost() . " Bad signature");
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
@@ -484,6 +495,31 @@ sub run
 	}
 	$c->close;
     }
+}
+
+sub _check_keyid 
+{
+	my $self = shift;
+	my $name = shift;
+	my $mkey = shift;
+	my $keyid = shift;
+	my $c = shift;
+	$sth = $self->{dbh}->prepare
+	    ("select keyid from manifests where name=? and mkey=?");
+	my $ok = $sth->execute ($name, $mkey)
+	    && $sth->rows == 1;
+	return 0 if (!$ok);
+	my $oldkeyid;
+    	if (my $row= $sth->fetchrow_hashref) {
+		$oldkeyid = $row->{keyid};
+	} else {
+		return 0;
+	}
+	if (($oldkeyid ne '') && ($oldkeyid ne $keyid)) {
+		Warehouse::_log($c->peerhost . " manifest overwrite failed for $name: $keyid trying to overwrite manifest owned by $oldkeyid");
+		return 0;
+	}
+	return 1;
 }
 
 sub _callback_manifest
