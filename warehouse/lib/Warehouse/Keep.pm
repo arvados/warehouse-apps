@@ -203,6 +203,7 @@ sub run
 
 		my $verified = Warehouse::_verify($signedmessage);
 
+
 		if (!$verified)
 		{
 				Warehouse::_log($now_string . ": Bad signature from " . $c->peerhost);
