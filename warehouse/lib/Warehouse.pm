@@ -10,6 +10,7 @@ use HTTP::Request::Common;
 use Date::Parse;
 use IO::Handle;
 use Warehouse::Stream;
+use GnuPG::Interface;
 use Unix::Syslog qw(:macros);
 use Unix::Syslog qw(:subs);
 use POSIX qw(strftime);

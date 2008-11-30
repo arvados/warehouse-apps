@@ -8,7 +8,6 @@ use HTTP::Response;
 use Digest::MD5;
 use DBI;
 use IO::Handle;
-use GnuPG::Interface;
 use POSIX qw(strftime);
 
 
