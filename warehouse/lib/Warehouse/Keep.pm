@@ -144,7 +144,7 @@ sub run
 	while (my $r = $c->get_request)
 	{
 			my $now_string = strftime "%Y-%m-%d %H:%M:%S", localtime;
-			Warehouse::_log("hello!"):
+			Warehouse::_log("hello!");
 	    print(scalar (localtime) .
 		  " " . $c->peerhost() .
 		  " R" .
