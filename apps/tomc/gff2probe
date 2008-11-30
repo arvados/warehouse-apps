@@ -2,6 +2,7 @@
 
 my $gff_in = shift;
 my $fasta_dir = shift;
+my $context = shift || 0;
 
 open STDIN, "<", $gff_in unless $gff_in eq "-";
 
@@ -9,13 +10,37 @@ my $chr = {};
 while (<STDIN>)
 {
     chomp;
-    my @gtf = split;
-    if ($gtf[0] ne $chr->{name}) { $chr = readchr($gtf[0]); }
-    my $str = substr ($chr->{data}, $gtf[3]-1, 1+$gtf[4]-$gtf[3]);
-    $str = rc($str) if $gtf[6] eq '-';
+    my @infield = split;
+    my $inchr = $infield[0];
+    $inchr =~ s/^chr([\dXYMT]+)$/$1/;
+    if ($inchr ne $chr->{name}) { $chr = readchr($inchr); }
+    my ($instart, $inend, $inname) = @infield[1,2,3];
+    if (@infield > 4)		# gff/gtf
+    {
+	($instart, $inend) = @infield[3,4];
+	$instart--;
+    }
+    my $start = $instart-$context;
+    my $len = $inend-$instart+2*$context;
+    if ($start < 0)
+    {
+	$len += $start;
+	$start = 0;
+    }
+    if ($start + $len > length $chr->{data})
+    {
+	$len - length ($chr->{data}) - $start;
+    }
+    my $end = $start + $len - 1;
+    my $str = substr ($chr->{data}, $start, $len);
+    $str = rc($str) if $infield[6] eq '-';
     my %desc;
     while (/([\w_]+) "(.*?)"/g) { $desc{$1}=$2; }
-    print ">".$desc{"transcript_id"}.".".$desc{"exon_number"}.":chr".$gtf[0].":".$gtf[3].":".$gtf[4].":".$gtf[6]."\n";
+    if (@infield > 4)
+    {
+	$inname = $desc{"transcript_id"}.".".$desc{"exon_number"};
+    }
+    print ">".$inname.":chr".$inchr.":".$start.":".$end.":".$infield[6]."\n";
     $str =~ s/(.{50})/$1\n/g;
     chomp $str;
     print $str;
