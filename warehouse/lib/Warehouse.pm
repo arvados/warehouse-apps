@@ -1734,9 +1734,9 @@ sub errstr
 sub _verify
 {
 
-	&_log("verifying");
-	my $text = shift;
-	my $gnupg = GnuPG::Interface->new();
+  &_log("verifying") if $ENV{DEBUG_GPG};
+  my $text = shift;
+  my $gnupg = GnuPG::Interface->new();
 
   $gnupg->options->hash_init( armor    => 1,
                               homedir => '/etc/warehouse/.gnupg',
@@ -1769,24 +1769,37 @@ sub _verify
   waitpid $pid, 0;
 
   if (($status_output =~ /VALIDSIG/) && ($status_output =~ /GOODSIG/)) {
-		&_log("Good signature");
+    &_log("Good signature") if $ENV{DEBUG_GPG};
     return 1;
   } else {
-		&_log("Data: $text");
-		&_log("Error: $error_output");
-		&_log("Status: $status_output");
+    &_log("Data: $text");
+    &_log("Error: $error_output");
+    &_log("Status: $status_output");
     return 0;
   }
-		
 }
+
+=head2 _log
+
+The various warehouse daemons are typically run under runsv, which means stdout
+goes to the log/main/current file under the service directory. That file is
+rotated fairly agressively, so it's mainly useful for debugging, not for longer
+term log analysis. For that, logging to syslog is more appropriate since it can
+easily be configured to retain old log files much longer.
+
+This function logs to syslog as well as stdout.
+
+=cut
 
 sub _log
 {
-#  my $self = shift;
-	my $message = shift;
+  my $message = shift;
+  # Log to syslog
   openlog(": ", LOG_PID, LOG_DAEMON);
   syslog(LOG_INFO, $message);
   closelog;
+  # Now also print to STDOUT to facilitate debugging.
+  print "$message\n";
 }
 
 1;
