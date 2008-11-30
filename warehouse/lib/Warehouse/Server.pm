@@ -162,7 +162,7 @@ sub run
 	    {
 		my $resp = HTTP::Response->new (200, "OK", []);
 		$resp->{sth} = $self->{dbh}->prepare
-		    ("select mkey, name from manifests order by name")
+		    ("select mkey, name, keyid from manifests order by name")
 		    or die DBI->errstr;
 		$resp->{sth}->execute()
 		    or die DBI->errstr;

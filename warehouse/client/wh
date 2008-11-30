@@ -199,12 +199,12 @@ sub manifest_list
 {
     foreach my $keyname ($whc->list_manifests)
     {
-	my ($key, $name) = @$keyname;
+	my ($key, $name, $keyid) = @$keyname;
 	if ((!defined $opt{key} || $key eq $opt{key})
 	    &&
 	    (!defined $opt{name} || $name eq $opt{name}))
 	{
-	    print "$key $name\n";
+	    print "$key $name $keyid\n";
 	}
     }
 }

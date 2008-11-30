@@ -1023,9 +1023,9 @@ sub list_manifests
   {
     foreach (split ("\n", $r->content))
     {
-      my ($key, $name) = split (/ /);
+      my ($key, $name, $keyid) = split (/ /);
       last if (!defined $name);	# XXX should check md5 of entire response here
-      push @ret, [$key, $name];
+      push @ret, [$key, $name, $keyid];
     }
   }
   else
