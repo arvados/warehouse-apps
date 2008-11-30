@@ -93,7 +93,9 @@ while( my $r = $in->next_result ) {
 				    # it will only work for FASTA parsing though!
 				    $hsp->bits,
 				    $hsp->query_string,
-				    $hsp->hit_string)),"\n";
+				    $hsp->hit_string,
+				    $r->query_length,
+				    )),"\n";
 	}
     }
 }
