@@ -10,8 +10,6 @@ use HTTP::Request::Common;
 use Date::Parse;
 use IO::Handle;
 use Warehouse::Stream;
-use Unix::Syslog qw(:macros);
-use Unix::Syslog qw(:subs);
 
 $memcached_max_data = 1000000;
 $no_warehouse_client_conf = 0;
@@ -1797,10 +1795,19 @@ This function logs to syslog as well as stderr.
 sub _log
 {
   my $message = shift;
-  # Log to syslog
-  openlog(": ", LOG_PID, LOG_DAEMON);
-  syslog(LOG_INFO, "$message");
-  closelog;
+
+  eval q{
+      use Unix::Syslog qw(:macros);
+      use Unix::Syslog qw(:subs);
+  };
+  if (!$@)
+  {
+      # Log to syslog
+      openlog(": ", LOG_PID, LOG_DAEMON);
+      syslog(LOG_INFO, "$message");
+      closelog;
+  }
+
   # Now also print to STDOUT to facilitate debugging.
   print STDERR ($message, "\n");
 }
