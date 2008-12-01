@@ -1,14 +1,36 @@
 #!/usr/bin/perl
 
+use strict;
+
+my $format = shift @ARGV or die "usage: $0 bed|fasta\n";
+
+my %stat;
+my %probe_match;
+my $lastid;
 while(<>)
 {
     chomp;
     my @tab = split;
     my ($probeid, $qstart, $qend, $qlength, $rchr, $rstart, $rend, $mismatches, $qacgt, $racgt) = @tab;
-    next if $rchr =~ /_/;
-    die "assert" unless $qstart==1 && $qend==$qlength && $mismatches==0 && $qlength==length $qacgt;
-    # ... && $qacgt eq $racgt [racgt might have "-" etc]
+
+    ++$stat{skip_non_chr}, next
+	if ($rchr =~ /_/);
+    ++$stat{skip_non_exact}, next
+	unless ($qstart==1 &&
+		$qend==$qlength &&
+		$mismatches==0 &&
+		$qlength==length $qacgt);
+
     my $acgt = $racgt;
     $acgt =~ s/.{1,50}/$&\n/g;
-    print (">$probeid=$rchr\@$rstart-$rend\n", $acgt);
+    print (">$probeid=$rchr\@$rstart-$rend\n", $acgt) if $format eq "fasta";
+    print ("$rchr\t$rstart\t$rend\t$probeid\n") if $format eq "bed";
+
+    ++$stat{probe_placed} if 1 == ++$probe_match{$probeid};
+    ++$stat{probe_non_unique} if 2 == $probe_match{$probeid};
 }
+
+printf STDERR "%9d %s\n", $stat{skip_non_chr}, "placements on chr*_* ignored";
+printf STDERR "%9d %s\n", $stat{skip_non_exact}, "non-exact placements ignored";
+printf STDERR "%9d %s\n", $stat{probe_placed}-$stat{probe_non_unique}, "probes placed exactly once";
+printf STDERR "%9d %s\n", $stat{probe_non_unique}, "probes placed more than once";
