@@ -531,12 +531,7 @@ if (!defined $success)
 goto ONELEVEL if !defined $success;
 
 
-if ($have_slurm)
-{
-  Log (undef, "release job allocation");
-  system "scancel $ENV{SLURM_JOBID}";
-}
-
+release_allocation();
 
 freeze();
 Log (undef, "reduce");
@@ -753,6 +748,16 @@ sub check_squeue
       # kill this proc if it hasn't exited in 30 seconds
       $proc{$_}->{killtime} = time + 30;
     }
+  }
+}
+
+
+sub release_allocation
+{
+  if ($have_slurm)
+  {
+    Log (undef, "release job allocation");
+    system "scancel $ENV{SLURM_JOBID}";
   }
 }
 
@@ -978,6 +983,7 @@ sub freeze_if_want_freeze
 {
   if ($main::please_freeze)
   {
+    release_allocation();
     if (@_)
     {
       # kill some srun procs before freeze+stop
