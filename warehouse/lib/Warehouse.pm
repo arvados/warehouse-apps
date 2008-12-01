@@ -10,7 +10,6 @@ use HTTP::Request::Common;
 use Date::Parse;
 use IO::Handle;
 use Warehouse::Stream;
-use GnuPG::Interface;
 use Unix::Syslog qw(:macros);
 use Unix::Syslog qw(:subs);
 
@@ -1735,6 +1734,10 @@ sub _verify
 
   &_log("verifying") if $ENV{DEBUG_GPG};
   my $text = shift;
+
+  eval "use GnuPG::Interface";
+  return (0,'') if $@;
+
   my $gnupg = GnuPG::Interface->new();
 
   $gnupg->options->hash_init( armor    => 1,
