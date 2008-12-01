@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+
+use strict;
+
+open STDOUT, "|sort -n -k2 |sort -s -k1,1";
+
+while (<>)
+{
+    my ($ref, $pos, $in) = split (/\s+/, $_, 3);
+    if ($ref =~ /.*=(.+)\@(\d+)-(\d+)$/)
+    {
+	$ref = $1;
+	$pos += $2 - 1;
+    }
+    print "$ref\t$pos\t$in";
+}
