@@ -1,0 +1,53 @@
+#!/usr/bin/perl -w
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+use Bio::SearchIO;
+
+my $in = Bio::SearchIO->new (-format => "blast",
+			     -file => "-");
+
+my @filter = @ARGV;
+
+while (my $r = $in->next_result)
+{
+  while (my $hit = $r->next_hit)
+  {
+  HSP:
+    while (my $hsp = $hit->next_hsp)
+    {
+      my $mismatchcount = $hsp->length('total') - 
+	  ($hsp->num_conserved + $hsp->gaps('total'));
+      for (@filter)
+      {
+	if ($_ eq "exact")
+	{
+	  next HSP if $mismatchcount > 0 || $hsp->length('total') != $r->query_length;
+	}
+      }
+      print join("\t",
+		 $r->query_name,
+
+		 $hsp->query->strand < 0 ?
+		 ( $hsp->query->end,
+		   $hsp->query->start ) :
+		 ( $hsp->query->start,
+		   $hsp->query->end ),
+
+		 $r->query_length,
+
+		 $hit->name,
+		 $hsp->hit->strand < 0 ?
+		 ( $hsp->hit->end,
+		   $hsp->hit->start ) :
+		 ( $hsp->hit->start,
+		   $hsp->hit->end ),
+
+		 $mismatchcount,
+
+		 $hsp->query_string,
+		 $hsp->hit_string,
+		 ), "\n";
+    }
+  }
+}
