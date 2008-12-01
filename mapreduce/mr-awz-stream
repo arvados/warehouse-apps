@@ -26,6 +26,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   Safepipe::readfrom ("main::S",
 		      "mrs-fetch -h '$manifestkey' '$wantsubdir'",
 		      "$ENV{KNOB_FUNCTION}",
+		      $KNOB_OUTPUTNAME=~/\.gz$/ ? "gzip -cn" : (),
 		      "mrs-store $wantsubdir $ENV{KNOB_OUTPUTNAME}",
 		      "mrs-output");
   close "S" or die "close S: $!";
