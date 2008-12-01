@@ -1,0 +1,14 @@
+#!/usr/bin/perl
+
+while(<>)
+{
+    chomp;
+    my @tab = split;
+    my ($probeid, $qstart, $qend, $qlength, $rchr, $rstart, $rend, $mismatches, $qacgt, $racgt) = @tab;
+    next if $rchr =~ /_/;
+    die "assert" unless $qstart==1 && $qend==$qlength && $mismatches==0 && $qlength==length $qacgt;
+    # ... && $qacgt eq $racgt [racgt might have "-" etc]
+    my $acgt = $racgt;
+    $acgt =~ s/.{1,50}/$&\n/g;
+    print (">$probeid=$rchr\@$rstart-$rend\n", $acgt);
+}
