@@ -4,10 +4,22 @@
 use strict;
 use Bio::SearchIO;
 
+my @filter = @ARGV;
+
+unless (open STDIN, "-|")
+{
+  $/ = "\n\n";
+  while (<STDIN>)
+  {
+    s/((?:^|\n)Query=\s*\S+)\r?\n(\S)/$1$2/sg;
+    s{((?:^|\n)Query=\s*)([^\n]+)}{my $a = $2; $a =~ tr/ /:/; $1.$a; }esg;
+    print;
+  }
+  exit 0;
+}
+
 my $in = Bio::SearchIO->new (-format => "blast",
 			     -file => "-");
-
-my @filter = @ARGV;
 
 while (my $r = $in->next_result)
 {
@@ -23,6 +35,36 @@ while (my $r = $in->next_result)
 	if ($_ eq "exact")
 	{
 	  next HSP if $mismatchcount > 0 || $hsp->length('total') != $r->query_length;
+	}
+	elsif ($_ eq "allfields")
+	{
+	  print join("\t", ( $r->query_name,
+			     $hit->name,
+			     sprintf("%.2f",$hsp->percent_identity),
+			     $hsp->length('total'),
+			     $mismatchcount,
+			     $hsp->gaps('total'),
+			     # flip start/end on rev strand
+			     $hsp->query->strand < 0 ?
+			     ( $hsp->query->end,
+			       $hsp->query->start ) :
+			     ( $hsp->query->start,
+			       $hsp->query->end ),
+			     $hsp->hit->strand < 0 ?
+			     ( $hsp->hit->end,
+			       $hsp->hit->start ) :
+			     ( $hsp->hit->start,
+			       $hsp->hit->end ),
+
+			     $hsp->evalue,
+			     # chance this to $hsp->sw_score 
+			     # if you would rather have that
+			     # it will only work for FASTA parsing though!
+			     $hsp->bits,
+			     $hsp->query_string,
+			     $hsp->hit_string,
+			     )),"\n";
+	  next;
 	}
       }
       print join("\t",
