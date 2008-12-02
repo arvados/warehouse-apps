@@ -64,7 +64,7 @@ while (my $r = $in->next_result)
 			     $hsp->query_string,
 			     $hsp->hit_string,
 			     )),"\n";
-	  next;
+	  next HSP;
 	}
       }
       print join("\t",
