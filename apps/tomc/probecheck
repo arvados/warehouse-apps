@@ -29,6 +29,7 @@ my @align;
 while(<>)
 {
     my @allfields = split;
+    next if @allfields < 11;
 
     my ($id_part, $chr, $pos0, $pos1) = @allfields[0,1,8,9];
     my ($querystring, $hitstring) = @allfields[12,13];
