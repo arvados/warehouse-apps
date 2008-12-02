@@ -1,0 +1,6 @@
+#!/usr/bin/perl
+
+use strict;
+
+die "Need to specify outputtype" if !$ENV{KNOB_OUTPUTTYPE};
+exec ("$ENV{MR_REVISION_SRCDIR}/apps/tomc/probecheck", "--".$ENV{KNOB_OUTPUTTYPE};
