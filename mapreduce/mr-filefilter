@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:run a specified filter, one job step per input file
+###MR_INPUT:manifest
+###MR_KNOBS:COMMAND=
+###MR_KNOBS:OUTPUTNAME=out.gz
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+die "no command" if $ENV{KNOB_COMMAND} !~ /\S/;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my $whc = new Warehouse;
+  my $in = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
+  $in->rewind;
+  while (my $s = $in->subdir_next)
+  {
+    my $stream_string = $s->as_string;
+    $s->rewind;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      $stream_string =~ s/ \d+:.*/ $pos:$size:$filename/;
+      print STDERR "+++mrjobstep 1 $stream_string+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  if (!open INSTREAM, "-|")
+  {
+    close STDIN;
+    my $whc = new Warehouse;
+    my $s = new Warehouse::Stream (whc => $whc,
+					  subdir => $ENV{MR_INPUT});
+    $s->rewind;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      $s->seek ($pos);
+      while (my $dataref = $s->read_until ($pos + $size))
+      {
+	print $$dataref;
+      }
+    }
+    exit 0;
+  }
+  my ($wantsubdir) = $ENV{MR_INPUT} =~ /(\S+)/;
+  Safepipe::readfrom ("main::S",
+		      ["main::INSTREAM", "$ENV{KNOB_COMMAND}"],
+		      $ENV{KNOB_OUTPUTNAME} =~ /\.gz$/ ? "gzip -cn" : (),
+		      "mrs-store '$wantsubdir' '$ENV{KNOB_OUTPUTNAME}'",
+		      "mrs-output");
+  close INSTREAM or die "close INSTREAM: $!";
+  close "S" or die "close S: $!";
+  while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
+}
