@@ -51,6 +51,7 @@ elsif ($ENV{MR_LEVEL} == 1)
 	print $$dataref;
       }
     }
+    close STDOUT or die "close child STDOUT: $!";
     exit 0;
   }
   my ($wantsubdir) = $ENV{MR_INPUT} =~ /(\S+)/;
