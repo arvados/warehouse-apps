@@ -1,0 +1,28 @@
+#!/usr/bin/perl
+
+use strict;
+use Fcntl ':flock';
+
+chdir $ENV{MR_JOB_TMP} or die "chdir $ENV{MR_JOB_TMP}: $!";
+atomic_whget ($ENV{KNOB_REFERENCE}."/".$ENV{KNOB_REFERENCEFILE}, "exons.RCA");
+exec "mrs-gpplace";
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
