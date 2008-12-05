@@ -5,7 +5,7 @@ use Fcntl ':flock';
 
 chdir $ENV{MR_JOB_TMP} or die "chdir $ENV{MR_JOB_TMP}: $!";
 atomic_whget ($ENV{KNOB_REFERENCE}."/".$ENV{KNOB_REFERENCEFILE}, "exons.RCA");
-exec "mrs-gpplace";
+exec "mrs-gpplace 2>/dev/null";
 
 sub atomic_whget {
   my ($source, $target) = @_;
