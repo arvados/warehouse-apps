@@ -1,0 +1,124 @@
+#!/usr/bin/perl
+
+#input: exons.RCA
+#input: readfile (on STDIN)
+#output: placementfile
+# Greg Porreca 6-18-2007
+# modified 12-02-2008 to place EcoP15I 24bp polonator reads
+#                     prints output to stdout
+# modified 12-03-2008 to pre-compute hexamer locations for speed increase
+# modified 12-04-2008 to pre-compute read locations for speed increase
+#
+use FileHandle;
+
+open(REFERENCE, "exons.RCA");
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+#load reference into memory and compute lookup-table
+print STDERR "Loading reference...\n";
+$count=0;
+while(<REFERENCE>){
+    chop $_;
+    @line = split(/\t/, $_);
+    $line[3] =~ tr/[acgt]/[ACGT]/;
+
+#    $x = reverse $line[3];
+#    push(@ref, $x . $x . $x);
+
+    $curr = $line[3] . $line[3];
+
+    $annot{$line[3]} = $line[0] . "\t" . $line[1] . "\t" . $line[2];
+    $exons[$count] = $curr;
+
+    print STDERR "$count\r";
+    for($i=0; $i<(length($curr)/2)+30; $i++){
+	# store all 4 possible reads from this position
+	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 13, 6);
+	$LUT{$read} = $LUT{$read} . "$count\t";
+	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 14, 6);
+	$LUT{$read} = $LUT{$read} . "$count\t";
+	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 15, 6);
+	$LUT{$read} = $LUT{$read} . "$count\t";
+	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 16, 6);
+	$LUT{$read} = $LUT{$read} . "$count\t";
+    }
+    $count++;
+}
+print STDERR "\n";
+close REFERENCE;
+
+print STDERR "Placing reads...\n";
+$s[0] = "A";
+$s[1] = "C";
+$s[2] = "G";
+$s[3] = "T";
+
+while(<STDIN>){
+    chop $_;
+    if($_!~/\./){
+	@line = split(/\t/, $_);
+	
+#expand read into all possible 1bp substitution variants, and search each against reference list
+	@curr_read_array = split(//, $line[4]);
+	for($pos = 0; $pos < 24; $pos++){
+	    for($base=0; $base<4; $base++){
+		
+		@new_seqarray = @curr_read_array;
+		$new_seqarray[$pos] = $s[$base];
+		$new_seq = join(/""/,@new_seqarray);
+		
+		$r1 = substr($new_seq, 0, 12);
+		$r2 = substr($new_seq, 12, 12);
+		
+#match 13 - 16 bp in between the reads (25--28EcoP15 - 12bp read)
+#match1 holds the sequences of all exons matching read 1 (with current substitution), match2 holds
+#the subset of match1 which also matches read 2 (with current substitution); 
+		# determine whether r1 matches any exons
+		@match0 = ();
+		if(exists $LUT{$r1}){
+		    @ex1 = split(/\t/, $LUT{$r1});
+		    for($i=0; $i<$#ex1+1; $i++){
+			$ex1h{$ex1[$i]}++;
+		    }
+
+		    @ex2 = split(/\t/, $LUT{$r2});
+		    if(exists $LUT{$r2}){
+			for($i=0; $i<$#ex2+1; $i++){
+			    if($ex1h{$ex2[$i]} > 0){
+				push(@match0, $exons[$ex2[$i]]);
+			    }
+			}
+		    }
+		}
+		undef %ex1h;
+		$s2 = @match0;
+		
+		for($i=0; $i<$s2; $i++){
+		    $curr_seq = $match0[$i];
+		    $curr_seq = substr($curr_seq, 0, length($curr_seq)/2);
+		    $hash{$annot{$curr_seq}}++;
+		    $mutated_seq = $new_seq;
+		}
+	    }
+	}
+	
+	
+	$num_matching_pairs = 0;
+	while(($key, $value) = each %hash){
+	    $num_matching_pairs++;
+	}
+	undef %hash;
+	
+	$input = join("\t", @line);
+	if($num_matching_pairs == 0){
+	    print "0\t$num_matching_pairs\t.\t.\t.\t.\t.\t$input\n";
+	}
+	elsif($num_matching_pairs == 1){
+	    print "U\t$num_matching_pairs\t$annot{$curr_seq}\t$curr_seq\t$mutated_seq\t$input\n";
+	}
+	else{
+	    print "N\t$num_matching_pairs\t.\t.\t.\t.\t.\t$input\n";
+	}	
+    }
+}

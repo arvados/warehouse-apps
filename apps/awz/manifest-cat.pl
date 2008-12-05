@@ -9,7 +9,7 @@ use Warehouse::Stream;
 use Getopt::Std;
 
 my %args;
-getopts ("w:m:", \%args);
+getopts ("vw:m:", \%args);
 
 my $whc = new Warehouse 
     ($args{'w'} ? (warehouse_name => $args{'w'}) : ());
@@ -32,10 +32,12 @@ $manifest->rewind;
 while (my $instream = $manifest->subdir_next ) {
   while (my ($pos, $size, $filename) = $instream->file_next) {
     last if !defined $pos;
-    print STDERR "."; 
+    print STDERR "." if $args{'v'};
     $instream->seek ($pos);    
     while (my $buf = $instream->read_until($pos+$size)) {
       print $$buf;
     }
   }
 }
+print STDERR "\n" if $args{'v'};
+
