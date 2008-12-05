@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:strip big text streams into smaller files
+###MR_INPUT:manifest
+###MR_KNOB:LINESPERFILE=100000
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+$ENV{KNOB_LINESPERFILE} ||= 1000;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  $ENV{MR_INPUT} = $ENV{MR_INPUT0};
+  do "mrtask-queuelines";
+}
+
+elsif ($ENV{MR_LEVEL} == 1)
+{
+  my $line = $ENV{MR_INPUT};
+  my $whc = new Warehouse;
+
+  my @files;
+  my $filenumber = 0;
+  my $linenumber = 0;
+  my $filestartpos = 0;
+  my $instream = new Warehouse::Stream (whc => $whc,
+					subdir => $line);
+  $instream->rewind;
+  while (my ($pos, $size, $filename) = $instream->file_next)
+  {
+    last if !defined $pos;
+    $instream->seek ($pos);
+    while (my $dataref = $instream->read_until ($pos + $size, "\n"))
+    {
+      ++$linenumber;
+      if ($linenumber % $ENV{KNOB_LINESPERFILE} == 0)
+      {
+	my $size = $instream->tell - $filestartpos;
+	push @files, "$filestartpos:$size:$filenumber.txt";
+	$filenumber++;
+	$filestartpos = $instream->tell;
+      }
+    }
+  }
+  my $size = $instream->tell - $filestartpos;
+  ++$filenumber, push @files, "$filestartpos:$size:$filenumber.txt"
+      if $size > 0;
+  my $outline = $line;
+  $outline =~ s/ \d+:\d+:.*//s;
+  $outline .= " @files\n";
+  print STDERR "+++mrout ".$outline."+++\n";
+  exit 0;
+}
