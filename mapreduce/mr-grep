@@ -38,7 +38,7 @@ elsif ($ENV{MR_LEVEL} == 1) {
   Safepipe::readfrom ("main::X",
 		      "mrs-fetch -h $manifestkey '$wantsubdir' '$wantfile'",
 		      "mrs-grep '$ENV{KNOB_PATTERN}'",
-		      $ENV{KNOB_GZIP} ? "gzip -1" : (),
+		      $ENV{KNOB_GZIP} ? "gzip -cn" : (),
 		      "mrs-store '$wantsubdir' '$outfile'",
 		      "mrs-output",
 		      );
