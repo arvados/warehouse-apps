@@ -1,0 +1,243 @@
+#!/usr/bin/perl
+
+use strict;
+use Fcntl ':flock';
+use Warehouse;
+use POSIX;
+use Digest::MD5 'md5_hex';
+my $whc = new Warehouse;
+
+my %override;
+while ($ARGV[0] =~ /^(.*?)=(.*)$/)
+{
+    $override{$1} = $2;
+    shift @ARGV;
+}
+
+@ARGV == 2
+    or die qq{
+usage: $0 default-revision workdir
+
+example: $0 2474 /scratch/gp-jobs-workdir
+
+};
+
+my ($revision_default, $workdir) = @ARGV;
+
+my %Job;
+my @Job;
+
+my $joblist = $whc->job_list;
+if (!$joblist || !@$joblist)
+{
+    warn "job_list returned nothing; quitting after 10 seconds";
+    sleep 10;
+    exit 1;
+}
+for (@$joblist)
+{
+    $Job{$_->{id}} = $_;
+}
+@Job = sort { $b->{id} <=> $a->{id} } values %Job;
+
+my %new_job_id;
+
+
+my @input = qw(
+reads_10282008_80pct_5bgsub_0_00.basecalls 47e77f1e07af6cf047ab0f358dd237e7+3616
+reads_10282008_80pct_5bgsub_0_01.basecalls 3788cb393e11d329e82735ad75789b72+2944
+reads_10282008_80pct_5bgsub_0_02.basecalls 0992ec43c967c085f23c3a0cf6e573f9+3658
+reads_10282008_80pct_5bgsub_0_03.basecalls 43ebbb58468304b6060125d537c5cdbe+4077
+reads_10282008_80pct_5bgsub_0_04.basecalls 00d29312f0f13ee4689bd324534974fa+1557
+reads_10282008_80pct_5bgsub_0_05.basecalls 7c68947fe75e2323b47edc356288628d+2020
+reads_10282008_80pct_5bgsub_0_06.basecalls d6bccda90245d72e7b8e3d0083fc4b8a+1600
+reads_10282008_80pct_5bgsub_0_07.basecalls 8066bc7c31e31089a22e0611df7675b7+1642
+
+reads_10282008_50pct_5bgsub_0_00.basecalls ad1d8aae9b6672c9be696f8536e09020+2314
+reads_10282008_50pct_5bgsub_0_01.basecalls 55469ec9886c9eadc2437e5d53af8ed5+1894
+reads_10282008_50pct_5bgsub_0_02.basecalls 4606cab1b0b1734148bd950389e66ee5+2356
+reads_10282008_50pct_5bgsub_0_03.basecalls 68d889b93f95a82139695ab9c4993a80+2608
+reads_10282008_50pct_5bgsub_0_04.basecalls b8181e81dd05f5d4f20140e0d8c8ec73+1012
+reads_10282008_50pct_5bgsub_0_05.basecalls 56c591249abf70443a37b2072946dee3+1306
+reads_10282008_50pct_5bgsub_0_06.basecalls 9cbcd22d413dacc659051b3e86a28877+1054
+reads_10282008_50pct_5bgsub_0_07.basecalls 1f9848ba866a9a8dc9ac496e609f63a1+1095
+);
+
+open STATUS, "|-", "tee", "$workdir/status.tmp";
+
+while (@input)
+{
+    my ($inputname, $inputmanifest) = splice @input, 0, 2;
+    $inputname =~ s/\.basecalls$//g;
+    my $flow = {};
+    my $pipeline = { label => "gpplace",
+		     REFERENCE => "2d9966d3920cf70afdfea0bb0c32905f",
+		     REFERENCEFILE => "exons.RCA",
+		 };
+    fillpipeline ($inputname,
+		  $inputmanifest,
+		  $flow,
+		  $pipeline);
+}
+
+if (close STATUS)
+{
+    rename "$workdir/status.tmp", "$workdir/status";
+}
+
+exit 0;
+
+
+
+sub fillpipeline
+{
+    my ($id, $in, $flow, $pipeline) = @_;
+
+    my $ref = $pipeline->{REFERENCE};
+    my $reffile = $pipeline->{REFERENCEFILE};
+
+    my $me = $flow->{$pipeline->{label}} = {};
+
+    $me->{outputs} = ["$in input"];
+
+    $me->{splitstream} = findjob
+	( { mrfunction => "splitstream",
+	    revision => [ 2474, ],
+	    inputkey => $in,
+	    knobs => makeknobs ("splitstream",
+				"LINESPERFILE=200000",
+				)
+	    } )
+	unless $me->{splitstream};
+
+    $me->{gpplace} = findjob
+	    ( { mrfunction => "filefilter",
+		revision => [ 2474, ],
+		inputkey => $me->{splitstream}->{outputkey},
+		stepspernode => 1,
+		nodes => 20,
+		knobs => makeknobs
+		    ("gpplace",
+		     "COMMAND=mrs-gpplacewrap",
+		     "OUTPUTNAME=out.gz",
+		     "REFERENCE=$ref",
+		     "REFERENCEFILE=$reffile",
+		     ),
+		} )
+	    unless $me->{gpplace} || !$me->{splitstream} || !$me->{splitstream}->{outputkey};
+    my $status = sprintf "$id $in %s %s\n", map { id_and_output ($me->{$_}) } (qw(splitstream gpplace));
+    print STATUS $status;
+}
+
+sub id_and_output
+{
+    my $job = shift;
+    return sprintf "%5d/%-32.32s", $job->{id}, output_or_status($job);
+}
+
+sub output_or_status
+{
+    my $job = shift;
+    if ($job->{success})
+    {
+	return $job->{outputkey};
+    }
+    if (length $job->{success})
+    {
+	return "failed";
+    }
+    if (length $job->{steps_running})
+    {
+	return sprintf ("%d done %d run %d todo", $job->{steps_done}, $job->{steps_running}, $job->{steps_todo});
+    }
+    if (length $job->{starttime_s})
+    {
+	return "starting";
+    }
+    if (length $job->{submittime})
+    {
+	return "queued";
+    }
+    return "new";
+}
+
+sub findjob
+{
+    my $want = shift;
+    my $failed;
+    my $queued;
+    for (@Job)
+    {
+	if ($_->{revision} >= $want->{revision}->[0]
+	    && ($_->{revision} <= $want->{revision}->[1] || !$want->{revision}->[1])
+	    && $_->{mrfunction} eq $want->{mrfunction}
+	    && $_->{knobs} eq $want->{knobs}
+	    && $_->{inputkey} eq $want->{inputkey})
+	{
+	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
+	    $failed = $_ if !$failed && $_->{success} eq '0';
+	    delete $_->{outputkey} if !$_->{success};
+	    return $_ if $_->{outputkey};
+	}
+    }
+    mention_failed_job ($failed) if !$queued && $failed;
+    return start_new_job ($want)
+	if (!$queued &&
+	    !$want->{quiet} &&
+	    (!$failed
+	     || -e "$workdir/retryfailed-".$failed->{id}
+	     || $override{retryfailed}));
+    return $queued || $failed;
+}
+
+sub start_new_job
+{
+    my $want = shift;
+    my $nodes = $want->{nodes} || 1;
+    my $moreoptions = "";
+    $moreoptions .= " stepspernode=".$want->{stepspernode} if $want->{stepspernode};
+    my $revision = $want->{revision}->[1] || $revision_default;
+    $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
+    my $knobs = $want->{knobs};
+    $knobs =~ s{=(.*?)(\\n|$)}{='$1' }g;
+    my $cmd = "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs";
+    return if $new_job_id{$cmd};
+    print "$cmd\n";
+    return undef if $override{nonewjobs};
+    my $id = `$cmd`;
+    chomp $id;
+    print "$id\n";
+    return if $id !~ /^\d+$/;
+    $new_job_id{$cmd} = $id;
+    my $newjoblist = $whc->job_list (id_min => $id, id_max => $id);
+    ($Job{$id}) = $newjoblist->[0];
+    push @Job, $newjoblist->[0];
+    return $Job{$id};
+}
+
+sub mention_failed_job
+{
+    my $job = shift;
+    print "# suggest investigating job id=".$job->{id}." -- failed with frozentokey=".$job->{frozentokey}." metakey=".$job->{metakey}."\n";
+}
+
+sub makeknobs
+{
+    my $function = shift @_;
+    my $knobs = "";
+    foreach (sort @_)
+    {
+	my ($k) = /^(.*)=/;
+	if (exists $override{"$function/$k"})
+	{
+	    $knobs .= $k."=".$override{"$function/$k"};
+	}
+	else
+	{
+	    $knobs .= $_;
+	}
+	$knobs .= "\\n";
+    }
+    $knobs =~ s/\\n$//s;
+    return $knobs;
+}
