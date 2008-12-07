@@ -25,6 +25,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   my @files;
   my $filenumber = 0;
   my $linenumber = 0;
+  my $filestartline = 1;
   my $filestartpos = 0;
   my $instream = new Warehouse::Stream (whc => $whc,
 					subdir => $line);
@@ -39,14 +40,15 @@ elsif ($ENV{MR_LEVEL} == 1)
       if ($linenumber % $ENV{KNOB_LINESPERFILE} == 0)
       {
 	my $size = $instream->tell - $filestartpos;
-	push @files, "$filestartpos:$size:$filenumber.txt";
+	push @files, "$filestartpos:$size:$filestartline-$linenumber.txt";
 	$filenumber++;
 	$filestartpos = $instream->tell;
+	$filestartline = $linenumber + 1;
       }
     }
   }
   my $size = $instream->tell - $filestartpos;
-  ++$filenumber, push @files, "$filestartpos:$size:$filenumber.txt"
+  push @files, "$filestartpos:$size:$filestartline-$linenumber.txt"
       if $size > 0;
   my $outline = $line;
   $outline =~ s/ \d+:\d+:.*//s;
