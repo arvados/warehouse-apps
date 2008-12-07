@@ -220,6 +220,7 @@ sub snap
 {
     my %got;
 
+    my $warehouse_name = $whc->{warehouse_name};
     $whc->write_start or die "Write failed: ".$whc->errstr;
     foreach my $keyname ($whc->list_manifests)
     {
@@ -234,6 +235,10 @@ sub snap
 	$whc->write_data (". ");
 	foreach (split (",", $key))
 	{
+	    if ($key !~ /\+K\d+\@\Q$warehouse_name\E\b/ && $opt{'keep'})
+	    {
+		$key .= "+K03\@$warehouse_name";
+	    }
 	    $whc->write_data ($key." ");
 	}
 	$whc->write_data ("0::$name\n");
@@ -251,24 +256,36 @@ sub snap
 
 		next if $arg !~ /^[0-9a-f]{32}/;
 
+		my @snapblocks;
+
 		my $needthis = 0;
 		foreach (split (",", $arg))
 		{
+		    if ($opt{'keep'} && !/\+K\d+\@\Q$warehouse_name\E\b/)
+		    {
+			$_ .= "+K03\@$warehouse_name";
+		    }
+		    push @snapblocks, $_;
 		    s/^([0-9a-f]{32})(\+.*)?$/$1/;
 		    if (!exists $got{$_}) { $needthis = $got{$_} = 1; }
 		}
 
-		if ($needthis && $arg)
+		if ($needthis && @snapblocks)
 		{
 		    $arg =~ s/,/ /g;
-		    $whc->write_data ("./".$j->{id}."/$_ $arg 0::$_\n");
+		    $whc->write_data ("./".$j->{id}."/$_ @snapblocks 0::$_\n");
 		}
 	    }
 	}
     }
     else { warn ("Nothing in job list: " . $whc->errstr . "\n"); }
 
-    my $snapkey = $whc->write_finish or die "Write failed: ".$whc->errstr;
+    my @snapkey = $whc->write_finish or die "Write failed: ".$whc->errstr;
+    my $snapkey = join (",", @snapkey);
+    if ($opt{'keep'})
+    {
+	($snapkey) = $whc->store_in_keep (hash => $snapkey);
+    }
     print "$snapkey\n";
 }
 
