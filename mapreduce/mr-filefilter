@@ -5,6 +5,7 @@
 ###MR_INPUT:manifest
 ###MR_KNOBS:COMMAND=
 ###MR_KNOBS:OUTPUTNAME=out.gz
+###MR_KNOBS:CONCATENATE=0
 
 use strict; 
 use Warehouse;
@@ -12,9 +13,22 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use Safepipe;
 
-die "no command" if $ENV{KNOB_COMMAND} !~ /\S/;
+die "no command specified" if $ENV{KNOB_COMMAND} !~ /\S/;
+die "no outputname specified" if $ENV{KNOB_OUTPUTNAME} !~ /\S/;
 
-if ($ENV{MR_LEVEL} == 0)
+if ($ENV{MR_LEVEL} == 0 && $ENV{KNOB_CONCATENATE})
+{
+  my $whc = new Warehouse;
+  my $instream = new Warehouse::Stream (whc => $whc,
+					hash => [split (",", $ENV{MR_INPUT0})]);
+  my $manifest = "";
+  while (my $dataref = $instream->read_until())
+  {
+    $manifest .= $$dataref;
+  }
+  level1 ($manifest, ".");
+}
+elsif ($ENV{MR_LEVEL} == 0)
 {
   my $whc = new Warehouse;
   my $in = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
@@ -32,33 +46,95 @@ if ($ENV{MR_LEVEL} == 0)
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
 }
-
 elsif ($ENV{MR_LEVEL} == 1)
 {
+  level1($ENV{MR_INPUT}, $ENV{MR_INPUT} =~ /^(\S+)/);
+}
+
+sub level1
+{
+  my $input = shift;
+  my $outdir = shift;
+
+  # maybe I can write an output manifest without reading or writing any data blocks.
+  my $want_gz = $ENV{KNOB_OUTPUTNAME} =~ /\.gz$/;
+  if (($ENV{KNOB_COMMAND} eq "cat" || 0 == length $ENV{KNOB_COMMAND})
+      &&
+      (!$want_gz || $input =~ /\.g?z/))
+  {
+    my $shortcut_ok = 1;
+    while ($shortcut_ok && $input =~ /(.+)/gm)
+    {
+      my $inputline = $1;
+      $inputline =~ s/^\S+\s+//;
+      my $streamlength = 0;
+      my $endoffiles = 0;
+      while ($shortcut_ok && $inputline =~ /(\S+)/g)
+      {
+	my $token = $1;
+	if ($token =~ /^(\d+):(\d+):/)
+	{
+	  $shortcut_ok &&= (!$want_gz || $token =~ /\.gz$/);
+	  $shortcut_ok &&= ($1 == $endoffiles);
+	  $endoffiles += $2;
+	}
+	if ($token =~ /\+(\d+)/)
+	{
+	  $streamlength += $1;
+	}
+      }
+      $shortcut_ok &&= $endoffiles == $streamlength;
+    }
+    if ($shortcut_ok)
+    {
+      my $whc = new Warehouse;
+      $whc->write_start;
+      $whc->write_data ($outdir);
+      while ($input =~ /(.+)/gm)
+      {
+	my $inputline = $1;
+	$inputline =~ s/^\S+\s+//;
+	while ($shortcut_ok && $inputline =~ /(\S+)/g)
+	{
+	  my $token = $1;
+	  last if $token =~ /^(\d+):(\d+):/;
+	  $whc->write_data (" ".$token);
+	}
+      }
+      $whc->write_data (" ".$ENV{KNOB_OUTPUTNAME}."\n");
+      my $outhash = join (",", $whc->write_finish);
+      print STDERR "+++mrout $outhash+++\n";
+      exit 0;
+    }
+  }
+
   if (!open INSTREAM, "-|")
   {
     close STDIN;
     my $whc = new Warehouse;
-    my $s = new Warehouse::Stream (whc => $whc,
-					  subdir => $ENV{MR_INPUT});
-    $s->rewind;
-    while (my ($pos, $size, $filename) = $s->file_next)
+    while ($input =~ /(.+)/gm)
     {
-      last if !defined $pos;
-      $s->seek ($pos);
-      while (my $dataref = $s->read_until ($pos + $size))
+      my $inputline = $1;
+      my $s = new Warehouse::Stream (whc => $whc,
+				     subdir => $inputline);
+      $s->rewind;
+      while (my ($pos, $size, $filename) = $s->file_next)
       {
-	print $$dataref;
+	last if !defined $pos;
+	$s->seek ($pos);
+	while (my $dataref = $s->read_until ($pos + $size))
+	{
+	  print $$dataref;
+	}
       }
     }
     close STDOUT or die "close child STDOUT: $!";
     exit 0;
   }
-  my ($wantsubdir) = $ENV{MR_INPUT} =~ /(\S+)/;
   Safepipe::readfrom ("main::S",
 		      ["main::INSTREAM", "$ENV{KNOB_COMMAND}"],
 		      $ENV{KNOB_OUTPUTNAME} =~ /\.gz$/ ? "gzip -cn" : (),
-		      "mrs-store '$wantsubdir' '$ENV{KNOB_OUTPUTNAME}'",
+		      "mrs-store '$outdir' '$ENV{KNOB_OUTPUTNAME}'",
 		      "mrs-output");
   close INSTREAM or die "close INSTREAM: $!";
   close "S" or die "close S: $!";
