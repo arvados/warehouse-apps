@@ -285,6 +285,7 @@ sub snap
     if ($opt{'keep'})
     {
 	($snapkey) = $whc->store_in_keep (hash => $snapkey);
+	$whc->store_manifest_by_name ($snapkey, undef, "/snap-".time)
     }
     print "$snapkey\n";
 }
