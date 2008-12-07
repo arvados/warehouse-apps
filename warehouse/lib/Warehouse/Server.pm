@@ -531,7 +531,7 @@ sub _callback_manifest
     }
     elsif (my @row = $self->{sth}->fetchrow_array)
     {
-	my $data = "@row\n";
+	my $data = join ("\t", @row) . "\n";
 	$self->{md5_ctx}->add ($data);
 	return $data;
     }
