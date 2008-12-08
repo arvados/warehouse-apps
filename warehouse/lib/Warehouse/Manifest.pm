@@ -225,8 +225,7 @@ sub errstr
 
  blocklist := block block block ...
 
- block := blockshortness <space> md5sum (deprecated)
-       or md5sum blockshortness hint hint ... (deprecated)
+ block := md5sum blockshortness hint hint ... (deprecated)
        or md5sum plusblocklength hint hint ...
        or md5sum hint hint ...
        or md5sum
@@ -262,22 +261,13 @@ sub errstr
 =head2 Example
 
  . b739bca6df51d8c189de04e59571f09b+1666 0:1666:INSTALL
- ./subdir1 2da5e40fa3dbb2531da9713144d2070b-0 f0766d92a869fcaeb765c18ca9eabef9+38108802 0:1666:INSTALL 1666:105216000:slurm-1.2.19.tar
+ ./subdir1 2da5e40fa3dbb2531da9713144d2070b+67108864 f0766d92a869fcaeb765c18ca9eabef9+38108802 0:1666:INSTALL 1666:105216000:slurm-1.2.19.tar
+ ./subdir2 2da5e40fa3dbb2531da9713144d2070b+67108864+K03@templeton f0766d92a869fcaeb765c18ca9eabef9+38108802+K03@templeton 0:1666:INSTALL 1666:105216000:slurm-1.2.19.tar
 
 Note:
 
   2^26 + 38108802 = 105217666
  1666 + 105216000 = 105217666
-
-=head2 Example (deprecated)
-
- . -67107198 b739bca6df51d8c189de04e59571f09b 0:1666:INSTALL
- ./subdir1 -0 2da5e40fa3dbb2531da9713144d2070b -29000062 f0766d92a869fcaeb765c18ca9eabef9 0:1666:INSTALL 1666:105216000:slurm-1.2.19.tar
-
-Note:
-
- 2^26 - 0 + 2^26 - 29000062 = 105217666
-           1666 + 105216000 = 105217666
 
 =cut
 
