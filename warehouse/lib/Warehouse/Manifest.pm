@@ -264,7 +264,7 @@ sub errstr
  ./subdir1 2da5e40fa3dbb2531da9713144d2070b+67108864 f0766d92a869fcaeb765c18ca9eabef9+38108802 0:1666:INSTALL 1666:105216000:slurm-1.2.19.tar
  ./subdir2 2da5e40fa3dbb2531da9713144d2070b+67108864+K03@templeton f0766d92a869fcaeb765c18ca9eabef9+38108802+K03@templeton 0:1666:INSTALL 1666:105216000:slurm-1.2.19.tar
 
-Note:
+Note: sum of block sizes equals sum of file sizes:
 
  67108864 + 38108802 = 105217666
     1666 + 105216000 = 105217666
