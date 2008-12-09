@@ -183,7 +183,7 @@ if ($ENV{MR_LEVEL} == 2)
 #      q{perl -pe 's{^\@.*}{">$subdir.$filename.$batchstart.".++$n}e; s{^\+.*}{} && scalar <>'},
        q{perl -pe 's{^\@}{>}; s{^\+.*}{}s && scalar <>'},
        "megablast -i stdin -d $refdir/$reffilename $ENV{KNOB_MBFLAGS}",
-       "gzip -1",
+       "gzip -cn",
        "mrs-store '$subdir/$filename-$batchstart-$batchend' '$filename-$batchstart-$batchend.mega.gz'",
        "mrs-output",
       )
