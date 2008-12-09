@@ -85,7 +85,7 @@ sub out
   my ($dataref, $filename) = @_;
   if (defined $filename)
   {
-    my $want_gunzip = !$opt{"no-gunzip"} && $filename =~ /\.gz$/;
+    my $want_gunzip = !$opt{"no-gunzip"};
     if ($gunzip_pipe_open && !$want_gunzip)
     {
       close GUNZIP_PIPE or die "close gunzip pipe: $!";
@@ -93,7 +93,7 @@ sub out
     }
     elsif (!$gunzip_pipe_open && $want_gunzip)
     {
-      open GUNZIP_PIPE, "|-", "gunzip", "-c" or die "open gunzip pipe: $!";
+      open GUNZIP_PIPE, "|-", "gunzip", "-cdf" or die "open gunzip pipe: $!";
       GUNZIP_PIPE->autoflush (1);
       $gunzip_pipe_open = 1;
     }
