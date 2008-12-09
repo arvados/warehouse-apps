@@ -134,6 +134,15 @@ sub job_show
     if ($joblist)
     {
 	my @fieldlist = grep { !/=/ } @ARGV;
+	for (0..$#fieldlist)
+	{
+	    if ($fieldlist[$_] eq "steps")
+	    {
+		splice (@fieldlist, $_, 1,
+			qw(steps_done steps_running steps_todo));
+		$_ += 2;
+	    }
+	}
 	@fieldlist = qw(inputkey revision mrfunction stepspernode knobs)
 	    if !@fieldlist;
 	foreach my $j (@$joblist)
