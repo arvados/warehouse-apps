@@ -97,6 +97,7 @@ if ($ENV{MR_LEVEL} == 1)
   my $bpcount = 0;		# ACGT base pairs counted in current trace
   my $have_good_reads = 0;	# any >= 400bp traces seen yet in this batch?
   my $have_any_reads = 0;	# any traces at all seen yet in this batch?
+  my $skipping_quality_scores_now = 0; # in fastq quality section?
   while (defined ($_ = <TRACES>))
   {
     if (/^[>\@]/)
@@ -122,8 +123,13 @@ if ($ENV{MR_LEVEL} == 1)
 	}
       }
       $bpcount = 0;
+      $skipping_quality_scores_now = 0;
     }
-    else
+    elsif (/^\+/)
+    {
+      $skipping_quality_scores_now = 1;
+    }
+    elsif (!$skipping_quality_scores_now)
     {
       $bpcount += tr/acgtACGT/acgtACGT/;
       $have_good_reads = 1 if $bpcount >= 400;
