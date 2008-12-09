@@ -1805,7 +1805,7 @@ sub _log
       # Log to syslog
       openlog(": ", LOG_PID, LOG_DAEMON);
       syslog(LOG_INFO, "$message");
-      closelog;
+      closelog();
   }
 
   # Now also print to STDOUT to facilitate debugging.
