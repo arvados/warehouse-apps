@@ -23,6 +23,8 @@ do '/etc/warehouse/memcached.conf.pl'
 $ENV{NOCACHE_READ} = 1 if $ENV{NOCACHE};
 $ENV{NOCACHE_WRITE} = 1 if $ENV{NOCACHE};
 
+$blocksize ||= 2**26;
+
 =head1 NAME
 
 Warehouse -- Client library for the storage warehouse.
@@ -47,7 +49,7 @@ our $VERSION = '0.01';
  my $filehash = $whc->store_block ($sample_content)
      or die "write failed: ".$whc->errstr;
 
- # Store a [possibly >64MB] file into multiple blocks
+ # Store a [possibly >64MiB] file into multiple blocks
  $whc->write_start or die "Write failed";
  while(<>) {
      $whc->write_data ($_) or die "Write failed";
@@ -287,7 +289,7 @@ sub _init
 
  my $hash = $whc->store_block ($data)
 
-Store a <= 64MB chunk of data.  On success, returns a hash which can
+Store a <= 64MiB chunk of data.  On success, returns a hash which can
 be used to retrieve the data.  On failure, returns undef.
 
 =cut
