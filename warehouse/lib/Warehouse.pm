@@ -1727,6 +1727,23 @@ sub errstr
     return $self->{errstr};
 }
 
+sub _encrypt_block
+{
+    # Return scalarref with encrypted data, or die if not possible.
+
+    my ($self, $dataref) = @_;
+    die "_encrypt_block() unimplemented";
+}
+
+sub _decrypt_block
+{
+    # Return scalarref with decrypted data. Return data untouched if
+    # decryption isn't possible.
+
+    my ($self, $dataref) = @_;
+    return $dataref;
+}
+
 sub _verify
 {
 
