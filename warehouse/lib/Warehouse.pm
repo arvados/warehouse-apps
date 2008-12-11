@@ -176,7 +176,12 @@ sub _init
     $self->_cryptsetup();
     $self->{warehouse_index} = $idx;
     $self->{warehouse_name} = $warehouse_name;
-    $self->{warehouse_servers} = $warehouses->[$idx]->{controllers};
+    $self->{name_warehouse_servers} = $warehouses->[$idx]->{name_controllers};
+    $self->{job_warehouse_servers} = $warehouses->[$idx]->{job_controllers};
+    $self->{name_warehouse_servers} = $warehouses->[$idx]->{controllers}
+	if !defined $self->{name_warehouse_servers};
+    $self->{job_warehouse_servers} = $warehouses->[$idx]->{job_controllers}
+	if !defined $self->{job_warehouse_servers};
     $self->{mogilefs_trackers} = $warehouses->[$idx]->{mogilefs_trackers};
     $self->{mogilefs_domain} = $warehouses->[$idx]->{mogilefs_domain};
     $self->{mogilefs_directory_class} = $warehouses->[$idx]->{mogilefs_directory_class};
@@ -184,8 +189,10 @@ sub _init
     $self->{keeps} = $warehouses->[$idx]->{keeps};
     $self->{memcached_size_threshold} = 0 if $idx != 0;
 
-    $self->{warehouse_servers} = $warehouse_servers
-	if !defined $self->{warehouse_servers};
+    $self->{name_warehouse_servers} = $warehouse_servers
+	if !defined $self->{name_warehouse_servers};
+    $self->{job_warehouse_servers} = $warehouse_servers
+	if !defined $self->{job_warehouse_servers};
 
     $self->{memcached_size_threshold} = $memcached_max_data
 	if !defined $self->{memcached_size_threshold};
@@ -982,7 +989,7 @@ sub store_manifest_by_name
     my $reqtext = "$newkey $oldkey $name";
     my $signedreq = $self->_sign ($reqtext);
 
-    my $url = "http://".$self->{warehouse_servers}."/put";
+    my $url = "http://".$self->{name_warehouse_servers}."/put";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $signedreq);
     $req->content ($signedreq);
@@ -1025,7 +1032,7 @@ sub fetch_manifest_key_by_name
     my $self = shift;
     my $name = shift;
 
-    my $url = "http://".$self->{warehouse_servers}."/get";
+    my $url = "http://".$self->{name_warehouse_servers}."/get";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $name);
     $req->content ($name);
@@ -1071,7 +1078,7 @@ sub list_manifests
 {
   my $self = shift;
 
-  my $url = "http://".$self->{warehouse_servers}."/list";
+  my $url = "http://".$self->{name_warehouse_servers}."/list";
   my $req = HTTP::Request->new (GET => $url);
   my $r = $self->{ua}->request ($req);
 
@@ -1116,7 +1123,7 @@ sub _job_list
 {
     my $self = shift;
     my %what = @_;
-    my $url = "http://".$self->{warehouse_servers}."/job/list";
+    my $url = "http://".$self->{job_warehouse_servers}."/job/list";
     $url .= "?".$what{id_min}."-".$what{id_max}
 	if $what{id_min} || $what{id_max};
     my $resp = $self->{ua}->get ($url);
@@ -1226,7 +1233,7 @@ sub job_freeze
     my $reqtext = join ("\n", map { $_."=".$job{$_} } keys %job);
     my $signedreq = $self->_sign ($reqtext);
 
-    my $url = "http://".$self->{warehouse_servers}."/job/freeze";
+    my $url = "http://".$self->{job_warehouse_servers}."/job/freeze";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $signedreq);
     $req->content ($signedreq);
@@ -1271,7 +1278,7 @@ sub job_new
     my $reqtext = join ("\n", map { $_."=".$job{$_} } keys %job);
     my $signedreq = $self->_sign ($reqtext);
 
-    my $url = "http://".$self->{warehouse_servers}."/job/new";
+    my $url = "http://".$self->{job_warehouse_servers}."/job/new";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $signedreq);
     $req->content ($signedreq);
@@ -1529,7 +1536,7 @@ sub write_cache
 					    job_list_fetched
 					    meta_stats_hashref
 					    manifest_stats_hashref);
-    my $cachefile = "/tmp/warehouse.cache.$<.".$self->{warehouse_servers};
+    my $cachefile = "/tmp/warehouse.cache.$<.".$self->{name_warehouse_servers};
     eval {
 	use Storable "lock_store";
 	lock_store $storeme, "$cachefile";
@@ -1543,7 +1550,7 @@ sub _read_cache
     my $stored;
     eval {
 	use Storable "lock_retrieve";
-	$stored = lock_retrieve "/tmp/warehouse.cache.$<.".$self->{warehouse_servers};
+	$stored = lock_retrieve "/tmp/warehouse.cache.$<.".$self->{name_warehouse_servers};
     };
     if (ref $stored eq 'HASH')
     {
@@ -1810,7 +1817,35 @@ sub _cryptsetup
     eval {
 	my $gnupg = GnuPG::Interface->new();
 	$gnupg->options->hash_init (homedir => $self->{gpg_homedir});
-	$gnupg->import_keys ("/etc/warehouse/gnupg-keys.pub");
+
+	my ( $input, $output, $error, $status ) =
+		( IO::Handle->new(),
+		  IO::Handle->new(),
+		  IO::Handle->new(),
+		  IO::Handle->new(),
+		);
+
+	my $handles = GnuPG::Handles->new( stdin  => $input,
+					   stdout => $output,
+					   stderr => $error,
+					   status => $status );
+
+	open(TMP,"/etc/warehouse/gnupg-keys.pub.asc");
+	my $pid = $gnupg->import_keys ( handles => $handles);
+
+	print $input join('',<TMP>);
+	close $input;
+	close TMP;
+
+	my $imported = join('',<$output>);
+	my $error_output = join('',<$error>);
+	my $status_output = join('',<$status>);
+
+	close $output;
+	close $error;
+	close $status;
+
+	waitpid $pid, 0;
     };
 }
 
