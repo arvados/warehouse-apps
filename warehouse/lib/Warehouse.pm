@@ -172,6 +172,8 @@ sub _init
     } (0..$#$warehouses)
     or die "I know no warehouse named ".$warehouse_name;
 
+    $self->{config} = $warehouses->[$idx];
+    $self->_cryptsetup();
     $self->{warehouse_index} = $idx;
     $self->{warehouse_name} = $warehouse_name;
     $self->{warehouse_servers} = $warehouses->[$idx]->{controllers};
@@ -180,8 +182,6 @@ sub _init
     $self->{mogilefs_directory_class} = $warehouses->[$idx]->{mogilefs_directory_class};
     $self->{mogilefs_file_class} = $warehouses->[$idx]->{mogilefs_file_class};
     $self->{keeps} = $warehouses->[$idx]->{keeps};
-    @{$self->{encrypt}} = ();
-    @{$self->{encrypt}} = $warehouses->[$idx]->{encrypt} if ($warehouses->[$idx]->{encrypt});
     $self->{memcached_size_threshold} = 0 if $idx != 0;
 
     $self->{warehouse_servers} = $warehouse_servers
@@ -314,10 +314,33 @@ sub store_block
     my $size = length $$dataref;
     my $hash = "$md5+$size";
 
-    my $alreadyhave = $self->fetch_block ($hash, 1, 1);
-    if (defined $alreadyhave && $$dataref eq $alreadyhave)
+    my $alreadyhave = $self->fetch_block_ref ($hash, 1, 1);
+    if ($alreadyhave && $$dataref eq $$alreadyhave)
     {
 	return $hash;
+    }
+    if (my $alreadyhavehash = $self->_cryptmap_fetchable ($dataref, $hash))
+    {
+	return $alreadyhavehash;
+    }
+
+    if (@{$self->{config}->{encrypt}})
+    {
+	my $enc = $self->_encrypt_block ($dataref);
+	die "Encrypted data is the same as original data"
+	    if $$dataref eq $$enc;
+
+	my $dec = $self->_decrypt_block ($enc);
+	die "Encrypted data but was not able to decrypt it"
+	    if $$dec ne $$dataref;
+
+	$dataref = $enc;
+	my $md5_enc = Digest::MD5::md5_hex ($$dataref);
+	my $hash_enc = sprintf "%s+%d", $md5_enc, length $$dataref;
+
+	$self->_cryptmap_write ($hash, $hash_enc);
+	$md5 = $md5_enc;
+	$hash = $hash_enc;
     }
 
     if ($size <= $self->{memcached_size_threshold}
@@ -347,7 +370,6 @@ sub store_block
 
     return $hash;
 }
-
 
 
 sub _store_block_memcached
@@ -544,7 +566,8 @@ sub fetch_block_ref
 
     if ($hash =~ /\+K/ || $ENV{NOCACHE_READ} || $ENV{NOCACHE})
     {
-	my $dataref = $self->fetch_from_keep ($hash);
+	my $dataref = $self->fetch_from_keep
+	    ($hash, { nodecrypt => $options->{nodecrypt} });
 	return $dataref if $dataref || $ENV{NOCACHE_READ} || $ENV{NOCACHE};
     }
 
@@ -609,7 +632,8 @@ sub fetch_block_ref
     {
 	if (!$verifyflag || $md5 eq Digest::MD5::md5_hex ($data))
 	{
-	    return \$data;
+	    return \$data if $options->{nodecrypt};
+	    return $self->_decrypt_block (\$data);
 	}
 	for (my $chunk = 0;
 	     $chunk * $memcached_max_data < (defined $sizehint
@@ -632,11 +656,18 @@ sub fetch_block_ref
     if (!defined $dataref && $hash !~ /\+K/)
     {
 	# didn't try Keep earlier, and other methods failed, so try it now
-	$dataref = $self->fetch_from_keep ($hash);
+	$dataref = $self->fetch_from_keep ($hash, { nodecrypt => 1 });
 	if ($dataref && ($options->{offset} || exists $options->{length}))
 	{
-	    warn "Ack! offset/length unimplemented with Keep fallback";
-	    undef $dataref;
+	    if (!exists $options->{nodecrypt})
+	    {
+		$dataref = $self->_decrypt_block ($dataref)
+		    or die "failed to decrypt data: cannot satisfy partial block request";
+	    }
+	    $$dataref = substr ($$dataref,
+				$options->{offset} || 0,
+				$options->{length});
+	    return $dataref;
 	}
     }
 
@@ -654,7 +685,9 @@ sub fetch_block_ref
 	$self->_store_block_memcached ($md5, $dataref);
     }
 
-    return $dataref;
+    return undef if !$dataref;
+    return $dataref if $options->{nodecrypt};
+    return $self->_decrypt_block ($dataref);
 }
 
 
@@ -702,6 +735,21 @@ sub store_in_keep
     {
 	$md5 = Digest::MD5::md5_hex ($$dataref);
 	@hints = length($$dataref);
+	my ($enchash, $encdataref)
+	    = $self->_cryptmap_fetchable ($dataref, "$md5+$hints[0]");
+	if ($enchash)
+	{
+	    ($md5, @hints) = split (/\+/, $enchash);
+	    $dataref = $encdataref;
+	}
+	else
+	{
+	    $dataref = $self->_encrypt_block ($dataref);
+	    my $encmd5 = Digest::MD5::md5_hex ($$dataref);
+	    my $encsize = length $$dataref;
+	    $self->_cryptmap_write ("$md5+$hints[0]", "$encmd5+$encsize");
+	    ($md5, @hints) = ($encmd5, $encsize);
+	}
     }
     $arg{nnodes} ||= 1;
 
@@ -725,6 +773,12 @@ sub store_in_keep
 	$req->content ($signedreq);
 
 	my $r = $self->{ua}->request ($req);
+	if ($ENV{DEBUG_KEEP})
+	{
+	    printf STDERR ("bucket %d %s %d %s\n",
+			   $bucket, $keep_host_port,
+			   $r->is_success, $r->status_line);
+	}
 	if ($r->is_success)
 	{
 	    $self->{stats_keepwrote_blocks} ++;
@@ -821,6 +875,8 @@ sub fetch_from_keep
 		$self->{stats_keepread_blocks} ++;
 		$self->{stats_keepread_bytes} += $datasize;
 		++$successes;
+		$data = $ { $self->_decrypt_block (\$data) }
+		    unless $opts->{nodecrypt};
 		return \$data if !$opts->{nnodes};
 		return \$data if $successes == $opts->{nnodes};
 	    }
@@ -1251,7 +1307,7 @@ sub _sign
     my $gnupg = GnuPG::Interface->new();
 
     $gnupg->options->hash_init( armor    => 1,
-                                homedir => '/etc/warehouse/.gnupg',
+                                homedir => $self->{gpg_homedir},
                               );
 
     my ( $input, $output, $error, $status ) =
@@ -1725,26 +1781,119 @@ sub manifest_data_size
     return $data_size;
 }
 
+
 sub errstr
 {
     my $self = shift;
     return $self->{errstr};
 }
 
+
+sub _cryptsetup
+{
+    my $self = shift;
+    $self->{config}->{encrypt} ||= [];
+    if ($ENV{ENCRYPT_ALL} && !@{$self->{config}->{encrypt}})
+    {
+	$self->{config}->{encrypt} = [ split (/\s*,\s*/, $ENV{ENCRYPT_ALL}) ];
+    }
+    $self->{config}->{cryptmap_name_prefix} ||= "/gpg/".Digest::MD5::md5_hex (join (",", sort @{$self->{config}->{encrypt}}))."/";
+
+    $self->{gpg_homedir} ||=
+	-w "$ENV{HOME}/.gnupg"
+	? "$ENV{HOME}/.gnupg"
+	: "/etc/warehouse/.gnupg";
+
+    eval "use GnuPG::Interface";
+    return if $@;
+
+    eval {
+	my $gnupg = GnuPG::Interface->new();
+	$gnupg->options->hash_init (homedir => $self->{gpg_homedir});
+	$gnupg->import_keys ("/etc/warehouse/gnupg-keys.pub");
+    };
+}
+
+
+sub _cryptmap_write
+{
+    my $self = shift;
+    my $plainhash = shift;
+    my $enchash = shift;
+    return undef if !@{$self->{config}->{encrypt}};
+    my $cryptmap_name = $self->{config}->{cryptmap_name_prefix}.$plainhash;
+
+    printf STDERR ("gpg: _cryptmap_write %s %s -> %s\n",
+		   $cryptmap_name,
+		   $self->fetch_manifest_key_by_name ($cryptmap_name),
+		   $enchash,
+		   )
+	if $ENV{DEBUG_GPG};
+
+    return $self->store_manifest_by_name
+	($enchash,
+	 $self->fetch_manifest_key_by_name ($cryptmap_name),
+	 $cryptmap_name);
+}
+
+
+sub _cryptmap_fetchable
+{
+    # Return the hash (md5+size) of a block which can be decrypted to
+    # yield $$dataref -- ie. look md5($$dataref) in the cryptmap db
+    # and make sure the encrypted block can really be decrypted.
+
+    my $self = shift;
+    my $dataref = shift;
+    my $hash = shift;		# optional
+
+    return undef if !@{$self->{config}->{encrypt}};
+
+    $hash ||= Digest::MD5::md5_hex ($$dataref) . "+" . length($$dataref);
+
+    my $enchash;
+    my $encdataref;
+    eval
+    {
+	$enchash = $self->fetch_manifest_key_by_name
+	    ($self->{config}->{cryptmap_name_prefix}.$hash)
+	    or die;
+	$encdataref = $self->fetch_block_ref
+	    ($enchash, { verify => 1, nowarn => 1, nodecrypt => 1 })
+	    or die;
+	$$encdataref ne $$dataref or die;
+	my $decdataref = $self->_decrypt_block ($encdataref) or die;
+	$$decdataref eq $$dataref or die;
+    };
+    $enchash = undef if $@;
+
+    printf STDERR "gpg: _cryptmap_fetchable %s %s\n", $hash, $enchash
+	if $ENV{DEBUG_GPG};
+
+    return ($enchash, $encdataref) if wantarray;
+    return $enchash;
+}
+
+
 sub _encrypt_block
 {
-    # Return scalarref with encrypted data, or die if not possible.
+    # Encrypt data using key specified by $self->{config}->{encrypt}.
+    # Return scalarref with encrypted data.  If encryption fails, die.
 
     my ($self, $dataref) = @_;
 
+    printf STDERR "gpg: encrypt %s\n", Digest::MD5::md5_hex($$dataref)
+	if $ENV{DEBUG_GPG};
+
     eval "use GnuPG::Interface";
     die "_encrypt_block() GnuPG::Interface not found" if $@;
-    die "_encrypt_block() public key id(s) not set for encryption" if (scalar @{$self->{encrypt}} <= 0);
+    die "_encrypt_block() public key id(s) not set for encryption"
+	if !@{$self->{config}->{encrypt}};
 
     my $gnupg = GnuPG::Interface->new();
 
-    $gnupg->options->hash_init( armor    => 1,
-                                homedir => '/etc/warehouse/.gnupg',
+    $gnupg->options->hash_init( armor    => 0,
+                                homedir => $self->{gpg_homedir},
                               );
 
     my ( $input, $output, $error, $status ) =
@@ -1759,7 +1908,7 @@ sub _encrypt_block
                                        stderr => $error,
                                        status => $status );
 
-    foreach my $key (@{$self->{encrypt}}) {
+    foreach my $key (@{$self->{config}->{encrypt}}) {
       $gnupg->options->push_recipients( $key );
     }
 
@@ -1788,18 +1937,22 @@ sub _encrypt_block
 
 sub _decrypt_block
 {
-    # Return scalarref with decrypted data. Return data untouched if
+    # Decrypt data using appropriate key (using the keys specified by
+    # $self->{config}->{encrypt} -- or try using other keys if that
+    # doesn't work).  Return scalarref with decrypted data.  Die if
     # decryption isn't possible.
 
     my ($self, $dataref) = @_;
+
+    printf STDERR "gpg: decrypt %s\n", Digest::MD5::md5_hex($$dataref)
+	if $ENV{DEBUG_GPG};
 
     eval "use GnuPG::Interface";
     die "_decrypt_block() GnuPG::Interface not found" if $@;
 
     my $gnupg = GnuPG::Interface->new();
-
     $gnupg->options->hash_init( armor    => 1,
-                                homedir => '/etc/warehouse/.gnupg',
+                                homedir => $self->{gpg_homedir},
                               );
 
     my ( $input, $output, $error, $status ) =
@@ -1859,7 +2012,7 @@ sub _verify
   my $gnupg = GnuPG::Interface->new();
 
   $gnupg->options->hash_init( armor    => 1,
-                              homedir => '/etc/warehouse/.gnupg',
+                              homedir => $self->{gpg_homedir},
                             );
   my ( $input, $output, $error, $status ) =
      ( IO::Handle->new(),
