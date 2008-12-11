@@ -180,6 +180,8 @@ sub _init
     $self->{mogilefs_directory_class} = $warehouses->[$idx]->{mogilefs_directory_class};
     $self->{mogilefs_file_class} = $warehouses->[$idx]->{mogilefs_file_class};
     $self->{keeps} = $warehouses->[$idx]->{keeps};
+    @{$self->{encrypt}} = ();
+    @{$self->{encrypt}} = $warehouses->[$idx]->{encrypt} if ($warehouses->[$idx]->{encrypt});
     $self->{memcached_size_threshold} = 0 if $idx != 0;
 
     $self->{warehouse_servers} = $warehouse_servers
@@ -1734,7 +1736,54 @@ sub _encrypt_block
     # Return scalarref with encrypted data, or die if not possible.
 
     my ($self, $dataref) = @_;
-    die "_encrypt_block() unimplemented";
+
+    eval "use GnuPG::Interface";
+    die "_encrypt_block() GnuPG::Interface not found" if $@;
+    die "_encrypt_block() public key id(s) not set for encryption" if (scalar @{$self->{encrypt}} <= 0);
+
+    my $gnupg = GnuPG::Interface->new();
+
+    $gnupg->options->hash_init( armor    => 1,
+                                homedir => '/etc/warehouse/.gnupg',
+                              );
+
+    my ( $input, $output, $error, $status ) =
+       ( IO::Handle->new(),
+         IO::Handle->new(),
+         IO::Handle->new(),
+         IO::Handle->new(),
+       );
+
+    my $handles = GnuPG::Handles->new( stdin  => $input,
+                                       stdout => $output,
+                                       stderr => $error,
+                                       status => $status );
+
+    foreach my $key (@{$self->{encrypt}}) {
+      $gnupg->options->push_recipients( $key );
+    }
+
+    my $pid = $gnupg->encrypt( handles => $handles );
+
+    print $input $$dataref;
+    close $input;
+
+    my $encrypted = join('',<$output>);
+    my $error_output = join('',<$error>);
+    my $status_output = join('',<$status>);
+
+    close $output;
+    close $error;
+    close $status;
+
+    waitpid $pid, 0;
+
+    if ($error_output ne '') {
+      die "_encrypt_block() error encrypting:\nError output: $error_output\nStatus output: $status_output\n";
+    }
+
+    return \$encrypted;
+
 }
 
 sub _decrypt_block
@@ -1743,7 +1792,59 @@ sub _decrypt_block
     # decryption isn't possible.
 
     my ($self, $dataref) = @_;
-    return $dataref;
+
+    eval "use GnuPG::Interface";
+    die "_decrypt_block() GnuPG::Interface not found" if $@;
+
+    my $gnupg = GnuPG::Interface->new();
+
+    $gnupg->options->hash_init( armor    => 1,
+                                homedir => '/etc/warehouse/.gnupg',
+                              );
+
+    my ( $input, $output, $error, $status ) =
+       ( IO::Handle->new(),
+         IO::Handle->new(),
+         IO::Handle->new(),
+         IO::Handle->new(),
+       );
+
+    my $handles = GnuPG::Handles->new( stdin  => $input,
+                                       stdout => $output,
+                                       stderr => $error,
+                                       status => $status );
+
+    my $pid = $gnupg->decrypt( handles => $handles );
+
+    print $input $$dataref;
+    close $input;
+
+    my $decrypted = join('',<$output>);
+    my $error_output = join('',<$error>);
+    my $status_output = join('',<$status>);
+
+    close $output;
+    close $error;
+    close $status;
+
+    waitpid $pid, 0;
+
+    if ($status_output =~ /NODATA/) {
+      # This data is not encrypted. Return input unchanged.
+      return $dataref;
+    }
+
+    if ($status_output =~ /NO_SECKEY/) {
+      # Properly encrypted data, but we don't have the secret key. Return input unchanged.
+      return $dataref;
+    }
+
+    if (!( $status_output =~ /DECRYPTION_OKAY/)) {
+      # Something else went wrong...
+      die "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
+    }
+
+    return \$decrypted;
 }
 
 sub _verify
