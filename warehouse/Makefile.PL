@@ -21,6 +21,8 @@ WriteMakefile
 		   'server/mogilefs-check.pl',
 		   'server/mogilefs-create-devices.pl',
 		   'server/warehoused',
+		   'server/whjobinit',
+		   'server/whjobmanager',
 		   'server/keepd',
 		   ]
      );
