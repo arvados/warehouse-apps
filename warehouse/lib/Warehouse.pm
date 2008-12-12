@@ -178,10 +178,13 @@ sub _init
     $self->{warehouse_name} = $warehouse_name;
     $self->{name_warehouse_servers} = $warehouses->[$idx]->{name_controllers};
     $self->{job_warehouse_servers} = $warehouses->[$idx]->{job_controllers};
+    $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{cryptmap_name_controllers};
     $self->{name_warehouse_servers} = $warehouses->[$idx]->{controllers}
 	if !defined $self->{name_warehouse_servers};
     $self->{job_warehouse_servers} = $warehouses->[$idx]->{job_controllers}
 	if !defined $self->{job_warehouse_servers};
+    $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{job_controllers}
+	if !defined $self->{cryptmap_name_controllers};
     $self->{mogilefs_trackers} = $warehouses->[$idx]->{mogilefs_trackers};
     $self->{mogilefs_domain} = $warehouses->[$idx]->{mogilefs_domain};
     $self->{mogilefs_directory_class} = $warehouses->[$idx]->{mogilefs_directory_class};
@@ -1867,6 +1870,7 @@ sub _cryptmap_write
 		   )
 	if $ENV{DEBUG_GPG};
 
+    local $self->{name_warehouse_servers} = $self->{cryptmap_name_controllers};
     return $self->store_manifest_by_name
 	($enchash,
 	 $self->fetch_manifest_key_by_name ($cryptmap_name),
@@ -1892,6 +1896,8 @@ sub _cryptmap_fetchable
     my $encdataref;
     eval
     {
+	local $self->{name_warehouse_servers} =
+	    $self->{cryptmap_name_controllers};
 	$enchash = $self->fetch_manifest_key_by_name
 	    ($self->{config}->{cryptmap_name_prefix}.$hash)
 	    or die;
