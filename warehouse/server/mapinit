@@ -1,0 +1,257 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+use DBI;
+use POSIX ':sys_wait_h';
+use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
+
+do '/etc/polony-tools/config.pl';
+my $max_njobs = 48;		# max "big job" concurrency
+
+
+
+my $dbh = DBI->connect($main::mapreduce_dsn,
+		       $main::mrcontrol_mysql_username,
+		       $main::mrcontrol_mysql_password);
+die $DBI::errstr if !$dbh;
+createtables ($dbh);
+
+
+
+$main::DRAIN = 0;
+$SIG{'TERM'} = sub
+{
+  warn ("$0 $$ SIGTERM, wait for "
+	. (0 + $main::children)
+	." children to finish\n");
+  $main::DRAIN = 1;
+};
+$SIG{'USR1'} = sub
+{
+  $main::ENV{MR_DEBUG} = 1;
+};
+$SIG{'USR2'} = sub
+{
+  $main::ENV{MR_DEBUG} = 0;
+};
+
+
+
+# Wait for jobs to appear in the queue; start them; repeat.
+
+my %job_proc;
+my %proc_job;
+$main::children = 0;
+my $sth;
+print STDERR "$0 $$ start\n";
+while (!$main::DRAIN || $main::children > 0)
+{
+  my @row;
+  if (!$main::DRAIN && (!defined ($sth) || !(@row = $sth->fetchrow)))
+  {
+    sleep 5;
+    $dbh->do ("update mrjob
+	       set jobmanager_id=-1, success=0, finishtime=now()
+	       where jobmanager_id is null
+	       and submittime<date_add(now(),interval -1 day)");
+    $sth = $dbh->prepare ("select id, nodes, revision from mrjob
+                           where jobmanager_id is null
+                           and submittime>date_add(now(),interval -1 day)");
+    $sth->execute or die $dbh->errstr;
+  }
+
+  if (!$main::DRAIN && @row)
+  {
+    my ($job_id, $job_nodes, $job_revision) = @row;
+
+    next if exists $job_proc{$job_id};
+
+    my $child = fork();
+    if (!defined $child)
+    {
+      warn "Couldn't fork: $!";
+    }
+    elsif ($child)
+    {
+      # XXX shouldn't have to reconnect here??? XXX
+      undef $dbh;
+      reconnect_database();
+
+      debuglog ("pid $child started");
+      $job_proc{$job_id} = $child;
+      $proc_job{$child} = $job_id;
+
+      if ($main::children >= $max_njobs)
+      {
+	my $finishedchild = wait;
+	debuglog ("pid $finishedchild finished");
+	delete $job_proc{$proc_job{$finishedchild}};
+	delete $proc_job{$finishedchild};
+      }
+      else
+      {
+	++$main::children;
+      }
+    }
+    else
+    {
+      close(STDIN);
+
+      $dbh->{InactiveDestroy} = 1;
+      undef $dbh;
+      undef $sth;
+
+      my @nodes_arg;
+      $job_nodes =~ s/\&.*//;	# legacy stepspernode syntax
+      if ($job_nodes =~ /^\d+$/)
+      {
+	@nodes_arg = ("--nodes", $job_nodes);
+      }
+      else
+      {
+	$job_nodes =~ s/\s+/,/g;
+	@nodes_arg = ("--nodelist", $job_nodes);
+      }
+      debuglog ("salloc --immediate --exclusive --no-kill --job-name=mr$job_id @nodes_arg mrjobmanager $job_id");
+      exec ("salloc", "--immediate", "--exclusive", "--no-kill", "--job-name=mr$job_id", @nodes_arg, "mrjobmanager", $job_id);
+      exit (1);
+    }
+  }
+
+  my $finishedchild = waitpid (-1, WNOHANG);
+  if ($finishedchild > 0)
+  {
+    reconnect_database();
+    $dbh->do ("update mrjob j, mrjobmanager m set m.finishtime=now()
+	       where j.id=? and m.id=j.jobmanager_id and m.pid=?
+	       and m.finishtime is null", undef,
+	      $proc_job{$finishedchild}, $finishedchild);
+    $dbh->do ("update mrjob j, mrjobmanager m set j.finishtime=now()
+	       where j.id=? and m.id=j.jobmanager_id and m.pid=?
+	       and j.finishtime is null", undef,
+	      $proc_job{$finishedchild}, $finishedchild);
+    debuglog ("job ".$proc_job{$finishedchild}." pid $finishedchild finished");
+    delete $job_proc{$proc_job{$finishedchild}};
+    delete $proc_job{$finishedchild};
+    --$main::children;
+  }
+}
+print STDERR "$0 $$ exit\n";
+exit 0;
+
+
+sub debuglog
+{
+  print STDERR ("$0 $$ ", @_, "\n") if $ENV{MR_DEBUG};
+}
+
+
+sub createtables
+{
+  my $dbh = shift;
+  foreach (qq{
+create table if not exists mrlog (
+ id bigint not null auto_increment primary key,
+ time datetime not null,
+ jobid bigint,
+ jobstepid bigint,
+ message varchar(255)
+)
+  },
+	   qq{
+create table if not exists mrjob (
+ id bigint not null auto_increment primary key,
+ global_id varchar(64),
+ revision bigint not null,
+ mrfunction varchar(64),
+ nprocs int,
+ nodes text,
+ stepspernode int,
+ knobs text,
+ input0 text,
+ submittime datetime,
+ starttime datetime,
+ finishtime datetime,
+ jobmanager_id bigint,
+ success tinyint,
+ output text,
+ metakey text,
+ frozentokey text,
+ thawedfromkey text,
+ steps_todo int,
+ steps_done int,
+ steps_running int,
+ unique(global_id)
+)
+  },
+	   qq{
+create table if not exists mrjobstep (
+ id bigint not null auto_increment primary key,
+ jobid bigint not null,
+ level int not null,
+ input varchar(255),
+ submittime datetime,
+ starttime datetime,
+ finishtime datetime,
+ node varchar(63),
+ exitcode int,
+ output text,
+ stderr text,
+ attempts int not null default 0,
+ index(jobid)
+)
+  },
+	   qq{
+create table if not exists mrjobmanager (
+ id bigint not null auto_increment primary key,
+ node varchar(63),
+ starttime datetime,
+ finishtime datetime,
+ revision bigint,
+ pid bigint
+)
+  },
+	   qq{
+grant insert, update on mrjob to mrwebgui\@localhost
+  },
+	   qq{
+grant insert, update on mrjobstep to mrwebgui\@localhost
+  })
+  {
+    my $sth = $dbh->prepare ($_);
+    $sth->execute or die $dbh->errstr;
+  }
+
+  foreach (qq{
+alter table mrjob add frozentokey text after metakey
+  },
+	   qq{
+alter table mrjob add thawedfromkey text after frozentokey
+  },
+	   qq{
+alter table mrjob add stepspernode int after nodes
+  })
+  {
+    my $sth = $dbh->prepare ($_);
+    $sth->{PrintWarn} = 0;
+    $sth->{PrintError} = 0;
+    $sth->execute;
+  }
+}
+
+
+sub reconnect_database
+{
+  return if ($dbh && $dbh->do ("select now()"));
+  for (1..16)
+  {
+    $dbh = DBI->connect($main::mapreduce_dsn,
+			$main::mrcontrol_mysql_username,
+			$main::mrcontrol_mysql_password);
+    return if $dbh;
+    warn ($DBI::errstr);
+    sleep $_;
+  }
+  croak ($DBI::errstr) if !$dbh;
+}
