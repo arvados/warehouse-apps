@@ -1334,9 +1334,10 @@ sub _sign
     print $input $text;
     close $input;
 
-    my $signed_text = join('',<$output>);
-    my $error_output = join('',<$error>);
-    my $status_output = join('',<$status>);
+    local $/ = undef;
+    my $signed_text = <$output>;
+    my $error_output = <$error>;
+    my $status_output = <$status>;
 
     close $output;
     close $error;
@@ -1833,13 +1834,14 @@ sub _cryptsetup
 	open(TMP,"/etc/warehouse/gnupg-keys.pub.asc");
 	my $pid = $gnupg->import_keys ( handles => $handles);
 
-	print $input join('',<TMP>);
+	local $/ = undef;
+	print $input <TMP>;
 	close $input;
 	close TMP;
 
-	my $imported = join('',<$output>);
-	my $error_output = join('',<$error>);
-	my $status_output = join('',<$status>);
+	my $imported = <$output>;
+	my $error_output = <$error>;
+	my $status_output = <$status>;
 
 	close $output;
 	close $error;
@@ -1952,9 +1954,10 @@ sub _encrypt_block
     print $input $$dataref;
     close $input;
 
-    my $encrypted = join('',<$output>);
-    my $error_output = join('',<$error>);
-    my $status_output = join('',<$status>);
+    local $/ = undef;
+    my $encrypted = <$output>;
+    my $error_output = <$error>;
+    my $status_output = <$status>;
 
     close $output;
     close $error;
@@ -2007,9 +2010,10 @@ sub _decrypt_block
     print $input $$dataref;
     close $input;
 
-    my $decrypted = join('',<$output>);
-    my $error_output = join('',<$error>);
-    my $status_output = join('',<$status>);
+    local $/ = undef;
+    my $decrypted = <$output>;
+    my $error_output = <$error>;
+    my $status_output = <$status>;
 
     close $output;
     close $error;
@@ -2066,9 +2070,10 @@ sub _verify
   print $input $text;
   close $input;
 
-  my $returned_text = join('',<$output>);
-  my $error_output = join('',<$error>);
-  my $status_output = join('',<$status>);
+  local $/ = undef;
+  my $returned_text = <$output>;
+  my $error_output = <$error>;
+  my $status_output = <$status>;
 
   close $output;
   close $error;
