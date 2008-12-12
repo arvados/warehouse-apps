@@ -5,14 +5,14 @@ use warnings;
 use Test::More tests => 8;
 use Warehouse;
 
-my $content26 = "abcdefghijklmnopqrstuvwxyz";
-my $content4M = "abcdefghijklmnop" x 262144;
-my $content64M = "abcdefghijklmnop" x 4194304;
-my $content128M = $content64M x 2;
-
 SKIP: {
     skip "warehouse client not configured on this machine", 8 if (! -f "/etc/warehouse/warehouse-client.conf");
     my $whc = new Warehouse (debug_mogilefs_paths => 1);
+
+    my $content26 = "abcdefghijklmnopqrstuvwxyz";
+    my $content4M = "abcdefghijklmnop" x 262144;
+    my $content64M = "abcdefghijklmnop" x 4194304;
+    my $content128M = $content64M x 2;
 
     my $check;
 
