@@ -190,7 +190,7 @@ sub _init
     $self->{mogilefs_file_class} = $warehouses->[$idx]->{mogilefs_file_class};
     $self->{keeps} = $warehouses->[$idx]->{keeps};
     $self->{memcached_size_threshold} = 0 if $idx != 0;
-    $self->{memcached_size_threshold} = 0 if $no_memcached_conf;
+    $self->{memcached_size_threshold} = -1 if $no_memcached_conf;
 
     $self->{name_warehouse_servers} = $warehouse_servers
 	if !defined $self->{name_warehouse_servers};
