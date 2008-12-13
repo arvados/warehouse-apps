@@ -2059,8 +2059,8 @@ sub _decrypt_block
 
 sub _verify
 {
+  warn "gpg: _verify\n" if $ENV{DEBUG_GPG};
 
-  &_log("verifying") if $ENV{DEBUG_GPG};
   my $text = shift;
 
   eval "use GnuPG::Interface";
@@ -2100,47 +2100,18 @@ sub _verify
   waitpid $pid, 0;
 
   if (($status_output =~ /VALIDSIG/) && ($status_output =~ /GOODSIG/)) {
-    &_log("Good signature") if $ENV{DEBUG_GPG};
-		my ($keyid) = $status_output =~ /GOODSIG .{8}(.{8}) /;
+    warn "gpg: good signature, keyid=$keyid\n" if $ENV{DEBUG_GPG};
+    my ($keyid) = $status_output =~ /GOODSIG .{8}(.{8}) /;
     return (1,$keyid);
   } else {
-    &_log("Data: $text");
-    &_log("Error: $error_output");
-    &_log("Status: $status_output");
+    my $safetext = $text;
+    $safetext =~ s/^(.{1024}).*/$1/s;
+    $safetext =~ s/[^-\w\(\)\@]/_/gs;
+    warn "gpg: failed: $safetext\n";
+    warn "gpg: error: $error_output\n";
+    warn "gpg: status: $status_output\n";
     return (0,'');
   }
-}
-
-=head2 _log
-
-The various warehouse daemons are typically run under runsv, which means stderr
-goes to the log/main/current file under the service directory. That file is
-rotated fairly agressively, so it's mainly useful for debugging, not for longer
-term log analysis. For that, logging to syslog is more appropriate since it can
-easily be configured to retain old log files much longer.
-
-This function logs to syslog as well as stderr.
-
-=cut
-
-sub _log
-{
-  my $message = shift;
-
-  eval q{
-      use Unix::Syslog qw(:macros);
-      use Unix::Syslog qw(:subs);
-  };
-  if (!$@)
-  {
-      # Log to syslog
-      openlog(": ", LOG_PID, LOG_DAEMON);
-      syslog(LOG_INFO, "$message");
-      closelog();
-  }
-
-  # Now also print to STDOUT to facilitate debugging.
-  print STDERR ($message, "\n");
 }
 
 1;

@@ -202,7 +202,7 @@ sub run
 
 		if (!$verified)
 		{
-				Warehouse::_log($c->peerhost() . " Bad signature");
+		    $self->_log ($c, "SigFail");
 		}
 		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 		$checktime += 0;
@@ -216,6 +216,10 @@ sub run
 			 [], "Signature verification failed.\n");
 		    $c->send_response ($resp);
 		    last;
+		}
+		if (!$verified)
+		{
+		    $self->_log ($c, "SigFail ignored");
 		}
 
 		my $dataref = $self->_fetch ($md5, { touch => 1 });
@@ -292,7 +296,7 @@ sub run
 
 		if (!$verified)
 		{
-				Warehouse::_log($c->peerhost() . " Bad signature");
+		    $self->_log($c, "SigFail");
 		}
 		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 		$checktime += 0;
@@ -306,6 +310,10 @@ sub run
 			 [], "Signature verification failed.\n");
 		    $c->send_response ($resp);
 		    last;
+		}
+		if (!$verified)
+		{
+		    $self->_log($c, "SigFail ignored");
 		}
 		if ($c->peerhost() ne $Warehouse::keep_controller_ip)
 		{
@@ -516,6 +524,13 @@ sub _store
     }
     $self->{errstr} = join (", ", @errstr);
     return undef;
+}
+
+
+sub _log
+{
+    my $c = shift;
+    print (scalar(localtime) . " " . $c->peerhost() . " L " . @_ . "\n");
 }
 
 1;

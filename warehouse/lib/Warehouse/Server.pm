@@ -141,7 +141,6 @@ sub run
     local $SIG{INT} = sub { $Warehouse::Server::kill = 1; };
     local $SIG{TERM} = sub { $Warehouse::Server::kill = 1; };
     local $| = 1;
-		Warehouse::_log("Warehouse Server.pm starting up");
 
     my $c;
     while (!$kill && ($c = $self->{daemon}->accept))
@@ -214,12 +213,13 @@ sub run
 
 		if (!$verified)
 		{
-				Warehouse::_log($c->peerhost() . " Bad signature");
+#		    $self->_log($c, "SigFail");
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
 #		    $c->send_response ($resp);
 #		    last;
+		    $self->_log($c, "SigFail ignored");
 		}
 
 		my $ok = 1;
@@ -328,12 +328,13 @@ sub run
 
 		if (!$verified)
 		{
-				Warehouse::_log($c->peerhost() . " Bad signature");
+#		    $self->_log($c, "SigFail");
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
 #		    $c->send_response ($resp);
 #		    last;
+		    $self->_log($c, "SigFail ignored");
 		}
 
 		my $mrdb = $self->{MapReduceDB};
@@ -427,12 +428,13 @@ sub run
 
 		if (!$verified)
 		{
-				Warehouse::_log($c->peerhost() . " Bad signature");
+#		    $self->_log($c, "SigFail");
 #		    my $resp = HTTP::Response->new
 #			(401, "SigFail",
 #			 [], "Signature verification failed.\n");
 #		    $c->send_response ($resp);
 #		    last;
+		    $self->_log($c, "SigFail ignored");
 		}
 
 		my $mrdb = $self->{MapReduceDB};
@@ -499,27 +501,27 @@ sub run
 
 sub _check_keyid 
 {
-	my $self = shift;
-	my $name = shift;
-	my $mkey = shift;
-	my $keyid = shift;
-	my $c = shift;
-	$sth = $self->{dbh}->prepare
-	    ("select keyid from manifests where name=? and mkey=?");
-	my $ok = $sth->execute ($name, $mkey)
-	    && $sth->rows == 1;
-	return 0 if (!$ok);
-	my $oldkeyid;
-    	if (my $row= $sth->fetchrow_hashref) {
-		$oldkeyid = $row->{keyid};
-	} else {
-		return 0;
-	}
-	if (($oldkeyid ne '') && ($oldkeyid ne $keyid)) {
-		Warehouse::_log($c->peerhost . " manifest overwrite failed for $name: $keyid trying to overwrite manifest owned by $oldkeyid");
-		return 0;
-	}
-	return 1;
+    my $self = shift;
+    my $name = shift;
+    my $mkey = shift;
+    my $keyid = shift;
+    my $c = shift;
+    $sth = $self->{dbh}->prepare
+	("select keyid from manifests where name=? and mkey=?");
+    my $ok = $sth->execute ($name, $mkey)
+	&& $sth->rows == 1;
+    return 0 if (!$ok);
+    my $oldkeyid;
+    if (my $row= $sth->fetchrow_hashref) {
+	$oldkeyid = $row->{keyid};
+    } else {
+	return 0;
+    }
+    if (($oldkeyid ne '') && ($oldkeyid ne $keyid)) {
+	$self->_log($c, "manifest overwrite failed for $name: $keyid trying to overwrite manifest owned by $oldkeyid");
+	return 0;
+    }
+    return 1;
 }
 
 sub _callback_manifest
@@ -580,6 +582,12 @@ sub _unescape
     local $_ = shift;
     s/\\(.)/$_unescapemap{$1}/ge;
     $_;
+}
+
+sub _log
+{
+    my $c = shift;
+    print (scalar(localtime) . " " . $c->peerhost() . " L " . @_ . "\n");
 }
 
 1;
