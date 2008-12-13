@@ -154,7 +154,6 @@ sub _init
     my $attempts = 0;
 
     die "Failed to load /etc/warehouse/warehouse-client.conf" if $no_warehouse_client_conf;
-    die "Failed to load /etc/warehouse/memcached.conf.pl" if $no_memcached_conf;
 
     my $warehouse_name =
 	$self->{warehouse} ||
@@ -191,6 +190,7 @@ sub _init
     $self->{mogilefs_file_class} = $warehouses->[$idx]->{mogilefs_file_class};
     $self->{keeps} = $warehouses->[$idx]->{keeps};
     $self->{memcached_size_threshold} = 0 if $idx != 0;
+    $self->{memcached_size_threshold} = 0 if $no_memcached_conf;
 
     $self->{name_warehouse_servers} = $warehouse_servers
 	if !defined $self->{name_warehouse_servers};
