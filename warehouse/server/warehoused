@@ -4,6 +4,8 @@ use Warehouse::Server;
 
 do '/etc/warehouse/warehouse-server.conf' or die "Failed to load config file";
 
+$ENV{"GNUPGHOME"} = "/etc/warehouse/.gnupg";
+
 open STDERR, ">&STDOUT";
 
 my $whs = Warehouse::Server->new
