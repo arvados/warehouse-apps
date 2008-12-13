@@ -156,7 +156,7 @@ sub as_key
 
   if (exists $self->{write_buf})
   {
-    $self->_write_flush (1) or die "_write_flush failed";
+    $self->_write_flush (1) or die "_write_flush failed: ".$self->{whc}->errstr;
 
     die "as_string called while still writing ".$self->{write_filename}
 	if exists $self->{write_filename};
