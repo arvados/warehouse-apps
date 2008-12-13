@@ -181,9 +181,9 @@ sub _init
     $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{cryptmap_name_controllers};
     $self->{name_warehouse_servers} = $warehouses->[$idx]->{controllers}
 	if !defined $self->{name_warehouse_servers};
-    $self->{job_warehouse_servers} = $warehouses->[$idx]->{job_controllers}
+    $self->{job_warehouse_servers} = $warehouses->[$idx]->{controllers}
 	if !defined $self->{job_warehouse_servers};
-    $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{job_controllers}
+    $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{controllers}
 	if !defined $self->{cryptmap_name_controllers};
     $self->{mogilefs_trackers} = $warehouses->[$idx]->{mogilefs_trackers};
     $self->{mogilefs_domain} = $warehouses->[$idx]->{mogilefs_domain};
@@ -344,13 +344,17 @@ sub store_block
 	die "Encrypted data but was not able to decrypt it"
 	    if $$dec ne $$dataref;
 
-	$dataref = $enc;
-	my $md5_enc = Digest::MD5::md5_hex ($$dataref);
-	my $hash_enc = sprintf "%s+%d", $md5_enc, length $$dataref;
+	my $md5_enc = Digest::MD5::md5_hex ($$enc);
+	my $hash_enc = sprintf ("%s+%d+GS%d+GM%s",
+				$md5_enc,
+				length $$enc,
+				length $$dataref,
+				$md5);
 
 	$self->_cryptmap_write ($hash, $hash_enc);
 	$md5 = $md5_enc;
 	$hash = $hash_enc;
+	$dataref = $enc;
     }
 
     if ($size <= $self->{memcached_size_threshold}
@@ -758,7 +762,7 @@ sub store_in_keep
 	    my $encmd5 = Digest::MD5::md5_hex ($$dataref);
 	    my $encsize = length $$dataref;
 	    $self->_cryptmap_write ("$md5+$hints[0]", "$encmd5+$encsize");
-	    ($md5, @hints) = ($encmd5, $encsize);
+	    ($md5, @hints) = ($encmd5, $encsize, "GS".$hints[0], "GM".$md5);
 	}
     }
     $arg{nnodes} ||= 1;
@@ -1862,10 +1866,11 @@ sub _cryptmap_write
     my $enchash = shift;
     return undef if !@{$self->{config}->{encrypt}};
     my $cryptmap_name = $self->{config}->{cryptmap_name_prefix}.$plainhash;
+    my $oldenchash = $self->fetch_manifest_key_by_name ($cryptmap_name);
 
     printf STDERR ("gpg: _cryptmap_write %s %s -> %s\n",
 		   $cryptmap_name,
-		   $self->fetch_manifest_key_by_name ($cryptmap_name),
+		   $oldenchash,
 		   $enchash,
 		   )
 	if $ENV{DEBUG_GPG};
@@ -1873,7 +1878,7 @@ sub _cryptmap_write
     local $self->{name_warehouse_servers} = $self->{cryptmap_name_controllers};
     return $self->store_manifest_by_name
 	($enchash,
-	 $self->fetch_manifest_key_by_name ($cryptmap_name),
+	 $oldenchash,
 	 $cryptmap_name);
 }
 
@@ -1900,17 +1905,24 @@ sub _cryptmap_fetchable
 	    $self->{cryptmap_name_controllers};
 	$enchash = $self->fetch_manifest_key_by_name
 	    ($self->{config}->{cryptmap_name_prefix}.$hash)
-	    or die;
+	    or die "no cryptmap for $hash";
+
+	$enchash =~ s/\+G[^\+]*//g;
+	$enchash .= "+GS".length($$dataref);
+	my ($plainmd5) = $hash =~ /^([0-9a-f]+)/;
+	$enchash .= "+GM$plainmd5";
+
 	$encdataref = $self->fetch_block_ref
 	    ($enchash, { verify => 1, nowarn => 1, nodecrypt => 1 })
-	    or die;
-	$$encdataref ne $$dataref or die;
-	my $decdataref = $self->_decrypt_block ($encdataref) or die;
-	$$decdataref eq $$dataref or die;
+	    or die "fetch $enchash fail";
+	$$encdataref ne $$dataref or die "encrypted eq orig";
+	my $decdataref = $self->_decrypt_block ($encdataref)
+	    or die "decrypt $enchash fail";
+	$$decdataref eq $$dataref or die "decrypted ne orig";
     };
     $enchash = undef if $@;
 
-    printf STDERR "gpg: _cryptmap_fetchable %s %s\n", $hash, $enchash
+    printf STDERR "gpg: _cryptmap_fetchable %s %s (%s)\n", $hash, $enchash, $@
 	if $ENV{DEBUG_GPG};
 
     return ($enchash, $encdataref) if wantarray;
