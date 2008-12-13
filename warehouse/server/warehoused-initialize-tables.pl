@@ -11,6 +11,7 @@ $dbh->do ("
   (
    name char(128) not null primary key,
    mkey text not null,
+   keyid char(8) default '' not null,
    verified timestamp
   )
   ");
