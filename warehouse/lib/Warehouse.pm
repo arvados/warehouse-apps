@@ -760,20 +760,23 @@ sub store_in_keep
     {
 	$md5 = Digest::MD5::md5_hex ($$dataref);
 	@hints = length($$dataref);
-	my ($enchash, $encdataref)
-	    = $self->_cryptmap_fetchable ($dataref, "$md5+$hints[0]");
-	if ($enchash)
+	if (@ { $self->{config}->{encrypt} })
 	{
-	    ($md5, @hints) = split (/\+/, $enchash);
-	    $dataref = $encdataref;
-	}
-	else
-	{
-	    $dataref = $self->_encrypt_block ($dataref);
-	    my $encmd5 = Digest::MD5::md5_hex ($$dataref);
-	    my $encsize = length $$dataref;
-	    $self->_cryptmap_write ("$md5+$hints[0]", "$encmd5+$encsize");
-	    ($md5, @hints) = ($encmd5, $encsize, "GS".$hints[0], "GM".$md5);
+	    my ($enchash, $encdataref)
+		= $self->_cryptmap_fetchable ($dataref, "$md5+$hints[0]");
+	    if ($enchash)
+	    {
+		($md5, @hints) = split (/\+/, $enchash);
+		$dataref = $encdataref;
+	    }
+	    else
+	    {
+		$dataref = $self->_encrypt_block ($dataref);
+		my $encmd5 = Digest::MD5::md5_hex ($$dataref);
+		my $encsize = length $$dataref;
+		$self->_cryptmap_write ("$md5+$hints[0]", "$encmd5+$encsize");
+		($md5, @hints) = ($encmd5, $encsize, "GS".$hints[0], "GM".$md5);
+	    }
 	}
     }
     $arg{nnodes} ||= 1;
