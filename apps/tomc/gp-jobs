@@ -44,31 +44,33 @@ my %new_job_id;
 
 
 my @input = qw(
-reads_10282008_80pct_5bgsub_0_00.basecalls 47e77f1e07af6cf047ab0f358dd237e7+3616
-reads_10282008_80pct_5bgsub_0_01.basecalls 3788cb393e11d329e82735ad75789b72+2944
-reads_10282008_80pct_5bgsub_0_02.basecalls 0992ec43c967c085f23c3a0cf6e573f9+3658
-reads_10282008_80pct_5bgsub_0_03.basecalls 43ebbb58468304b6060125d537c5cdbe+4077
-reads_10282008_80pct_5bgsub_0_04.basecalls 00d29312f0f13ee4689bd324534974fa+1557
-reads_10282008_80pct_5bgsub_0_05.basecalls 7c68947fe75e2323b47edc356288628d+2020
-reads_10282008_80pct_5bgsub_0_06.basecalls d6bccda90245d72e7b8e3d0083fc4b8a+1600
-reads_10282008_80pct_5bgsub_0_07.basecalls 8066bc7c31e31089a22e0611df7675b7+1642
+reads_10282008_80pct_5bgsub_0_00 47e77f1e07af6cf047ab0f358dd237e7+3616
+reads_10282008_80pct_5bgsub_0_01 3788cb393e11d329e82735ad75789b72+2944
+reads_10282008_80pct_5bgsub_0_02 0992ec43c967c085f23c3a0cf6e573f9+3658
+reads_10282008_80pct_5bgsub_0_03 43ebbb58468304b6060125d537c5cdbe+4077
+reads_10282008_80pct_5bgsub_0_04 00d29312f0f13ee4689bd324534974fa+1557
+reads_10282008_80pct_5bgsub_0_05 7c68947fe75e2323b47edc356288628d+2020
+reads_10282008_80pct_5bgsub_0_06 d6bccda90245d72e7b8e3d0083fc4b8a+1600
+reads_10282008_80pct_5bgsub_0_07 8066bc7c31e31089a22e0611df7675b7+1642
 
-reads_10282008_50pct_5bgsub_0_00.basecalls ad1d8aae9b6672c9be696f8536e09020+2314
-reads_10282008_50pct_5bgsub_0_01.basecalls 55469ec9886c9eadc2437e5d53af8ed5+1894
-reads_10282008_50pct_5bgsub_0_02.basecalls 4606cab1b0b1734148bd950389e66ee5+2356
-reads_10282008_50pct_5bgsub_0_03.basecalls 68d889b93f95a82139695ab9c4993a80+2608
-reads_10282008_50pct_5bgsub_0_04.basecalls b8181e81dd05f5d4f20140e0d8c8ec73+1012
-reads_10282008_50pct_5bgsub_0_05.basecalls 56c591249abf70443a37b2072946dee3+1306
-reads_10282008_50pct_5bgsub_0_06.basecalls 9cbcd22d413dacc659051b3e86a28877+1054
-reads_10282008_50pct_5bgsub_0_07.basecalls 1f9848ba866a9a8dc9ac496e609f63a1+1095
+reads_10282008_50pct_5bgsub_0_00 ad1d8aae9b6672c9be696f8536e09020+2314
+reads_10282008_50pct_5bgsub_0_01 55469ec9886c9eadc2437e5d53af8ed5+1894
+reads_10282008_50pct_5bgsub_0_02 4606cab1b0b1734148bd950389e66ee5+2356
+reads_10282008_50pct_5bgsub_0_03 68d889b93f95a82139695ab9c4993a80+2608
+reads_10282008_50pct_5bgsub_0_04 b8181e81dd05f5d4f20140e0d8c8ec73+1012
+reads_10282008_50pct_5bgsub_0_05 56c591249abf70443a37b2072946dee3+1306
+reads_10282008_50pct_5bgsub_0_06 9cbcd22d413dacc659051b3e86a28877+1054
+reads_10282008_50pct_5bgsub_0_07 1f9848ba866a9a8dc9ac496e609f63a1+1095
 );
 
-open STATUS, "|-", "tee", "$workdir/status.tmp";
+my $idlength = length $input[0];
+my $allstatus = sprintf ("%-${idlength}s %-37s %-38s %-38s %-38s\n", qw(id readfilter splitstream gpplace gpgrep));
 
+my @gpgrephash;
+my $alldone = 1;
 while (@input)
 {
     my ($inputname, $inputmanifest) = splice @input, 0, 2;
-    $inputname =~ s/\.basecalls$//g;
     my $flow = {};
     my $pipeline = { label => "gpplace",
 		     REFERENCE => "2d9966d3920cf70afdfea0bb0c32905f",
@@ -78,11 +80,54 @@ while (@input)
 		  $inputmanifest,
 		  $flow,
 		  $pipeline);
+    if ($flow->{gpplace}->{gpgrep} &&
+	$flow->{gpplace}->{gpgrep}->{outputkey})
+    {
+	push @gpgrephash, $flow->{gpplace}->{gpgrep}->{outputkey};
+    }
+    else
+    {
+	$alldone = 0;
+    }
 }
 
+my $finalmanifesthash;
+if ($alldone)
+{
+    my $gpgrepid = md5_hex ("@gpgrephash");
+    if (-e "$workdir/$gpgrepid")
+    {
+	open B, "<", "$workdir/$gpgrepid";
+	chomp ($finalmanifesthash = <B>);
+    }
+    else
+    {
+	$whc->write_start;
+	for (@gpgrephash)
+	{
+	    my $instream = new Warehouse::Stream (whc => $whc, hash => [split(",")]);
+	    while (my $dataref = $instream->read_until ())
+	    {
+		$whc->write_data ($dataref);
+	    }
+	}
+	$finalmanifesthash = $whc->write_finish();
+
+	open B, ">$workdir/$gpgrepid";
+	flock B, LOCK_EX or die "flock failed";
+	print B $finalmanifesthash;
+	close B or warn "close $workdir/$gpgrepid: $!";
+    }
+}
+$allstatus .= "\nall files: $finalmanifesthash\n" if $finalmanifesthash;
+print "\nall files: $finalmanifesthash\n" if $finalmanifesthash;
+
+$allstatus =~ s{([0-9a-f]{32})}{<a href="http://templeton-controller.freelogy.org/whget.cgi/$1/">$1</a>}g;
+open STATUS, ">", "$workdir/status.html.tmp";
+print STATUS "<pre>$allstatus</pre>";
 if (close STATUS)
 {
-    rename "$workdir/status.tmp", "$workdir/status";
+    rename "$workdir/status.html.tmp", "$workdir/status.html";
 }
 
 exit 0;
@@ -125,13 +170,31 @@ sub fillpipeline
 		     ),
 		} )
 	    unless $me->{gpplace} || !$me->{splitstream} || !$me->{splitstream}->{outputkey};
-    my $status = sprintf "$id $in %s %s\n", map { id_and_output ($me->{$_}) } (qw(splitstream gpplace));
-    print STATUS $status;
+
+    $me->{gpgrep} = findjob
+	    ( { mrfunction => "filefilter",
+		revision => [ 2479, ],
+		inputkey => $me->{gpplace}->{outputkey},
+		stepspernode => 1,
+		nodes => 1,
+		knobs => makeknobs
+		    ("gpgrep",
+		     "COMMAND=perl -ne \"print unless /^0/\"",
+		     "OUTPUTNAME=${id}_placed.gz",
+		     "CONCATENATE=1",
+		     ),
+		} )
+	    unless $me->{gpgrep} || !$me->{gpplace} || !$me->{gpplace}->{outputkey};
+
+    my $status = sprintf "$id $in %s %s %s\n", map { id_and_output ($me->{$_}) } (qw(splitstream gpplace gpgrep));
+    print $status;
+    $allstatus .= $status;
 }
 
 sub id_and_output
 {
     my $job = shift;
+    return sprintf "%38s", "" if !$job || !$job->{id};
     return sprintf "%5d/%-32.32s", $job->{id}, output_or_status($job);
 }
 
