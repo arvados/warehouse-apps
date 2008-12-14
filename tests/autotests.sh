@@ -35,7 +35,7 @@ PATH="$install/bin:$PATH"
 
 for f in "$src"/tests/test-*.sh
 do
-  sh -e "$f"
+  bash -e "$f"
 done
 
 echo "All tests completed."
