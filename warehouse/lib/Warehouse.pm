@@ -24,6 +24,7 @@ $ENV{NOCACHE_READ} = 1 if $ENV{NOCACHE};
 $ENV{NOCACHE_WRITE} = 1 if $ENV{NOCACHE};
 
 $blocksize ||= 2**26;
+$svn_root ||= "http://dev.freelogy.org/svn/polony/polony-tools/trunk";
 
 =head1 NAME
 
@@ -175,6 +176,7 @@ sub _init
     $self->_cryptsetup();
     $self->{warehouse_index} = $idx;
     $self->{warehouse_name} = $warehouse_name;
+    $self->{config}->{svn_root} ||= $svn_root;
     $self->{name_warehouse_servers} = $warehouses->[$idx]->{name_controllers};
     $self->{job_warehouse_servers} = $warehouses->[$idx]->{job_controllers};
     $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{cryptmap_name_controllers};
@@ -293,6 +295,15 @@ sub _init
     $self->{job_list_fetched} = undef;
 
     return $self;
+}
+
+
+
+sub get_config
+{
+    my $self = shift;
+    my $configvar = shift;
+    return $self->{config}->{$configvar};
 }
 
 

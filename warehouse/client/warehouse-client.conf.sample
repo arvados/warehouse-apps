@@ -1,11 +1,14 @@
 # -*- mode: perl; perl-indent-level: 4; -*-
 
-$Warehouse::blocksize = 64*1024*1024;
+$Warehouse::svn_root
+    = "http://dev.oxf.freelogy.org/svn/polony/polony-tools/trunk";
+$Warehouse::blocksize
+    = 64*1024*1024;
 
 $Warehouse::warehouse_servers
-    = "warehouse.server.host.name:24848";
-$Warehouse::keep_controller_ip
-    = "ip.ad.dr.ess";		# allowed to delete blocks from Keep
+    = "warehouse.server.host.name:24848"; # should be unused in current version
+$Warehouse::keep_controller_ip	# only needed on Keep storage nodes -- who is
+    = "ip.ad.dr.ess";		# allowed to delete blocks from Keep?
 
 $Warehouse::mogilefs_trackers = "mogilefs.tracker.host.name:6001";
 $Warehouse::mogilefs_domain = "warehouse";
