@@ -527,8 +527,9 @@ sub read_until
     # skip "blockshortness" token
     shift @{$self->{nexthashes}} if $self->{nexthashes}->[0] =~ /^-\d+$/;
 
-    my $dataref = $self->{whc}->fetch_block_ref (shift @{$self->{nexthashes}})
-	or die "fetch_block_ref failed";
+    my $nexthash = shift @{$self->{nexthashes}};
+    my $dataref = $self->{whc}->fetch_block_ref ($nexthash)
+	or die "fetch_block_ref($nexthash) failed";
     $self->{buf} .= $$dataref;
 
     $dpos = undef;
