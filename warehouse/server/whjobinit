@@ -110,13 +110,13 @@ while (!$main::DRAIN || $main::children > 0)
       }
       if ($have_slurm)
       {
-	debuglog ("salloc --immediate --exclusive --no-kill --job-name=mr$job_id @nodes_arg mrjobmanager $job_id");
-	exec ("salloc", "--immediate", "--exclusive", "--no-kill", "--job-name=mr$job_id", @nodes_arg, "mrjobmanager", $job_id);
+	debuglog ("salloc --immediate --exclusive --no-kill --job-name=mr$job_id @nodes_arg whjobmanager $job_id");
+	exec ("salloc", "--immediate", "--exclusive", "--no-kill", "--job-name=mr$job_id", @nodes_arg, "whjobmanager", $job_id);
       }
       else
       {
-	debuglog ("mrjobmanager $job_id");
-	exec ("mrjobmanager", $job_id);
+	debuglog ("whjobmanager $job_id");
+	exec ("whjobmanager", $job_id);
       }
       exit (1);
     }
@@ -124,7 +124,7 @@ while (!$main::DRAIN || $main::children > 0)
 
   my $finishedchild = 
       ($main::children >= $max_njobs)
-      ? wait
+      ? wait ()
       : waitpid (-1, WNOHANG);
 
   if ($finishedchild > 0)
