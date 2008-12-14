@@ -28,7 +28,7 @@ sub maybe_install_revision
       system (qw(svn export -r), $revision, $repos, "src")
 	  == 0 or die "$?";
       open F, ">.fetched" or die "$!";
-      system (qw(sh ./src/tests/autotests.sh))
+      system (qw(./src/tests/autotests.sh))
 	  == 0 or die "$?";
       open F, ">.installed" or die "$!";
       open F, ">.tested" or die "$!";
