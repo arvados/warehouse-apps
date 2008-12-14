@@ -15,10 +15,10 @@ use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 use Warehouse;
 use Warehouse::Stream;
 
-do '/etc/polony-tools/config.pl';
+do '/etc/warehouse/warehouse-server.conf';
 
 my $have_slurm = exists $ENV{SLURM_JOBID} && exists $ENV{SLURM_NODELIST};
-
+my $have_database = @ARGV == 1 && $ARGV[0] =~ /^\d+$/;
 
 
 $SIG{'USR1'} = sub
@@ -44,16 +44,12 @@ my $Job = {};
 my $job_id;
 my $dbh;
 my $sth;
-if ($have_slurm)
+if ($have_database)
 {
   ($job_id) = @ARGV;
 
-  $dbh = DBI->connect($main::mapreduce_dsn,
-		      $main::mrcontrol_mysql_username,
-		      $main::mrcontrol_mysql_password);
+  $dbh = DBI->connect(@$Warehouse::Server::DatabaseDSN);
   die $DBI::errstr if !$dbh;
-
-
 
   $sth = $dbh->prepare ("select * from mrjob where id=?");
   $sth->execute ($job_id) or die $dbh->errstr;
@@ -167,7 +163,7 @@ foreach (@sinfo)
 
 
 my $jobmanager_id;
-if ($have_slurm)
+if ($have_database)
 {
   # Claim this job, and make sure nobody else does
 
@@ -250,13 +246,13 @@ else
   $ENV{"MR_REVISION"} = $Job->{revision};
   $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
   $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
-  $ENV{"INSTALL_REPOS"} = $main::svn_repos;
+  $ENV{"INSTALL_REPOS"} = $whc->get_config("svn_root");
   $ENV{"INSTALL_REVISION"} = $Job->{revision};
   my @srunargs = ("srun",
 		  "--nodelist=$nodelist",
 		  "-D", "/tmp", "--job-name=$job_id");
   my @execargs = ("sh", "-c",
-		  "mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet '$main::svn_repos/installrevision' && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
+		  "mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet \"\$INSTALL_REPOS/installrevision\" && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
 
   my $installpid = fork();
   if ($installpid == 0)
@@ -912,7 +908,7 @@ sub Log				# ($jobstep_id, $logmessage)
 
 sub reconnect_database
 {
-  return if !$have_slurm;
+  return if !$have_database;
   return if ($dbh && $dbh->do ("select now()"));
   for (1..16)
   {
@@ -929,7 +925,7 @@ sub reconnect_database
 
 sub dbh_do
 {
-  return 1 if !$have_slurm;
+  return 1 if !$have_database;
   my $ret = $dbh->do (@_);
   return $ret unless (!$ret && $DBI::errstr =~ /server has gone away/);
   reconnect_database();
@@ -951,7 +947,7 @@ sub croak
 
 sub cleanup
 {
-  return if !$have_slurm;
+  return if !$have_database;
 
   reconnect_database();
   my $sth;
@@ -975,7 +971,7 @@ sub save_meta
   $dbh->do ("update mrjob set metakey=? where id=?",
 	    undef,
 	    $key, $job_id)
-      if $have_slurm;
+      if $have_database;
 }
 
 
