@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
+BEGIN { open STDERR, ">&STDOUT"; }
+
 use strict;
 use DBI;
 use POSIX ':sys_wait_h';
