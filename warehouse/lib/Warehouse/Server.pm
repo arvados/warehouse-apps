@@ -586,6 +586,7 @@ sub _unescape
 
 sub _log
 {
+    my $self = shift;
     my $c = shift;
     print (scalar(localtime) . " " . $c->peerhost() . " L " . @_ . "\n");
 }
