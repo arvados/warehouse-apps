@@ -134,7 +134,8 @@ sub fillflow
 		jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
 		jsonjob ("Convert to BFA", $me->{fasta2bfa}),
 		] } ];
-	print "# finished ".$flow->{json}->{pipeline}->[0]->{label}." $in\n";
+	print "# finished ".$flow->{json}->{pipeline}->[0]->{label}." $in\n"
+	    if $override{debug};
     }
     elsif (-e "$workdir/$in.isreads" && 0)
     {
@@ -188,12 +189,16 @@ sub fillflow
 	{
 	    if ($spec{"reads"} && $spec{"genome"})
 	    {
+		my $pipeline = {
+		    label => "maq",
+		    genome => $spec{"genome"},
+		};
+		$pipeline->{sol2bfq} = ["INPUTFORMAT=std"]
+		    unless (-e "$workdir/".$spec{"reads"}.".issolexa");
 		fillpipeline ($in,
 			      $spec{"reads"},
 			      $flow,
-			      { label => "maq",
-				genome => $spec{"genome"}
-			      });
+			      $pipeline);
 	    }
 	    else
 	    {
@@ -212,7 +217,8 @@ sub fillflow
     }
     else
     {
-	print "# skipped $in, don\'t know what it is.\n";
+	print "# skipped $in, don\'t know what it is.\n"
+	    if $override{debug};
 	next;
     }
 
@@ -222,7 +228,8 @@ sub fillflow
 	$flow->{json}->{message} = <F>;
     }
     writejson ("$workdir/$in", $flow->{json});
-    print "# finished $in\n";
+    print "# finished $in\n"
+	if $override{debug};
 }
 
 sub fillpipeline
@@ -351,6 +358,22 @@ sub fillpipeline
 	buildoutputs ($me, "snpfilter",
 		      "cns.final.snp.txt");
     }
+    if ($me->{snpfilter} && $me->{snpfilter}->{outputkey})
+    {
+	$me->{snptranslate} = findjob
+	    ( { mrfunction => "awz-stream",
+		revision => [ 2462, ],
+		inputkey => $me->{snpfilter}->{outputkey},
+		nodes => 1,
+		knobs => makeknobs
+		    ("maq-snptranslate",
+		     "FUNCTION=mrs-maq-snptranslate",
+		     "OUTPUTNAME=cns.translated.snp.txt",
+		     ),
+		} ) unless $me->{snptranslate};
+	buildoutputs ($me, "snptranslate",
+		      "cns.translated.snp.txt");
+    }
 
     if ($me->{snpfilter} && $me->{snpfilter}->{outputkey})
     {
@@ -382,6 +405,7 @@ sub fillpipeline
 		    jsonjob ("Assemble", $me->{assemble}),
 		    jsonjob ("Consensus", $me->{cns2x}),
 		    jsonjob ("SNPfilter", $me->{snpfilter}),
+		    jsonjob ("SNPtranslate", $me->{snptranslate}),
 		    jsonjob ("gzip", $me->{gzip}),
 		    ] } );
 
@@ -392,7 +416,8 @@ sub fillpipeline
 	$flow->{json}->{downloadall} = $id;
     }
 
-    print "# finished ".$pipeline->{label}." $in\n";
+    print "# finished ".$pipeline->{label}." $in\n"
+	if $override{debug};
 }
 
 sub buildbigmanifest
@@ -538,7 +563,7 @@ sub start_new_job
     $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
     my $knobs = $want->{knobs};
     $knobs =~ s{=(.*?)(\\n|$)}{='$1' }g;
-    my $cmd = "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs\n";
+    my $cmd = "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs";
     return if $new_job_id{$cmd};
     print "$cmd\n";
     my $id = `$cmd`;
@@ -555,7 +580,8 @@ sub start_new_job
 sub mention_failed_job
 {
     my $job = shift;
-    print "# suggest investigating job id=".$job->{id}." -- failed with frozentokey=".$job->{frozentokey}." metakey=".$job->{metakey}."\n";
+    print "# suggest investigating job id=".$job->{id}." -- failed with frozentokey=".$job->{frozentokey}." metakey=".$job->{metakey}."\n"
+	if $override{debug};
 }
 
 sub makeknobs
