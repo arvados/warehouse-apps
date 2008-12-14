@@ -11,7 +11,8 @@ open STDERR, ">&STDOUT";
 my $whs = Warehouse::Server->new
 	( DatabaseDSN => $Warehouse::Server::DatabaseDSN,
 	  ListenAddress => $Warehouse::Server::ListenAddress,
-	  ListenPort => $Warehouse::Server::ListenPort );
+	  ListenPort => $Warehouse::Server::ListenPort,
+	  MapReduceDB => $Warehouse::Server::MapReduceDB );
 
 print "Listening at " . $whs->url . "\n";
 
