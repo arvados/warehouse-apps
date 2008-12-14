@@ -94,23 +94,27 @@ sub keepit
 {
     my $pipelinehash = shift;
     my $bigmanifesthash = shift;
-    if (my $manifest = readfile ("$workdir/$pipelinehash.bigmanifest"))
+    my $bigmanifest = readfile ("$workdir/$pipelinehash.bigmanifest");
+
+    if (!$bigmanifest)
     {
-	return $manifest;
+	$bigmanifest = $whc->fetch_block ($bigmanifesthash);
+	$bigmanifest =~ s{ (([0-9a-f]{32})\S*)}{
+	    my $hash = $1;
+	    my $md5 = $2;
+	    my $blockhash = readlink "$workdir/datablocks/$md5.keep";
+	    if (!$blockhash)
+	    {
+		($blockhash) = $whc->store_in_keep (hash => $hash);
+		symlink $blockhash, "$workdir/datablocks/$md5.keep";
+	    }
+	    " " . $blockhash;
+	}ge;
     }
-    my $bigmanifest = $whc->fetch_block ($bigmanifesthash);
-    $bigmanifest =~ s{ (([0-9a-f]{32})\S*)}{
-	my $hash = $1;
-	my $md5 = $2;
-	my $blockhash = readlink "$workdir/datablocks/$md5.keep";
-	if (!$blockhash)
-	{
-	    ($blockhash) = $whc->store_in_keep (hash => $hash);
-	    symlink $blockhash, "$workdir/datablocks/$md5.keep";
-	}
-	" " . $blockhash;
-    }ge;
     my ($bighash) = $whc->store_in_keep (dataref => \$bigmanifest);
+    my $hostname;
+    chomp ($hostname = `hostname -s`);
+    $whc->store_manifest_by_name ($bighash, undef, "/$hostname/pgp10factory/download/$pipelinehash");
     writefile ("$workdir/$pipelinehash.bigmanifest", $bigmanifest);
     return $bigmanifest;
 }
