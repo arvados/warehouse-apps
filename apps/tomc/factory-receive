@@ -50,9 +50,20 @@ foreach my $hash (sort keys %hash_is)
 	}
 	if ($chunk =~ m{^(\@\S+\n[A-Z]+\n\+\S*\n\S+\n){4}}s)
 	{
+	    if ($chunk !~ m{^(\@\S+\n[A-Z]+\n\+\S*\n[\0-I]+\n){40}}s
+		&&
+		$chunk !~ m{^(\@\S+\n[A-Z]+\n\+\S*\n[\0-I]+\n)+$}s)
+	    {
+		print "$hash is solexa fastq reads\n";
+		sysopen F, "$workdir/$hash.issolexa", O_WRONLY|O_CREAT|O_EXCL;
+		close F;
+	    }
+	    else
+	    {
+		print "$hash is sanger fastq reads\n";
+	    }
 	    sysopen F, "$workdir/$hash.isreads", O_WRONLY|O_CREAT|O_EXCL;
 	    close F;
-	    print "$hash is fastq reads\n";
 	}
 	elsif ($chunk =~ /^((>[^\n]+|[-a-z\*]+)\n){4}/is)
 	{
