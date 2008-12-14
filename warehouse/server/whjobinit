@@ -36,6 +36,11 @@ $SIG{'USR2'} = sub
 
 
 
+my $have_slurm = `which salloc` =~ /salloc/;
+$max_njobs = 1 if !$have_slurm;
+
+
+
 # Wait for jobs to appear in the queue; start them; repeat.
 
 my %job_proc;
@@ -80,17 +85,7 @@ while (!$main::DRAIN || $main::children > 0)
       $job_proc{$job_id} = $child;
       $proc_job{$child} = $job_id;
 
-      if ($main::children >= $max_njobs)
-      {
-	my $finishedchild = wait;
-	debuglog ("pid $finishedchild finished");
-	delete $job_proc{$proc_job{$finishedchild}};
-	delete $proc_job{$finishedchild};
-      }
-      else
-      {
-	++$main::children;
-      }
+      ++$main::children;
     }
     else
     {
@@ -111,13 +106,25 @@ while (!$main::DRAIN || $main::children > 0)
 	$job_nodes =~ s/\s+/,/g;
 	@nodes_arg = ("--nodelist", $job_nodes);
       }
-      debuglog ("salloc --immediate --exclusive --no-kill --job-name=mr$job_id @nodes_arg mrjobmanager $job_id");
-      exec ("salloc", "--immediate", "--exclusive", "--no-kill", "--job-name=mr$job_id", @nodes_arg, "mrjobmanager", $job_id);
+      if ($have_slurm)
+      {
+	debuglog ("salloc --immediate --exclusive --no-kill --job-name=mr$job_id @nodes_arg mrjobmanager $job_id");
+	exec ("salloc", "--immediate", "--exclusive", "--no-kill", "--job-name=mr$job_id", @nodes_arg, "mrjobmanager", $job_id);
+      }
+      else
+      {
+	debuglog ("mrjobmanager $job_id");
+	exec ("mrjobmanager", $job_id);
+      }
       exit (1);
     }
   }
 
-  my $finishedchild = waitpid (-1, WNOHANG);
+  my $finishedchild = 
+      ($main::children >= $max_njobs)
+      ? wait
+      : waitpid (-1, WNOHANG);
+
   if ($finishedchild > 0)
   {
     reconnect_database();
