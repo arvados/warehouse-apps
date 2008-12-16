@@ -1828,10 +1828,19 @@ sub _cryptsetup
     }
     $self->{config}->{cryptmap_name_prefix} ||= "/gpg/".Digest::MD5::md5_hex (join (",", sort @{$self->{config}->{encrypt}}))."/";
 
-    $self->{gpg_homedir} ||=
-	(-w "$ENV{HOME}/.gnupg" || (-w $ENV{HOME} && !-e "$ENV{HOME}/.gnupg"))
-	? "$ENV{HOME}/.gnupg"
-	: "/etc/warehouse/.gnupg";
+    if (-w "$ENV{HOME}/.gnupg" || (-w $ENV{HOME} && !-e "$ENV{HOME}/.gnupg"))
+    {
+	$self->{gpg_homedir} = "$ENV{HOME}/.gnupg";
+    }
+    elsif (-w ($self->{gpg_homedir} = "/etc/warehouse/.gnupg"))
+    {
+	;
+    }
+    else
+    {
+	$self->{config}->{nodecrypt} = 1;
+	return;
+    }
 
     eval "use GnuPG::Interface";
     return if $@;
@@ -2013,6 +2022,8 @@ sub _decrypt_block
     # decryption isn't possible.
 
     my ($self, $dataref) = @_;
+
+    return $dataref if $self->{config}->{nodecrypt};
 
     printf STDERR "gpg: decrypt %s\n", Digest::MD5::md5_hex($$dataref)
 	if $ENV{DEBUG_GPG};
