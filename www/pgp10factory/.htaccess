@@ -1,6 +1,6 @@
 Options +ExecCGI +Includes
 AddHandler cgi-script .cgi
-DirectoryIndex index.shtml
+DirectoryIndex index.cgi
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !/cache/images/.
 RewriteCond %{REQUEST_FILENAME} cache|session/
