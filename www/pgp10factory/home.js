@@ -99,7 +99,7 @@ function pipeline_layout_save()
 	    parameters: { layout: $('layout_stash').value },
 	    onSuccess: function(response) {
 		$('layout_save').disabled = true;
-		$('layout_link').innerHTML = '&nbsp; &nbsp; <a href=\"./home.cgi?'+response.responseText+'\">Link to this layout</a> &nbsp; - &nbsp; <a href=\"./download.cgi/'+response.responseText+'\">Download input+output tarball</a>';
+		$('layout_link').innerHTML = '&nbsp; &nbsp; <a href=\"./?'+response.responseText+'\">Link to this layout</a> &nbsp; - &nbsp; <a href=\"./download.cgi/'+response.responseText+'\">Download input+output tarball</a>';
 	    }});
 }
 
