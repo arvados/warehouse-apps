@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+
+use strict;
+
+my %chr_regions;
+
+if ($ENV{KNOB_REFERENCE})
+{
+    warn "reading reference regions\n";
+    open R, "-|", "bash -c 'set -o pipefail; whget \"$ENV{KNOB_REFERENCE}\" - | gzip -cdf'"
+	or die "whget: $!";
+    while (<R>)
+    {
+	if (/^>(.*)=(chr)?(\S+)\@(\d+)-(\d+)$/)
+	{
+	    my ($exonid, $chr, $startpos, $endpos) = ($1, $3, $4, $5);
+	    $chr_regions{$chr} ||= [];
+	    push @ { $chr_regions{$chr} }, [$startpos, $endpos, $exonid, $chr];
+	}
+    }
+    close R or die "\"whget $ENV{KNOB_REFERENCE} -\" pipe failed: $!";
+
+    warn "sorting reference regions\n";
+    for my $chr (keys %chr_regions)
+    {
+	$chr_regions{$chr} = [ sort
+			       {
+				   $a->[0] <=> $b->[0];
+			       } @ { $chr_regions{$chr} } ];
+    }
+}
+
+my $ok = 0;
+
+warn "reading affy data\n";
+my @affy;
+while (<>)
+{
+    $ok = 1 if /^\#%netaffx-annotation-tabular-format-version=1.0/;
+    next if /^\#/;
+    $ok = 2, next if $ok==1 && /^\"Probe Set ID\",\"Affy SNP ID\",\"/;
+    die "format error" unless $ok == 2;
+    my @in = /\"(.*?)\"/g;
+    push @affy, [@in[0,1,2,3,4,5,8,9,10]];
+    print STDERR "\r$." unless $.%10000;
+}
+warn "\n";
+
+warn "sorting affy data\n";
+@affy = sort { $a->[4] <=> $b->[4] } @affy;
+
+warn "filtering affy data\n";
+for (@affy)
+{
+    my ($pid, $aid, $did,
+	$chr, $pos, $strand,
+	$x, $x,
+	$acgt, $alleleA, $alleleB) = @$_;
+    my $regions = $chr_regions{$chr} or next;
+    while ($#$regions >= 0 &&
+	   $regions->[0]->[1] < $pos) # pos is beyond endpos, no future matches
+    {
+	shift @$regions;
+    }
+    for (my $ri=0;
+	 $ri <= $#$regions &&
+	 $regions->[$ri]->[0] <= $pos; # pos is not before startpos
+	 $ri++)
+    {
+	if ($regions->[$ri]->[1] >= $pos) # pos is not beyond endpos
+	{
+	    print join ("\t", @$_), "\n";
+	    last;
+	}
+    }
+}
