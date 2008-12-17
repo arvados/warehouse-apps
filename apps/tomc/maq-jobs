@@ -535,7 +535,7 @@ sub findjob
 	    && ($_->{revision} <= $want->{revision}->[1] || !$want->{revision}->[1])
 	    && $_->{mrfunction} eq $want->{mrfunction}
 	    && $_->{knobs} eq $want->{knobs}
-	    && $_->{inputkey} eq $want->{inputkey})
+	    && keys_are_equal ($_->{inputkey}, $want->{inputkey}))
 	{
 	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
 	    $failed = $_ if !$failed && $_->{success} eq '0';
@@ -553,24 +553,47 @@ sub findjob
     return $queued || $failed;
 }
 
+sub keys_are_equal
+{
+    my ($a, $b) = @_;
+    for ($a, $b) { s/\+[^,]*//g }
+    return ($a eq $b);
+}
+
 sub start_new_job
 {
     my $want = shift;
     my $nodes = $want->{nodes} || 1;
     my $moreoptions = "";
-    $moreoptions .= " stepspernode=".$want->{stepspernode} if $want->{stepspernode};
     my $revision = $want->{revision}->[1] || $revision_default;
     $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
-    my $knobs = $want->{knobs};
-    $knobs =~ s{=(.*?)(\\n|$)}{='$1' }g;
-    my $cmd = "wh job new nodes=$nodes photons=1 revision=$revision mrfunction='".$want->{mrfunction}."' inputkey='".$want->{inputkey}."'$moreoptions $knobs";
-    return if $new_job_id{$cmd};
-    print "$cmd\n";
-    my $id = `$cmd`;
-    chomp $id;
-    print "$id\n";
+    my %jobspec = ("nodes" => $nodes,
+		   "photons" => 1,
+		   "revision" => $revision,
+		   "mrfunction" => $want->{mrfunction},
+		   "inputkey" => $want->{inputkey},
+		   "knobs" => $want->{knobs},
+	);
+    $jobspec{stepspernode} = $want->{stepspernode} if $want->{stepspernode};
+    my $printable_jobspec
+	= join ("", map { "    $_=$jobspec{$_}\n" } sort keys %jobspec);
+    $printable_jobspec =~ s/\n(\S)/\n          $1/gs;
+    return if exists $new_job_id{$printable_jobspec};
+
+    if (exists $override{newjoblimit} &&
+	--$override{newjoblimit} < 0)
+    {
+	return;
+    }
+
+    my $id = $whc->job_new (%jobspec) || -1;
+    print ("$id -- started ",
+	   scalar(localtime),
+	   "\n",
+	   $printable_jobspec);
+    $new_job_id{$printable_jobspec} = $id || -1;
     return if $id !~ /^\d+$/;
-    $new_job_id{$cmd} = $id;
+
     my $newjoblist = $whc->job_list (id_min => $id, id_max => $id);
     ($Job{$id}) = $newjoblist->[0];
     push @Job, $newjoblist->[0];
