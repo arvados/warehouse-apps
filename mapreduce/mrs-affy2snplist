@@ -54,7 +54,6 @@ for (@affy)
 {
     my ($pid, $aid, $did,
 	$chr, $pos, $strand,
-	$x, $x,
 	$acgt, $alleleA, $alleleB) = @$_;
     if ($strand eq "-")
     {
