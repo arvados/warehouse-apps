@@ -1,0 +1,67 @@
+#!/usr/bin/perl
+
+use strict;
+
+my @x;
+while (@ARGV && $ARGV[0] ne '--') { push @x, shift @ARGV }
+shift @ARGV;
+my @y = @ARGV or die "usage: $0 snplist sniplist ... -- snplist snplist ...\n";
+
+for my $xfile (@x)
+{
+    print "\t$xfile";
+}
+print "\n";
+for my $yfile (@y)
+{
+    print "$yfile";
+    my $ylist_orig = readsnplist ($yfile);
+    for my $xfile (@x)
+    {
+	my $xlist = readsnplist ($xfile);
+	my $ylist = [ @$ylist_orig ];
+	my $xypoints = scalar @$xlist + scalar @$ylist;
+	my $points = 0;
+	while (@$xlist && @$ylist)
+	{
+	    my $cmp = $xlist->[0]->[0] cmp $ylist->[0]->[0];
+#	    printf "%d %s %s\n", $cmp, $xlist->[0]->[0], $ylist->[0]->[0];
+	    if ($cmp < 0)
+	    {
+		shift @$xlist;
+	    }
+	    elsif ($cmp > 0)
+	    {
+		shift @$ylist;
+	    }
+	    else
+	    {
+		# same position
+		if ($xlist->[0]->[2] eq $ylist->[0]->[2])
+		{
+		    # same bp at this position
+		    $points += 2;
+		}
+		shift @$xlist;
+		shift @$ylist;
+	    }
+	}
+	my $score = sprintf "%.1f", 100*$points/$xypoints;
+	print "\t$score";
+    }
+    print "\n";
+}
+
+sub readsnplist
+{
+    my $file = shift;
+    open IN, "<", $file or die "$file: $!";
+    my @snplist;
+    while (<IN>)
+    {
+	chomp;
+	my ($chrpos, $refbp, $seqbp) = split (/\s+/, $_, 4);
+	push @snplist, [$chrpos, $refbp, $seqbp];
+    }
+    return [ sort { $a->[0] cmp $b->[0] } @snplist ];
+}
