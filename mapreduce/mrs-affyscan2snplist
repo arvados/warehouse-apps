@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+
+use strict;
+
+my %chr_regions;
+
+die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
+
+open R, "-|", "bash -c 'set -o pipefail; whget \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf | sort -k5'"
+    or die "whget: $!";
+
+open STDIN, "-|", "sort -k2"
+    or die "sort input: $!";
+
+open STDOUT, "|-", "sort"
+    or die "sort output: $!";
+
+my $found = 0;
+my $notfound = 0;
+my $r = getnextr() or die "no reference data";
+while (<STDIN>)
+{
+    next unless /^\d/;
+    chomp;
+    my (@in) = split (/\t/);
+    my ($sid, $AB) = @in[1,9];
+
+    my $cmp;
+    while (($cmp = $r->[4] cmp $sid) < 0)
+    {
+	$r = getnextr() or last;
+    }
+    $r or last;
+    if ($cmp == 0)
+    {
+	my ($a, $b) = split ('', $r->[3]);
+	$AB =~ s/(A)|B/$1 ? $a : $b/ge;
+	print join ("\t", $r->[0], $r->[1], $a, $AB,
+		    $r->[4], $r->[5], $r->[6]), "\n";
+	++$found;
+    }
+    else
+    {
+	++$notfound;
+    }
+}
+
+close STDIN;
+close R;
+close STDOUT or die "sort output: $!";
+
+warn "$found rows output.\n";
+warn "$notfound rows skipped, not found in reference file.\n" if $notfound;
+
+sub getnextr
+{
+    local $_ = <R>;
+    return undef if !defined $_;
+    chomp;
+    return [ split (/\t/) ];
+}
