@@ -65,3 +65,18 @@ sub readsnplist
     }
     return [ sort { $a->[0] cmp $b->[0] } @snplist ];
 }
+
+sub fasta_flatten
+{
+    my $fasta = shift;
+    $fasta =~ tr/a-z/A-Z/;
+    $fasta =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
+    $fasta = hex($fasta);
+    while ($fasta & ~0xf)
+    {
+	$fasta = ($fasta & 0xf) | ($fasta >> 4);
+    }
+    $fasta = sprintf ("%x", $fasta);
+    $fasta =~ tr/0123456789abcdef/XACMGRSVTWYHKDBN/;
+    return $fasta;
+}
