@@ -25,19 +25,21 @@ for my $yfile (@y)
 	while (@$xlist && @$ylist)
 	{
 	    my $cmp = $xlist->[0]->[0] cmp $ylist->[0]->[0];
-#	    printf "%d %s %s\n", $cmp, $xlist->[0]->[0], $ylist->[0]->[0];
 	    if ($cmp < 0)
 	    {
 		shift @$xlist;
+		++$points;
 	    }
 	    elsif ($cmp > 0)
 	    {
 		shift @$ylist;
+		++$points;
 	    }
 	    else
 	    {
 		# same position
-		if ($xlist->[0]->[2] eq $ylist->[0]->[2])
+		if (fasta_flatten($xlist->[0]->[2]) eq
+		    fasta_flatten($ylist->[0]->[2]))
 		{
 		    # same bp at this position
 		    $points += 2;
