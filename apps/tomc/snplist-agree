@@ -24,7 +24,10 @@ for my $yfile (@y)
 	my $points = 0;
 	while (@$xlist && @$ylist)
 	{
-	    my $cmp = $xlist->[0]->[0] cmp $ylist->[0]->[0];
+	    my $xchrpos = join("\t", $xlist->[0]->[0,1]);
+	    my $ychrpos = join("\t", $ylist->[0]->[0,1]);
+	    my $cmp = $xlist->[0]->[0] cmp $ylist->[0]->[0]
+		|| $xlist->[0]->[1] <=> $ylist->[0]->[1];
 	    if ($cmp < 0)
 	    {
 		shift @$xlist;
@@ -37,9 +40,14 @@ for my $yfile (@y)
 	    }
 	    else
 	    {
+#print "$xchrpos\t$ychrpos\t".$xlist->[0]->[3]."\t".$xlist->[0]->[3]."\n";
 		# same position
-		if (fasta_flatten($xlist->[0]->[2]) eq
-		    fasta_flatten($ylist->[0]->[2]))
+		if (fasta_flatten($xlist->[0]->[3]) eq
+		    fasta_flatten($ylist->[0]->[3])
+		    ||
+		    $xlist->[0]->[3] eq "NoCall"
+		    ||
+		    $ylist->[0]->[3] eq "NoCall")
 		{
 		    # same bp at this position
 		    $points += 2;
@@ -48,7 +56,7 @@ for my $yfile (@y)
 		shift @$ylist;
 	    }
 	}
-	my $score = sprintf "%.1f", 100*$points/$xypoints;
+	my $score = sprintf "%.2f", 100*$points/$xypoints;
 	print "\t$score";
     }
     print "\n";
@@ -62,10 +70,10 @@ sub readsnplist
     while (<IN>)
     {
 	chomp;
-	my ($chrpos, $refbp, $seqbp) = split (/\s+/, $_, 4);
-	push @snplist, [$chrpos, $refbp, $seqbp];
+	my ($chr, $pos, $refbp, $seqbp) = split (/\t/, $_, 5);
+	push @snplist, [$chr, $pos, $refbp, $seqbp];
     }
-    return [ sort { $a->[0] cmp $b->[0] } @snplist ];
+    return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
 }
 
 sub fasta_flatten
