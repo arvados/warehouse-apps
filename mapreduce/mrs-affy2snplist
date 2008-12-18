@@ -56,6 +56,22 @@ for (@affy)
 	$chr, $pos, $strand,
 	$x, $x,
 	$acgt, $alleleA, $alleleB) = @$_;
+    if ($strand eq "-")
+    {
+	for ($acgt, $alleleA, $alleleB)
+	{
+	    tr/\[\]/\]\[/;
+	    tr/acgtACGT/tgcaTGCA/;
+	    $_ = reverse $_;
+	}
+    }
+    if (!$ENV{KNOB_REFERENCE})
+    {
+	print join ("\t",
+		    "chr$chr", $pos, "N", "$alleleA$alleleB",
+		    $pid, $aid, $did, $acgt), "\n";
+	next;
+    }
     my $regions = $chr_regions{$chr} or next;
     while ($#$regions >= 0 &&
 	   $regions->[0]->[1] < $pos) # pos is beyond endpos, no future matches
@@ -69,7 +85,9 @@ for (@affy)
     {
 	if ($regions->[$ri]->[1] >= $pos) # pos is not beyond endpos
 	{
-	    print join ("\t", @$_), "\n";
+	    print join ("\t",
+			"chr$chr", $pos, "N", "$alleleA$alleleB",
+			$pid, $aid, $did, $acgt), "\n";
 	    last;
 	}
     }
