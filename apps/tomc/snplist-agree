@@ -43,17 +43,23 @@ for my $yfile (@y)
 	    else
 	    {
 		# same position
-		if ($xlist->[0]->[3] eq
-		    $ylist->[0]->[3])
+		if ($xlist->[0]->[3] eq "N"
+		    ||
+		    $ylist->[0]->[3] eq "N")
+		{
+		    $xypoints -= 2;
+		}
+		elsif ($xlist->[0]->[3] eq
+		       $ylist->[0]->[3])
 		{
 		    # same bp at this position
 		    $points += 2;
 		}
-		elsif ($xlist->[0]->[3] eq "NoCall"
-		       ||
-		       $ylist->[0]->[3] eq "NoCall")
+		elsif ($xlist->[0]->[3] &
+		       $ylist->[0]->[3] != 0)
 		{
-		    $xypoints -= 2;
+		    # some overlap in choices
+		    $points += 1;
 		}
 		shift @$xlist;
 		shift @$ylist;
@@ -63,7 +69,7 @@ for my $yfile (@y)
 	push @xscore, $score;
 	$xhighscore = $score if $xhighscore < $score;
     }
-    print map { "\t".($_ > $xhighscore*.8 ? "*" : " ")."$_" } @xscore;
+    print map { "\t".($_ > $xhighscore*.9 ? "*" : " ")."$_" } @xscore;
     print "\n";
 }
 
@@ -84,7 +90,7 @@ sub readsnplist
 sub fasta_flatten
 {
     my $fasta = shift;
-    return $fasta if $fasta eq 'NoCall';
+    return "N" if $fasta =~ /^N/;
     $fasta =~ tr/a-z/A-Z/;
     $fasta =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
     $fasta = hex($fasta);
@@ -92,6 +98,7 @@ sub fasta_flatten
     {
 	$fasta = ($fasta & 0xf) | ($fasta >> 4);
     }
+    return $fasta;
     $fasta = sprintf ("%x", $fasta);
     $fasta =~ tr/0123456789abcdef/XACMGRSVTWYHKDBN/;
     return $fasta;
