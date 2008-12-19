@@ -402,9 +402,9 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
       $execargs[-1] .=
 	  "&& "
 	  ."( "
-	  ."  [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] "
+	  ."  [ -e '$ENV{MR_REVISION_INSTALLDIR}/.tested' ] "
 	  ."|| "
-	  ."  ( svn export --quiet '$main::svn_repos/installrevision' "
+	  ."  ( svn export --quiet '$ENV{INSTALL_REPOS}/installrevision' "
 	  ."    && ./installrevision "
 	  ."  ) "
 	  .") ";
