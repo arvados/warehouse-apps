@@ -375,7 +375,7 @@ sub fillpipeline
 		      "cns.translated.snp.txt");
     }
 
-    if ($me->{snpfilter} && $me->{snpfilter}->{outputkey})
+    if ($me->{snptranslate} && $me->{snptranslate}->{outputkey})
     {
 	my $bigmanifesthash = buildbigmanifest
 	    ($id, map {
@@ -429,6 +429,7 @@ sub buildbigmanifest
     {
 	return $bigmanifesthash;
     }
+    print "Building big output manifest for pipeline $pipeline_id\n";
     for (@outputs)
     {
 	if (-e "$workdir/$_.nomanifest")
