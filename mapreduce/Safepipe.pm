@@ -46,7 +46,7 @@ sub readfrom
 	    }
 
 	    exec $command;
-	    die "@caller: $!";
+	    die "$command: $! at $caller[1] line $caller[2].\n";
 	}
 	close "write$n" or die "$!";
 	$lastreadpipe = "read$n";
