@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+use strict;
+
+
+my $started = 0;
+my $reffield;
+my $posfield;
+while (<>)
+{
+    chomp;
+    if (!$started)
+    {
+	$started = 1;
+	my @in = split;
+	for ($reffield = 0;
+	     $reffield <= $#in-1 && !($in[$reffield] =~ /=\S+\@\d+-\d+$/ &&
+				      $in[$reffield+1] =~ /^\d+$/);
+	     $reffield++)
+	{
+	}
+	die "could not find adjacent annotated-reference and position fields"
+	    if $reffield >= $#in;
+	$posfield = $reffield + 1;
+    }
+    my @in = split (/\s+/, $_, $reffield + 3);
+    $in[$posfield] =~ /^\d+$/
+	or die "did not find non-negative integer in position field: \$in[$posfield] == ".$in[$posfield];
+    $in[$reffield] =~ /.*=(\S+)\@(\d+)-(\d+)$/
+	or die "could not parse annotated-reference field";
+    $in[$reffield] = $1;
+    $in[$posfield] += $2 - 1;
+    print join ("\t", @in), "\n";
+}
