@@ -466,7 +466,7 @@ sub blockhash_with_size
     if ($blockhash =~ /^([0-9a-f]{32})/)
     {
 	my $md5 = $1;
-	my $size = readlink "$workdir/datablocks/$md5.size";
+	$size = readlink "$workdir/datablocks/$md5.size";
 	if (!$size)
 	{
 	    my $dataref = $whc->fetch_block_ref ($md5);
