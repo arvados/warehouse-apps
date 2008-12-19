@@ -18,8 +18,17 @@ close R;
 
 while(<>)
 {
-    my ($readid, $chr, $pos, @aln) = split;
-    print if findsnpref ($chr, $pos, $pos + $aln[-3] - 1);
+    my @in = split;
+    if ($in[1] =~ /^chr/)
+    {
+	my ($readid, $chr, $pos, @aln) = split;
+	print if findsnpref ($chr, $pos, $pos + $aln[-3] - 1);
+    }
+    else
+    {
+	my ($chr, $pos) = split (/\s+/, $_, 3);
+	print if findsnpref ($chr, $pos, $pos);
+    }
 }
 
 my $srmin = 0;
