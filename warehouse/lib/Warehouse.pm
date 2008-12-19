@@ -2028,6 +2028,25 @@ sub _decrypt_block
     printf STDERR "gpg: decrypt %s\n", Digest::MD5::md5_hex($$dataref)
 	if $ENV{DEBUG_GPG};
 
+    my $child = open D, "-|";
+    die "couldn't fork" if !defined $child;
+    if ($child == 0)
+    {
+	$dataref = $self->_unsafe_decrypt_block ($dataref);
+	print $$dataref;
+	exit 0;
+    }
+    local $/ = undef;
+    my $decrypted = <D>;
+    close D;
+    return $dataref if $decrypted eq "";
+    return \$decrypted;
+}
+
+sub _unsafe_decrypt_block
+{
+    my ($self, $dataref) = @_;
+
     eval "use GnuPG::Interface";
     die "_decrypt_block() GnuPG::Interface not found" if $@;
 
