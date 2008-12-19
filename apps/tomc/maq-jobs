@@ -379,8 +379,7 @@ sub fillpipeline
     {
 	my $bigmanifesthash = buildbigmanifest
 	    ($id, map {
-		/^\S+/;
-		$&;
+		/^\S+/ ? ($&) : ()
 	     } @{$me->{outputs}});
 	$me->{gzip} = findjob
 	    ( { mrfunction => "gzip",
@@ -464,7 +463,7 @@ sub blockhash_with_size
     my $blockhash = shift;
     my $size;
     if ($blockhash =~ /\+(\d+)/) { return $blockhash; }
-    if ($blockhash =~ /^[0-9a-f]{32}/)
+    if ($blockhash =~ /^([0-9a-f]{32})/)
     {
 	my $md5 = $1;
 	my $size = readlink "$workdir/datablocks/$md5.size";
