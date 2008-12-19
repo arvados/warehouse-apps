@@ -1,0 +1,88 @@
+#!/usr/bin/perl
+
+use strict;
+
+die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
+
+open R, "-|", "bash -c 'set -o pipefail; whget \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf'"
+    or die "whget: $!";
+my @snpref;
+while (<R>)
+{
+    chomp;
+    push @snpref, [split];
+}
+close R;
+
+@snpref = sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snpref;
+
+while(<>)
+{
+    my ($readid, $chr, $pos, @aln) = split;
+    print if findsnpref ($chr, $pos, $pos + $aln[-3] - 1);
+}
+
+my $srmin = 0;
+my $srmax = 0;
+sub findsnpref
+{
+    my ($chr, $startpos, $endpos) = @_;
+
+    # srmin left over from the previous search already points to the
+    # next interesting position after the previous read's startpos.
+    # Usually this is the relevant part of the search for this read,
+    # too.  Let's check this common case quickly before doing the full
+    # binary search.
+
+    if (($chr cmp $snpref[$srmin]->[0]
+	 || $endpos <=> $snpref[$srmin]->[1]) < 0
+	# sought read ends before location [srmin]
+
+	&& ($srmin == 0
+	    ||
+	    ($chr cmp $snpref[$srmin-1]->[0]
+	     || $startpos <=> $snpref[$srmin-1]->[1]) > 0)
+	# sought read starts after location [srmin-1]
+	)
+    {
+	return undef;
+    }
+
+    # startpos and endpos tend to proceed toward srmin. perhaps they
+    # got there:
+
+    if ($chr eq $snpref[$srmin]->[0] &&
+	$startpos <= $snpref[$srmin]->[1] &&
+	$endpos >= $snpref[$srmin]->[1])
+    {
+	return 1;
+    }
+	
+    $srmin = 0;
+    $srmax = $#snpref;
+    while ($srmin < $srmax)
+    {
+	my $srmid = int (($srmin + $srmax) / 2);
+	my $cmp = $chr cmp $snpref[$srmid]->[0]
+	    || $startpos <=> $snpref[$srmid]->[1];
+	if ($cmp < 0)		# sought read starts before location [srmid] --
+				# if it covers anything after [srmid], it must
+				# also cover [srmid].
+	{
+	    $srmax = $srmid;
+	}
+	elsif ($cmp > 0)	# sought read starts after location [srmid] --
+				# it can't cover [srmid] or anything before it.
+	{
+	    $srmin = $srmid + 1;
+	}
+	else
+	{
+	    $srmin = $srmid;
+	    return 1;
+	}
+    }
+    return ($chr eq $snpref[$srmin]->[0]
+	    && $startpos <= $snpref[$srmin]->[1]
+	    && $endpos >= $snpref[$srmin]->[1]);
+}
