@@ -7,58 +7,63 @@ while (@ARGV && $ARGV[0] ne '--') { push @x, shift @ARGV }
 shift @ARGV;
 my @y = @ARGV or die "usage: $0 snplist sniplist ... -- snplist snplist ...\n";
 
+my @xlists;
 for my $xfile (@x)
 {
     print "\t$xfile";
+    push @xlists, readsnplist ($xfile);
 }
 print "\n";
 for my $yfile (@y)
 {
     print "$yfile";
     my $ylist_orig = readsnplist ($yfile);
-    for my $xfile (@x)
+    my @xscore;
+    my $xhighscore;
+    for my $xlist_orig (@xlists)
     {
-	my $xlist = readsnplist ($xfile);
+	my $xlist = [ @$xlist_orig ];
 	my $ylist = [ @$ylist_orig ];
 	my $xypoints = scalar @$xlist + scalar @$ylist;
 	my $points = 0;
 	while (@$xlist && @$ylist)
 	{
-	    my $xchrpos = join("\t", $xlist->[0]->[0,1]);
-	    my $ychrpos = join("\t", $ylist->[0]->[0,1]);
 	    my $cmp = $xlist->[0]->[0] cmp $ylist->[0]->[0]
 		|| $xlist->[0]->[1] <=> $ylist->[0]->[1];
 	    if ($cmp < 0)
 	    {
 		shift @$xlist;
-		++$points;
+		--$xypoints;
 	    }
 	    elsif ($cmp > 0)
 	    {
 		shift @$ylist;
-		++$points;
+		--$xypoints;
 	    }
 	    else
 	    {
-#print "$xchrpos\t$ychrpos\t".$xlist->[0]->[3]."\t".$xlist->[0]->[3]."\n";
 		# same position
-		if (fasta_flatten($xlist->[0]->[3]) eq
-		    fasta_flatten($ylist->[0]->[3])
-		    ||
-		    $xlist->[0]->[3] eq "NoCall"
-		    ||
-		    $ylist->[0]->[3] eq "NoCall")
+		if ($xlist->[0]->[3] eq
+		    $ylist->[0]->[3])
 		{
 		    # same bp at this position
 		    $points += 2;
+		}
+		elsif ($xlist->[0]->[3] eq "NoCall"
+		       ||
+		       $ylist->[0]->[3] eq "NoCall")
+		{
+		    $xypoints -= 2;
 		}
 		shift @$xlist;
 		shift @$ylist;
 	    }
 	}
 	my $score = sprintf "%.2f", 100*$points/$xypoints;
-	print "\t$score";
+	push @xscore, $score;
+	$xhighscore = $score if $xhighscore < $score;
     }
+    print map { "\t".($_ > $xhighscore*.8 ? "*" : " ")."$_" } @xscore;
     print "\n";
 }
 
@@ -71,7 +76,7 @@ sub readsnplist
     {
 	chomp;
 	my ($chr, $pos, $refbp, $seqbp) = split (/\t/, $_, 5);
-	push @snplist, [$chr, $pos, $refbp, $seqbp];
+	push @snplist, [$chr, $pos, $refbp, fasta_flatten ($seqbp)];
     }
     return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
 }
@@ -79,6 +84,7 @@ sub readsnplist
 sub fasta_flatten
 {
     my $fasta = shift;
+    return $fasta if $fasta eq 'NoCall';
     $fasta =~ tr/a-z/A-Z/;
     $fasta =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
     $fasta = hex($fasta);
