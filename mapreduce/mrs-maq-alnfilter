@@ -123,7 +123,6 @@ sub print_snpskeptic
 
 	my $refbase = fasta2bin ($snpref[$sr]->[2]);
 	my $maqcall = fasta2bin ($snpref[$sr]->[3]);
-#printf STDERR "$sr refbase %s $refbase maqcall %s $maqcall\n", $snpref[$sr]->[2], $snpref[$sr]->[3];
 	next if $refbase == $maqcall;
 
 	my $sk = $snpskeptic[$sr];
@@ -134,7 +133,6 @@ sub print_snpskeptic
 	    if (1 == ($candidate =~ tr/acgtACGT/01230123/))
 	    {
 		$candidate_startsites[$candidate]->{$read_start_site}++;
-#print STDERR "$sr ref $refbase maqcall $maqcall candidate $candidate start $read_start_site\n";
 	    }
 	}
 	my $newcall = $maqcall;
@@ -150,13 +148,7 @@ sub print_snpskeptic
 	}
 	if ($maqcall != $newcall)
 	{
-	    $newcall = bin2fasta ($newcall);
-	    printf STDERR
-		("downgraded %s to %s\n",
-		 $snpref[$sr]->[3],
-		 $newcall,
-		 );
-	    $snpref[$sr]->[3] = $newcall;
+	    $snpref[$sr]->[3] = bin2fasta ($newcall);
 	}
     }
     print map { join ("\t", @$_) . "\n" } @snpref;
