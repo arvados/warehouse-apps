@@ -2,6 +2,7 @@
 
 use strict;
 
+$ENV{KNOB_SNPCALL_MIN_COVER} ||= 10;
 $ENV{KNOB_SNPCALL_MIN_STARTS} ||= 2;
 die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
 
@@ -127,8 +128,10 @@ sub print_snpskeptic
 
 	my $sk = $snpskeptic[$sr];
 	my @candidate_startsites = ({}, {}, {}, {}); # a,c,g,t
+	my $coverage = 0;
 	while (@$sk)
 	{
+	    ++$coverage;
 	    my ($candidate, $read_start_site) = splice @$sk, 0, 2;
 	    if (1 == ($candidate =~ tr/acgtACGT/01230123/))
 	    {
@@ -140,8 +143,13 @@ sub print_snpskeptic
 	{
 	    if (($maqcall & (1 << $candidate)) &&
 		($refbase & (1 << $candidate)) == 0 &&
-		$ENV{KNOB_SNPCALL_MIN_STARTS}
-		> scalar keys % { $candidate_startsites[$candidate] })
+		(
+		 $ENV{KNOB_SNPCALL_MIN_COVER} > $coverage
+		 ||
+		 $ENV{KNOB_SNPCALL_MIN_STARTS}
+		 > scalar keys % { $candidate_startsites[$candidate] }
+		 )
+		)
 	    {
 		$newcall &= ~(1 << $candidate);
 	    }
