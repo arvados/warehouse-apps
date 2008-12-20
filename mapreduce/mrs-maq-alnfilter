@@ -2,6 +2,7 @@
 
 use strict;
 
+$ENV{KNOB_SNPCALL_MIN_STARTS} ||= 2;
 die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
 
 open R, "-|", "bash -c 'set -o pipefail; whget \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf'"
@@ -15,14 +16,24 @@ while (<R>)
 close R;
 
 @snpref = sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snpref;
+my @snpskeptic = map { [] } @snpref;
+
+my $want_snpskeptic = $ENV{KNOB_WANT_SNPS};
+my $srmin = 0;
+my $srmax = 0;
 
 while(<>)
 {
     my @in = split;
     if ($in[1] =~ /^chr/)
     {
-	my ($readid, $chr, $pos, @aln) = split;
-	print if findsnpref ($chr, $pos, $pos + $aln[-3] - 1);
+	my (@aln) = split;
+	my ($readid, $chr, $pos) = @aln;
+	if (findsnpref ($chr, $pos, $pos + $aln[-3] - 1, @aln))
+	{
+	    print;
+	    feed_snpskeptic ($srmin, @aln) if $want_snpskeptic;
+	}
     }
     else
     {
@@ -30,12 +41,11 @@ while(<>)
 	print if findsnpref ($chr, $pos, $pos);
     }
 }
+print_snpskeptic() if $want_snpskeptic;
 
-my $srmin = 0;
-my $srmax = 0;
 sub findsnpref
 {
-    my ($chr, $startpos, $endpos) = @_;
+    my ($chr, $startpos, $endpos, @alignment) = @_;
 
     # srmin left over from the previous search already points to the
     # next interesting position after the previous read's startpos.
@@ -94,4 +104,81 @@ sub findsnpref
     return ($chr eq $snpref[$srmin]->[0]
 	    && $startpos <= $snpref[$srmin]->[1]
 	    && $endpos >= $snpref[$srmin]->[1]);
+}
+
+sub feed_snpskeptic
+{
+    my ($snpindex, @alignment) = @_;
+    my $read_start_site = $alignment[2];
+    my $read_pos = $snpref[$snpindex]->[1] - $read_start_site;
+    my $basecall = substr ($alignment[-2], $read_pos, 1);
+    push @ { $snpskeptic[$snpindex] }, $basecall, $read_start_site;
+}
+
+sub print_snpskeptic
+{
+    for (my $sr = 0; $sr <= $#snpref; $sr++)
+    {
+	next if $snpref[$sr]->[3] eq "N";
+
+	my $refbase = fasta2bin ($snpref[$sr]->[2]);
+	my $maqcall = fasta2bin ($snpref[$sr]->[3]);
+#printf STDERR "$sr refbase %s $refbase maqcall %s $maqcall\n", $snpref[$sr]->[2], $snpref[$sr]->[3];
+	next if $refbase == $maqcall;
+
+	my $sk = $snpskeptic[$sr];
+	my @candidate_startsites = ({}, {}, {}, {}); # a,c,g,t
+	while (@$sk)
+	{
+	    my ($candidate, $read_start_site) = splice @$sk, 0, 2;
+	    if (1 == ($candidate =~ tr/acgtACGT/01230123/))
+	    {
+		$candidate_startsites[$candidate]->{$read_start_site}++;
+#print STDERR "$sr ref $refbase maqcall $maqcall candidate $candidate start $read_start_site\n";
+	    }
+	}
+	my $newcall = $maqcall;
+	for my $candidate (0..3)
+	{
+	    if (($maqcall & (1 << $candidate)) &&
+		($refbase & (1 << $candidate)) == 0 &&
+		$ENV{KNOB_SNPCALL_MIN_STARTS}
+		> scalar keys % { $candidate_startsites[$candidate] })
+	    {
+		$newcall &= ~(1 << $candidate);
+	    }
+	}
+	if ($maqcall != $newcall)
+	{
+	    $newcall = bin2fasta ($newcall);
+	    printf STDERR
+		("downgraded %s to %s\n",
+		 $snpref[$sr]->[3],
+		 $newcall,
+		 );
+	    $snpref[$sr]->[3] = $newcall;
+	}
+    }
+    print map { join ("\t", @$_) . "\n" } @snpref;
+}
+
+sub fasta2bin
+{
+    my $x = shift;
+    return "N" if $x =~ /^N/;
+    $x =~ tr/a-z/A-Z/;
+    $x =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
+    $x = hex($x);
+    while ($x & ~0xf)
+    {
+	$x = ($x & 0xf) | ($x >> 4);
+    }
+    return $x;
+}
+
+sub bin2fasta
+{
+    my $x = sprintf ("%x", shift);
+    $x =~ tr/0123456789abcdef/XACMGRSVTWYHKDBN/;
+    return $x;
 }
