@@ -46,7 +46,7 @@ my %new_job_id;
 
 
 opendir (D, $workdir) or die "$workdir: $!";
-for my $workfile (readdir D)
+for my $workfile (sort readdir D)
 {
     next if $workfile =~ /\./;
     next if $workfile !~ /^[0-9a-f]{32}/;
@@ -450,7 +450,7 @@ sub buildbigmanifest
 	}
     }
     $bigmanifest =~ s{^(\S+ (\S+).*:)-\n}{
-	$1 . "reads.txt" . (block_is_gz($2) ? ".gz" : "") . "\n";
+	$1 . "reads.txt" . (block_is_binary($2) ? ".gz" : "") . "\n";
     }e;
     $bigmanifest =~ s/\n.{600}.*?:cns\.fq\.txt\n/\n/;
     $bigmanifesthash = $whc->store_block (\$bigmanifest);
@@ -482,17 +482,17 @@ sub blockhash_with_size
     return $blockhash;
 }
 
-sub block_is_gz
+sub block_is_binary
 {
     my ($blockhash) = @_;
     my ($md5) = $blockhash =~ /^([0-9a-f]{32})/;
-    my $is_gz = readlink "$workdir/datablocks/$md5.gzip";
-    return $is_gz if defined $is_gz;
+    my $is_binary = readlink "$workdir/datablocks/$md5.isbinary";
+    return $is_binary if defined $is_binary;
 
     my $data = $whc->fetch_block ($blockhash);
-    $is_gz = ($data =~ /^[ -\177]{1024}/) ? 1 : 0;
-    symlink $is_gz, "$workdir/datablocks/$md5.gzip";
-    return $is_gz;
+    $is_binary = ($data !~ /^[ -\177]{1024}/) ? 1 : 0;
+    symlink $is_binary, "$workdir/datablocks/$md5.isbinary";
+    return $is_binary;
 }
 
 sub buildoutputs
