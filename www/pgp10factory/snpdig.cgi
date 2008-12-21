@@ -20,94 +20,154 @@ print CGI->header (-cookie => [session::togo()]);
 
 my $whc = new Warehouse;
 
-my ($hash, $wantfile) = $ENV{PATH_INFO} =~ m{([0-9a-f]{32})(/\S+)?};
+my @snplists = map {
+    [ m{^/?(.*?)([0-9a-f]{32})(/\S+)?} ];
+    # eg. {hash}/snplist.tab
+    # eg. agrees-{hash}/snplist.tab
+    # eg. disagrees-{hash}/snplist.tab
+    # eg. isin-{hash}/snplist.tab
+} split (/;/, $ENV{PATH_INFO});
 
 my $targetcolumn;
 
-my $m = new Warehouse::Manifest (whc => $whc, key => $hash);
-while (my $s = $m->subdir_next)
+my @callfilters;
+while (@snplists)
 {
-    $s->rewind;
-    my $subdir = $s->name;
-    while (my ($pos, $size, $file) = $s->file_next)
+    my ($filtertype, $hash, $wantfile) = @ { pop @snplists };
+    my $m = new Warehouse::Manifest (whc => $whc, key => $hash);
+    while (my $s = $m->subdir_next)
     {
-	last if !defined $pos;
-	next if length ($wantfile) && ".$wantfile" ne "$subdir/$file";
-
-	# read alignments and snp calls
-
-	my @calls;
-	my @aligns;
-
-	$s->seek ($pos);
-	my $line = 0;
-	while (my $dataref = $s->read_until ($pos + $size, "\n"))
+	$s->rewind;
+	my $subdir = $s->name;
+	while (my ($pos, $size, $file) = $s->file_next)
 	{
-	    ++$line;
-	    chomp $$dataref;
-	    if ($$dataref =~ /^(\S+) \t (\d+) \t [A-Z]\S* \t [A-Z]\S* \t /x)
+	    last if !defined $pos;
+	    next if length ($wantfile) && ".$wantfile" ne "$subdir/$file";
+
+	    # read alignments and snp calls
+
+	    my @calls;
+	    my @aligns;
+
+	    $s->seek ($pos);
+	    my $line = 0;
+	    while (my $dataref = $s->read_until ($pos + $size, "\n"))
 	    {
-		push @calls, [ $1, $2, $$dataref ];
-	    }
-	    elsif ($$dataref =~ /^ \S+ \t (\S+) \t (\d+) \t [-\+] \t 
-				.* \t (\d+) \t (\S+) \t \S+$/x
-		   && $3 == length $4)
-	    {
-		push @aligns, [ $1, $2, $2 + $3 - 1, $$dataref ];
-		$targetcolumn ||= $3;
-	    }
-	    else
-	    {
+		++$line;
+		chomp $$dataref;
+		if ($$dataref =~ /^(\S+) \t (\d+) \t
+				   [A-Z]\S* \t [A-Z]\S* \t /x)
+		{
+		    push @calls, [ $1, $2, $$dataref ];
+		    next;
+		}
+		elsif ($$dataref =~ /^\S+ \t (\S+) \t (\d+) \t [-\+] \t
+				      .* \t (\d+) \t (\S+) \t \S+$/x
+		       && $3 == length $4)
+		{
+		    if (!@snplists)
+		    {
+			push @aligns, [ $1, $2, $2 + $3 - 1, $$dataref ];
+			$targetcolumn ||= $3;
+		    }
+		    next;
+		}
 		die "$0 $hash $subdir/$file line $line noparse $$dataref\n";
 	    }
-	}
 
-	# sort
+	    # sort
 
-	@calls = sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @calls;
-	@aligns = sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @aligns;
+	    @calls = sort
+	    { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @calls;
 
-	# merge
+	    @aligns = sort
+	    { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @aligns;
 
-	for (@calls)
-	{
-	    my ($chr, $pos, $inrec) = @$_;
-	    my ($refbase, $callbase) = $inrec =~ /^\S+\s\d+\s(\S+)\s(\S+)/;
+	    # if this is just a filter (ie. not the first snplist specified)...
 
-	    my $got;
-	    my $html;
-	    $html = qq{<a name="$chr,$pos"><code>$inrec</code></a>\n};
-
-	    shift @aligns while ($chr gt $aligns[0]->[0]);
-	    shift @aligns while ($chr eq $aligns[0]->[0] &&
-				 $pos > $aligns[0]->[2]);
-	    for (my $a = 0;
-		 $a <= $#aligns &&
-		 $chr eq $aligns[$a]->[0] &&
-		 $pos >= $aligns[$a]->[1];
-		 $a++)
+	    if (@snplists)
 	    {
-		if ($pos <= $aligns[$a]->[2])
+		unshift @callfilters, [ $filtertype, @calls ];
+		next;
+	    }
+
+	    # merge
+
+	  CALL:
+	    for (@calls)
+	    {
+		my ($chr, $pos, $inrec) = @$_;
+		my ($refbase, $callbase) = $inrec =~ /^\S+\s\d+\s(\S+)\s(\S+)/;
+		my @filterrecs;
+
+		for my $callfilter (@callfilters)
 		{
+		    splice @$callfilter, 1, 1
+			while ($chr gt $callfilter->[1]->[0]
+			       ||
+			       ($chr eq $callfilter->[1]->[0] &&
+				$pos > $callfilter->[1]->[1]));
+		    my $has = ($chr eq $callfilter->[1]->[0] &&
+			       $pos == $callfilter->[1]->[1]);
+
+		    next CALL if !$has && $callfilter->[0] eq "isin";
+		    next CALL if !$has;
+
+		    my ($filterbase)
+			= $callfilter->[1]->[2] =~ /^\S+\s\d+\s\S+\s(\S+)/;
+		    
+		    my $agree = (fasta2bin ($callbase)
+				 & fasta2bin ($filterbase));
+		    my $ignore = ($callbase =~ /^[NX]/ ||
+				  $filterbase =~ /^[NX]/);
+		    my $disagree = !$agree && !$ignore;
+		    $agree &&= !$ignore;
+		    next CALL if $callfilter->[0] eq "agree-" && !$agree;
+		    next CALL if $callfilter->[0] eq "disagree-" && !$disagree;
+
+		    push @filterrecs, $callfilter->[1]->[2];
+		}
+
+		my $got;
+		my $html;
+		$html = qq{<a name="$chr,$pos"><code><b>$inrec</b></code></a>\n};
+		$html .= join ("", map { "<br><code>".$q->escapeHTML($_)."</code>" } @filterrecs);
+
+		shift @aligns while ($chr gt $aligns[0]->[0]);
+		shift @aligns while ($chr eq $aligns[0]->[0] &&
+				     $pos > $aligns[0]->[2]);
+		for (my $a = 0;
+		     $a <= $#aligns &&
+		     $chr eq $aligns[$a]->[0] &&
+		     $pos >= $aligns[$a]->[1];
+		     $a++)
+		{
+		    next unless ($pos <= $aligns[$a]->[2]);
+
 		    $html .= qq{<pre>} if !$got;
 		    $got = 1;
 		    $html .=
 			&ascii_art ($pos, $refbase, $callbase, $aligns[$a]);
 		}
-	    }
-	    $html .= sprintf ("%*s%*s</pre>",
-			      $targetcolumn+1, "*",
-			      $targetcolumn+8, "*",
-			      ) if $got;
-	    $html .= "<br />" if !$got;
+		if ($got)
+		{
+		    $html .= sprintf ("%*s%*s</pre>",
+				      $targetcolumn+1, "*",
+				      $targetcolumn+8, "*");
+		}
+		else
+		{
+		    $html .= "<br />";
+		}
 
-	    if ($callbase ne $refbase &&
-		$callbase ne "N" &&
-		$callbase ne "X")
-	    {
-		$html = qq{<div style="background: #ffc;">$html</div>};
+		if ($callbase ne $refbase &&
+		    $callbase ne "N" &&
+		    $callbase ne "X")
+		{
+		    $html = qq{<div style="background: #ffc;">$html</div>};
+		}
+		print $html."\n";
 	    }
-	    print $html."\n";
 	}
     }
 }
