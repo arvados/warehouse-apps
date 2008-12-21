@@ -9,9 +9,10 @@ my @y = @ARGV or die "usage: $0 snplist sniplist ... -- snplist snplist ...\n";
 
 print "<PRE>";
 my @xlists;
+printf "%13s", "";
 for my $xfile (@x)
 {
-    print "\t".unique_part ($xfile, @x);
+    printf "%13s", unique_part ($xfile, @x);
     push @xlists, readsnplist ($xfile);
 }
 my @xhash = map { readlink($_) =~ /([0-9a-f]{32})/ } @x;
@@ -20,7 +21,7 @@ my @links;
 print "\n";
 for my $yfile (@y)
 {
-    print scalar unique_part ($yfile, @y);
+    printf "%13s", unique_part ($yfile, @y);
     my $ylist_orig = readsnplist ($yfile);
     my $yhash = shift @yhash;
     my @xscore;
@@ -85,7 +86,7 @@ for my $yfile (@y)
     for (my $xi=0; $xi <= $#xscore; $xi++)
     {
 	my $star = $xscore[$xi] > $xhighscore*.9;
-	print "\t".($star ? "*" : " ").$xscore[$xi];
+	printf "%13s", ($star ? "*" : " ").$xscore[$xi];
 	if ($star)
 	{
 	    my $xhash = $xhash[$xi];
