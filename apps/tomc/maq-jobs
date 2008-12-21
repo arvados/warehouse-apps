@@ -716,6 +716,7 @@ sub jsonjob
 		qq{<button id="retry-$id" onclick="pipeline_retryjob($id);">retry job</button>},
 		];
 	}
+	$x->{summary} = join (" ", $label, map { $job->{$_} } qw(id success outputkey metakey));
     }
     return $x;
 }
