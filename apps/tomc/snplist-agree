@@ -7,21 +7,28 @@ while (@ARGV && $ARGV[0] ne '--') { push @x, shift @ARGV }
 shift @ARGV;
 my @y = @ARGV or die "usage: $0 snplist sniplist ... -- snplist snplist ...\n";
 
+print "<PRE>";
 my @xlists;
 for my $xfile (@x)
 {
-    print "\t$xfile";
+    print "\t".unique_part ($xfile, @x);
     push @xlists, readsnplist ($xfile);
 }
+my @xhash = map { readlink($_) =~ /([0-9a-f]{32})/ } @x;
+my @yhash = map { readlink($_) =~ /([0-9a-f]{32})/ } @y;
+my @links;
 print "\n";
 for my $yfile (@y)
 {
-    print "$yfile";
+    print scalar unique_part ($yfile, @y);
     my $ylist_orig = readsnplist ($yfile);
+    my $yhash = shift @yhash;
     my @xscore;
     my $xhighscore;
-    for my $xlist_orig (@xlists)
+    for (my $xi=0; $xi <= $#xlists; $xi++)
     {
+	my $xlist_orig = $xlists[$xi];
+
 	my $xlist = [ @$xlist_orig ];
 	my $ylist = [ @$ylist_orig ];
 	my $xypoints = scalar @$xlist + scalar @$ylist;
@@ -49,14 +56,20 @@ for my $yfile (@y)
 		{
 		    $xypoints -= 2;
 		}
+		elsif ($xlist->[0]->[3] eq "X"
+		       ||
+		       $ylist->[0]->[3] eq "X")
+		{
+		    $xypoints -= 2;
+		}
 		elsif ($xlist->[0]->[3] eq
 		       $ylist->[0]->[3])
 		{
 		    # same bp at this position
 		    $points += 2;
 		}
-		elsif ($xlist->[0]->[3] &
-		       $ylist->[0]->[3] != 0)
+		elsif (($xlist->[0]->[3] &
+			$ylist->[0]->[3]) != 0)
 		{
 		    # some overlap in choices
 		    $points += 1;
@@ -69,9 +82,22 @@ for my $yfile (@y)
 	push @xscore, $score;
 	$xhighscore = $score if $xhighscore < $score;
     }
-    print map { "\t".($_ > $xhighscore*.9 ? "*" : " ")."$_" } @xscore;
+    for (my $xi=0; $xi <= $#xscore; $xi++)
+    {
+	my $star = $xscore[$xi] > $xhighscore*.9;
+	print "\t".($star ? "*" : " ").$xscore[$xi];
+	if ($star)
+	{
+	    my $xhash = $xhash[$xi];
+	    my $label = &unique_part ($yfile, @y)
+		. " / " . &unique_part ($x[$xi], @x);
+	    push @links, qq{$label - <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">agree</a> / <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">disagree</a>};
+	}
+    }
     print "\n";
 }
+print "</pre>";
+print "<UL>\n<LI>".join("</LI>\n<LI>", @links)."</LI>\n</UL>";
 
 sub readsnplist
 {
@@ -81,16 +107,18 @@ sub readsnplist
     while (<IN>)
     {
 	chomp;
-	my ($chr, $pos, $refbp, $seqbp) = split (/\t/, $_, 5);
-	push @snplist, [$chr, $pos, $refbp, fasta_flatten ($seqbp)];
+	my ($chr, $pos, $refbp, $seqbp, $extra) = split (/\t/, $_, 5);
+	push @snplist, [$chr, $pos, $refbp, fasta2bin ($seqbp), $extra]
+	    if ($pos =~ /^\d+$/ && $refbp =~ /^.$/);
     }
     return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
 }
 
-sub fasta_flatten
+sub fasta2bin
 {
     my $fasta = shift;
     return "N" if $fasta =~ /^N/;
+    return "X" if $fasta eq "X";
     $fasta =~ tr/a-z/A-Z/;
     $fasta =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
     $fasta = hex($fasta);
@@ -99,7 +127,26 @@ sub fasta_flatten
 	$fasta = ($fasta & 0xf) | ($fasta >> 4);
     }
     return $fasta;
-    $fasta = sprintf ("%x", $fasta);
-    $fasta =~ tr/0123456789abcdef/XACMGRSVTWYHKDBN/;
-    return $fasta;
+}
+
+sub bin2fasta
+{
+    my $x = shift;
+    $x = sprintf ("%x", $x);
+    $x =~ tr/0123456789abcdef/XACMGRSVTWYHKDBN/;
+    return $x;
+}
+
+sub unique_part
+{
+    my $this = shift;
+    my $thislen = length($this);
+    my $ustart = $thislen;
+    my $uend = $thislen;
+    for (@_)
+    {
+	$ustart-- while substr ($this, 0, $ustart) ne substr ($_, 0, $ustart);
+	$uend-- while $uend && substr ($this, $thislen-$uend) ne substr ($_, length($_)-$uend);
+    }
+    return substr ($this, $ustart, $thislen - $uend - $ustart);
 }
