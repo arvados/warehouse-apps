@@ -79,6 +79,7 @@ function pipeline_layout_stash()
 	     $('pipeline_cell_'+i).style.display != 'none';
 	 i++)
 	layout.push ({
+		id: $('pipeline_id_'+i).innerHTML,
 		reads: $('selectedreads_'+i).value,
 		genome: $('selectedgenome_'+i).value,
 		position: i
