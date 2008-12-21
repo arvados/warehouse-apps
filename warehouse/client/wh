@@ -34,7 +34,7 @@ map { $opt{$1} = $2 if /(.+?)=(.*)/s } @ARGV;
 # into a proper newline here, which is what the new_job warehouse function
 # expects. If you need to include spaces in knobs, submit the knobs as
 # separate opts like FOO="bar baz" instead of knobs="FOO=bar baz".
-$opt{'knobs'} =~ s/ /\n/g;
+$opt{'knobs'} =~ s/ /\n/g if exists $opt{'knobs'};
 
 my $whc;
 $whc = new Warehouse ($opt{warehouse_name}
@@ -145,8 +145,26 @@ sub job_show
 	}
 	@fieldlist = qw(inputkey revision mrfunction stepspernode knobs)
 	    if !@fieldlist;
+      J:
 	foreach my $j (@$joblist)
 	{
+	    for (keys %opt)
+	    {
+		if (!/^id(_min|_max|)$/)
+		{
+		    if (/^[A-Z]/)
+		    {
+			if ($j->{knobs} !~ /(^|\\n)\Q$_=$opt{$_}\E(\\n|$ )/x)
+			{
+			    next J;
+			}
+		    }
+		    elsif ($opt{$_} ne $j->{$_})
+		    {
+			next J;
+		    }
+		}
+	    }
 	    my @out;
 	    foreach (@fieldlist)
 	    {
