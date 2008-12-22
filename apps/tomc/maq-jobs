@@ -575,6 +575,7 @@ sub start_new_job
 		   "knobs" => $want->{knobs},
 	);
     $jobspec{stepspernode} = $want->{stepspernode} if $want->{stepspernode};
+    $jobspec{knobs} =~ s/\\(.)/$1 eq "n" ? "\n" : $1/ge;
     my $printable_jobspec
 	= join ("", map { "    $_=$jobspec{$_}\n" } sort keys %jobspec);
     $printable_jobspec =~ s/\n(\S)/\n          $1/gs;
