@@ -21,7 +21,9 @@ my $r = getnextr() or die "no reference data";
 while (<STDIN>)
 {
     next unless /^\d/;
-    chomp;
+    s/\r?\n$//;
+    s/Mapping Analysis$//;	# concatenated files with no newline at end
+
     my (@in) = split (/\t/);
     my ($sid, $AB) = @in[1,9];
 
