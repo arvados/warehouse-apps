@@ -21,11 +21,13 @@ print CGI->header (-cookie => [session::togo()]);
 my $whc = new Warehouse;
 
 my @snplists = map {
-    [ m{^/?(.*?)([0-9a-f]{32})(/\S+)?} ];
+    [ m{^/?(.*?)([0-9a-f]{32})?(/\S+)?$} ];
     # eg. {hash}/snplist.tab
     # eg. agrees-{hash}/snplist.tab
     # eg. disagrees-{hash}/snplist.tab
     # eg. isin-{hash}/snplist.tab
+    # eg. hom-agrees-{hash}/snplist.tab
+    # eg. het-disagrees-{hash}/snplist.tab
 } split (/;/, $ENV{PATH_INFO});
 
 my $targetcolumn;
@@ -34,6 +36,13 @@ my @callfilters;
 while (@snplists)
 {
     my ($filtertype, $hash, $wantfile) = @ { pop @snplists };
+
+    if (!defined $hash)
+    {
+	unshift @callfilters, [ $filtertype ];
+	next;
+    }
+
     my $m = new Warehouse::Manifest (whc => $whc, key => $hash);
     while (my $s = $m->subdir_next)
     {
@@ -100,6 +109,9 @@ while (@snplists)
 		my ($refbase, $callbase) = $inrec =~ /^\S+\s\d+\s(\S+)\s(\S+)/;
 		my @filterrecs;
 
+		next CALL if $filtertype =~ /\bhet-/ && !is_het($callbase);
+		next CALL if $filtertype =~ /\bhom-/ && !is_hom($callbase);
+
 		for my $callfilter (@callfilters)
 		{
 		    splice @$callfilter, 1, 1
@@ -110,22 +122,24 @@ while (@snplists)
 		    my $has = ($chr eq $callfilter->[1]->[0] &&
 			       $pos == $callfilter->[1]->[1]);
 
-		    next CALL if !$has && $callfilter->[0] eq "isin";
-		    next CALL if !$has;
+		    next CALL if !$has && $callfilter->[0] =~ "\bisin-";
 
 		    my ($filterbase)
 			= $callfilter->[1]->[2] =~ /^\S+\s\d+\s\S+\s(\S+)/;
 		    
 		    my $agree = (fasta2bin ($callbase)
-				 & fasta2bin ($filterbase));
+				 == fasta2bin ($filterbase));
 		    my $ignore = ($callbase =~ /^[NX]/ ||
-				  $filterbase =~ /^[NX]/);
+				  $filterbase =~ /^[NX]/ ||
+				  !$has);
 		    my $disagree = !$agree && !$ignore;
 		    $agree &&= !$ignore;
-		    next CALL if $callfilter->[0] eq "agree-" && !$agree;
-		    next CALL if $callfilter->[0] eq "disagree-" && !$disagree;
+		    next CALL if $callfilter->[0] =~ /\bagree-/ && !$agree;
+		    next CALL if $callfilter->[0] =~ /\bdisagree-/ && !$disagree;
+		    next CALL if $callfilter->[0] =~ /\bhet-/ && !is_het($filterbase);
+		    next CALL if $callfilter->[0] =~ /\bhom-/ && !is_hom($filterbase);
 
-		    push @filterrecs, $callfilter->[1]->[2];
+		    push @filterrecs, $callfilter->[1]->[2] if $has;
 		}
 
 		my $got;
@@ -206,4 +220,16 @@ sub fasta2bin
 	$x = ($x & 0xf) | ($x >> 4);
     }
     return $x;
+}
+
+sub is_het
+{
+    my $x = fasta2bin (@_);
+    $x !~ /^(0|1|2|4|8|15)$/;
+}
+
+sub is_hom
+{
+    my $x = fasta2bin (@_);
+    $x =~ /^(1|2|4|8)$/;
 }
