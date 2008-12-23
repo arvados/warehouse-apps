@@ -17,13 +17,16 @@ print $q->header (-type => "text/plain",
 		  -cookie => [session::togo()]);
 my $sessionid = session::id();
 
-
-my @pipelinespec = ("pipeline=maq");
-for (qw(reads genome))
+my @pipelinespec;
+my @pipelinetype = split (":", $q->param ("pipeline"));
+my @pipelinespec = ("pipeline=".shift @pipelinetype);
+for (my $i=0; $i <= $#pipelinetype; $i+=2)
 {
-    push @pipelinespec, "$_=".$q->param ($_);
+    if ($q->param ($pipelinetype[$i]))
+    {
+	push @pipelinespec, $pipelinetype[$i]."=".$q->param ($pipelinetype[$i]);
+    }
 }
-push @pipelinespec, "sol2bfq/INPUTFORMAT=std" if $q->param ("std");
 
 my $spec = join ("\n", @pipelinespec)."\n";
 my $specmd5 = md5_hex ($spec);

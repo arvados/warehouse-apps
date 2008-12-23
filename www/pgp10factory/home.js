@@ -53,6 +53,9 @@ function fewerpipelines()
 	 i++)
 	if ($('pipeline_cell_'+i).style.display == 'none') {
 	    $('pipeline_cell_'+(i-1)).style.display = 'none';
+	    $('selectpipelinetype_'+(i-1)).value = '';
+	    select_selectors(i-1);
+	    pipeline_request(i-1);
 	    break;
 	}
     pipeline_layout_stash();
@@ -78,12 +81,16 @@ function pipeline_layout_stash()
 	     $('pipeline_cell_'+i) &&
 	     $('pipeline_cell_'+i).style.display != 'none';
 	 i++)
-	layout.push ({
-		id: $('pipeline_id_'+i).innerHTML,
-		reads: $('selectedreads_'+i).value,
-		genome: $('selectedgenome_'+i).value,
-		position: i
-		    });
+	{
+	    layout.push ({
+		    id: $('pipeline_id_'+i).innerHTML,
+		    position: i
+			});
+	    var ptype = $('selectpipelinetype_'+i).value.split (":");
+	    layout[i].pipelinetype = ptype[0];
+	    for (var what=1; what<ptype.length; what+=2)
+		layout[i][ptype[what]] = $('selected'+ptype[what]+'_'+i).value;
+	}
     var newjson = layout.toJSON();
     if (newjson != $('layout_stash').value) {
 	$('layout_stash').value = newjson;
@@ -106,20 +113,32 @@ function pipeline_layout_save()
 
 function pipeline_submit(position)
 {
-    $('selectedreads_'+position).value = $('selectreads_'+position).value;
-    $('selectedgenome_'+position).value = $('selectgenome_'+position).value;
+    var ptype = $('selectpipelinetype_'+position).value.split (":");
+    for (var what=1; what<ptype.length; what+=2)
+	$('selected'+ptype[what]+'_'+position).value = $('select'+ptype[what]+'_'+position).value;
     pipeline_layout_stash();
     pipeline_request(position);
 }
 
 function pipeline_request(position)
 {
+    var ptype = $('selectpipelinetype_'+position).value.split (":");
+    var parameters = { position: position, pipeline: $('selectpipelinetype_'+position).value };
+
+    $('pipeline_id_'+position).update();
+    $('result_content_'+position).update();
+    $('renderhash_'+position).value = '';
+    $('pipeline_download_'+position).update();
+    $('pipeline_message_'+position).update();
+
+    if (!ptype[0].length)
+	return;
+
+    for (var what=1; what<ptype.length; what+=2)
+	if ($('selected'+ptype[what]+'_'+position).value)
+	    parameters[ptype[what]] = $('selected'+ptype[what]+'_'+position).value;
     new Ajax.Request('ajax-add-pipeline.cgi', {
-	    parameters: {
-		reads: $('selectedreads_'+position).value,
-		genome: $('selectedgenome_'+position).value,
-		position: position
-		    },
+	    parameters: parameters,
 	    onSuccess: function(response) {
 		var json = response.responseText.evalJSON();
 		var position = response.request.parameters.position;
@@ -127,8 +146,6 @@ function pipeline_request(position)
 		pipeline_update (response);
 	    }
     });
-    $('result_content_'+position).update();
-    $('renderhash_'+position).value = '';
 }
 
 function pipeline_check(pe, position)
@@ -170,9 +187,24 @@ function enable_updatebutton(position)
     $('updatebutton_'+position).disabled=false;
 }
 
+function select_selectors(position)
+{
+    var ptype = $('selectpipelinetype_'+position).value.split (":");
+    var selectors = '';
+    for (var i=1; i<ptype.length; i+=2)
+	{
+	    selectors += '<select id="select'+ptype[i]+'_'+position+'" name="'+ptype[i]+'_'+position+'" size="1" onclick="select_populate('+position+', \''+ptype[i]+'\', \''+ptype[i+1]+'\');" onchange="enable_updatebutton('+position+');"><option value="">Select '+ptype[i]+'</option></select><br />';
+	    selectors += '<input type="hidden" id="selected'+ptype[i]+'_'+position+'" name="selected'+ptype[i]+'_'+position+'" />';
+	}
+    $('selectors_'+position).update (selectors);
+}
+
 function home_update(pe)
 {
-    for (var i=0; $('pipeline_id_'+i); i++)
+    for (var i=0;
+	 $('pipeline_id_'+i)
+	     && $('pipeline_cell_'+i).style.display != 'none';
+	 i++)
 	pipeline_check(pe, i);
     download_check(pe);
     if (!pe.save_buttons_showing)
@@ -233,21 +265,24 @@ function comment_save(datahash)
     });
 }
 
-function select_populate(position, withwhat)
+function select_populate(position, what, withwhat, defaultvalue)
 {
-    var widget = 'select'+withwhat+'_'+position;
-    var stash = 'selected'+withwhat+'_'+position;
-    if ($(widget).value != '')
+    var widget = 'select'+what+'_'+position;
+    var stash = 'selected'+what+'_'+position;
+    if (!$(stash) || !$(widget))
 	return;
+    if (!$(stash).value && defaultvalue)
+	$(stash).value = defaultvalue;
+    if ($(widget).value)
+	defaultvalue = $(widget).value;
     new Ajax.Request ('ajax-get.cgi', {
 	    method: 'post',
-	    parameters: { what: withwhat, widget: widget, stash: stash, as: 'select' },
+	    parameters: { what: withwhat, widget: widget, as: 'select', value: defaultvalue },
 	    onSuccess:
 	    function(response)	{
 		var widget = response.request.parameters.widget;
-		var stash = response.request.parameters.stash;
 		$(widget).innerHTML = response.responseText;
-		$(widget).value = $(stash).value;
+		$(widget).value = response.request.parameters.value;
 	    }
     });
 }
@@ -264,14 +299,31 @@ function initialize_from_layout_stash()
 	if (i >= layout.length)
 	    $('pipeline_cell_'+i).style.display = 'none';
 	else {
-	    if (layout[i].reads != '' && layout[i].genome != '') {
-		$('selectedreads_'+i).value = layout[i].reads;
-		$('selectedgenome_'+i).value = layout[i].genome;
-		select_populate(i, 'reads');
-		select_populate(i, 'genome');
-		pipeline_request(i);
+	    if (!layout[i].pipelinetype &&
+		layout[i].pipelinetype != '' &&
+		layout[i].reads != '' &&
+		layout[i].genome != '') {
+		layout[i].pipelinetype = 'maq';
 	    }
-	    $('pipeline_cell_'+i).style.display = '';
+	    var wanttype = '' + layout[i].pipelinetype + ':';
+	    var ptype_string = undefined;
+	    for (var oi=0;
+		 !ptype_string
+		     && oi < $('selectpipelinetype_'+i).options.length;
+		 oi++)
+		if ($('selectpipelinetype_'+i).options[oi].value.substr
+		    (0, wanttype.length)
+		    == wanttype)
+		    ptype_string = $('selectpipelinetype_'+i).options[oi].value;
+	    if (ptype_string) {
+		$('selectpipelinetype_'+i).value = ptype_string;
+		select_selectors (i);
+		var ptype = ptype_string.split(':');
+		for (var s=1; s<ptype.length; s+=2)
+		    select_populate(i, ptype[s], ptype[s+1], layout[i][ptype[s]]);
+		pipeline_request(i);
+		$('pipeline_cell_'+i).style.display = '';
+	    }
 	}
     }
     panel_showhide ('build');

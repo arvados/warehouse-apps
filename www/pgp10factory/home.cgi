@@ -90,10 +90,17 @@ for (my $PID = 0; $PID < 16; $PID++)
     print qq{
 <td valign="top" id="pipeline_cell_$PID"$hiddenstyle>
 <p>
-<select id="selectreads_$PID" name="reads_$PID" size="1" onclick="select_populate($PID, 'reads');" onchange="enable_updatebutton($PID);"><option value="">Select reads</option></select><br />
-<select id="selectgenome_$PID" name="genome_$PID" size="1" onclick="select_populate($PID, 'genome');" onchange="enable_updatebutton($PID);"><option value="">Select genome</option></select><br />
+<select id="selectpipelinetype_$PID" name="pipelinetype_$PID" size="1" onchange="select_selectors($PID);">
+<option value="">Choose pipeline</option>
+<option value="maq:reads:reads:genome:genome:affymap:affymap?">Place reads with Maq</option>
+<option value="affyscan:affyscan:affyscan:affymap:affymap:genome:genome">Xref affy scan</option>
+</select><br />
+<span id="selectors_$PID">
+</span>
 <input type="hidden" id="selectedreads_$PID" name="selectedreads_$PID" />
 <input type="hidden" id="selectedgenome_$PID" name="selectedgenome_$PID" />
+<input type="hidden" id="selectedaffyscan_$PID" name="selectedaffyscan_$PID" />
+<input type="hidden" id="selectedaffymap_$PID" name="selectedaffymap_$PID" />
 <input type="hidden" id="renderhash_$PID" name="renderhash_$PID" />
 <button id="updatebutton_$PID" onclick="pipeline_submit($PID);">Update</button>
 </p>

@@ -59,6 +59,18 @@ for (sort keys %todo)
 	    {
 		++$objects{genomes}->{$datahash};
 	    }
+	    elsif (-e "$workdir/$datahash.isaffymap")
+	    {
+		++$objects{affymaps}->{$datahash};
+	    }
+	    elsif (-e "$workdir/$datahash.isaffyscan")
+	    {
+		++$objects{affyscans}->{$datahash};
+	    }
+	    elsif (-e "$workdir/$datahash.islayout")
+	    {
+		++$objects{layouts}->{$datahash};
+	    }
 	    elsif (-e "$workdir/$datahash.ispipeline")
 	    {
 		++$objects{pipelines}->{$datahash};
@@ -77,7 +89,7 @@ for (sort keys %todo)
 
 print qq{<table class="manage_data">};
 
-foreach my $obtype (qw(reads genomes pipelines unknown pending))
+foreach my $obtype (qw(reads genomes affymaps affyscans layouts pipelines unknown pending))
 {
     my @hashes = sort keys % { $objects{$obtype} };
     print qq{<tr><th colspan="4">$obtype</th></tr>};

@@ -71,6 +71,32 @@ foreach my $hash (sort keys %hash_is)
 	    close F;
 	    print "$hash is fasta genome\n";
 	}
+	elsif ($chunk =~ /^Mapping Analysis\r?\n\tSNP ID\tTSC ID\tdbSNP RS ID\tChromosome\tChromosomal Location\t.*\t\d+[SN]_(\S+).*\r?\n\d+\tSNP/s)
+	{
+	    my $affyscan_id = $1;
+	    sysopen F, "$workdir/$hash.isaffyscan", O_WRONLY|O_CREAT|O_EXCL;
+	    close F;
+	    sysopen F, "$workdir/$hash.comment", O_WRONLY|O_CREAT|O_EXCL;
+	    syswrite F, $affyscan_id;
+	    close F;
+	    print "$hash is affy scan, id is $affyscan_id\n";
+	}
+	elsif ($chunk =~ /\n\#%netaffx-annotation-tabular-format-version=1.0/)
+	{
+	    my %headinfo = $chunk =~ /\n\#%(\S+?)=([^\r\n]*)/g;
+	    my $affymap_id = ($headinfo{"netaffx-annotation-date"}
+			      . " " .
+			      $headinfo{"netaffx-annotation-netaffx-build"}
+			      . " " .
+			      ($headinfo{"genome-version-ncbi"} ||
+			       $headinfo{"genome-version"}));
+	    sysopen F, "$workdir/$hash.isaffymap", O_WRONLY|O_CREAT|O_EXCL;
+	    close F;
+	    sysopen F, "$workdir/$hash.comment", O_WRONLY|O_CREAT|O_EXCL;
+	    syswrite F, $affymap_id;
+	    close F;
+	    print "$hash is affy map, $affymap_id\n";
+	}
 	else
 	{
 	    sysopen F, "$workdir/$hash.isunknown", O_WRONLY|O_CREAT|O_EXCL;
@@ -79,3 +105,5 @@ foreach my $hash (sort keys %hash_is)
 	}
     }
 }
+
+__END__

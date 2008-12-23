@@ -28,5 +28,7 @@ if ((sysopen (F, "$workdir/$jsonhash.islayout", O_WRONLY|O_CREAT|O_EXCL) &&
     (open (F, "<", "$workdir/$jsonhash") &&
      scalar <F> eq $json))
 {
+    sysopen F, "./session/$sessionid/$jsonhash", O_WRONLY|O_CREAT|O_EXCL;
+    close F;
     print "$jsonhash";
 }

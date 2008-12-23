@@ -127,7 +127,7 @@ sub fillflow
 		     "REMOVE_LC=0",
 		    ),
 	      } );
-	my $inputpath = $flow->{in_manifest} ? "$in/" : "$in/=/$in.gz";
+	my $inputpath = $flow->{input_in_manifest} ? "$in/" : "$in/=/$in.gz";
 	$flow->{json}->{pipeline} = [ {
 	    label => "Convert to BFA",
 	    job => [
@@ -141,26 +141,26 @@ sub fillflow
     {
 	my $rhg18 = "99259f4330907e84fe7253bd4e52dd3e";
 	my $r55k = "f7703aadfb55c12127c4d51693c85587";
-	fillpipeline (make_pipeline_id("maq", $in, $rhg18),
-		      $in, $flow,
-		      { label => "sol/maq/hg18",
-			REFERENCE => $rhg18,
-			REFERENCEFILE => "homo_sapiens.bfa",
-		    } );
-	fillpipeline (make_pipeline_id("maq", $in, $r55k),
-		      $in, $flow,
-		      { label => "sol/maq/55k",
-			REFERENCE => $r55k,
-			REFERENCEFILE => "ref.bfa",
-		    } );
-	fillpipeline (make_pipeline_id("maq/std", $in, $rhg18),
+	maq_pipeline (make_pipeline_id("maq", $in, $rhg18),
+		     $in, $flow,
+		     { label => "sol/maq/hg18",
+		       REFERENCE => $rhg18,
+		       REFERENCEFILE => "homo_sapiens.bfa",
+		     } );
+	maq_pipeline (make_pipeline_id("maq", $in, $r55k),
+		     $in, $flow,
+		     { label => "sol/maq/55k",
+		       REFERENCE => $r55k,
+		       REFERENCEFILE => "ref.bfa",
+		     } );
+	maq_pipeline (make_pipeline_id("maq/std", $in, $rhg18),
 		      $in, $flow,
 		      { label => "std/maq/hg18",
 			REFERENCE => $rhg18,
 			REFERENCEFILE => "homo_sapiens.bfa",
 			sol2bfq => ["INPUTFORMAT=std"],
 		    } );
-	fillpipeline (make_pipeline_id("maq/std", $in, $r55k),
+	maq_pipeline (make_pipeline_id("maq/std", $in, $r55k),
 		      $in, $flow,
 		      { label => "std/maq/55k",
 			REFERENCE => $r55k,
@@ -192,10 +192,11 @@ sub fillflow
 		my $pipeline = {
 		    label => "maq",
 		    genome => $spec{"genome"},
+		    input => \%spec,
 		};
 		$pipeline->{sol2bfq} = ["INPUTFORMAT=std"]
 		    unless (-e "$workdir/".$spec{"reads"}.".issolexa");
-		fillpipeline ($in,
+		maq_pipeline ($in,
 			      $spec{"reads"},
 			      $flow,
 			      $pipeline);
@@ -203,6 +204,23 @@ sub fillflow
 	    else
 	    {
 		$flow->{json}->{message} = "Need to specify reads and genome";
+	    }
+	}
+	elsif ($whatpipeline eq "affyscan")
+	{
+	    if ($spec{"affyscan"} && $spec{"affymap"})
+	    {
+		my $pipeline = {
+		    label => "affyscan",
+		    input => \%spec,
+		};
+		affyscan_pipeline ($in,
+				   $flow,
+				   $pipeline);
+	    }
+	    else
+	    {
+		$flow->{json}->{message} = "Need to specify affyscan and affymap";
 	    }
 	}
 	else
@@ -232,13 +250,58 @@ sub fillflow
 	if $override{debug};
 }
 
-sub fillpipeline
+sub affyscan_pipeline
+{
+    my ($id, $flow, $pipeline) = @_;
+
+    my $me = $flow->{$pipeline->{label}} = {};
+
+    $me->{affy2snplist} = findjob
+	( { mrfunction => "filefilter",
+	    revision => [ 2581, ],
+	    inputkey => $pipeline->{input}->{affymap},
+	    knobs => makeknobs ("affy2snplist",
+				"COMMAND=mrs-affy2snplist",
+				"OUTPUTNAME=snplist.txt",
+				"CONCATENATE=1",
+				$pipeline->{input}->{genome}
+				? ("REFERENCE=".$pipeline->{input}->{genome}."/")
+				: (),
+		),
+	} ) unless $me->{affy2snplist};
+
+    $me->{affyscan2snplist} = findjob
+	( { mrfunction => "filefilter",
+	    revision => [ 2579, ],
+	    inputkey => $pipeline->{input}->{affyscan},
+	    knobs => makeknobs ("affyscan2snplist",
+				"COMMAND=mrs-affyscan2snplist",
+				"OUTPUTNAME=snplist.txt",
+				"SNPREFERENCE=".$me->{affy2snplist}->{outputkey}."/",
+		),
+	} ) unless $me->{affyscan2snplist} || !$me->{affy2snplist} || !$me->{affy2snplist}->{outputkey};
+
+    my $scan = $pipeline->{input}->{affyscan};
+    my $inputpath = $flow->{input_in_manifest} ? "$scan/" : "$scan/=/$scan.gz";
+    push (@ { $flow->{json}->{pipeline} },
+	  { label => $pipeline->{label},
+	    job => [
+		    jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
+		    jsonjob ("Prune Affy map", $me->{affy2snplist}),
+		    jsonjob ("Look up SNP IDs", $me->{affyscan2snplist}),
+		    ] } );
+
+    print "# finished ".$pipeline->{label}." $scan\n"
+	if $override{debug};
+}
+
+sub maq_pipeline
 {
     my ($id, $in, $flow, $pipeline) = @_;
 
     my $ref = $pipeline->{REFERENCE};
     my $reffile = $pipeline->{REFERENCEFILE};
-    my @jsonjob_reference;
+    my @jsonjobs;
 
     my $me = $flow->{$pipeline->{label}} = {};
 
@@ -261,7 +324,7 @@ sub fillpipeline
 	    $ref = $me->{fasta2bfa}->{outputkey};
 	    $reffile = "ref.bfa";
 	}
-	@jsonjob_reference = (jsonjob ("Prepare reference", $me->{fasta2bfa}));
+	push @jsonjobs, jsonjob ("Prepare reference", $me->{fasta2bfa});
     }
 
     $me->{sol2bfq} = findjob
@@ -273,6 +336,25 @@ sub fillpipeline
 				? @{$pipeline->{sol2bfq}} : (),
 		),
 	} ) unless $me->{sol2bfq};
+    push @jsonjobs, jsonjob ("Prepare reads", $me->{sol2bfq});
+
+    if ($pipeline->{input}->{affymap})
+    {
+	$me->{affy2snplist} = findjob
+	    ( { mrfunction => "filefilter",
+		revision => [ 2581, ],
+		inputkey => $pipeline->{input}->{affymap},
+		knobs => makeknobs ("affy2snplist",
+				    "COMMAND=mrs-affy2snplist",
+				    "OUTPUTNAME=snplist.txt",
+				    "CONCATENATE=1",
+				    $pipeline->{input}->{genome}
+				    ? ("REFERENCE=".$pipeline->{input}->{genome}."/")
+				    : (),
+		    ),
+	      } ) unless $me->{affy2snplist};
+	push @jsonjobs, jsonjob ("Filter affymap with reference", $me->{affy2snplist});
+    }
 
     if ($ref && $me->{sol2bfq} && $me->{sol2bfq}->{outputkey})
     {
@@ -287,6 +369,7 @@ sub fillpipeline
 		     "REFERENCEFILE=$reffile",
 		     ),
 		} ) unless $me->{map};
+	push @jsonjobs, jsonjob ("Map", $me->{map});
     }
     if ($me->{map} && $me->{map}->{outputkey})
     {
@@ -302,6 +385,7 @@ sub fillpipeline
 		     ),
 		} ) unless $me->{merge};
 	buildoutputs ($me, "merge", "mapcheck.txt");
+	push @jsonjobs, jsonjob ("Merge", $me->{merge});
     }
     if ($me->{merge} && $me->{merge}->{outputkey})
     {
@@ -315,6 +399,8 @@ sub fillpipeline
 		     ),
 		} ) unless $me->{mapview};
 	buildoutputs ($me, "mapview", "all.aln.txt");
+	push @jsonjobs, jsonjob ("Mapview", $me->{mapview});
+
 	$me->{assemble} = findjob
 	    ( { mrfunction => "maq-assemble",
 		revision => [ 2319, ],
@@ -326,6 +412,51 @@ sub fillpipeline
 		     "REFERENCEFILE=$reffile",
 		     ),
 		} ) unless $me->{assemble};
+	push @jsonjobs, jsonjob ("Assemble", $me->{assemble});
+    }
+    if ($pipeline->{input}->{affymap})
+    {
+	if ($me->{affy2snplist} &&
+	    $me->{affy2snplist}->{outputkey} &&
+	    $me->{assemble} &&
+	    $me->{assemble}->{outputkey})
+	{
+	    $me->{cnsfilter} = findjob
+		( { mrfunction => "filefilter",
+		    revision => [ 2559, ],
+		    inputkey => $me->{assemble}->{outputkey},
+		    knobs => makeknobs
+			("cnsfilter",
+			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter",
+			 "OUTPUTNAME=snplist.txt",
+			 "SNPREFERENCE=".$me->{affy2snplist}->{outputkey}."/snplist.txt",
+			),
+		  } ) unless $me->{cnsfilter};
+	}
+	push @jsonjobs, jsonjob ("Filter calls", $me->{cnsfilter});
+
+	if ($me->{cnsfilter} &&
+	    $me->{cnsfilter}->{outputkey} &&
+	    $me->{mapview} &&
+	    $me->{mapview}->{outputkey})
+	{
+	    $me->{snpdetail} = findjob
+		( { mrfunction => "filefilter",
+		    revision => [ 2565, ],
+		    inputkey => $me->{mapview}->{outputkey},
+		    knobs => makeknobs
+			("snpdetail",
+			 "COMMAND=mrs-reftranslate|mrs-maq-alnfilter",
+			 "OUTPUTNAME=snplist.txt",
+			 "SNPREFERENCE=".$me->{cnsfilter}->{outputkey}."/snplist.txt",
+			 "WANT_SNPS=1",
+#			 "SNPCALL_MIN_COVER=10",
+			 "SNPCALL_MIN_STARTS=2",
+			),
+		  } ) unless $me->{snpdetail};
+	}
+	buildoutputs ($me, "snpdetail", "snplist.txt");
+	push @jsonjobs, jsonjob ("Pileup filtered calls", $me->{snpdetail});
     }
     if ($me->{assemble} && $me->{assemble}->{outputkey})
     {
@@ -390,18 +521,13 @@ sub fillpipeline
 	      } ) unless $me->{gzip} || !$bigmanifesthash;
     }
 
-    my $inputpath = $flow->{in_manifest} ? "$in/" : "$in/=/$in.gz";
+    my $inputpath = $flow->{input_in_manifest} ? "$in/" : "$in/=/$in.gz";
     push (@ { $flow->{json}->{pipeline} },
 	  { label => $pipeline->{label},
 	    image => mapcheck_png ($me->{merge}),
 	    job => [
 		    jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
-		    @jsonjob_reference,
-		    jsonjob ("Prepare reads", $me->{sol2bfq}),
-		    jsonjob ("Map", $me->{map}),
-		    jsonjob ("Merge", $me->{merge}),
-		    jsonjob ("Mapview", $me->{mapview}),
-		    jsonjob ("Assemble", $me->{assemble}),
+		    @jsonjobs,
 		    jsonjob ("Consensus", $me->{cns2x}),
 		    jsonjob ("SNPfilter", $me->{snpfilter}),
 		    jsonjob ("SNPtranslate", $me->{snptranslate}),
@@ -537,20 +663,21 @@ sub findjob
 	    && $_->{knobs} eq $want->{knobs}
 	    && keys_are_equal ($_->{inputkey}, $want->{inputkey}))
 	{
-	    $queued = $_ unless $queued || $_->{finishtime} || length ($_->{success});
-	    $failed = $_ if !$failed && $_->{success} eq '0';
 	    delete $_->{outputkey} if !$_->{success};
 	    return $_ if $_->{outputkey};
+	    $queued = $_ if !$queued && !$_->{finishtime} && !length ($_->{success});
+	    $failed = $_ if !$failed && $_->{success} eq '0';
 	}
     }
-    mention_failed_job ($failed) if !$queued && $failed;
+    return $queued if $queued;
+
+    mention_failed_job ($failed) if $failed;
     return start_new_job ($want)
-	if (!$queued &&
-	    !$want->{quiet} &&
+	if (!$want->{quiet} &&
 	    (!$failed
 	     || -e "$workdir/retryfailed-".$failed->{id}
 	     || $override{retryfailed}));
-    return $queued || $failed;
+    return $failed;
 }
 
 sub keys_are_equal
@@ -717,7 +844,9 @@ sub jsonjob
 		qq{<button id="retry-$id" onclick="pipeline_retryjob($id);">retry job</button>},
 		];
 	}
-	$x->{summary} = join (" ", $label, map { $job->{$_} } qw(id success outputkey metakey));
+	my $safelabel = $label;
+	$safelabel =~ s/\s//g;
+	$x->{summary} = join (" ", $safelabel, map { $job->{$_} } qw(id success outputkey metakey));
     }
     return $x;
 }

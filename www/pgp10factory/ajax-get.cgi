@@ -20,6 +20,7 @@ print $q->header (-type => "text/plain",
 my $sessionid = session::id();
 
 my $what = $q->param ("what");
+my $offer_none_option = $what =~ s/\?$//;
 my $as = $q->param ("as");
 die if $as ne "select";
 
@@ -43,6 +44,8 @@ for (sort (readdir S))
     }
 }
 closedir S;
+
+print qq{<option value="">No $what</option>\n} if $offer_none_option;
 for my $hash (sort keys %todo)
 {
     my $shortname = $hash;
