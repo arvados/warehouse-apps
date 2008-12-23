@@ -137,37 +137,6 @@ sub fillflow
 	print "# finished ".$flow->{json}->{pipeline}->[0]->{label}." $in\n"
 	    if $override{debug};
     }
-    elsif (-e "$workdir/$in.isreads" && 0)
-    {
-	my $rhg18 = "99259f4330907e84fe7253bd4e52dd3e";
-	my $r55k = "f7703aadfb55c12127c4d51693c85587";
-	maq_pipeline (make_pipeline_id("maq", $in, $rhg18),
-		     $in, $flow,
-		     { label => "sol/maq/hg18",
-		       REFERENCE => $rhg18,
-		       REFERENCEFILE => "homo_sapiens.bfa",
-		     } );
-	maq_pipeline (make_pipeline_id("maq", $in, $r55k),
-		     $in, $flow,
-		     { label => "sol/maq/55k",
-		       REFERENCE => $r55k,
-		       REFERENCEFILE => "ref.bfa",
-		     } );
-	maq_pipeline (make_pipeline_id("maq/std", $in, $rhg18),
-		      $in, $flow,
-		      { label => "std/maq/hg18",
-			REFERENCE => $rhg18,
-			REFERENCEFILE => "homo_sapiens.bfa",
-			sol2bfq => ["INPUTFORMAT=std"],
-		    } );
-	maq_pipeline (make_pipeline_id("maq/std", $in, $r55k),
-		      $in, $flow,
-		      { label => "std/maq/55k",
-			REFERENCE => $r55k,
-			REFERENCEFILE => "ref.bfa",
-			sol2bfq => ["INPUTFORMAT=std"],
-		    } );
-    }
     elsif (-e "$workdir/$in.ispipeline")
     {
 	$flow->{json}->{id} = $in;
