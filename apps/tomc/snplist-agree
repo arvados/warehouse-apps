@@ -21,7 +21,7 @@ my @links;
 print "\n";
 for my $yfile (@y)
 {
-    printf "%13s", unique_part ($yfile, @y);
+    printf "%13.13s", unique_part ($yfile, @y);
     my $ylist_orig = readsnplist ($yfile);
     my $yhash = shift @yhash;
     my @xscore;
@@ -86,7 +86,7 @@ for my $yfile (@y)
     for (my $xi=0; $xi <= $#xscore; $xi++)
     {
 	my $star = $xscore[$xi] > $xhighscore*.9;
-	printf "%13s", ($star ? "*" : " ").$xscore[$xi];
+	printf "%13.13s", ($star ? "*" : " ").$xscore[$xi];
 	if ($star)
 	{
 	    my $xhash = $xhash[$xi];
