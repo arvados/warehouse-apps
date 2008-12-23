@@ -30,7 +30,11 @@ while (<STDIN>)
     my $cmp;
     while (($cmp = $r->[4] cmp $sid) < 0)
     {
-	$r = getnextr() or last;
+	if (!($r = getnextr()))
+	{
+	    while (<STDIN>) { }
+	    last;
+	}
     }
     $r or last;
     if ($cmp == 0)
@@ -48,6 +52,7 @@ while (<STDIN>)
 }
 
 close STDIN;
+$r = <R> while $r;
 close R;
 close STDOUT or die "sort output: $!";
 
