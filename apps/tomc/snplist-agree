@@ -15,8 +15,8 @@ for my $xfile (@x)
     printf " %12.12s", unique_part ($xfile, @x);
     push @xlists, readsnplist ($xfile);
 }
-my @xhash = map { readlink($_) =~ /([0-9a-f]{32})/ } @x;
-my @yhash = map { readlink($_) =~ /([0-9a-f]{32})/ } @y;
+my @xhash = map { readlink($_) =~ /([0-9a-f]{32})/ || /([0-9a-f]{32})/ } @x;
+my @yhash = map { readlink($_) =~ /([0-9a-f]{32})/ || /([0-9a-f]{32})/ } @y;
 my @links;
 print "\n";
 for my $yfile (@y)
