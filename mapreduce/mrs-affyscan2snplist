@@ -6,7 +6,7 @@ my %chr_regions;
 
 die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
 
-open R, "-|", "bash -c 'set -o pipefail; whget \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf | sort -k5'"
+open R, "-|", "bash -c 'set -o pipefail; whget -r \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf | sort -k5'"
     or die "whget: $!";
 
 open STDIN, "-|", "sort -k2"
