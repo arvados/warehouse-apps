@@ -7,7 +7,7 @@ my %chr_regions;
 if ($ENV{KNOB_REFERENCE})
 {
     warn "reading reference regions\n";
-    open R, "-|", "bash -c 'set -o pipefail; whget \"$ENV{KNOB_REFERENCE}\" - | gzip -cdf'"
+    open R, "-|", "bash -c 'set -o pipefail; whget -r \"$ENV{KNOB_REFERENCE}\" - | gzip -cdf'"
 	or die "whget: $!";
     while (<R>)
     {
