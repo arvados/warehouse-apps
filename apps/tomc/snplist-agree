@@ -105,9 +105,9 @@ print "<UL>\n<LI>".join("</LI>\n<LI>", @links)."</LI>\n</UL>";
 sub readsnplist
 {
     my $file = shift;
-    if ($file =~ /^[0-9a-f]{32}(\+.*)?$/ && !-e $file)
+    if ($file =~ /^[0-9a-f]{32}/ && !-e $file)
     {
-	open STDIN, "-|", "whget", "-r", $file."/", "-" or die "whget: $!";
+	open STDIN, "-|", "whget", "-r", $file, "-" or die "whget: $!";
 	open STDIN, "-|", "gzip", "-cdf" or die "gzip: $!";
     }
     else
