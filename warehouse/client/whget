@@ -23,6 +23,7 @@ my $localbase = shift @ARGV or usage();
 
 $source !~ m,/$,		# either you only want one file,
     or $localbase =~ s,/$,,	# or you specified a local directory/,
+    or $localbase eq "-"	# or you want everything on stdout,
     or usage();			# or you're confused
 
 my ($key_or_name, $path) = $source =~ m|^(/?[^/]*)(/.*)?|;
@@ -208,6 +209,7 @@ while (0 < length $manifest)
 
 		my $localfile = $localbase.$localsubdir;
 		$localfile .= "/".$name if $wantfile eq "";
+		$localfile = "-" if $localbase eq "-";
 
 		make_parent_dirs ($localfile)
 		    unless $opt{n};
@@ -297,6 +299,8 @@ Fetch a directory:
 Fetch a directory tree:
        $me -r [options] key/[subdir/] localdir/
        $me -r [options] /name/[subdir/] localdir/
+       $me -r [options] /key/[subdir/] -
+       $me -r [options] /name/[subdir/] -
 Fetch a raw manifest:
        $me [options] key localdestfile
        $me [options] /name localdestfile
