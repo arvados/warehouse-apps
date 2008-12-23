@@ -36,6 +36,8 @@ function pipeline_render(id, json, renderhash) {
 	    }
 	    if (cur_line.image)
 		$('pipeline_'+id+'_'+i).insert({bottom: '<img style=\"border: 1px solid #000; margin-bottom: 5px; margin-top: 5px;\" src=\"cache/'+cur_line.image+'\" />'});
+	    if (cur_line.html)
+		$('pipeline_'+id+'_'+i).insert({bottom: cur_line.html});
 	}
     }
 }

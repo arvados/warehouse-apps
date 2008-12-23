@@ -94,6 +94,7 @@ for (my $PID = 0; $PID < 16; $PID++)
 <option value="">Choose pipeline</option>
 <option value="maq:reads:reads:genome:genome:affymap:affymap?">Place reads with Maq</option>
 <option value="affyscan:affyscan:affyscan:affymap:affymap:genome:genome">Xref affy scan</option>
+<option value="concordance:layout0:layout:layout1:layout">Concordance between layouts</option>
 </select><br />
 <span id="selectors_$PID">
 </span>

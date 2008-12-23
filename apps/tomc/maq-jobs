@@ -192,6 +192,20 @@ sub fillflow
 		$flow->{json}->{message} = "Need to specify affyscan and affymap";
 	    }
 	}
+	elsif ($whatpipeline eq "concordance")
+	{
+	    if ($spec{"layout0"} && $spec{"layout1"})
+	    {
+		concordance_pipeline ($in,
+				      $flow,
+				      { label => "concordance",
+					input => \%spec });
+	    }
+	    else
+	    {
+		$flow->{json}->{message} = "Need to specify layout0 and layout1";
+	    }
+	}
 	else
 	{
 	    $flow->{json}->{message} = "Unknown pipeline: \"$whatpipeline\".";
@@ -217,6 +231,68 @@ sub fillflow
     writejson ("$workdir/$in", $flow->{json});
     print "# finished $in\n"
 	if $override{debug};
+}
+
+sub concordance_pipeline
+{
+    my ($id, $flow, $pipeline) = @_;
+
+    my $me = $flow->{$pipeline->{label}} = {};
+
+    my $outfile = "$workdir/images/$id.html";
+    if (-s $outfile)
+    {
+	my $layout0 = $pipeline->{input}->{"layout0"};
+	my $layout1 = $pipeline->{input}->{"layout1"};
+	push (@ { $flow->{json}->{pipeline} },
+	      { label => $pipeline->{label},
+		html => "<a href=\"cache/images/$id.html\">View concordance table</a><br /><br /><a href=\"./?$layout0\">View \"y\" layout</a><br /><br /><a href=\"./?$layout1\">View \"x\" layout</a><br /><br />&nbsp;",
+		job => [] });
+	return;
+    }
+
+    my @x;
+    my @y;
+    for my $yx (0,1)
+    {
+	my $layoutfile = "$workdir/".$pipeline->{input}->{"layout$yx"};
+	open L, "<", $layoutfile or return;
+	local $/ = undef;
+	my $layoutdata = <L>;
+	my @pipelinefiles;
+	while ($layoutdata =~ m{"id": "(.*?)"}g)
+	{
+	    push @pipelinefiles, $1;
+	}
+	close L;
+	my @pipelineoutputs;
+	foreach (@pipelinefiles)
+	{
+	    open P, "<", "$workdir/".$_ or return;
+	    my $pipelinejson = <P>;
+	    if ($pipelinejson =~ m{"summary": "(Pileupfilteredcalls|LookupSNPIDs) \d+ 1 (\S+)})
+	    {
+		push @x, "$2/" if $yx == 1;
+		push @y, "$2/" if $yx == 0;
+	    }
+	    else
+	    {
+		$flow->{json}->{message} = "Waiting for pipeline(s) to produce snplists ($_)";
+		return;
+	    }
+	    close P;
+	}
+    }
+    my ($mybasedir) = $0 =~ /^(.*\/)/;
+    print "Running snplist-agree for pipeline $id\n";
+    if (system ("${mybasedir}snplist-agree @x -- @y > $outfile.tmp") == 0)
+    {
+	rename "$outfile.tmp", $outfile;
+	if (-s $outfile)
+	{
+	    return concordance_pipeline (@_);
+	}
+    }
 }
 
 sub affyscan_pipeline
@@ -249,6 +325,7 @@ sub affyscan_pipeline
 				"SNPREFERENCE=".$me->{affy2snplist}->{outputkey}."/",
 		),
 	} ) unless $me->{affyscan2snplist} || !$me->{affy2snplist} || !$me->{affy2snplist}->{outputkey};
+    buildoutputs ($me, "affyscan2snplist", "snplist.txt");
 
     my $scan = $pipeline->{input}->{affyscan};
     my $inputpath = $flow->{input_in_manifest} ? "$scan/" : "$scan/=/$scan.gz";
@@ -259,9 +336,6 @@ sub affyscan_pipeline
 		    jsonjob ("Prune Affy map", $me->{affy2snplist}),
 		    jsonjob ("Look up SNP IDs", $me->{affyscan2snplist}),
 		    ] } );
-
-    print "# finished ".$pipeline->{label}." $scan\n"
-	if $override{debug};
 }
 
 sub maq_pipeline
