@@ -12,7 +12,7 @@ my @xlists;
 printf "%13s", "";
 for my $xfile (@x)
 {
-    printf "%13s", unique_part ($xfile, @x);
+    printf " %12.12s", unique_part ($xfile, @x);
     push @xlists, readsnplist ($xfile);
 }
 my @xhash = map { readlink($_) =~ /([0-9a-f]{32})/ } @x;
@@ -79,7 +79,9 @@ for my $yfile (@y)
 		shift @$ylist;
 	    }
 	}
-	my $score = sprintf "%.2f", 100*$points/$xypoints;
+	my $score = $xypoints
+	    ? sprintf ("%.2f", 100*$points/$xypoints)
+	    : "----";
 	push @xscore, $score;
 	$xhighscore = $score if $xhighscore < $score;
     }
@@ -103,15 +105,24 @@ print "<UL>\n<LI>".join("</LI>\n<LI>", @links)."</LI>\n</UL>";
 sub readsnplist
 {
     my $file = shift;
-    open IN, "<", $file or die "$file: $!";
+    if ($file =~ /^[0-9a-f]{32}(\+.*)?$/ && !-e $file)
+    {
+	open STDIN, "-|", "whget", "-r", $file."/", "-" or die "whget: $!";
+	open STDIN, "-|", "gzip", "-cdf" or die "gzip: $!";
+    }
+    else
+    {
+	open STDIN, "<", $file or die "$file: $!";
+    }
     my @snplist;
-    while (<IN>)
+    while (<STDIN>)
     {
 	chomp;
 	my ($chr, $pos, $refbp, $seqbp, $extra) = split (/\t/, $_, 5);
 	push @snplist, [$chr, $pos, $refbp, fasta2bin ($seqbp), $extra]
 	    if ($pos =~ /^\d+$/ && $refbp =~ /^.$/);
     }
+    close STDIN or die "input: $!";
     return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
 }
 
