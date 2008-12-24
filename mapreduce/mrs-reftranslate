@@ -19,8 +19,13 @@ while (<>)
 	     $reffield++)
 	{
 	}
-	die "could not find adjacent annotated-reference and position fields"
-	    if $reffield >= $#in;
+	if ($reffield >= $#in)
+	{
+	    warn "did not find adjacent annotated-reference and position fields; falling back on 'cat' and hoping for the best.";
+	    print "$_\n";
+	    print while <>;
+	    exit 0;
+	}
 	$posfield = $reffield + 1;
     }
     my @in = split (/\s+/, $_, $reffield + 3);
