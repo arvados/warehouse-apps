@@ -139,16 +139,13 @@ sub print_snpskeptic
 	    }
 	}
 	my $newcall = $maqcall;
+	$newcall = "X" if $ENV{KNOB_SNPCALL_MIN_COVER} > $coverage;
 	for my $candidate (0..3)
 	{
 	    if (($maqcall & (1 << $candidate)) &&
 		($refbase & (1 << $candidate)) == 0 &&
-		(
-		 $ENV{KNOB_SNPCALL_MIN_COVER} > $coverage
-		 ||
-		 $ENV{KNOB_SNPCALL_MIN_STARTS}
-		 > scalar keys % { $candidate_startsites[$candidate] }
-		 )
+		$ENV{KNOB_SNPCALL_MIN_STARTS}
+		> scalar keys % { $candidate_startsites[$candidate] }
 		)
 	    {
 		$newcall = 0;
