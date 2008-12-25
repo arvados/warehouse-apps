@@ -139,7 +139,7 @@ sub print_snpskeptic
 	    }
 	}
 	my $newcall = $maqcall;
-	$newcall = "X" if $ENV{KNOB_SNPCALL_MIN_COVER} > $coverage;
+	$newcall = 0 if $ENV{KNOB_SNPCALL_MIN_COVER} > $coverage;
 	for my $candidate (0..3)
 	{
 	    if (($maqcall & (1 << $candidate)) &&
