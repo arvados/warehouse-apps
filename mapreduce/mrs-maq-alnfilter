@@ -124,7 +124,6 @@ sub print_snpskeptic
 
 	my $refbase = fasta2bin ($snpref[$sr]->[2]);
 	my $maqcall = fasta2bin ($snpref[$sr]->[3]);
-	next if $refbase == $maqcall;
 
 	my $sk = $snpskeptic[$sr];
 	my @candidate_startsites = ({}, {}, {}, {}); # a,c,g,t
@@ -142,7 +141,8 @@ sub print_snpskeptic
 	$newcall = 0 if $ENV{KNOB_SNPCALL_MIN_COVER} > $coverage;
 	for my $candidate (0..3)
 	{
-	    if (($maqcall & (1 << $candidate)) &&
+	    if ($newcall > 0 &&
+		($maqcall & (1 << $candidate)) &&
 		($refbase & (1 << $candidate)) == 0 &&
 		$ENV{KNOB_SNPCALL_MIN_STARTS}
 		> scalar keys % { $candidate_startsites[$candidate] }
