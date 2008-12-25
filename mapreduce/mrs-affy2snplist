@@ -2,6 +2,8 @@
 
 use strict;
 
+$ENV{KNOB_PROBEMARGIN} ||= 0;
+
 my %chr_regions;
 
 if ($ENV{KNOB_REFERENCE})
@@ -15,6 +17,9 @@ if ($ENV{KNOB_REFERENCE})
 	{
 	    my ($exonid, $chr, $startpos, $endpos) = ($1, $3, $4, $5);
 	    $chr_regions{$chr} ||= [];
+	    $startpos += $ENV{KNOB_PROBEMARGIN};
+	    $endpos -= $ENV{KNOB_PROBEMARGIN};
+	    next if $startpos > $endpos;
 	    push @ { $chr_regions{$chr} }, [$startpos, $endpos, $exonid, $chr];
 	}
     }
