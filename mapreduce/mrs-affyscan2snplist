@@ -20,12 +20,12 @@ my $notfound = 0;
 my $r = getnextr() or die "no reference data";
 while (<STDIN>)
 {
-    next unless /^\d/;
+    next unless /^\d/ || /^AFFX-/;
     s/\r?\n$//;
     s/Mapping Analysis$//;	# concatenated files with no newline at end
 
     my (@in) = split (/\t/);
-    my ($sid, $AB) = @in[1,9];
+    my ($sid, $AB) = ($in[0] =~ s/^AFFX-/SNP_A-/) ? @in[0,1] : @in[1,9];
 
     my $cmp;
     while (($cmp = $r->[4] cmp $sid) < 0)
