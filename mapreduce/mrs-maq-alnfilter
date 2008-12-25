@@ -151,7 +151,7 @@ sub print_snpskeptic
 		 )
 		)
 	    {
-		$newcall &= ~(1 << $candidate);
+		$newcall = 0;
 	    }
 	}
 	if ($maqcall != $newcall)
