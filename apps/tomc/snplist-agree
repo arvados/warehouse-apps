@@ -32,8 +32,9 @@ for my $yfile (@y)
 
 	my $xlist = [ @$xlist_orig ];
 	my $ylist = [ @$ylist_orig ];
-	my $xypoints = scalar @$xlist + scalar @$ylist;
-	my $points = 0;
+	my $score_nocall = 0;
+	my $score_yes = 0;
+	my $score_no = 0;
 	while (@$xlist && @$ylist)
 	{
 	    my $cmp = $xlist->[0]->[0] cmp $ylist->[0]->[0]
@@ -41,12 +42,12 @@ for my $yfile (@y)
 	    if ($cmp < 0)
 	    {
 		shift @$xlist;
-		--$xypoints;
+		++$score_nocall;
 	    }
 	    elsif ($cmp > 0)
 	    {
 		shift @$ylist;
-		--$xypoints;
+		++$score_nocall;
 	    }
 	    else
 	    {
@@ -55,46 +56,52 @@ for my $yfile (@y)
 		    ||
 		    $ylist->[0]->[3] eq "N")
 		{
-		    $xypoints -= 2;
+		    ++$score_nocall;
 		}
 		elsif ($xlist->[0]->[3] eq "X"
 		       ||
 		       $ylist->[0]->[3] eq "X")
 		{
-		    $xypoints -= 2;
+		    ++$score_nocall;
 		}
 		elsif ($xlist->[0]->[3] eq
 		       $ylist->[0]->[3])
 		{
 		    # same bp at this position
-		    $points += 2;
+		    ++$score_yes;
 		}
 		elsif (($xlist->[0]->[3] &
 			$ylist->[0]->[3]) != 0)
 		{
 		    # some overlap in choices
-		    $points += 0;
+		    ++$score_no;
+		}
+		else
+		{
+		    ++$score_no;
 		}
 		shift @$xlist;
 		shift @$ylist;
 	    }
 	}
-	my $score = $xypoints
-	    ? sprintf ("%.2f", 100*$points/$xypoints)
+	my $score = ($score_yes + $score_no)
+	    ? sprintf ("%.2f", 100*$score_yes/($score_yes+$score_no))
 	    : "----";
-	push @xscore, $score;
+	push @xscore, [$score, $score_yes, $score_no, $score_nocall];
 	$xhighscore = $score if $xhighscore < $score;
     }
     for (my $xi=0; $xi <= $#xscore; $xi++)
     {
-	my $star = $xscore[$xi] > $xhighscore*.9;
-	printf "%13.13s", ($star ? "*" : " ").$xscore[$xi];
+	my $star = $xscore[$xi]->[0] > $xhighscore*.9;
+	printf "%13.13s", ($star ? "*" : " ").$xscore[$xi]->[0];
 	if ($star)
 	{
 	    my $xhash = $xhash[$xi];
 	    my $label = &unique_part ($yfile, @y)
 		. " / " . &unique_part ($x[$xi], @x);
-	    push @links, qq{$label - <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">agree</a> / <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">disagree</a>};
+
+	    my ($x, $yes, $no, $nocall) = @ { $xscore[$xi] };
+	    push @links, qq{$label - $yes <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">agree</a> / $no <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">disagree</a> / $nocall <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;nocall-$xhash">NoCall</a>};
 	}
     }
     print "\n";
