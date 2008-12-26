@@ -125,7 +125,7 @@ sub print_snpskeptic
 	my $refbase = fasta2bin ($snpref[$sr]->[2]);
 	my $maqcall = fasta2bin ($snpref[$sr]->[3]);
 
-	my $sk = $snpskeptic[$sr];
+	my $sk = $snpskeptic[$sr] or next;
 	my @candidate_startsites = ({}, {}, {}, {}); # a,c,g,t
 	my $coverage = 0;
 	while (@$sk)
