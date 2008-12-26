@@ -46,11 +46,12 @@ for (sort (readdir S))
 closedir S;
 
 print qq{<option value="">No $what</option>\n} if $offer_none_option;
+
+my %shortname;
 for my $hash (sort keys %todo)
 {
     my $shortname = $hash;
     $shortname =~ s/(.{8}).*/$1.../;
-
     my $comment = "";
     if (open (F, "<", "./session/$sessionid/$hash.comment") ||
 	open (F, "<", "$workdir/$hash.comment"))
@@ -59,5 +60,14 @@ for my $hash (sort keys %todo)
 	$comment = <F>;
 	$shortname = substr ($comment, 0, 32)." ($shortname)";
     }
+    $shortname{$hash} = $shortname;
+}
+
+for my $hash (sort {
+    ((!$shortname{$a}) != (!$shortname{$b}))
+	? $shortname{$b} cmp $shortname{$a}
+    : ($shortname{$a} cmp $shortname{$b} || $a cmp $b) } keys %todo)
+{
+    my $shortname = $shortname{$hash};
     print qq{<option value="$hash">$shortname</option>\n};
 }
