@@ -71,7 +71,8 @@ foreach my $hash (sort keys %hash_is)
 	    close F;
 	    print "$hash is fasta genome\n";
 	}
-	elsif ($chunk =~ /^Mapping Analysis\r?\n\tSNP ID\tTSC ID\tdbSNP RS ID\tChromosome\tChromosomal Location\t.*\t\d+[SN]_(\S+).*\r?\n\d+\tSNP/s)
+	elsif ($chunk =~ /^Mapping Analysis\r?\n\tSNP ID\tTSC ID\tdbSNP RS ID\tChromosome\tChromosomal Location\t.*\t\d+[SN]_(\S+).*\r?\n\d+\tSNP/s ||
+	       $chunk =~ /^\#CHP File=[^\n]*\\(.+)\.chp\r?\n.*\nAFFX-/s)
 	{
 	    my $affyscan_id = $1;
 	    sysopen F, "$workdir/$hash.isaffyscan", O_WRONLY|O_CREAT|O_EXCL;
