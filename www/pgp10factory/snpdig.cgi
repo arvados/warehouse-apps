@@ -28,6 +28,7 @@ my @snplists = map {
     # eg. isin-{hash}/snplist.tab
     # eg. hom-agrees-{hash}/snplist.tab
     # eg. het-disagrees-{hash}/snplist.tab
+    # eg. nocall-{hash}/snplist.tab
 } split (/;/, $ENV{PATH_INFO});
 
 my $targetcolumn;
@@ -102,6 +103,7 @@ while (@snplists)
 
 	    # merge
 
+	    my $npositions;
 	  CALL:
 	    for (@calls)
 	    {
@@ -138,6 +140,7 @@ while (@snplists)
 		    next CALL if $callfilter->[0] =~ /\bdisagree-/ && !$disagree;
 		    next CALL if $callfilter->[0] =~ /\bhet-/ && !is_het($filterbase);
 		    next CALL if $callfilter->[0] =~ /\bhom-/ && !is_hom($filterbase);
+		    next CALL if $callfilter->[0] =~ /\bnocall-/ && !$ignore;
 
 		    push @filterrecs, $callfilter->[1]->[2] if $has;
 		}
@@ -181,7 +184,9 @@ while (@snplists)
 		    $html = qq{<div style="background: #ffc;">$html</div>};
 		}
 		print $html."\n";
+		++$npositions;
 	    }
+	    print qq{<hr noshade size=1 />$npositions positions listed\n};
 	}
     }
 }
@@ -232,4 +237,9 @@ sub is_hom
 {
     my $x = fasta2bin (@_);
     $x =~ /^(1|2|4|8)$/;
+}
+
+sub is_nocall
+{
+    my ($refbase, $callbase, $filterbase) = @_;
 }
