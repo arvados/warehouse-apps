@@ -104,6 +104,10 @@ foreach my $obtype (qw(reads genomes affymaps affyscans layouts pipelines unknow
 	    local $/ = undef;
 	    $comment = $q->escapeHTML (scalar <F>);
 	}
+	if ($obtype eq "layouts")
+	{
+	    $label = qq{<a href="./?$datahash">$label</a>};
+	}
 	print qq{<tr><td>$label</td><td><input type="text" name="$datahash" id="$datahash" size=40 value="$comment" onpaste="showsavebutton('$datahash')" onkeypress="showsavebutton('$datahash')" /></td><td><button id="save-$datahash" style="display: none;" onclick="comment_save('$datahash')">Save</button><input type="hidden" id="hidden-$datahash" /></td></tr>\n};
     }
 }
