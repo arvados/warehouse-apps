@@ -22,7 +22,7 @@ my @pipelinetype = split (":", $q->param ("pipeline"));
 my @pipelinespec = ("pipeline=".shift @pipelinetype);
 for (my $i=0; $i <= $#pipelinetype; $i+=2)
 {
-    if ($q->param ($pipelinetype[$i]))
+    if (length ($q->param ($pipelinetype[$i])))
     {
 	push @pipelinespec, $pipelinetype[$i]."=".$q->param ($pipelinetype[$i]);
     }

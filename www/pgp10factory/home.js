@@ -193,8 +193,13 @@ function select_selectors(position)
     var selectors = '';
     for (var i=1; i<ptype.length; i+=2)
 	{
-	    selectors += '<select id="select'+ptype[i]+'_'+position+'" name="'+ptype[i]+'_'+position+'" size="1" onclick="select_populate('+position+', \''+ptype[i]+'\', \''+ptype[i+1]+'\');" onchange="enable_updatebutton('+position+');"><option value="">Select '+ptype[i]+'</option></select><br />';
-	    selectors += '<input type="hidden" id="selected'+ptype[i]+'_'+position+'" name="selected'+ptype[i]+'_'+position+'" />';
+	    if (ptype[i+1][0] == "#") {
+		selectors += '<input type=text id="select'+ptype[i]+'_'+position+'" name="'+ptype[i]+'_'+position+'" size="4" maxlength="2" onchange="enable_updatebutton('+position+');" /> '+ptype[i]+'<br />';
+		selectors += '<input type="hidden" id="selected'+ptype[i]+'_'+position+'" name="selected'+ptype[i]+'_'+position+'" />';
+	    } else {
+		selectors += '<select id="select'+ptype[i]+'_'+position+'" name="'+ptype[i]+'_'+position+'" size="1" onclick="select_populate('+position+', \''+ptype[i]+'\', \''+ptype[i+1]+'\');" onchange="enable_updatebutton('+position+');"><option value="">Select '+ptype[i]+'</option></select><br />';
+		selectors += '<input type="hidden" id="selected'+ptype[i]+'_'+position+'" name="selected'+ptype[i]+'_'+position+'" />';
+	    }
 	}
     $('selectors_'+position).update (selectors);
 }
@@ -275,6 +280,12 @@ function select_populate(position, what, withwhat, defaultvalue)
 	$(stash).value = defaultvalue;
     if ($(widget).value)
 	defaultvalue = $(widget).value;
+    if (withwhat[0] == "#") {
+	if (!defaultvalue && defaultvalue != '' && defaultvalue != 0)
+	    defaultvalue = withwhat.substr(1);
+	$(widget).value = defaultvalue;
+	return;
+    }
     new Ajax.Request ('ajax-get.cgi', {
 	    method: 'post',
 	    parameters: { what: withwhat, widget: widget, as: 'select', value: defaultvalue },

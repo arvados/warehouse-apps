@@ -303,12 +303,15 @@ sub affyscan_pipeline
 
     $me->{affy2snplist} = findjob
 	( { mrfunction => "filefilter",
-	    revision => [ 2581, ],
+	    revision => [ $pipeline->{input}->{probemargin} ? 2592 : 2581, ],
 	    inputkey => $pipeline->{input}->{affymap},
 	    knobs => makeknobs ("affy2snplist",
 				"COMMAND=mrs-affy2snplist",
 				"OUTPUTNAME=snplist.txt",
 				"CONCATENATE=1",
+				$pipeline->{input}->{probemargin}
+				? ("PROBEMARGIN=".$pipeline->{input}->{probemargin})
+				: (),
 				$pipeline->{input}->{genome}
 				? ("REFERENCE=".$pipeline->{input}->{genome}."/")
 				: (),
@@ -367,8 +370,8 @@ sub maq_pipeline
 	    $ref = $me->{fasta2bfa}->{outputkey};
 	    $reffile = "ref.bfa";
 	}
-	push @jsonjobs, jsonjob ("Prepare reference", $me->{fasta2bfa});
     }
+    push @jsonjobs, jsonjob ("Prepare reference", $me->{fasta2bfa});
 
     $me->{sol2bfq} = findjob
 	( { mrfunction => "sol2bfq",
@@ -412,8 +415,8 @@ sub maq_pipeline
 		     "REFERENCEFILE=$reffile",
 		     ),
 		} ) unless $me->{map};
-	push @jsonjobs, jsonjob ("Map", $me->{map});
     }
+    push @jsonjobs, jsonjob ("Map", $me->{map});
     if ($me->{map} && $me->{map}->{outputkey})
     {
 	$me->{merge} = findjob
@@ -428,8 +431,8 @@ sub maq_pipeline
 		     ),
 		} ) unless $me->{merge};
 	buildoutputs ($me, "merge", "mapcheck.txt");
-	push @jsonjobs, jsonjob ("Merge", $me->{merge});
     }
+    push @jsonjobs, jsonjob ("Merge", $me->{merge});
     if ($me->{merge} && $me->{merge}->{outputkey})
     {
 	$me->{mapview} = findjob
@@ -442,7 +445,6 @@ sub maq_pipeline
 		     ),
 		} ) unless $me->{mapview};
 	buildoutputs ($me, "mapview", "all.aln.txt");
-	push @jsonjobs, jsonjob ("Mapview", $me->{mapview});
 
 	$me->{assemble} = findjob
 	    ( { mrfunction => "maq-assemble",
@@ -455,8 +457,9 @@ sub maq_pipeline
 		     "REFERENCEFILE=$reffile",
 		     ),
 		} ) unless $me->{assemble};
-	push @jsonjobs, jsonjob ("Assemble", $me->{assemble});
     }
+    push @jsonjobs, jsonjob ("Mapview", $me->{mapview});
+    push @jsonjobs, jsonjob ("Assemble", $me->{assemble});
     if ($pipeline->{input}->{affymap})
     {
 	if ($me->{affy2snplist} &&
@@ -477,29 +480,6 @@ sub maq_pipeline
 		  } ) unless $me->{cnsfilter};
 	}
 	push @jsonjobs, jsonjob ("Filter calls", $me->{cnsfilter});
-
-	if ($me->{cnsfilter} &&
-	    $me->{cnsfilter}->{outputkey} &&
-	    $me->{mapview} &&
-	    $me->{mapview}->{outputkey})
-	{
-	    $me->{snpdetail} = findjob
-		( { mrfunction => "filefilter",
-		    revision => [ 2565, ],
-		    inputkey => $me->{mapview}->{outputkey},
-		    knobs => makeknobs
-			("snpdetail",
-			 "COMMAND=mrs-reftranslate|mrs-maq-alnfilter",
-			 "OUTPUTNAME=snplist.txt",
-			 "SNPREFERENCE=".$me->{cnsfilter}->{outputkey}."/snplist.txt",
-			 "WANT_SNPS=1",
-#			 "SNPCALL_MIN_COVER=10",
-			 "SNPCALL_MIN_STARTS=2",
-			),
-		  } ) unless $me->{snpdetail};
-	}
-	buildoutputs ($me, "snpdetail", "snplist.txt");
-	push @jsonjobs, jsonjob ("Pileup filtered calls", $me->{snpdetail});
     }
     if ($me->{assemble} && $me->{assemble}->{outputkey})
     {
@@ -517,6 +497,7 @@ sub maq_pipeline
 	buildoutputs ($me, "cns2x",
 		      "cns.fq.txt", "cns.snp.txt", "cns.win.txt");
     }
+    push @jsonjobs, jsonjob ("Consensus", $me->{cns2x});
     if ($me->{cns2x} && $me->{cns2x}->{outputkey})
     {
 	$me->{snpfilter} = findjob
@@ -532,6 +513,7 @@ sub maq_pipeline
 	buildoutputs ($me, "snpfilter",
 		      "cns.final.snp.txt");
     }
+    push @jsonjobs, jsonjob ("SNPfilter", $me->{snpfilter});
     if ($me->{snpfilter} && $me->{snpfilter}->{outputkey})
     {
 	$me->{snptranslate} = findjob
@@ -548,6 +530,47 @@ sub maq_pipeline
 	buildoutputs ($me, "snptranslate",
 		      "cns.translated.snp.txt");
     }
+    push @jsonjobs, jsonjob ("SNPtranslate", $me->{snptranslate});
+
+    my $snplist;
+    if ($pipeline->{input}->{affymap})
+    {
+	$snplist = $me->{cnsfilter}->{outputkey}."/snplist.txt"
+	    if $me->{cnsfilter} && $me->{cnsfilter}->{outputkey};
+    }
+    else
+    {
+	$snplist = $me->{snptranslate}->{outputkey}."/cns.translated.snp.txt"
+	    if $me->{snptranslate} && $me->{snptranslate}->{outputkey};
+    }
+    if ($snplist &&
+	$me->{mapview} &&
+	$me->{mapview}->{outputkey})
+    {
+	my @userknobs;
+	push @userknobs, "SNPCALL_MIN_COVER=".$pipeline->{input}->{mincoverage}
+	    if $pipeline->{input}->{mincoverage};
+	push @userknobs, "SNPCALL_MIN_STARTS=".$pipeline->{input}->{minstarts}
+	    if $pipeline->{input}->{minstarts};
+	push @userknobs, "SNPCALL_MIN_STARTS=2"
+	    if !length ($pipeline->{input}->{minstarts});
+
+	$me->{snpdetail} = findjob
+	    ( { mrfunction => "filefilter",
+		revision => [ 2596, ],
+		inputkey => $me->{mapview}->{outputkey},
+		knobs => makeknobs
+		    ("snpdetail",
+		     "COMMAND=mrs-reftranslate|mrs-maq-alnfilter",
+		     "OUTPUTNAME=snplist.txt",
+		     "SNPREFERENCE=".$snplist,
+		     "WANT_SNPS=1",
+		     @userknobs,
+		    ),
+	      } ) unless $me->{snpdetail};
+    }
+    buildoutputs ($me, "snpdetail", "snplist.txt");
+    push @jsonjobs, jsonjob ("Pileup filtered calls", $me->{snpdetail});
 
     if ($me->{snptranslate} && $me->{snptranslate}->{outputkey})
     {
@@ -563,6 +586,7 @@ sub maq_pipeline
 		knobs => makeknobs ("maq-gzip"),
 	      } ) unless $me->{gzip} || !$bigmanifesthash;
     }
+    push @jsonjobs, jsonjob ("gzip", $me->{gzip});
 
     my $inputpath = $flow->{input_in_manifest} ? "$in/" : "$in/=/$in.gz";
     push (@ { $flow->{json}->{pipeline} },
@@ -571,10 +595,6 @@ sub maq_pipeline
 	    job => [
 		    jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
 		    @jsonjobs,
-		    jsonjob ("Consensus", $me->{cns2x}),
-		    jsonjob ("SNPfilter", $me->{snpfilter}),
-		    jsonjob ("SNPtranslate", $me->{snptranslate}),
-		    jsonjob ("gzip", $me->{gzip}),
 		    ] } );
 
     if ($me->{gzip} && $me->{gzip}->{outputkey})
