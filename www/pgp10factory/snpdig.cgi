@@ -28,6 +28,7 @@ my @snplists = map {
     # eg. isin-{hash}/snplist.tab
     # eg. hom-agrees-{hash}/snplist.tab
     # eg. het-disagrees-{hash}/snplist.tab
+    # eg. call-{hash}/snplist.tab
     # eg. nocall-{hash}/snplist.tab
 } split (/;/, $ENV{PATH_INFO});
 
@@ -113,6 +114,8 @@ while (@snplists)
 
 		next CALL if $filtertype =~ /\bhet-/ && !is_het($callbase);
 		next CALL if $filtertype =~ /\bhom-/ && !is_hom($callbase);
+		next CALL if $filtertype =~ /\bcall-/ && is_nocall($callbase);
+		next CALL if $filtertype =~ /\bnocall-/ && !is_nocall($callbase);
 
 		for my $callfilter (@callfilters)
 		{
@@ -131,8 +134,9 @@ while (@snplists)
 		    
 		    my $agree = (fasta2bin ($callbase)
 				 == fasta2bin ($filterbase));
-		    my $ignore = ($callbase =~ /^[NX]/ ||
-				  $filterbase =~ /^[NX]/ ||
+		    my $nocall = &is_nocall ($filterbase);
+		    my $ignore = (&is_nocall ($callbase) ||
+				  $nocall ||
 				  !$has);
 		    my $disagree = !$agree && !$ignore;
 		    $agree &&= !$ignore;
@@ -140,7 +144,8 @@ while (@snplists)
 		    next CALL if $callfilter->[0] =~ /\bdisagree-/ && !$disagree;
 		    next CALL if $callfilter->[0] =~ /\bhet-/ && !is_het($filterbase);
 		    next CALL if $callfilter->[0] =~ /\bhom-/ && !is_hom($filterbase);
-		    next CALL if $callfilter->[0] =~ /\bnocall-/ && !$ignore;
+		    next CALL if $callfilter->[0] =~ /\bnocall-/ && !$nocall;
+		    next CALL if $callfilter->[0] =~ /\bcall-/ && $nocall || !$has;
 
 		    push @filterrecs, $callfilter->[1]->[2] if $has;
 		}
@@ -150,8 +155,10 @@ while (@snplists)
 		$html = qq{<a name="$chr,$pos"><code><b>$inrec</b></code></a>\n};
 		$html .= join ("", map { "<br><code>".$q->escapeHTML($_)."</code>" } @filterrecs);
 
-		shift @aligns while ($chr gt $aligns[0]->[0]);
-		shift @aligns while ($chr eq $aligns[0]->[0] &&
+		shift @aligns while (@aligns &&
+				     $chr gt $aligns[0]->[0]);
+		shift @aligns while (@aligns &&
+				     $chr eq $aligns[0]->[0] &&
 				     $pos > $aligns[0]->[2]);
 		for (my $a = 0;
 		     $a <= $#aligns &&
@@ -241,5 +248,6 @@ sub is_hom
 
 sub is_nocall
 {
-    my ($refbase, $callbase, $filterbase) = @_;
+    my ($x) = shift;
+    $x =~ /^[NX]/i;
 }
