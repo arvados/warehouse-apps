@@ -53,7 +53,8 @@ for my $hash (sort keys %todo)
     my $shortname = $hash;
     $shortname =~ s/(.{8}).*/$1.../;
     my $comment = "";
-    if (open (F, "<", "./session/$sessionid/$hash.comment") ||
+    if ((-s "./session/$sessionid/$hash.comment" &&
+	 open (F, "<", "./session/$sessionid/$hash.comment")) ||
 	open (F, "<", "$workdir/$hash.comment"))
     {
 	undef $/;
