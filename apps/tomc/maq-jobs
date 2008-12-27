@@ -343,12 +343,13 @@ sub concordance_pipeline
     }
     if (-s $htmlfile)
     {
-	my $layout0 = $pipeline->{input}->{"layout0"};
-	my $layout1 = $pipeline->{input}->{"layout1"};
 	$flow->{json}->{pipeline}->[-1]->{html} = 
-	    "<a href=\"cache/images/$id.html\">View concordance table</a><br /><br /><a href=\"./?$layout0\">View \"y\" layout</a><br /><br /><a href=\"./?$layout1\">View \"x\" layout</a><br /><br />&nbsp;";
-	return;
+	    "<a href=\"cache/images/$id.html\">View concordance table</a><br /><br />";
     }
+    my $layout0 = $pipeline->{input}->{"layout0"};
+    my $layout1 = $pipeline->{input}->{"layout1"};
+    $flow->{json}->{pipeline}->[-1]->{html} .=
+	"<a href=\"./?$layout0\">View \"y\" layout</a><br /><br /><a href=\"./?$layout1\">View \"x\" layout</a><br /><br />&nbsp;";
 }
 
 sub get_layout
