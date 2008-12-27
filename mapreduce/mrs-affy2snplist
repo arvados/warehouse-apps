@@ -22,6 +22,12 @@ if ($ENV{KNOB_REFERENCE})
 	    next if $startpos > $endpos;
 	    push @ { $chr_regions{$chr} }, [$startpos, $endpos, $exonid, $chr];
 	}
+	elsif (/^>chr(\d+|[A-Z])$/)
+	{
+	    my $chr = $1;
+	    $chr_regions{$chr} ||= [];
+	    push @ { $chr_regions{$chr} }, [1, 0, "", $chr];
+	}
     }
     close R or die "\"whget $ENV{KNOB_REFERENCE} -\" pipe failed: $!";
 
@@ -78,6 +84,7 @@ for (@affy)
     }
     my $regions = $chr_regions{$chr} or next;
     while ($#$regions >= 0 &&
+	   $regions->[0]->[1] > 0 &&
 	   $regions->[0]->[1] < $pos) # pos is beyond endpos, no future matches
     {
 	shift @$regions;
@@ -87,7 +94,8 @@ for (@affy)
 	 $regions->[$ri]->[0] <= $pos; # pos is not before startpos
 	 $ri++)
     {
-	if ($regions->[$ri]->[1] >= $pos) # pos is not beyond endpos
+	if ($regions->[$ri]->[1] >= $pos # pos is not beyond endpos
+	    || $regions->[$ri]->[1] == 0 # endpos==0 means "to end of chr"
 	{
 	    print join ("\t",
 			"chr$chr", $pos, "N", "$alleleA$alleleB",
