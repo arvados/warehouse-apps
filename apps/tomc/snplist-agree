@@ -5,24 +5,24 @@ use strict;
 my @x;
 while (@ARGV && $ARGV[0] ne '--') { push @x, shift @ARGV }
 shift @ARGV;
-my @y = @ARGV or die "usage: $0 snplist sniplist ... -- snplist snplist ...\n";
+my @y = @ARGV or die "usage: $0 snplist snplist ... -- snplist snplist ...\n";
 
-print "<PRE>";
+print "<TABLE>";
 my @xlists;
-printf "%13s", "";
+print "<TR><TH></TH>\n";
 for my $xfile (@x)
 {
-    printf " %12.12s", unique_part ($xfile, @x);
-    push @xlists, readsnplist ($xfile);
+    printf "<TH><code>%8.8s</code></TH>\n", unique_part ($xfile, @x);
+    push @xlists, &readsnplist ($xfile);
 }
 my @xhash = map { readlink($_) =~ /([0-9a-f]{32})/ || /([0-9a-f]{32})/ } @x;
 my @yhash = map { readlink($_) =~ /([0-9a-f]{32})/ || /([0-9a-f]{32})/ } @y;
 my @links;
-print "\n";
+print "</TR>\n";
 for my $yfile (@y)
 {
-    printf "%13.13s", unique_part ($yfile, @y);
-    my $ylist_orig = readsnplist ($yfile);
+    printf "<TR><TH><CODE>%8.8s</CODE></TH>\n", unique_part ($yfile, @y);
+    my $ylist_orig = &readsnplist ($yfile);
     my $yhash = shift @yhash;
     my @xscore;
     my $xhighscore;
@@ -32,7 +32,8 @@ for my $yfile (@y)
 
 	my $xlist = [ @$xlist_orig ];
 	my $ylist = [ @$ylist_orig ];
-	my $score_nocall = 0;
+	my $score_nocall_x = 0;
+	my $score_nocall_y = 0;
 	my $score_yes = 0;
 	my $score_no = 0;
 	while (@$xlist && @$ylist)
@@ -42,39 +43,31 @@ for my $yfile (@y)
 	    if ($cmp < 0)
 	    {
 		shift @$xlist;
-		++$score_nocall;
 	    }
 	    elsif ($cmp > 0)
 	    {
 		shift @$ylist;
-		++$score_nocall;
 	    }
 	    else
 	    {
 		# same position
-		if ($xlist->[0]->[3] eq "N"
-		    ||
-		    $ylist->[0]->[3] eq "N")
+		my $nocall_x = $xlist->[0]->[3] =~ /^[NX]/;
+		my $nocall_y = $ylist->[0]->[3] =~ /^[NX]/;
+		if ($nocall_x && !$nocall_y)
 		{
-		    ++$score_nocall;
+		    ++$score_nocall_x;
 		}
-		elsif ($xlist->[0]->[3] eq "X"
-		       ||
-		       $ylist->[0]->[3] eq "X")
+		elsif (!$nocall_x && $nocall_y)
 		{
-		    ++$score_nocall;
+		    ++$score_nocall_y;
+		}
+		elsif ($nocall_x && $nocall_y)
+		{
 		}
 		elsif ($xlist->[0]->[3] eq
 		       $ylist->[0]->[3])
 		{
-		    # same bp at this position
 		    ++$score_yes;
-		}
-		elsif (($xlist->[0]->[3] &
-			$ylist->[0]->[3]) != 0)
-		{
-		    # some overlap in choices
-		    ++$score_no;
 		}
 		else
 		{
@@ -85,33 +78,41 @@ for my $yfile (@y)
 	    }
 	}
 	my $score = ($score_yes + $score_no)
-	    ? sprintf ("%.2f", 100*$score_yes/($score_yes+$score_no))
-	    : "----";
-	push @xscore, [$score, $score_yes, $score_no, $score_nocall];
+	    ? 100*$score_yes/($score_yes+$score_no)
+	    : "-";
+	push @xscore, [$score, $score_yes, $score_no, $score_nocall_x, $score_nocall_y];
 	$xhighscore = $score if $xhighscore < $score;
     }
     for (my $xi=0; $xi <= $#xscore; $xi++)
     {
-	my $star = $xscore[$xi]->[0] > $xhighscore*.9;
-	printf "%13.13s", ($star ? "*" : " ").$xscore[$xi]->[0];
+	my $score = $xscore[$xi]->[0];
+	my $star = $score > $xhighscore*.9;
+	my $redness = ($score-60) * 128/40;
+	$redness = 0 if $redness < 0;
+	my $color = sprintf ("#ff%02x%02x",
+			     255 - $redness,
+			     255 - $redness);
+	printf "<TD style=\"background: $color\">%.0f%s</TD>", $xscore[$xi]->[0], $star ? "*" : "";
 	if ($star)
 	{
 	    my $xhash = $xhash[$xi];
-	    my $label = &unique_part ($yfile, @y)
-		. " / " . &unique_part ($x[$xi], @x);
-
-	    my ($x, $yes, $no, $nocall) = @ { $xscore[$xi] };
-	    push @links, qq{$label - $yes <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">agree</a> / $no <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">disagree</a> / $nocall <a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;nocall-$xhash">NoCall</a>};
+	    my $label = sprintf ("<code>%8.8s / %8.8s</code>",
+				 &unique_part ($yfile, @y),
+				 &unique_part ($x[$xi], @x));
+	    my ($x, $yes, $no, $nocallx, $nocally) = @ { $xscore[$xi] };
+	    push @links, qq{<TR><TH>$label</TH><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">$yes</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">$no</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/nocall-$yhash;call-$xhash">$nocally</a></TD></TR>};
 	}
     }
-    print "\n";
+    print "</TR>\n";
 }
-print "</pre>";
-print "<UL>\n<LI>".join("</LI>\n<LI>", @links)."</LI>\n</UL>";
+print "</TABLE>\n";
+unshift @links, qq{<TR><TD><u>high scoring pair (y/x)</u></TD><TD><u>concordant</u></TD><TD><u>discordant</u></TD><TD><u>nocall_y:call_x</u></TD></TR>};
+print "<TABLE>", @links, "</TABLE>";
 
 sub readsnplist
 {
     my $file = shift;
+    $file =~ s/:.*//;
     if ($file =~ /^[0-9a-f]{32}/ && !-e $file)
     {
 	open STDIN, "-|", "whget", "-r", $file, "-" or die "whget: $!";
@@ -158,6 +159,8 @@ sub bin2fasta
 
 sub unique_part
 {
+    @_ = @_;
+    for (@_) { s/^.*?:(.)/$1/ || s/://; s/[\r\n]//g; }
     my $this = shift;
     my $thislen = length($this);
     my $ustart = $thislen;
@@ -167,5 +170,6 @@ sub unique_part
 	$ustart-- while substr ($this, 0, $ustart) ne substr ($_, 0, $ustart);
 	$uend-- while $uend && substr ($this, $thislen-$uend) ne substr ($_, length($_)-$uend);
     }
+    $ustart = 0 if $ustart <= 3;
     return substr ($this, $ustart, $thislen - $uend - $ustart);
 }

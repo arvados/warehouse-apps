@@ -7,6 +7,8 @@ use POSIX;
 use Digest::MD5 'md5_hex';
 my $whc = new Warehouse;
 
+$| = 1;
+
 my %override;
 while ($ARGV[0] =~ /^(.*?)=(.*)$/)
 {
@@ -239,60 +241,216 @@ sub concordance_pipeline
 
     my $me = $flow->{$pipeline->{label}} = {};
 
-    my $outfile = "$workdir/images/$id.html";
-    if (-s $outfile)
+    push (@ { $flow->{json}->{pipeline} },
+	  { label => $pipeline->{label},
+	    job => [] });
+
+    my $ypipelines = &get_layout ($pipeline->{input}->{"layout0"});
+    my $xpipelines = &get_layout ($pipeline->{input}->{"layout1"});
+    &build_snplist_union ($id, $flow, $pipeline, $ypipelines);
+    my $n = 0;
+    my @snpagree;
+    my $snpagree_ready = 1;
+    for (@$ypipelines)
+    {
+	++$n;
+	my @jsonjobs;
+	my $snpdetail = $Job { $_->{Pileupfilteredcalls}->{id} };
+	my $mapview = $Job { $_->{Mapview}->{id} };
+	my $assemble = $Job { $_->{Assemble}->{id} };
+	if ($me->{snplistunion} &&
+	    $me->{snplistunion}->{outputkey} &&
+	    $assemble &&
+	    $assemble->{outputkey})
+	{
+	    $me->{"cnsfilter$n"} = findjob
+		( { mrfunction => "filefilter",
+		    revision => [ 2590, ],
+		    inputkey => $assemble->{outputkey},
+		    knobs => makeknobs
+			("cnsfilter",
+			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter",
+			 "OUTPUTNAME=snplist.txt",
+			 "SNPREFERENCE=".$me->{snplistunion}->{outputkey}."/snplist.txt",
+			),
+		  } );
+	}
+	push @jsonjobs, jsonjob ("cnsfilter$n", $me->{"cnsfilter$n"});
+	if ($me->{"cnsfilter$n"} &&
+	    $me->{"cnsfilter$n"}->{outputkey} &&
+	    $snpdetail &&
+	    $snpdetail->{knobs} &&
+	    $mapview &&
+	    $mapview->{outputkey})
+	{
+	    my @knobs;
+	    push @knobs, "SNPCALL_MIN_COVER=$1"
+		if $snpdetail->{knobs} =~ /SNPCALL_MIN_COVER=(\d+)/;
+	    push @knobs, "SNPCALL_MIN_STARTS=$1"
+		if $snpdetail->{knobs} =~ /SNPCALL_MIN_STARTS=(\d+)/;
+
+	    $me->{"snpdetail$n"} = findjob
+		( { mrfunction => "filefilter",
+		    revision => [ 2596, ],
+		    inputkey => $mapview->{outputkey},
+		    knobs => makeknobs
+			("snpdetail",
+			 "COMMAND=mrs-reftranslate|mrs-maq-alnfilter",
+			 "OUTPUTNAME=snplist.txt",
+			 "SNPREFERENCE=".$me->{"cnsfilter$n"}->{outputkey}."/snplist.txt",
+			 "WANT_SNPS=1",
+			 @knobs,
+			),
+		  } );
+	}
+	if ($me->{"snpdetail$n"} && $me->{"snpdetail$n"}->{outputkey})
+	{
+	    $me->{"snpdetail$n"}->{outputlinks} =
+		["<a href='snpdig.cgi/call-".$me->{"snpdetail$n"}->{outputkey}."'>snpdig/call</a>",
+		 "<a href='snpdig.cgi/nocall".$me->{"snpdetail$n"}->{outputkey}."'>snpdig/nocall</a>"];
+	    push @snpagree, $me->{"snpdetail$n"}->{outputkey};
+	}
+	else
+	{
+	    $snpagree_ready = 0;
+	}
+	push @jsonjobs, &jsonjob ("snpdetail$n", $me->{"snpdetail$n"});
+	push (@ { $flow->{json}->{pipeline}->[-1]->{job} }, @jsonjobs);
+    }
+
+
+    if ($snpagree_ready)
+    {
+	for my $n (0..$#$ypipelines)
+	{
+	    my @snpdig = @snpagree;
+	    unshift @snpdig, splice @snpdig, $n, 1;
+	    my $url = "snpdig.cgi/call-".join(";", @snpdig);
+	    for (@ { $flow->{json}->{pipeline}->[-1]->{job} })
+	    {
+		if ($_->{label} eq "snpdetail".($n+1))
+		{
+		    push @ { $_->{outputfiles} }, "<a href='$url'>snpdig/allcalls</a>";
+		}
+	    }
+	}
+    }
+
+    my $htmlfile = "$workdir/images/$id.html";
+    if (!-s $htmlfile)
+    {
+	&build_concordance_chart ($id, $flow, $pipeline, $htmlfile, $xpipelines, $ypipelines);
+    }
+    if (-s $htmlfile)
     {
 	my $layout0 = $pipeline->{input}->{"layout0"};
 	my $layout1 = $pipeline->{input}->{"layout1"};
-	push (@ { $flow->{json}->{pipeline} },
-	      { label => $pipeline->{label},
-		html => "<a href=\"cache/images/$id.html\">View concordance table</a><br /><br /><a href=\"./?$layout0\">View \"y\" layout</a><br /><br /><a href=\"./?$layout1\">View \"x\" layout</a><br /><br />&nbsp;",
-		job => [] });
+	$flow->{json}->{pipeline}->[-1]->{html} = 
+	    "<a href=\"cache/images/$id.html\">View concordance table</a><br /><br /><a href=\"./?$layout0\">View \"y\" layout</a><br /><br /><a href=\"./?$layout1\">View \"x\" layout</a><br /><br />&nbsp;";
 	return;
     }
+}
 
-    my @x;
-    my @y;
-    for my $yx (0,1)
+sub get_layout
+{
+    my ($layouthash) = @_;
+
+    my $layoutfile = "$workdir/$layouthash";
+    open L, "<", $layoutfile or return;
+    local $/ = undef;
+    my $layoutdata = <L>;
+    my @pipelinefiles;
+    while ($layoutdata =~ m{"id": "(.*?)"}g)
     {
-	my $layoutfile = "$workdir/".$pipeline->{input}->{"layout$yx"};
-	open L, "<", $layoutfile or return;
-	local $/ = undef;
-	my $layoutdata = <L>;
-	my @pipelinefiles;
-	while ($layoutdata =~ m{"id": "(.*?)"}g)
-	{
-	    push @pipelinefiles, $1;
-	}
-	close L;
-	my @pipelineoutputs;
-	foreach (@pipelinefiles)
-	{
-	    open P, "<", "$workdir/".$_ or return;
-	    my $pipelinejson = <P>;
-	    if ($pipelinejson =~ m{"summary": "(Pileupfilteredcalls|LookupSNPIDs) \d+ 1 (\S+)})
-	    {
-		push @x, "$2/" if $yx == 1;
-		push @y, "$2/" if $yx == 0;
-	    }
-	    else
-	    {
-		$flow->{json}->{message} = "Waiting for pipeline(s) to produce snplists ($_)";
-		return;
-	    }
-	    close P;
-	}
+	push @pipelinefiles, $1;
     }
-    my ($mybasedir) = $0 =~ /^(.*\/)/;
+    close L;
+    my @pipelines;
+    foreach (@pipelinefiles)
+    {
+	open P, "<", "$workdir/".$_ or return undef;
+	push @pipelines, { id => $_ };
+	my $pipelinejson = <P>;
+	while ($pipelinejson =~ m{"summary": "(\S+) (\d+) (\d+) (\S*)}g)
+	{
+	    $pipelines[-1]->{$1} = { id => $2 };
+	    $pipelines[-1]->{$1}->{outputkey} = $4 if $3;
+	}
+	close P;
+    }
+    return \@pipelines;
+}
+
+sub build_concordance_chart
+{
+    my ($id, $flow, $pipeline, $outfile, $xref, $yref) = @_;
+    my @x = @$xref;
+    my @y = @$yref;
+
+    for (@x, @y)
+    {
+	my $pipelinehash = $_->{"id"};
+	my $pipelinefile = "$workdir/$pipelinehash.ispipeline";
+	my $inhash;
+	map { $inhash=$2 if /^(reads|affyscan)=(\S+)/ } <P>
+	    if open P, "<", $pipelinefile;
+	close P;
+	my $comment = "";
+	($comment) = <C> if open C, "<", "$workdir/$inhash.comment";
+	close C;
+	my $snplistsummary =
+	    $_->{"Pileupfilteredcalls"} ||
+	    $_->{"LookupSNPIDs"};
+	return if !$snplistsummary;
+	my $snplistoutput = $snplistsummary->{"outputkey"};
+	return if !$snplistoutput;
+	$_ = $snplistoutput."/:".$comment;
+    }
+
     print "Running snplist-agree for pipeline $id\n";
-    if (system ("${mybasedir}snplist-agree @x -- @y > $outfile.tmp") == 0)
+
+    my ($mybasedir) = $0 =~ /^(.*\/)/;
+    my $child = fork();
+    if ($child eq 0)
+    {
+	close STDIN;
+	open STDOUT, ">", "$outfile.tmp" or die "open $outfile.tmp: $!";
+	exec ("${mybasedir}snplist-agree", @x, "--", @y);
+	exit 1;
+    }
+    wait if $child;
+    if ($? == 0)
     {
 	rename "$outfile.tmp", $outfile;
 	if (-s $outfile)
 	{
-	    return concordance_pipeline (@_);
+	    return 1;
 	}
     }
+    return undef;
+}
+
+sub build_snplist_union
+{
+    my ($id, $flow, $pipeline, $pipelines) = @_;
+
+    my $me = $flow->{$pipeline->{label}};
+
+    my @y = map { $_->{SNPtranslate}->{outputkey} || return } @$pipelines;
+    my $in = join(",", @y);
+    $me->{snplistunion} = findjob
+	( { mrfunction => "filefilter",
+	    revision => [ 2596, ],
+	    inputkey => $in,
+	    knobs => makeknobs ("snplistunion",
+				"CONCATENATE=1",
+				"OUTPUTNAME=snplist.txt",
+				"COMMAND=egrep ^chr|cut -f1,2|sort -nk2|sort -sk1,1|uniq",
+		),
+	  } ) unless $me->{snplistunion};
+    my $joblist = $flow->{json}->{pipeline}->[-1]->{job};
+    push @$joblist, jsonjob ("snplist union", $me->{snplistunion});
+    buildoutputs ($me, "snplistunion", "snplist.txt");
 }
 
 sub affyscan_pipeline
@@ -778,7 +936,7 @@ sub start_new_job
     }
 
     my $id = $whc->job_new (%jobspec) || -1;
-    print ("$id -- started ",
+    print ("$id -- queued ",
 	   scalar(localtime),
 	   "\n",
 	   $printable_jobspec);
