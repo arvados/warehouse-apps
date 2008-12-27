@@ -96,6 +96,7 @@ for (@affy)
     {
 	if ($regions->[$ri]->[1] >= $pos # pos is not beyond endpos
 	    || $regions->[$ri]->[1] == 0 # endpos==0 means "to end of chr"
+	    )
 	{
 	    print join ("\t",
 			"chr$chr", $pos, "N", "$alleleA$alleleB",
