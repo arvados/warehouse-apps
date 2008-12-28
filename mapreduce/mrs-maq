@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+use Warehouse;
+my $whc = new Warehouse;
+
+$ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+chdir ($tmp) or die "chdir $tmp: $!";
+
+fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
+system ("dpkg --extract maq.deb .")
+    == 0 or die "dpkg exited $?";
+
+system ("./usr/bin/maq", @_)
+    == 0 or die "\`maq @_\` exited $?";
+exit 0;
+
+sub fetch_to_file
+{
+  my ($whc, $hash, $filename) = @_;
+  my $dataref = $whc->fetch_block_ref ($hash) or die "fetch $hash: ".$whc->errstr;
+  open F, ">", $filename or die "open $filename: $!";
+  print F $$dataref or die "write $filename: $!";
+  close F or die "close $filename: $!";
+  return 1;
+}
