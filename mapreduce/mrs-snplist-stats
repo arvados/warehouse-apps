@@ -1,8 +1,15 @@
 #!/usr/bin/perl
 
-if ($ENV{KNOB_SNPREFERENCE})
+if (open STDIN, "-|")
 {
-    if (!open STDIN, "-|")
+    my @all = <STDIN>;
+    chomp @all;
+    print join ("\t", $ENV{MR_ID}, @all), "\n";
+    exit 0;
+}
+else
+{
+    if ($ENV{KNOB_SNPREFERENCE})
     {
 	# distribute input to two child procs
 	my @writehandle;
@@ -30,14 +37,10 @@ if ($ENV{KNOB_SNPREFERENCE})
 	for my $w (@writehandle) { close $w; }
 	exit 0;
     }
-    my @all = <STDIN>;
-    chomp @all;
-    print join ("\t", $ENV{MR_ID}, @all), "\n";
-    exit 0;
-}
-else
-{
-    &do_stats (0);
+    else
+    {
+	&do_stats (0);
+    }
 }
 
 sub do_stats
