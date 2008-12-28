@@ -76,7 +76,6 @@ sub do_stats
 sub fasta2bin
 {
     my $x = shift;
-    return "N" if $x =~ /^N/;
     $x =~ tr/a-z/A-Z/;
     $x =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
     $x = hex($x);
