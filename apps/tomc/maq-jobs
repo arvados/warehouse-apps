@@ -318,7 +318,6 @@ sub concordance_pipeline
 	push (@ { $flow->{json}->{pipeline}->[-1]->{job} }, @jsonjobs);
     }
 
-
     if ($snpagree_ready)
     {
 	for my $n (0..$#$ypipelines)
@@ -337,10 +336,7 @@ sub concordance_pipeline
     }
 
     my $htmlfile = "$workdir/images/$id.html";
-    if (!-s $htmlfile)
-    {
-	&build_concordance_chart ($id, $flow, $pipeline, $htmlfile, $xpipelines, $ypipelines);
-    }
+    &build_concordance_chart ($id, $flow, $pipeline, $htmlfile, $xpipelines, $ypipelines);
     if (-s $htmlfile)
     {
 	$flow->{json}->{pipeline}->[-1]->{html} = 
@@ -388,6 +384,7 @@ sub build_concordance_chart
     my @x = @$xref;
     my @y = @$yref;
 
+    my $last_job_finish;
     for (@x, @y)
     {
 	my $pipelinehash = $_->{"id"};
@@ -405,8 +402,15 @@ sub build_concordance_chart
 	return if !$snplistsummary;
 	my $snplistoutput = $snplistsummary->{"outputkey"};
 	return if !$snplistoutput;
+
+	my $ft = $Job { $snplistsummary->{"id"} }->{"finishtime_s"};
+	$last_job_finish = $ft if $last_job_finish < $ft;
+
 	$_ = $snplistoutput."/:".$comment;
     }
+
+    return if (-s $outfile &&
+	       (time - (-M $outfile * 86400)) > $last_job_finish);
 
     print "Running snplist-agree for pipeline $id\n";
 
@@ -547,7 +551,7 @@ sub maq_pipeline
     {
 	$me->{affy2snplist} = findjob
 	    ( { mrfunction => "filefilter",
-		revision => [ 2581, ],
+		revision => [ 2610, ],
 		inputkey => $pipeline->{input}->{affymap},
 		knobs => makeknobs ("affy2snplist",
 				    "COMMAND=mrs-affy2snplist",
