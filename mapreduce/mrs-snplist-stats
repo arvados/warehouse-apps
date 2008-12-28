@@ -35,6 +35,10 @@ if ($ENV{KNOB_SNPREFERENCE})
     print join ("\t", $ENV{MR_ID}, @all), "\n";
     exit 0;
 }
+else
+{
+    &do_stats (0);
+}
 
 sub do_stats
 {
