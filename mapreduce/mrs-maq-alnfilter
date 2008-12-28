@@ -39,17 +39,16 @@ while(<>)
     my @in = split;
     if ($in[1] =~ /^chr/)
     {
-	my @aln = @in;
-	my ($readid, $chr, $pos) = @aln;
-	if (findsnpref ($chr, $pos, $pos + $aln[-3] - 1, @aln) xor $invert)
+	my ($chr, $pos) = @in[1,2];
+	if (findsnpref ($chr, $pos, $pos + $in[-3] - 1) xor $invert)
 	{
 	    print;
-	    feed_snpskeptic ($srmin, @aln) if $want_snpskeptic;
+	    feed_snpskeptic ($srmin, @in) if $want_snpskeptic;
 	}
     }
     else
     {
-	my ($chr, $pos) = split (/\s+/, $_, 3);
+	my ($chr, $pos) = @in[0,1];
 	print if (findsnpref ($chr, $pos, $pos) xor $invert);
     }
 }
@@ -57,7 +56,7 @@ print_snpskeptic() if $want_snpskeptic;
 
 sub findsnpref
 {
-    my ($chr, $startpos, $endpos, @alignment) = @_;
+    my ($chr, $startpos, $endpos) = @_;
 
     # srmin left over from the previous search already points to the
     # next interesting position after the previous read's startpos.
@@ -88,7 +87,19 @@ sub findsnpref
     {
 	return 1;
     }
-	
+
+    # just past?
+
+    if ($srmin < $#snpref &&
+	($chr cmp $snpref[$srmin]->[0]
+	 || $startpos <=> $snpref[$srmin]->[1]) > 0 &&
+	($chr cmp $snpref[$srmin+1]->[0]
+	 || $endpos <=> $snpref[$srmin+1]->[1]) < 0)
+    {
+	++$srmin;
+	return undef;
+    }
+
     $srmin = 0;
     $srmax = $#snpref;
     while ($srmin < $srmax)
