@@ -4,7 +4,18 @@ if (open STDIN, "-|")
 {
     my @all = <STDIN>;
     chomp @all;
-    print join ("\t", $ENV{MR_ID}, @all), "\n";
+    my $tot = 0;
+    my $call = 0;
+    for (@all)
+    {
+	if (/(\d+)$/)
+	{
+	    my $n = $1;
+	    $tot += $n;
+	    $call += $n if !/^noc/;
+	}
+    }
+    print join ("\t", $ENV{MR_ID}, @all, "call", $call, "total", $tot), "\n";
     exit 0;
 }
 else
@@ -54,10 +65,12 @@ sub do_stats
 	next if !defined $chr;
 	++$stat{het} if is_het($call);
 	++$stat{hom} if is_hom($call);
+	++$stat{noc} if is_nocall($call);
     }
     my $yn = $in_reflist ? "y" : "n";
     print "het/$yn\t$stat{het}\n";
     print "hom/$yn\t$stat{hom}\n";
+    print "noc/$yn\t$stat{noc}\n";
 }
 
 sub fasta2bin
