@@ -1,0 +1,86 @@
+#!/usr/bin/perl
+
+if ($ENV{KNOB_SNPREFERENCE})
+{
+    if (!open STDIN, "-|")
+    {
+	# distribute input to two child procs
+	my @writehandle;
+	for my $in_reflist (1, 0)
+	{
+	    my ($r, $w) = ("READER$in_reflist", "WRITER$in_reflist");
+	    pipe ($r, $w) or die "pipe: $!";
+	    if (fork() == 0)
+	    {
+		close $w;
+		open STDIN, "<&", $r or die "open: $!";
+		$ENV{KNOB_WANT_SNPS} = 0;
+		open STDIN, "-|", "mrs-maq-alnfilter", ($in_reflist ? () : ("-v"))
+		    or die "mrs-maq-alnfilter: $!";
+		&do_stats($in_reflist);
+		exit 0;
+	    }
+	    close $r;
+	    push @writehandle, $w;
+	}
+	while (<>)
+	{
+	    for my $w (@writehandle) { print $w $_ }
+	}
+	for my $w (@writehandle) { close $w; }
+	exit 0;
+    }
+    my @all = <STDIN>;
+    chomp @all;
+    print join ("\t", $ENV{MR_ID}, @all), "\n";
+    exit 0;
+}
+
+sub do_stats
+{
+    my $in_reflist = shift;
+    my %stat = (het => 0,
+		hom => 0);
+    while (<>)
+    {
+	my ($chr, $pos, $ref, $call) = /^(\S+)\s(\d+)\s([A-Z])+\s([A-Z])+\s/;
+	next if !defined $chr;
+	++$stat{het} if is_het($call);
+	++$stat{hom} if is_hom($call);
+    }
+    my $yn = $in_reflist ? "y" : "n";
+    print "het/$yn\t$stat{het}\n";
+    print "hom/$yn\t$stat{hom}\n";
+}
+
+sub fasta2bin
+{
+    my $x = shift;
+    return "N" if $x =~ /^N/;
+    $x =~ tr/a-z/A-Z/;
+    $x =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
+    $x = hex($x);
+    while ($x & ~0xf)
+    {
+	$x = ($x & 0xf) | ($x >> 4);
+    }
+    return $x;
+}
+
+sub is_het
+{
+    my $x = fasta2bin (@_);
+    $x !~ /^(0|1|2|4|8|15)$/;
+}
+
+sub is_hom
+{
+    my $x = fasta2bin (@_);
+    $x =~ /^(1|2|4|8)$/;
+}
+
+sub is_nocall
+{
+    my ($x) = shift;
+    $x =~ /^[NX]/i;
+}

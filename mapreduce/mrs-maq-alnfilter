@@ -2,8 +2,15 @@
 
 use strict;
 
-$ENV{KNOB_SNPCALL_MIN_COVER} ||= 10;
-$ENV{KNOB_SNPCALL_MIN_STARTS} ||= 2;
+my $invert = 0;
+for (@ARGV)
+{
+    if ($_ eq "-v") { $invert = 1; }
+}
+@ARGV = ();
+
+$ENV{KNOB_SNPCALL_MIN_COVER} = 10 if !length $ENV{KNOB_SNPCALL_MIN_COVER};
+$ENV{KNOB_SNPCALL_MIN_STARTS} = 2 if !length $ENV{KNOB_SNPCALL_MIN_STARTS};
 die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
 
 open R, "-|", "bash -c 'set -o pipefail; whget \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf'"
@@ -13,6 +20,10 @@ while (<R>)
 {
     chomp;
     push @snpref, [split];
+    # special kludge for bed/dbsnp
+    ++$snpref[-1]->[1]
+	if ($snpref[-1]->[1]+1 == $snpref[-1]->[2] &&
+	    $snpref[-1]->[3] =~ /^rs\d+$/);
 }
 close R;
 
@@ -28,9 +39,9 @@ while(<>)
     my @in = split;
     if ($in[1] =~ /^chr/)
     {
-	my (@aln) = split;
+	my @aln = @in;
 	my ($readid, $chr, $pos) = @aln;
-	if (findsnpref ($chr, $pos, $pos + $aln[-3] - 1, @aln))
+	if (findsnpref ($chr, $pos, $pos + $aln[-3] - 1, @aln) xor $invert)
 	{
 	    print;
 	    feed_snpskeptic ($srmin, @aln) if $want_snpskeptic;
@@ -39,7 +50,7 @@ while(<>)
     else
     {
 	my ($chr, $pos) = split (/\s+/, $_, 3);
-	print if findsnpref ($chr, $pos, $pos);
+	print if (findsnpref ($chr, $pos, $pos) xor $invert);
     }
 }
 print_snpskeptic() if $want_snpskeptic;
@@ -102,6 +113,7 @@ sub findsnpref
 	    return 1;
 	}
     }
+
     return ($chr eq $snpref[$srmin]->[0]
 	    && $startpos <= $snpref[$srmin]->[1]
 	    && $endpos >= $snpref[$srmin]->[1]);
@@ -156,7 +168,7 @@ sub print_snpskeptic
 	    $snpref[$sr]->[3] = bin2fasta ($newcall);
 	}
     }
-    print map { join ("\t", @$_) . "\n" } @snpref;
+    map { print join ("\t", @$_) . "\n" } @snpref;
 }
 
 sub fasta2bin
