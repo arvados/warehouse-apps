@@ -13,7 +13,7 @@ $ENV{KNOB_SNPCALL_MIN_COVER} = 10 if !length $ENV{KNOB_SNPCALL_MIN_COVER};
 $ENV{KNOB_SNPCALL_MIN_STARTS} = 2 if !length $ENV{KNOB_SNPCALL_MIN_STARTS};
 die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
 
-open R, "-|", "bash -c 'set -o pipefail; whget \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf'"
+open R, "-|", "bash -c 'set -o pipefail; whget -r \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf'"
     or die "whget: $!";
 my @snpref;
 while (<R>)
