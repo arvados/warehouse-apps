@@ -15,9 +15,10 @@ for my $xfile (@x)
     printf "<TH><code>%8.8s</code></TH>\n", unique_part ($xfile, @x);
     push @xlists, &readsnplist ($xfile);
 }
+print ("<!--\n", (map { "x $_\n" } @x), (map { "y $_\n" } @y), "-->\n");
 my @xhash = map { readlink($_) =~ /([0-9a-f]{32})/ || /([0-9a-f]{32})/ } @x;
 my @yhash = map { readlink($_) =~ /([0-9a-f]{32})/ || /([0-9a-f]{32})/ } @y;
-my @links;
+my @snpcounts;
 print "</TR>\n";
 for my $yfile (@y)
 {
@@ -51,8 +52,8 @@ for my $yfile (@y)
 	    else
 	    {
 		# same position
-		my $nocall_x = $xlist->[0]->[3] =~ /^[NX]/;
-		my $nocall_y = $ylist->[0]->[3] =~ /^[NX]/;
+		my $nocall_x = $xlist->[0]->[2] =~ /^[NX]/;
+		my $nocall_y = $ylist->[0]->[2] =~ /^[NX]/;
 		if ($nocall_x && !$nocall_y)
 		{
 		    ++$score_nocall_x;
@@ -64,8 +65,8 @@ for my $yfile (@y)
 		elsif ($nocall_x && $nocall_y)
 		{
 		}
-		elsif ($xlist->[0]->[3] eq
-		       $ylist->[0]->[3])
+		elsif ($xlist->[0]->[2] eq
+		       $ylist->[0]->[2])
 		{
 		    ++$score_yes;
 		}
@@ -100,14 +101,15 @@ for my $yfile (@y)
 				 &unique_part ($yfile, @y),
 				 &unique_part ($x[$xi], @x));
 	    my ($x, $yes, $no, $nocallx, $nocally) = @ { $xscore[$xi] };
-	    push @links, qq{<TR><TH>$label</TH><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">$yes</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">$no</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/nocall-$yhash;call-$xhash">$nocally</a></TD></TR>};
+	    push @snpcounts, qq{<TR><TH>$label</TH><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">$yes</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">$no</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/nocall-$yhash;call-$xhash">$nocally</a></TD></TR>\n};
+	    push @snpcounts, qq{<!-- $yhash $xhash $yes $no $nocally -->\n};
 	}
     }
     print "</TR>\n";
 }
 print "</TABLE>\n";
-unshift @links, qq{<TR><TD><u>high scoring pair (y/x)</u></TD><TD><u>concordant</u></TD><TD><u>discordant</u></TD><TD><u>nocall_y:call_x</u></TD></TR>};
-print "<TABLE>", @links, "</TABLE>";
+unshift @snpcounts, qq{<TR><TD><u>high scoring pair (y/x)</u></TD><TD><u>concordant</u></TD><TD><u>discordant</u></TD><TD><u>nocall_y:call_x</u></TD></TR>\n};
+print "<TABLE>", @snpcounts, "</TABLE>";
 
 sub readsnplist
 {
@@ -127,10 +129,11 @@ sub readsnplist
     {
 	chomp;
 	my ($chr, $pos, $refbp, $seqbp, $extra) = split (/\t/, $_, 5);
-	push @snplist, [$chr, $pos, $refbp, fasta2bin ($seqbp), $extra]
+	push @snplist, [$chr, $pos, fasta2bin ($seqbp)]
 	    if ($pos =~ /^\d+$/ && $refbp =~ /^.$/);
     }
     close STDIN or die "input: $!";
+    while (0 < wait) { }
     return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
 }
 
@@ -147,14 +150,6 @@ sub fasta2bin
 	$fasta = ($fasta & 0xf) | ($fasta >> 4);
     }
     return $fasta;
-}
-
-sub bin2fasta
-{
-    my $x = shift;
-    $x = sprintf ("%x", $x);
-    $x =~ tr/0123456789abcdef/XACMGRSVTWYHKDBN/;
-    return $x;
 }
 
 sub unique_part

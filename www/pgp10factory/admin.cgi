@@ -39,7 +39,7 @@ while (my $f = readdir D)
 		push @ { $dataset{$datahash}->{sources} }, $url;
 	    }
 	}
-	elsif (-e "$workdir/$f.isreads" || -e "$workdir/$f.isgenome" || -e "$workdir/$f.isaffyscan" || -e "$workdir/$f.isaffymap")
+	elsif (-e "$workdir/$f.isreads" || -e "$workdir/$f.isgenome" || -e "$workdir/$f.isaffyscan" || -e "$workdir/$f.isaffymap" || -e "$workdir/$f.issnplist")
 	{
 	    my $datahash = $f;
 	    $dataset{$datahash} ||= {};

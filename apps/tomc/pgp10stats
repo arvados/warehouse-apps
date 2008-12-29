@@ -1,0 +1,159 @@
+#!/usr/bin/perl
+
+use strict;
+
+my ($workdir, $pipelinehash) = @ARGV;
+
+my %summary;
+open P, "<", "$workdir/$pipelinehash" or die "open $pipelinehash: $!";
+while (<P>)
+{
+    if (/"summary": "(\S+) (\d*) (\d*) (\S*) (\S*)/)
+    {
+	$summary{$1} = { jobid => $2,
+			 success => $3,
+			 outputkey => $4,
+			 metakey => $5 };
+    }
+}
+close P;
+
+my @Rows;
+my @Head = ("");
+for my $what (qw(Concordance readstats placestats coverstats snpstats))
+{
+    my @coltitles = ($what);
+    map { s/stats$/s/ } @coltitles;
+
+    my @newdata;
+    my $hash = $summary{$what}->{outputkey};
+    if ($hash =~ /\.html$/)
+    {
+	open HTML, "<", "$workdir/images/$hash" or die "open $hash: $!";
+	@newdata = grep { s/^<!-- ([0-9a-f]{32}) [0-9a-f]{32} (\d([\d\s]*\d)?) -->\n/$1 $2/ } <HTML>;
+
+	for (my $r = 0; $r <= $#newdata; $r++)
+	{
+	    if ($newdata[$r] =~ s/^(\S+) (.*)/$2/)
+	    {
+		my $id = $1;
+		while ($r < $#newdata &&
+		       $newdata[$r+1] =~ /^(\S+) (.*)/ && $1 eq $id)
+		{
+		    my @data1 = split (/\s/, $2);
+		    my @data0 = split (/\s/, $newdata[$r]);
+		    my @data;
+		    while (@data0 || @data1)
+		    {
+			push @data, ((shift @data0) + (shift @data1))/2;
+		    }
+		    $newdata[$r] = "@data";
+		    splice @newdata, $r+1, 1;
+		}
+	    }
+	}
+
+	@coltitles = qw(con dis nocall) if ($what eq "Concordance" &&
+					    $newdata[0] =~ /^[\d\.]+ [\d\.]+ [\d\.]+$/);
+    }
+    else
+    {
+	open TAB, "<", "$workdir/images/$hash.txt" or die "open $hash.txt: $!";
+	@newdata = <TAB>;
+	chomp @newdata;
+    }
+    &addcolumns (\@coltitles, \@newdata);
+}
+
+push @Rows, ["Sum"];
+for (my $c=1; $c<=$#Head; $c++)
+{
+    my $tot = 0;
+    for (my $r=0; $r<$#Rows; $r++) { $tot += $Rows[$r]->[$c] }
+    push @{$Rows[-1]}, $tot;
+}
+
+push @Head, qw(affacc affcov mbextr hetnex hetyex);
+my %colnum;
+for (my $c=0; $c<=$#Head; $c++) { $colnum{$Head[$c]} = $c; }
+
+for (my $r=0; $r<$#Rows; $r++)
+{
+    push @{$Rows[$r]}, (100 * fromcol("con",$r) / (fromcol("con",$r) + fromcol("dis",$r)));
+    push @{$Rows[$r]}, (100 * (fromcol("con",$r) + fromcol("dis",$r)) / (fromcol("con",$r) + fromcol("dis",$r) + fromcol("nocall",$r)));
+    push @{$Rows[$r]}, (0.0675 * fromcol("affcov",$r));
+    push @{$Rows[$r]}, (fromcol("het/n",$r) * 30 / fromcol("mbextr",$r));
+    push @{$Rows[$r]}, (fromcol("het/y",$r) * 30 / fromcol("mbextr",$r));
+}
+
+for (\@Head, @Rows)
+{
+    map { $_ = sprintf "%.2f", $_ if /\.\d\d\d/ } @$_;
+    print join ("\t", @$_) . "\n";
+}
+
+sub fromcol
+{
+    my ($colname, $rownum) = @_;
+    return $colnum{$colname} ? $Rows[$rownum]->[$colnum{$colname}] : 0;
+}
+
+sub addcolumns
+{
+    my $colname_default = shift;
+    my $newdata = shift;
+    @$newdata = map { [split (/\s/)] } @$newdata;
+    my $newdata_has_rownum = 1;
+    for (my $r = 0; $r <= $#$newdata; $r++)
+    {
+	if ($newdata->[$r]->[0] ne $r+1)
+	{
+	    $newdata_has_rownum = 0;
+	}
+    }
+    my @newcol_is_head = map { 1 } @{$newdata->[0]};
+    for (my $c = 0; $c <= $#{$newdata->[0]}; $c++)
+    {
+	$newcol_is_head[$c] &&= $newdata->[0]->[$c] =~ /\D/;
+	for (my $r = 1;
+	     $newcol_is_head[$c] &&
+	     $r <= $#$newdata;
+	     $r++)
+	{
+	    $newcol_is_head[$c] = 0 if $newdata->[$r]->[$c] ne $newdata->[0]->[$c];
+	}
+    }
+    for (my $c = $newdata_has_rownum; $c <= $#{$newdata->[0]}; $c++)
+    {
+	if ($newcol_is_head[$c]) { push @Head, $newdata->[0]->[$c]; $c++ }
+	elsif (@$colname_default) { push @Head, shift @$colname_default; }
+	else { push @Head, "" }
+    }
+    for (my $r = 0; $r <= $#$newdata; $r++)
+    {
+	if (!$Rows[$r])
+	{
+	    $Rows[$r] = [];
+	    $Rows[$r]->[0] = $r+1;
+	}
+	for (my $c = $newdata_has_rownum; $c <= $#{$newdata->[0]}; $c++)
+	{
+	    if ($newcol_is_head[$c]) { }
+	    else { push @{$Rows[$r]}, $newdata->[$r]->[$c]; }
+	}
+    }
+
+    my $rightmost = -1;
+    grep { $rightmost = $#$_ if $rightmost < $#$_ } @Rows;
+    while ($#Head < $rightmost)
+    {
+	push @Head, shift @$colname_default;
+    }
+    for (my $r = 0; $r <= $#Rows; $r++)
+    {
+	while ($#{$Rows[$r]} < $rightmost)
+	{
+	    push @{$Rows[$r]}, "";
+	}
+    }
+}

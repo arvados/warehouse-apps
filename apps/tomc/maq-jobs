@@ -46,7 +46,7 @@ for (@$joblist)
 
 my %new_job_id;
 
-
+my $mychildren = 0;
 opendir (D, $workdir) or die "$workdir: $!";
 for my $workfile (sort readdir D)
 {
@@ -55,6 +55,9 @@ for my $workfile (sort readdir D)
     fillflow ($workfile);
 }
 closedir D;
+--$mychildren while 0 < wait;
+exit 0;
+
 
 
 my %Flow;
@@ -241,23 +244,65 @@ sub concordance_pipeline
 
     my $me = $flow->{$pipeline->{label}} = {};
 
+    my @jsonjobs;
     push (@ { $flow->{json}->{pipeline} },
 	  { label => $pipeline->{label},
-	    job => [] });
+	    job => \@jsonjobs });
 
     my $ypipelines = &get_layout ($pipeline->{input}->{"layout0"});
     my $xpipelines = &get_layout ($pipeline->{input}->{"layout1"});
+
+    my $htmlfile = "$workdir/images/$id.html";
+    &build_concordance_chart ($id, $flow, $pipeline, $htmlfile, $xpipelines, $ypipelines);
+    if (-s $htmlfile)
+    {
+	$me->{"concordance"} = { success => 1, outputlinks => ["<a href=\"cache/images/$id.html\">concordance</a>"], outputkey => "$id.html" };
+    }
+    push @jsonjobs, &jsonjob ("Concordance", $me->{"concordance"});
+
     &build_snplist_union ($id, $flow, $pipeline, $ypipelines);
+
     my $n = 0;
     my @snpagree;
     my $snpagree_ready = 1;
+    my @prepreads;
+    my $prepreads_ready = 1;
+    my @mapviews;
+    my $mapviews_ready = 1;
+    my @covered_bp;
     for (@$ypipelines)
     {
 	++$n;
-	my @jsonjobs;
+
+	my $prepreads = $Job { $_->{Preparereads}->{id} };
 	my $snpdetail = $Job { $_->{Pileupfilteredcalls}->{id} };
 	my $mapview = $Job { $_->{Mapview}->{id} };
 	my $assemble = $Job { $_->{Assemble}->{id} };
+	my $merge = $Job { $_->{Merge}->{id} };
+
+	push @covered_bp, "--";
+	if ($merge && $merge->{outputkey})
+	{
+	    my $mapcheck = &local_cache ($merge->{outputkey}."/mapcheck.txt");
+	    if ($mapcheck =~ /Length of non-gap regions covered by reads:\s*(\d+)/)
+	    {
+		$covered_bp[-1] = $1;
+	    }
+	}
+
+	if ($prepreads && $prepreads->{inputkey})
+	{
+	    if ($prepreads = &fix_nomanifest ($prepreads->{inputkey}))
+	    {
+		push @prepreads, $prepreads;
+	    } else { $prepreads_ready = 0; }
+	} else { $prepreads_ready = 0; }
+
+	if ($mapview && $mapview->{outputkey})
+	{
+	    push @mapviews, $mapview->{outputkey};
+	} else { $mapviews_ready = 0; }
+
 	if ($me->{snplistunion} &&
 	    $me->{snplistunion}->{outputkey} &&
 	    $assemble &&
@@ -315,7 +360,86 @@ sub concordance_pipeline
 	    $snpagree_ready = 0;
 	}
 	push @jsonjobs, &jsonjob ("snpdetail$n", $me->{"snpdetail$n"});
-	push (@ { $flow->{json}->{pipeline}->[-1]->{job} }, @jsonjobs);
+    }
+
+    if ($prepreads_ready)
+    {
+	for (@prepreads)
+	{
+	    my $allreads = join (",", @prepreads);
+	    $me->{"readstats"} = findjob
+		( { mrfunction => "filefilter",
+		    revision => [ 2618, ],
+		    inputkey => $allreads,
+		    knobs => makeknobs
+			("readstats",
+			 "COMMAND=wc -l | (read a; echo \$MR_ID \$((\$a/4)) )",
+			 "OUTPUTNAME=readstats%N.txt",
+			),
+		  } );
+	}
+	if ($me->{"readstats"})
+	{
+	    my $stathash = $me->{"readstats"}->{"outputkey"};
+	    if ($stathash)
+	    {
+		if (!-s "$workdir/images/$stathash.txt")
+		{
+		    print "whget $stathash/ -> cache/images/$stathash.txt\n";
+		    system (qq{whget -r "$stathash/" - > "$workdir/images/$stathash.txt"});
+		}
+		$me->{"readstats"}->{outputlinks} =
+		    ["<a href='cache/images/$stathash.txt'>readstats.txt</a>"];
+	    }
+	}
+    }
+    push @jsonjobs, &jsonjob ("readstats", $me->{"readstats"});
+
+    if ($mapviews_ready)
+    {
+	for (@mapviews)
+	{
+	    my $allmapviews = join (",", @mapviews);
+	    $me->{"placestats"} = findjob
+		( { mrfunction => "filefilter",
+		    revision => [ 2618, ],
+		    inputkey => $allmapviews,
+		    knobs => makeknobs
+			("placestats",
+			 "COMMAND=cut -f1|sort -u|wc -l|(read a; echo \$MR_ID \$a)",
+			 "OUTPUTNAME=count_reads_placed.txt",
+			),
+		  } );
+	}
+	if ($me->{"placestats"})
+	{
+	    my $stathash = $me->{"placestats"}->{"outputkey"};
+	    if ($stathash)
+	    {
+		if (!-s "$workdir/images/$stathash.txt")
+		{
+		    print "whget $stathash/ -> cache/images/$stathash.txt\n";
+		    system (qq{whget -r "$stathash/" - > "$workdir/images/$stathash.txt"});
+		}
+		$me->{"placestats"}->{outputlinks} =
+		    ["<a href='cache/images/$stathash.txt'>placestats.txt</a>"];
+	    }
+	}
+    }
+    push @jsonjobs, &jsonjob ("placestats", $me->{"placestats"});
+
+    if (!grep { /--/ } @covered_bp)
+    {
+	my $N = 0;
+	my $cbp = join ("", map { ++$N; "$N $_\n" } @covered_bp);
+	my $cbphash = md5_hex ($cbp);
+	if (!-s "$workdir/images/$cbphash.txt")
+	{
+	    open C, ">", "$workdir/images/$cbphash.txt";
+	    print C $cbp;
+	    close C;
+	}
+	push @jsonjobs, &jsonjob ("coverstats", $me->{"coverstats"} = { outputlinks => ["<a href='cache/images/$cbphash.txt'>cbpstats.txt</a>"], success => 1, outputkey => $cbphash }),
     }
 
     if ($snpagree_ready)
@@ -325,7 +449,7 @@ sub concordance_pipeline
 	    my @snpdig = @snpagree;
 	    unshift @snpdig, splice @snpdig, $n, 1;
 	    my $url = "snpdig.cgi/call-".join(";", @snpdig);
-	    for (@ { $flow->{json}->{pipeline}->[-1]->{job} })
+	    for (@jsonjobs)
 	    {
 		if ($_->{label} eq "snpdetail".($n+1))
 		{
@@ -333,19 +457,100 @@ sub concordance_pipeline
 		}
 	    }
 	}
+
+	my $allsnplists = join (",", @snpagree);
+	$me->{"snpstats"} = findjob
+	    ( { mrfunction => "filefilter",
+		revision => [ 2620, ],
+		inputkey => $allsnplists,
+		knobs => makeknobs
+		    ("snpstats",
+		     "COMMAND=mrs-snplist-stats",
+		     "OUTPUTNAME=snpstats%N.txt",
+		     $pipeline->{input}->{"snplist"}
+		     ? ("SNPREFERENCE=".$pipeline->{input}->{"snplist"}."/")
+		     : ()
+		    ),
+	      } );
+	if ($me->{"snpstats"})
+	{
+	    my $stathash = $me->{"snpstats"}->{"outputkey"};
+	    if ($stathash)
+	    {
+		if (!-s "$workdir/images/$stathash.txt")
+		{
+		    print "whget $stathash/ -> cache/images/$stathash.txt\n";
+		    system (qq{whget -r "$stathash/" - > "$workdir/images/$stathash.txt"});
+		}
+		$me->{"snpstats"}->{outputlinks} =
+		    ["<a href='cache/images/$stathash.txt'>snpstats.txt</a>"];
+	    }
+	}
+    }
+    push @jsonjobs, &jsonjob ("snpstats", $me->{"snpstats"});
+
+    if ($me->{"readstats"} && $me->{"readstats"}->{"outputkey"} &&
+	$me->{"placestats"} && $me->{"placestats"}->{"outputkey"} &&
+	$me->{"coverstats"} && $me->{"coverstats"}->{"outputkey"} &&
+	$me->{"snpstats"} && $me->{"snpstats"}->{"outputkey"})
+    {
+	push @jsonjobs, &jsonjob ("allstats", { outputlinks => ["<a href='allstats.cgi?$id'>allstats</a>"], success => 1 }),
     }
 
-    my $htmlfile = "$workdir/images/$id.html";
-    &build_concordance_chart ($id, $flow, $pipeline, $htmlfile, $xpipelines, $ypipelines);
-    if (-s $htmlfile)
-    {
-	$flow->{json}->{pipeline}->[-1]->{html} = 
-	    "<a href=\"cache/images/$id.html\">View concordance table</a><br /><br />";
-    }
     my $layout0 = $pipeline->{input}->{"layout0"};
     my $layout1 = $pipeline->{input}->{"layout1"};
     $flow->{json}->{pipeline}->[-1]->{html} .=
 	"<a href=\"./?$layout0\">View \"y\" layout</a><br /><br /><a href=\"./?$layout1\">View \"x\" layout</a><br /><br />&nbsp;";
+}
+
+sub local_cache
+{
+    my $hash_path = shift;
+    my $cache_file = $hash_path;
+    $cache_file =~ s{/$}{};
+    $cache_file =~ s{/}{--}g;
+    $cache_file .= ".txt" if $cache_file !~ /\./;
+    $cache_file = "$workdir/images/$cache_file";
+    if (!-s $cache_file)
+    {
+	print "whget -r $hash_path -> $cache_file\n";
+	system (qq{whget -r "$hash_path" - > "$cache_file"});
+    }
+    if (-s $cache_file)
+    {
+	if (open C, "<", $cache_file)
+	{
+	    local $/ = undef;
+	    my $data = <C>;
+	    return $data if close C;
+	}
+    }
+    return undef;
+}
+
+sub fix_nomanifest
+{
+    my ($hash) = @_;
+    if (!-e "$workdir/$hash.nomanifest")
+    {
+	return $hash;
+    }
+    if (my $mhash = readlink ("$workdir/$hash.asmanifest"))
+    {
+	return $mhash;
+    }
+    my $gz = block_is_binary ($hash) ? ".gz" : "";
+    my $dhashes =
+	join (" ", map { &blockhash_with_size ($_) } split (",", $hash));
+    my $dsize = 0;
+    $dsize += $1 while $dhashes =~ /\S*\+(\d+)\S*/g;
+    my $mhash = $whc->store_block (". $dhashes 0:$dsize:reads.txt$gz\n");
+    if ($mhash)
+    {
+	symlink $mhash, "$workdir/$hash.asmanifest";
+	return $mhash;
+    }
+    return undef;
 }
 
 sub get_layout
@@ -414,24 +619,39 @@ sub build_concordance_chart
 
     print "Running snplist-agree for pipeline $id\n";
 
+    --$mychildren while 0 < waitpid (-1, WNOHANG);
+    my $childsupervisor = $mychildren < 1 ? fork() : undef;
+    if ($childsupervisor)
+    {
+	++$mychildren;
+	return;
+    }
     my ($mybasedir) = $0 =~ /^(.*\/)/;
     my $child = fork();
     if ($child eq 0)
     {
 	close STDIN;
-	open STDOUT, ">", "$outfile.tmp" or die "open $outfile.tmp: $!";
+	open STDOUT, "+>>", "$outfile.tmp" or die "open $outfile.tmp: $!";
+	flock STDOUT, LOCK_EX|LOCK_NB or die "$outfile.tmp already locked\n";
+	truncate STDOUT, 0 or die "truncate $outfile.tmp failed: $!";
+	seek STDOUT, 0, 0 or die "seek $outfile.tmp failed: $!";
 	exec ("${mybasedir}snplist-agree", @x, "--", @y);
 	exit 1;
     }
-    wait if $child;
-    if ($? == 0)
+    if ($child)
     {
-	rename "$outfile.tmp", $outfile;
-	if (-s $outfile)
+	wait;
+	if ($? == 0)
 	{
-	    return 1;
+	    rename "$outfile.tmp", $outfile;
+	    if (-s $outfile)
+	    {
+		exit 0 if defined $childsupervisor;
+		return 1;
+	    }
 	}
     }
+    exit 1 if defined $childsupervisor;
     return undef;
 }
 

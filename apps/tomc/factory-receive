@@ -82,6 +82,12 @@ foreach my $hash (sort keys %hash_is)
 	    close F;
 	    print "$hash is affy scan, id is $affyscan_id\n";
 	}
+	elsif ($chunk =~ /^(chr\S+\s\d+\s\d+\srs\d+\s\d+\s[-\+]\r?\n){10}/s)
+	{
+	    sysopen F, "$workdir/$hash.issnplist", O_WRONLY|O_CREAT|O_EXCL;
+	    close F;
+	    print "$hash is snplist\n";
+	}
 	elsif ($chunk =~ /\n\#%netaffx-annotation-tabular-format-version=1.0/)
 	{
 	    my %headinfo = $chunk =~ /\n\#%(\S+?)=([^\r\n]*)/g;

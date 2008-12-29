@@ -75,6 +75,10 @@ for (sort keys %todo)
 	    {
 		++$objects{pipelines}->{$datahash};
 	    }
+	    elsif (-e "$workdir/$datahash.issnplist")
+	    {
+		++$objects{snplists}->{$datahash};
+	    }
 	    else
 	    {
 		++$objects{unknown}->{$datahash};
@@ -89,7 +93,7 @@ for (sort keys %todo)
 
 print qq{<table class="manage_data">};
 
-foreach my $obtype (qw(reads genomes affymaps affyscans layouts pipelines unknown pending))
+foreach my $obtype (qw(reads genomes affymaps affyscans snplists layouts pipelines unknown pending))
 {
     my @hashes = sort keys % { $objects{$obtype} };
     print qq{<tr><th colspan="4">$obtype</th></tr>};
