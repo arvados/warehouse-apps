@@ -14,8 +14,15 @@ fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
 
-system ("./usr/bin/maq", @ARGV)
-    == 0 or die "\`maq @ARGV\` exited $?";
+my $maqprogram = "./usr/bin/maq";
+if ($ARGV[0] =~ m{^/})
+{
+  $maqprogram = ".".$ARGV[0];
+  shift @ARGV;
+}
+
+system ($maqprogram, @ARGV)
+    == 0 or die "\`$maqprogram @ARGV\` exited $?";
 exit 0;
 
 sub fetch_to_file
