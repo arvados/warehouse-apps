@@ -769,6 +769,10 @@ sub readfrompipes
       print STDERR $buf if $ENV{MR_DEBUG};
       $jobstep[$job]->{stderr} .= $buf;
       preprocess_stderr ($job);
+      if (length ($jobstep[$job]->{stderr}) > 16384)
+      {
+	substr ($jobstep[$job]->{stderr}, 0, 8192) = "";
+      }
       $gotsome = 1;
     }
   }
