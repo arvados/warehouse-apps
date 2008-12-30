@@ -58,7 +58,8 @@ sub do_stats
 {
     my $in_reflist = shift;
     my %stat = (het => 0,
-		hom => 0);
+		hom => 0,
+		noc => 0);
     while (<>)
     {
 	my ($chr, $pos, $ref, $call) = /^(\S+)\s(\d+)\s([A-Z])+\s([A-Z])+\s/;
