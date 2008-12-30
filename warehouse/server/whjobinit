@@ -123,7 +123,7 @@ while (!$main::DRAIN || $main::children > 0)
   }
 
   my $finishedchild = 
-      ($main::children >= $max_njobs)
+      ($main::children >= $max_njobs || $main::DRAIN)
       ? wait ()
       : waitpid (-1, WNOHANG);
 
@@ -142,10 +142,6 @@ while (!$main::DRAIN || $main::children > 0)
     delete $job_proc{$proc_job{$finishedchild}};
     delete $proc_job{$finishedchild};
     --$main::children;
-  }
-  elsif ($main::DRAIN)
-  {
-    sleep 1;
   }
 }
 print STDERR "$0 $$ exit\n";
