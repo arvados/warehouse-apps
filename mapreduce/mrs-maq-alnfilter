@@ -27,7 +27,17 @@ while (<R>)
 }
 close R;
 
-@snpref = sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snpref;
+@snpref = sort { ( $a->[0] cmp $b->[0] ||
+		   $a->[1] <=> $b->[1] ||
+		   $#$a <=> $#$b ) } @snpref;
+for (my $i=$#snpref-1; $i>=0; $i--)
+{
+    if ($snpref[$i]->[0] eq $snpref->[$i+1]->[0] &&
+	$snpref[$i]->[1] == $snpref->[$i+1]->[1])
+    {
+	splice @snpref, $i, 1;
+    }
+}
 my @snpskeptic = map { [] } @snpref;
 
 my $want_snpskeptic = $ENV{KNOB_WANT_SNPS};
@@ -51,6 +61,15 @@ while(<>)
 	my ($chr, $pos) = @in[0,1];
 	print if (findsnpref ($chr, $pos, $pos) xor $invert);
     }
+}
+if ($ENV{KNOB_SNPFILTER_ARGS})
+{
+    $|=1;
+    open (STDOUT, "|-",
+	  "mrs-maq",
+	  "/usr/bin/maq.pl",
+	  "SNPfilter",
+	  split (/\s+/, $ENV{KNOB_SNPFILTER_ARGS})) or die "mrs-maq: $!";
 }
 print_snpskeptic() if $want_snpskeptic;
 
