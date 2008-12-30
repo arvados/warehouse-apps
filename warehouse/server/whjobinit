@@ -143,6 +143,10 @@ while (!$main::DRAIN || $main::children > 0)
     delete $proc_job{$finishedchild};
     --$main::children;
   }
+  elsif ($main::DRAIN)
+  {
+    sleep 1;
+  }
 }
 print STDERR "$0 $$ exit\n";
 exit 0;
