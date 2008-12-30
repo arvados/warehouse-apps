@@ -916,9 +916,7 @@ sub reconnect_database
   return if ($dbh && $dbh->do ("select now()"));
   for (1..16)
   {
-    $dbh = DBI->connect($main::mapreduce_dsn,
-			$main::mrcontrol_mysql_username,
-			$main::mrcontrol_mysql_password);
+    $dbh = DBI->connect(@$Warehouse::Server::DatabaseDSN);
     return if $dbh;
     warn ($DBI::errstr);
     sleep $_;
