@@ -25,14 +25,18 @@ my $srmax = 0;
 
 while(<>)
 {
+    chomp;
     my @snplist = split;
     $snplist[1] =~ /^\d+$/ or die "format error";
-    printf ("%s\t%d\t%d\t%s>%s:%s%d:%s\n",
+    $snplist[3] =~ s/NoCall/N/;
+    my $name = (!$ENV{KNOB_SNPREFERENCE} && $snplist[6] =~ /^rs\d+$/)
+	? $snplist[6]
+	: sprintf ("%s%d", $ENV{KNOB_BED_ID_PREFIX}, $ENV{MR_ID});
+    printf ("%s\t%d\t%d\t%s>%s:%s:%s\n",
 	    $snplist[0],
 	    $snplist[1]-1, $snplist[1],
 	    $snplist[2], $snplist[3],
-	    $ENV{KNOB_BED_ID_PREFIX},
-	    $ENV{MR_ID},
+	    $name,
 	    &findsnpref (@snplist[0,1,1]),
 	    );
 }
