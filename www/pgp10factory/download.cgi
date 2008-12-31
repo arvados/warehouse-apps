@@ -25,21 +25,33 @@ my @pipelines;
 
 if (-e "$workdir/$hash.islayout")
 {
-    my $layout = readfile ("$workdir/$hash");
-    while ($layout =~ m{"reads": "([0-9a-f,]+)", "genome": "([0-9a-f,]+)"}g)
+    my $layout = &readfile ("$workdir/$hash");
+    while ($layout =~ m{"id": "([0-9a-f,]+)"}g)
     {
-	my $text = "pipeline=maq\nreads=$1\ngenome=$2\n";
+	my $pipelinehash = $1;
 	push @pipelines, {
-	    id => md5_hex ($text),
-	    reads => $1,
-	    genome => $2,
-	    text => $text,
+	    id => $pipelinehash,
+	    text => &readfile ("$workdir/$pipelinehash.ispipeline"),
 	};
+	warn $pipelines[-1]->{"id"}." -- ".$pipelines[-1]->{"text"}."\n\n";
+    }
+    if (!@pipelines)
+    {
+	while ($layout =~ m{"reads": "([0-9a-f,]+)", "genome": "([0-9a-f,]+)"}g)
+	{
+	    my $text = "pipeline=maq\nreads=$1\ngenome=$2\n";
+	    push @pipelines, {
+		id => md5_hex ($text),
+		reads => $1,
+		genome => $2,
+		text => $text,
+	    };
+	}
     }
 }
 elsif (-e "$workdir/$hash.ispipeline" && readlink "$workdir/$hash.download")
 {
-    my $text = readfile ("$workdir/$hash");
+    my $text = readfile ("$workdir/$hash.ispipeline");
     my ($reads) = $text =~ /reads=(.*)/;
     my ($genome) = $text =~ /genome=(.*)/;
     push @pipelines, {
@@ -147,9 +159,11 @@ sub printtar
     my @pipelines = @_;
 
     my $tarballsize = 0;
+    my $N = 0;
     for my $pipeline (@pipelines)
     {
 	$tarballsize += tarsize ($pipeline);
+	$pipeline->{"name"} = ++$N if @pipelines > 1;
     }
     
     print CGI->header (
@@ -209,7 +223,7 @@ sub tarpipeline
 {
     my $pipeline = shift;
     my $manifestdata = $pipeline->{bigmanifest};
-    my $pipelinedir = $pipeline->{id};
+    my $pipelinedir = $pipeline->{"name"} || $pipeline->{"id"};
     my $timestamp = readlink ("$workdir/".$pipeline->{id}.".finishtime_s")
 	|| scalar time;
     my $m = new Warehouse::Manifest (whc => $whc, data => \$manifestdata);
