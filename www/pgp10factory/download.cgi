@@ -33,7 +33,6 @@ if (-e "$workdir/$hash.islayout")
 	    id => $pipelinehash,
 	    text => &readfile ("$workdir/$pipelinehash.ispipeline"),
 	};
-	warn $pipelines[-1]->{"id"}." -- ".$pipelines[-1]->{"text"}."\n\n";
     }
     if (!@pipelines)
     {
