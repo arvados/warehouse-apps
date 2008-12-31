@@ -65,25 +65,33 @@ for my $what (qw(Concordance readstats placestats coverstats snpstats))
     &addcolumns (\@coltitles, \@newdata);
 }
 
+push @Head, qw(affacc affcov mbextr hetnex hetyex);
+my %colnum;
+for (my $c=0; $c<=$#Head; $c++) { $colnum{$Head[$c]} = $c; }
+
+for (my $r=0; $r<=$#Rows; $r++)
+{
+    push @{$Rows[$r]}, ((fromcol("con",$r) + fromcol("dis",$r))
+			? (100 * fromcol("con",$r) / (fromcol("con",$r) + fromcol("dis",$r)))
+			: 0);
+    push @{$Rows[$r]}, ((fromcol("con",$r) + fromcol("dis",$r) + fromcol("nocall",$r))
+			? (100 * (fromcol("con",$r) + fromcol("dis",$r)) / (fromcol("con",$r) + fromcol("dis",$r) + fromcol("nocall",$r)))
+			: 0);
+    push @{$Rows[$r]}, (0.0675 * fromcol("affcov",$r));
+    push @{$Rows[$r]}, (fromcol("mbextr",$r)
+			? (fromcol("het/n",$r) * 30 / fromcol("mbextr",$r))
+			: 0);
+    push @{$Rows[$r]}, (fromcol("mbextr",$r)
+			? (fromcol("het/y",$r) * 30 / fromcol("mbextr",$r))
+			: 0);
+}
+
 push @Rows, ["Sum"];
 for (my $c=1; $c<=$#Head; $c++)
 {
     my $tot = 0;
     for (my $r=0; $r<$#Rows; $r++) { $tot += $Rows[$r]->[$c] }
     push @{$Rows[-1]}, $tot;
-}
-
-push @Head, qw(affacc affcov mbextr hetnex hetyex);
-my %colnum;
-for (my $c=0; $c<=$#Head; $c++) { $colnum{$Head[$c]} = $c; }
-
-for (my $r=0; $r<$#Rows; $r++)
-{
-    push @{$Rows[$r]}, (100 * fromcol("con",$r) / (fromcol("con",$r) + fromcol("dis",$r)));
-    push @{$Rows[$r]}, (100 * (fromcol("con",$r) + fromcol("dis",$r)) / (fromcol("con",$r) + fromcol("dis",$r) + fromcol("nocall",$r)));
-    push @{$Rows[$r]}, (0.0675 * fromcol("affcov",$r));
-    push @{$Rows[$r]}, (fromcol("het/n",$r) * 30 / fromcol("mbextr",$r));
-    push @{$Rows[$r]}, (fromcol("het/y",$r) * 30 / fromcol("mbextr",$r));
 }
 
 for (\@Head, @Rows)
