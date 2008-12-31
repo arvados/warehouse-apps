@@ -83,6 +83,11 @@ while (@snplists)
 		    }
 		    next;
 		}
+		elsif ($$dataref =~ /^(\S+) \t (\d+) $/x)
+		{
+		    push @calls, [ $1, $2, $$dataref ];
+		    next;
+		}
 		die "$0 $hash $subdir/$file line $line noparse $$dataref\n";
 	    }
 
@@ -249,5 +254,5 @@ sub is_hom
 sub is_nocall
 {
     my ($x) = shift;
-    $x =~ /^[NX]/i;
+    length($x) == 0 || $x =~ /^[NX]/i;
 }
