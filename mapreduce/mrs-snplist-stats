@@ -63,6 +63,11 @@ sub do_stats
     while (<>)
     {
 	my ($chr, $pos, $ref, $call) = /^(\S+)\s(\d+)\s([A-Z])+\s([A-Z])+\s/;
+	if (!defined $chr)
+	{
+	    ($chr, $pos) = /^(\S+)\s(\d+)\n/;
+	    ($ref, $call) = "N", "N";
+	}
 	next if !defined $chr;
 	++$stat{het} if is_het($call);
 	++$stat{hom} if is_hom($call);
