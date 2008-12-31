@@ -1,13 +1,117 @@
 #!/usr/bin/perl
 
+my @snpref;
+if ($ENV{KNOB_SNPREFERENCE})
+{
+    open R, "-|", "bash -c 'set -o pipefail; whget -r \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf'"
+	or die "whget: $!";
+    while (<R>)
+    {
+	chomp;
+	push @snpref, [split];
+	# special kludge for bed/dbsnp
+	++$snpref[-1]->[1]
+	    if ($snpref[-1]->[1]+1 == $snpref[-1]->[2] &&
+		$snpref[-1]->[3] =~ /^rs\d+$/);
+    }
+    close R;
+    @snpref = sort { ( $a->[0] cmp $b->[0] ||
+		       $a->[1] <=> $b->[1] ||
+		       $#$a <=> $#$b ) } @snpref;
+}
+
+my $srmin = 0;
+my $srmax = 0;
+
 while(<>)
 {
     my @snplist = split;
     $snplist[1] =~ /^\d+$/ or die "format error";
-    printf ("%s\t%d\t%d\t%s>%s:%s%d:\n",
+    printf ("%s\t%d\t%d\t%s>%s:%s%d:%s\n",
 	    $snplist[0],
 	    $snplist[1]-1, $snplist[1],
 	    $snplist[2], $snplist[3],
 	    $ENV{KNOB_BED_ID_PREFIX},
-	    $ENV{MR_ID});
+	    $ENV{MR_ID},
+	    &findsnpref (@snplist[0,1,1]),
+	    );
+}
+
+sub findsnpref
+{
+    return undef if !@snpref;
+
+    my ($chr, $startpos, $endpos) = @_;
+
+    # srmin left over from the previous search already points to the
+    # next interesting position after the previous read's startpos.
+    # Usually this is the relevant part of the search for this read,
+    # too.  Let's check this common case quickly before doing the full
+    # binary search.
+
+    if (($chr cmp $snpref[$srmin]->[0]
+	 || $endpos <=> $snpref[$srmin]->[1]) < 0
+	# sought read ends before location [srmin]
+
+	&& ($srmin == 0
+	    ||
+	    ($chr cmp $snpref[$srmin-1]->[0]
+	     || $startpos <=> $snpref[$srmin-1]->[1]) > 0)
+	# sought read starts after location [srmin-1]
+	)
+    {
+	return undef;
+    }
+
+    # startpos and endpos tend to proceed toward srmin. perhaps they
+    # got there:
+
+    if ($chr eq $snpref[$srmin]->[0] &&
+	$startpos <= $snpref[$srmin]->[1] &&
+	$endpos >= $snpref[$srmin]->[1])
+    {
+	return $snpref[$srmin]->[3];
+    }
+
+    # just past?
+
+    if ($srmin < $#snpref &&
+	($chr cmp $snpref[$srmin]->[0]
+	 || $startpos <=> $snpref[$srmin]->[1]) > 0 &&
+	($chr cmp $snpref[$srmin+1]->[0]
+	 || $endpos <=> $snpref[$srmin+1]->[1]) < 0)
+    {
+	++$srmin;
+	return undef;
+    }
+
+    $srmin = 0;
+    $srmax = $#snpref;
+    while ($srmin < $srmax)
+    {
+	my $srmid = int (($srmin + $srmax) / 2);
+	my $cmp = $chr cmp $snpref[$srmid]->[0]
+	    || $startpos <=> $snpref[$srmid]->[1];
+	if ($cmp < 0)		# sought read starts before location [srmid] --
+				# if it covers anything after [srmid], it must
+				# also cover [srmid].
+	{
+	    $srmax = $srmid;
+	}
+	elsif ($cmp > 0)	# sought read starts after location [srmid] --
+				# it can't cover [srmid] or anything before it.
+	{
+	    $srmin = $srmid + 1;
+	}
+	else
+	{
+	    $srmin = $srmid;
+	    return $snpref[$srmin]->[3];
+	}
+    }
+
+    return undef unless ($chr eq $snpref[$srmin]->[0]
+			 && $startpos <= $snpref[$srmin]->[1]
+			 && $endpos >= $snpref[$srmin]->[1]);
+    return $snpref[$srmin]->[3];
 }
