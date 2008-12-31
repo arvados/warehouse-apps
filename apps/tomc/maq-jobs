@@ -270,6 +270,7 @@ sub concordance_pipeline
     my @mapviews;
     my $mapviews_ready = 1;
     my @covered_bp;
+    my @notable_knobs;
     for (@$ypipelines)
     {
 	++$n;
@@ -310,11 +311,11 @@ sub concordance_pipeline
 	{
 	    $me->{"cnsfilter$n"} = findjob
 		( { mrfunction => "filefilter",
-		    revision => [ 2590, ],
+		    revision => [ 2622, ],
 		    inputkey => $assemble->{outputkey},
 		    knobs => makeknobs
 			("cnsfilter",
-			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter",
+			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter|mrs-maq /usr/bin/maq.pl SNPfilter -q 40 -w 5 -N 2 -d 1 -D 256 -n 20 -",
 			 "OUTPUTNAME=snplist.txt",
 			 "SNPREFERENCE=".$me->{snplistunion}->{outputkey}."/snplist.txt",
 			),
@@ -333,16 +334,17 @@ sub concordance_pipeline
 		if $snpdetail->{knobs} =~ /SNPCALL_MIN_COVER=(\d+)/;
 	    push @knobs, "SNPCALL_MIN_STARTS=$1"
 		if $snpdetail->{knobs} =~ /SNPCALL_MIN_STARTS=(\d+)/;
+	    @notable_knobs = @knobs;
 
 	    $me->{"snpdetail$n"} = findjob
 		( { mrfunction => "filefilter",
-		    revision => [ 2596, ],
+		    revision => [ 2631, ],
 		    inputkey => $mapview->{outputkey},
 		    knobs => makeknobs
 			("snpdetail",
 			 "COMMAND=mrs-reftranslate|mrs-maq-alnfilter",
 			 "OUTPUTNAME=snplist.txt",
-			 "SNPREFERENCE=".$me->{"cnsfilter$n"}->{outputkey}."/snplist.txt",
+			 "SNPREFERENCE=".$me->{"cnsfilter$n"}->{"outputkey"}.",".$me->{"snplistunion"}->{"outputkey"}."/",
 			 "WANT_SNPS=1",
 			 @knobs,
 			),
@@ -352,7 +354,7 @@ sub concordance_pipeline
 	{
 	    $me->{"snpdetail$n"}->{outputlinks} =
 		["<a href='snpdig.cgi/call-".$me->{"snpdetail$n"}->{outputkey}."'>snpdig/call</a>",
-		 "<a href='snpdig.cgi/nocall".$me->{"snpdetail$n"}->{outputkey}."'>snpdig/nocall</a>"];
+		 "<a href='snpdig.cgi/nocall-".$me->{"snpdetail$n"}->{outputkey}."'>snpdig/nocall</a>"];
 	    push @snpagree, $me->{"snpdetail$n"}->{outputkey};
 	}
 	else
@@ -459,9 +461,23 @@ sub concordance_pipeline
 	}
 
 	my $allsnplists = join (",", @snpagree);
+ 	$me->{"snplist2bed"} = findjob
+ 	    ( { mrfunction => "filefilter",
+ 		revision => [ 2636, ],
+ 		inputkey => $allsnplists,
+ 		knobs => makeknobs
+ 		    ("allsnps",
+ 		     "COMMAND=egrep ^chr | cut -f1-4 | perl -ne 'print if /[A-MO-WYZ]\$/' | mrs-snplist2bed",
+ 		     "OUTPUTNAME=snplist%N.bed",
+		     $pipeline->{input}->{"snplist"}
+		     ? ("SNPREFERENCE=".$pipeline->{input}->{"snplist"}."/")
+		     : ()
+ 		    ),
+ 	      } );
+	&buildoutputs ($me, "snplist2bed", map { "snplist$_.bed" } (1..(1+$#snpagree)));
 	$me->{"snpstats"} = findjob
 	    ( { mrfunction => "filefilter",
-		revision => [ 2620, ],
+		revision => [ 2632, ],
 		inputkey => $allsnplists,
 		knobs => makeknobs
 		    ("snpstats",
@@ -487,6 +503,7 @@ sub concordance_pipeline
 	    }
 	}
     }
+    push @jsonjobs, &jsonjob ("snplist2bed", $me->{"snplist2bed"});
     push @jsonjobs, &jsonjob ("snpstats", $me->{"snpstats"});
 
     if ($me->{"readstats"} && $me->{"readstats"}->{"outputkey"} &&
@@ -615,7 +632,7 @@ sub build_concordance_chart
     }
 
     return if (-s $outfile &&
-	       (time - (-M $outfile * 86400)) > $last_job_finish);
+	       (time - ((-M $outfile) * 86400)) > $last_job_finish);
 
     print "Running snplist-agree for pipeline $id\n";
 
@@ -684,6 +701,8 @@ sub affyscan_pipeline
 
     my $me = $flow->{$pipeline->{label}} = {};
 
+    $me->{"outputs"} = [$pipeline->{"input"}->{"affyscan"} . " input"];
+
     $me->{affy2snplist} = findjob
 	( { mrfunction => "filefilter",
 	    revision => [ $pipeline->{input}->{probemargin} ? 2592 : 2581, ],
@@ -713,15 +732,53 @@ sub affyscan_pipeline
 	} ) unless $me->{affyscan2snplist} || !$me->{affy2snplist} || !$me->{affy2snplist}->{outputkey};
     buildoutputs ($me, "affyscan2snplist", "snplist.txt");
 
+    $me->{"snplist2bed"} = &findjob
+	( { mrfunction => "filefilter",
+	    revision => [ 2637, ],
+	    inputkey => $me->{"affyscan2snplist"}->{"outputkey"},
+	    knobs => makeknobs ("snplist2bed",
+				"COMMAND=mrs-snplist2bed",
+				"OUTPUTNAME=affyscan.bed",
+		),
+	} ) unless ($me->{"snplist2bed"} ||
+		    !$me->{"affyscan2snplist"} ||
+		    !$me->{"affyscan2snplist"}->{"outputkey"});
+    &buildoutputs ($me, "snplist2bed", "affyscan.bed");
+
+    if ($me->{"snplist2bed"} &&
+	$me->{"snplist2bed"}->{"outputkey"})
+    {
+	my $bigmanifesthash = &buildbigmanifest
+	    ($id, map {
+		/^\S+/ ? ($&) : ()
+	     } @{$me->{"outputs"}});
+	$me->{gzip} = findjob
+	    ( { mrfunction => "gzip",
+		revision => [ 2394, ],
+		inputkey => $bigmanifesthash,
+		nodes => 1,
+		knobs => makeknobs ("affyscan-gzip"),
+	      } ) unless $me->{"gzip"} || !$bigmanifesthash;
+    }
+
     my $scan = $pipeline->{input}->{affyscan};
     my $inputpath = $flow->{input_in_manifest} ? "$scan/" : "$scan/=/$scan.gz";
     push (@ { $flow->{json}->{pipeline} },
 	  { label => $pipeline->{label},
 	    job => [
 		    jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
-		    jsonjob ("Prune Affy map", $me->{affy2snplist}),
-		    jsonjob ("Look up SNP IDs", $me->{affyscan2snplist}),
+		    jsonjob ("Prune Affy map", $me->{"affy2snplist"}),
+		    jsonjob ("Look up SNP IDs", $me->{"affyscan2snplist"}),
+		    jsonjob ("Convert to BED", $me->{"snplist2bed"}),
+		    jsonjob ("gzip", $me->{"gzip"}),
 		    ] } );
+
+    if ($me->{"gzip"} && $me->{"gzip"}->{"outputkey"})
+    {
+	symlink $me->{"gzip"}->{"outputkey"}, "$workdir/$id.download";
+	symlink $me->{"gzip"}->{"finishtime_s"}, "$workdir/$id.finishtime_s";
+	$flow->{"json"}->{"downloadall"} = $id;
+    }
 }
 
 sub maq_pipeline
@@ -1281,12 +1338,14 @@ sub jsonjob
 	{
 	    $x->{outputfiles} = $job->{outputlinks};
 	}
-	if ($x->{status} eq "fail" && $job->{metakey})
+	if ($x->{status} eq "fail")
 	{
 	    my $id = $job->{id};
 	    my $meta = $job->{metakey};
 	    $x->{outputfiles} = [
-		qq{<a href="http://templeton-controller.freelogy.org/whget.cgi/$meta.txt">view errors</a>},
+		($meta
+		 ? qq{<a href="http://templeton-controller.freelogy.org/whget.cgi/$meta.txt">view errors</a>}
+		 : ()),
 		qq{<button id="retry-$id" onclick="pipeline_retryjob($id);">retry job</button>},
 		];
 	}
