@@ -26,7 +26,7 @@ for my $yfile (@y)
     my $ylist_orig = &readsnplist ($yfile);
     my $yhash = shift @yhash;
     my @xscore;
-    my $xhighscore;
+    my $xhighscore = 0;
     for (my $xi=0; $xi <= $#xlists; $xi++)
     {
 	my $xlist_orig = $xlists[$xi];
@@ -94,7 +94,7 @@ for my $yfile (@y)
 			     255 - $redness,
 			     255 - $redness);
 	printf "<TD style=\"background: $color\">%.0f%s</TD>", $xscore[$xi]->[0], $star ? "*" : "";
-	if ($star)
+	if ($star || ($xhighscore == 0 && $xi == 0))
 	{
 	    my $xhash = $xhash[$xi];
 	    my $label = sprintf ("<code>%8.8s / %8.8s</code>",
