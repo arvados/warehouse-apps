@@ -32,8 +32,8 @@ close R;
 		   $#$a <=> $#$b ) } @snpref;
 for (my $i=$#snpref-1; $i>=0; $i--)
 {
-    if ($snpref[$i]->[0] eq $snpref->[$i+1]->[0] &&
-	$snpref[$i]->[1] == $snpref->[$i+1]->[1])
+    if ($snpref[$i]->[0] eq $snpref[$i+1]->[0] &&
+	$snpref[$i]->[1] == $snpref[$i+1]->[1])
     {
 	splice @snpref, $i, 1;
     }
