@@ -1,0 +1,9 @@
+#!/usr/bin/perl
+
+while(<>)
+{
+    my @snplist = split;
+    $snplist[1] =~ /^\d+$/ or die "format error";
+    printf ("%s\t%d\t%d\t%s\n",
+	    $snplist[0], $snplist[1]-1, $snplist[1], $snplist[3]);
+}
