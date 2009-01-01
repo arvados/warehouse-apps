@@ -218,3 +218,137 @@ axis(1,
      labels=c(1:10),
      at=(1:10)*4-2.5,
      tick=FALSE)
+
+
+postscript(file="/tmp/filter-effect-on-het-and-dbsnp-proportion-grouped.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F)
+
+dbsnp_order <- order(rowSums(Allstats[,c("het.y.2s_3c","hom.y.2s_3c")]/Allstats[,"call.2s_3c"]))
+foo <- Allstats[dbsnp_order,c("het.y.1s_1c","hom.y.1s_1c","het.n.1s_1c","hom.n.1s_1c")]
+foo[11:20,] <- Allstats[dbsnp_order,c("het.y.1s_3c","hom.y.1s_3c","het.n.1s_3c","hom.n.1s_3c")]
+foo[21:30,] <- Allstats[dbsnp_order,c("het.y.2s_3c","hom.y.2s_3c","het.n.2s_3c","hom.n.2s_3c")]
+foo <- foo/rowSums(foo)
+
+barplot(t(foo),
+	space=c(0,rep(c(0,0,0,0,0,0,0,0,0,1),2),0,0,0,0,0,0,0,0,0),
+	main="Effect of filters on het/hom/dbsnp calls (55k probe reference)",
+	ylab="proportion of het/dbsnp, hom/dbsnp, het/other, hom/other",
+	xlab="pgp10 for each filter: 1s1c, 1s3c, 2s3c",
+	xaxt="n")
+
+
+postscript(file="/tmp/het-proportion-agreement-1s1c.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F)
+
+foo <- Allstats[,"het.y.1s_1c"]/(Allstats[,"het.y.1s_1c"]+Allstats[,"hom.y.1s_1c"])
+foo[11:20] <- Allstats[,"het.n.1s_1c"]/(Allstats[,"het.n.1s_1c"]+Allstats[,"hom.n.1s_1c"])
+
+barplot(t(foo[order(c(2*(1:10)-1,2*(1:10)))]),
+	space=c(0,rep(c(0,1),9),0),
+	col=gray(c(.8)),
+	main="Agreement of het call proportions (1s1c)",
+	ylab="proportion of heterozygous SNPs",
+	xlab="Compare loci in dbSNP / not in dbSNP for each participant",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*3-2,
+     tick=FALSE)
+
+
+postscript(file="/tmp/het-proportion-agreement-1s3c.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F)
+
+foo <- Allstats[,"het.y.1s_3c"]/(Allstats[,"het.y.1s_3c"]+Allstats[,"hom.y.1s_3c"])
+foo[11:20] <- Allstats[,"het.n.1s_3c"]/(Allstats[,"het.n.1s_3c"]+Allstats[,"hom.n.1s_3c"])
+
+barplot(t(foo[order(c(2*(1:10)-1,2*(1:10)))]),
+	space=c(0,rep(c(0,1),9),0),
+	col=gray(c(.8)),
+	main="Agreement of het call proportions (1s3c)",
+	ylab="proportion of heterozygous SNPs",
+	xlab="Compare loci in dbSNP / not in dbSNP for each participant",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*3-2,
+     tick=FALSE)
+
+
+postscript(file="/tmp/het-proportion-agreement-2s3c.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F)
+
+foo <- Allstats[,"het.y.2s_3c"]/(Allstats[,"het.y.2s_3c"]+Allstats[,"hom.y.2s_3c"])
+foo[11:20] <- Allstats[,"het.n.2s_3c"]/(Allstats[,"het.n.2s_3c"]+Allstats[,"hom.n.2s_3c"])
+
+barplot(t(foo[order(c(2*(1:10)-1,2*(1:10)))]),
+	space=c(0,rep(c(0,1),9),0),
+	col=gray(c(.8)),
+	main="Agreement of het call proportions (2s3c)",
+	ylab="proportion of heterozygous SNPs",
+	xlab="Compare loci in dbSNP / not in dbSNP for each participant",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*3-2,
+     tick=FALSE)
+
+
+postscript(file="/tmp/filter-effect-percent.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F)
+
+foo <- Allstats[,"con.1s_1c"]/(Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"])
+foo[11:20] <- Allstats[,"con.1s_3c"]/(Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"])
+foo[21:30] <- Allstats[,"con.2s_3c"]/(Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"])
+foo <- foo * 100
+
+barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10)))]),
+	space=c(0,rep(c(0,0,1),9),0,0),
+	col=gray(c(.8)),
+	main="Effect of filters on concordance (55k probe reference)",
+	ylab="% concordance with Affy scans",
+	xlab="1s1c/1s3c/2s3c for each participant",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*4-2.5,
+     tick=FALSE)
+
+
+postscript(file="/tmp/filter-effect-percent-hg18.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F)
+
+foo <- Allstats[,"con.1s_1c_hg18"]/(Allstats[,"con.1s_1c_hg18"]+Allstats[,"dis.1s_1c_hg18"])
+foo[11:20] <- Allstats[,"con.1s_3c_hg18"]/(Allstats[,"con.1s_3c_hg18"]+Allstats[,"dis.1s_3c_hg18"])
+foo[21:30] <- Allstats[,"con.2s_3c_hg18"]/(Allstats[,"con.2s_3c_hg18"]+Allstats[,"dis.2s_3c_hg18"])
+foo <- foo * 100
+
+barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10)))]),
+	space=c(0,rep(c(0,0,1),9),0,0),
+	col=gray(c(.8)),
+	main="Effect of filters on concordance (hg18 reference)",
+	ylab="% concordance with Affy scans",
+	xlab="1s1c/1s3c/2s3c for each participant",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*4-2.5,
+     tick=FALSE)
