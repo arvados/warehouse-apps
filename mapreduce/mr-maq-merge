@@ -31,6 +31,9 @@ system ("dpkg --extract maq.deb .")
 system ("whget $ENV{KNOB_REFERENCE}/ $tmp/")
     == 0 or die "whget $ENV{KNOB_REFERENCE}/ $tmp/ exited $?";
 
+my $queue_only = $ENV{MR_LEVEL} == 0 && $ENV{KNOB_PARTIAL};
+my $start_after = $ENV{MR_LEVEL} == 1 ? $ENV{MR_INPUT} : 0;
+my $outfile = $ENV{KNOB_PARTIAL} ? sprintf ("%03d", $start_after) : "all";
 my @files;
 my $m = new Warehouse::Manifest (whc => $whc,
 				 key => $ENV{MR_INPUT0});
@@ -43,6 +46,16 @@ while (my $s = $m->subdir_next)
     last if !defined $pos;
     if ($filename =~ m{ ^[^/]+\.map$ }x)
     {
+      if ($queue_only)
+      {
+	if ($start_after % $ENV{KNOB_MAX_MERGE} == 0)
+	{
+	  print STDERR "+++mrjobstep 1 $start_after+++\n";
+	}
+	$start_after++;
+	next;
+      }
+      next if 0 < $start_after--;
       open F, ">", $filename or die "open $filename: $!";
       $s->seek ($pos);
       while (my $dataref = $s->read_until ($pos+$size))
@@ -54,19 +67,20 @@ while (my $s = $m->subdir_next)
     }
     if (@files >= $ENV{KNOB_MAX_MERGE})
     {
-      system ("./usr/bin/maq mapmerge out/all.map *.map")
+      last if $ENV{KNOB_PARTIAL};
+      system ("./usr/bin/maq mapmerge out/$outfile.map *.map")
 	  == 0 or die "maq mapmerge exited $?";
       unlink @files;
-      rename "out/all.map", "merged.map" or die "rename out/all.map -> merged.map: $!";
+      rename "out/$outfile.map", "merged.map" or die "rename out/$outfile.map -> merged.map: $!";
       @files = ("merged.map");
     }
   }
 }
 
-system ("./usr/bin/maq mapmerge out/all.map *.map")
+system ("./usr/bin/maq mapmerge out/$outfile.map *.map")
     == 0 or die "maq mapmerge exited $?";
 
-system ("./usr/bin/maq mapcheck $ENV{KNOB_REFERENCEFILE} out/all.map >out/mapcheck.txt")
+system ("./usr/bin/maq mapcheck $ENV{KNOB_REFERENCEFILE} out/$outfile.map >out/mapcheck.txt")
     == 0 or die "maq mapcheck exited $?";
 
 my $key = `whput out/`;
