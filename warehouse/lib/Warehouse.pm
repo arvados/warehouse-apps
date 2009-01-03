@@ -191,6 +191,11 @@ sub _init
     $self->{mogilefs_directory_class} = $warehouses->[$idx]->{mogilefs_directory_class};
     $self->{mogilefs_file_class} = $warehouses->[$idx]->{mogilefs_file_class};
     $self->{keeps} = $warehouses->[$idx]->{keeps};
+    if (!defined($warehouses->[$idx]->{keep_name})) {
+        $self->{keep_name} = $self->{warehouse_name};
+    } else {
+        $self->{keep_name} = $warehouses->[$idx]->{keep_name};
+    }
     $self->{memcached_size_threshold} = 0 if $idx != 0;
     $self->{memcached_size_threshold} = -1 if $no_memcached_conf;
 
@@ -831,10 +836,10 @@ sub store_in_keep
     {
 	$_ = 67108864 if $_ eq "0";
 	next if !/\D/ && defined $keepreportedsize;
-	next if /^K.*\@(.*)/ && $1 eq $self->{warehouse_name};
+	next if /^K.*\@(.*)/ && $1 eq $self->{keep_name};
 	$hash .= "+$_";
     }
-    $hash .= "+K".unpack("H*", $bits)."\@".$self->{warehouse_name};
+    $hash .= "+K".unpack("H*", $bits)."\@".$self->{keep_name};
     return $hash if !wantarray;
     return ($hash, $nnodes);
 }
