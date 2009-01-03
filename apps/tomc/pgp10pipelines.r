@@ -289,8 +289,7 @@ foo[21:30,] <- Allstats[,c("con.2s_3c","dis.2s_3c","nocall.2s_3c")]
 barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10))),]),
 	space=c(0,rep(c(0,0,1),9),0,0),
 	col=gray(c(.8,.5,1)),
-	main="Effect of filters on concordance (55k probe reference)",
-	ylab="concordant, discordant, nocall",
+	ylab="concordant - discordant - nocall",
 	xaxt="n")
 axis(1,
      labels=c(1:10),
@@ -362,9 +361,8 @@ foo[21:30,] <- Allstats[,c("het.y.2s_3c","hom.y.2s_3c","het.n.2s_3c","hom.n.2s_3
 
 barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10))),]),
 	space=c(0,rep(c(0,0,1),9),0,0),
-	main="Effect of filters on het/hom/dbsnp calls (55k probe reference)",
-	ylab="het/dbsnp, hom/dbsnp, het/other, hom/other",
-	xlab="1s1c/1s3c/2s3c for each participant",
+	ylab="het,dbsnp - hom,dbsnp - het,other - hom,other",
+	xlab="1s1c, 1s3c, 2s3c for each participant",
 	xaxt="n")
 axis(1,
      labels=c(1:10),
@@ -414,9 +412,29 @@ foo <- foo/rowSums(foo)
 barplot(t(foo),
 	space=c(0,rep(c(0,0,0,0,0,0,0,0,0,1),2),0,0,0,0,0,0,0,0,0),
 	main="Effect of filters on het/hom/dbsnp calls (55k probe reference)",
-	ylab="proportion of het/dbsnp, hom/dbsnp, het/other, hom/other",
+	ylab="het,dbsnp - hom,dbsnp - het,novel - hom,novel",
 	xlab="pgp10 for each filter: 1s1c, 1s3c, 2s3c",
 	xaxt="n")
+
+
+postscript(file="/tmp/filter-effect-on-het-and-dbsnp-2s3c.ps",
+	   title="/tmp/filter-effect-on-het-and-dbsnp-2s3c.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+foo <- Allstats[,c("het.y.2s_3c","hom.y.2s_3c","het.n.2s_3c","hom.n.2s_3c")]
+
+barplot(t(foo),
+	ylab="het,dbsnp - hom,dbsnp - het,novel - hom,novel",
+	space=0.2,
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*1.2-.5,
+     tick=FALSE)
 
 
 postscript(file="/tmp/het-proportion-agreement-1s1c.ps",
@@ -588,11 +606,11 @@ foo[21:30] <- (Allstats[,"het.y.2s_3c"]+Allstats[,"het.n.2s_3c"])*
 foo <- foo * 100
 
 barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10)))]),
+	ylim=c(0,500000),
 	space=c(0,rep(c(0,0,1),9),0,0),
 	col=gray(c(.8)),
-	main="Effect of filters on rate of heterozygous calls per estimated # covered bases",
 	ylab="Number of heterozygous calls expected with full coverage",
-	xlab="1s1c/1s3c/2s3c for each participant",
+	xlab="1s1c, 1s3c, 2s3c for each participant",
 	xaxt="n")
 axis(1,
      labels=c(1:10),
@@ -614,11 +632,11 @@ foo[21:30] <- (Allstats[,"het.y.2s_3c"]+Allstats[,"het.n.2s_3c"]) * 6743440 / Al
 foo <- foo * 100
 
 barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10)))]),
+	ylim=c(0,500000),
 	space=c(0,rep(c(0,0,1),9),0,0),
 	col=gray(c(.8)),
-	main="Effect of filters on rate of heterozygous calls per maq coverage stat",
 	ylab="Number of heterozygous calls expected with full coverage",
-	xlab="1s1c/1s3c/2s3c for each participant",
+	xlab="1s1c, 1s3c, 2s3c for each participant",
 	xaxt="n")
 axis(1,
      labels=c(1:10),
