@@ -77,6 +77,12 @@ while (my $s = $m->subdir_next)
   }
 }
 
+if ($queue_only)
+{
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
 system ("./usr/bin/maq mapmerge out/$outfile.map *.map")
     == 0 or die "maq mapmerge exited $?";
 
