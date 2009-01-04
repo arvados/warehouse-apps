@@ -79,12 +79,16 @@ sub write_file
     die "Error reading $filename: $!" if !defined $ok;
     close F;
     $s->write_finish;
-    if ($opt{"in-manifest"})
+    if ($opt{"in-manifest"} || $opt{"as-manifest"})
     {
 	$whc->write_start;
 	$whc->write_data ($s->as_string);
 	my $k = join (",", $whc->write_finish);
 	print "$k\n";
+    }
+    elsif ($opt{"as-stream"})
+    {
+	print $s->as_string;
     }
     else
     {
@@ -202,7 +206,8 @@ options:
     --warehouse-controllers=host:port
     --mogilefs-trackers=host:port,host:port
     --name=/manifestname
-    --in-manifest
+    --in-manifest or --as-manifest
+    --as-stream
     --use-filename=read-from-stdin.txt
 
 };
