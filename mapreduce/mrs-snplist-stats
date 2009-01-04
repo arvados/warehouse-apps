@@ -73,6 +73,7 @@ sub do_stats
     my $in_reflist = shift;
     my %stat = (het => 0,
 		hom => 0,
+		ref => 0,
 		noc => 0);
     while (<>)
     {
@@ -86,10 +87,12 @@ sub do_stats
 	++$stat{het} if is_het($call);
 	++$stat{hom} if is_hom($call);
 	++$stat{noc} if is_nocall($call);
+	++$stat{ref} if is_hom($call) && $call eq $ref;
     }
     my $yn = $in_reflist ? "y" : "n";
     print "het/$yn\t$stat{het}\n";
     print "hom/$yn\t$stat{hom}\n";
+    print "ref/$yn\t$stat{ref}\n";
     print "noc/$yn\t$stat{noc}\n";
 }
 
