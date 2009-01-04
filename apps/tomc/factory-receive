@@ -82,7 +82,7 @@ foreach my $hash (sort keys %hash_is)
 	    close F;
 	    print "$hash is affy scan, id is $affyscan_id\n";
 	}
-	elsif ($chunk =~ /^(chr\S+\s\d+\s\d+\srs\d+\s\d+\s[-\+]\r?\n){10}/s)
+	elsif ($chunk =~ /^(chr\S+\s\d+\s\d+(\srs\d+\s\d+\s[-\+])?\r?\n){10}/s)
 	{
 	    sysopen F, "$workdir/$hash.issnplist", O_WRONLY|O_CREAT|O_EXCL;
 	    close F;
