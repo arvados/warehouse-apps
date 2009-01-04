@@ -978,6 +978,10 @@ sub maq_pipeline
 	$snplist = $me->{cnsfilter}->{outputkey}."/snplist.txt"
 	    if $me->{cnsfilter} && $me->{cnsfilter}->{outputkey};
     }
+    elsif ($pipeline->{"input"}->{"snplist"})
+    {
+	$snplist = $me->{"input"}->{"snplist"}."/";
+    }
     else
     {
 	$snplist = $me->{snptranslate}->{outputkey}."/cns.translated.snp.txt"
