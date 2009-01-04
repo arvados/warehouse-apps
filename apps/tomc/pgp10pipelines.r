@@ -12,6 +12,9 @@
 #   wget http://genomerator-dev.freelogy.org/pgp10factory/allstats.cgi?$m -q -O $m
 #   md5sum $m
 #  done
+#  wget http://tomc.freelogy.org/~tomc/pgp10/snploci-stats
+#  wget http://tomc.freelogy.org/~tomc/pgp10/snploci-stats-2s3c
+#  wget http://tomc.freelogy.org/~tomc/pgp10/snploci-stats-2s3c-hg18
 # Then:
 #  R --no-save < /path/to/pgp10pipelines.r
 
@@ -22,6 +25,9 @@ T_1s_1c_hg18 <- read.delim("31e81993fe9a19104d864f56f5ed7155",header=TRUE)[1:10,
 T_1s_3c_hg18 <- read.delim("d3323e14a7bb07d0ea058a144cfbe856",header=TRUE)[1:10,]
 T_2s_3c_hg18 <- read.delim("611289629595e6331701b3ac2a74319f",header=TRUE)[1:10,]
 T_public <- read.delim("b0e21209c3ccc04f33d32498ec3b8a67",header=TRUE)[1:10,]
+snploci <- read.delim("snploci-stats",header=TRUE)
+snploci_2s3c <- read.delim("snploci-stats-2s3c",header=TRUE)
+snploci_2s3c_hg18 <- read.delim("snploci-stats-2s3c-hg18",header=TRUE)
 
 Allstats <- T_1s_1c
 Allstats <- merge(Allstats, T_1s_1c, by="X", suffixes=c("",".1s_1c"), sort=FALSE)
@@ -209,8 +215,7 @@ postscript(file="/tmp/con-dis-nocall-1s1c.ps",
 	   paper="letter")
 barplot(t(T_1s_1c[,c("con","dis","nocall")]),
 	col=gray(c(.8,.5,1)),
-	ylab="concordant, discordant, nocall",
-	main="Concordance with Affy (1s1c)")
+	ylab="concordant, discordant, nocall")
 
 postscript(file="/tmp/con-dis-nocall-1s3c.ps",
 	   title="/tmp/con-dis-nocall-1s3c.ps",
@@ -221,8 +226,7 @@ postscript(file="/tmp/con-dis-nocall-1s3c.ps",
 	   paper="letter")
 barplot(t(T_1s_3c[,c("con","dis","nocall")]),
 	col=gray(c(.8,.5,1)),
-	ylab="concordant, discordant, nocall",
-	main="Concordance with Affy (1s3c)")
+	ylab="concordant, discordant, nocall")
 
 postscript(file="/tmp/con-dis-nocall-2s3c.ps",
 	   title="/tmp/con-dis-nocall-2s3c.ps",
@@ -233,8 +237,7 @@ postscript(file="/tmp/con-dis-nocall-2s3c.ps",
 	   paper="letter")
 barplot(t(T_2s_3c[,c("con","dis","nocall")]),
 	col=gray(c(.8,.5,1)),
-	ylab="concordant, discordant, nocall",
-	main="Concordance with Affy (2s3c)")
+	ylab="concordant, discordant, nocall")
 
 postscript(file="/tmp/con-dis-nocall-1s1c-hg18.ps",
 	   title="/tmp/con-dis-nocall-1s1c-hg18.ps",
@@ -437,6 +440,109 @@ axis(1,
      tick=FALSE)
 
 
+postscript(file="/tmp/het-and-dbsnp-public.ps",
+	   title="/tmp/het-and-dbsnp-public.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+barplot(t(snploci[,c("het.y","hom.y","het.n","hom.n")]),
+	ylim=c(0,5500),
+	ylab="het,dbsnp - hom,dbsnp - het,novel - hom,novel",
+	space=0.2,
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*1.2-.5,
+     tick=FALSE)
+
+
+postscript(file="/tmp/het-and-dbsnp-2s3c.ps",
+	   title="/tmp/het-and-dbsnp-2s3c.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+barplot(t(snploci_2s3c[,c("het.y","hom.y","het.n","hom.n")]),
+	ylim=c(0,5500),
+	ylab="het,dbsnp - hom,dbsnp - het,novel - hom,novel",
+	space=0.2,
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*1.2-.5,
+     tick=FALSE)
+
+
+postscript(file="/tmp/het-and-dbsnp-2s3c-hg18.ps",
+	   title="/tmp/het-and-dbsnp-2s3c-hg18.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+barplot(t(snploci_2s3c_hg18[,c("het.y","hom.y","het.n","hom.n")]),
+	ylim=c(0,5500),
+	ylab="het,dbsnp - hom,dbsnp - het,novel - hom,novel",
+	space=0.2,
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*1.2-.5,
+     tick=FALSE)
+
+
+postscript(file="/tmp/dbsnp-novel-2s3c.ps",
+	   title="/tmp/dbsnp-novel-2s3c.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+foo <- snploci_2s3c[,c("het.y","hom.y")]
+foo[11:20,] <- snploci_2s3c[,c("het.n","hom.n")]
+barplot(t(foo[order(c(2*(1:10)-1,2*(1:10))),]),
+	ylim=c(0,3000),
+	space=c(0,rep(c(0,1),9),0),
+	col=gray(c(.8,.5)),
+	ylab="heterozygous, homozygous",
+	xlab="dbSNP, novel",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*3-2,
+     tick=FALSE)
+
+
+postscript(file="/tmp/dbsnp-novel-2s3c-proportion.ps",
+	   title="/tmp/dbsnp-novel-2s3c-proportion.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+foo <- snploci_2s3c[,c("het.y","hom.y")]
+foo[11:20,] <- snploci_2s3c[,c("het.n","hom.n")]
+foo <- 100 * foo/rowSums(foo)
+barplot(t(foo[order(c(2*(1:10)-1,2*(1:10))),"het.y"]),
+	space=c(0,rep(c(0,1),9),0),
+	col=gray(c(.8,.5)),
+	ylab="% heterozygous",
+	xlab="dbSNP, novel",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*3-2,
+     tick=FALSE)
+
+
 postscript(file="/tmp/het-proportion-agreement-1s1c.ps",
 	   title="/tmp/het-proportion-agreement-1s1c.ps",
 	   width=6,
@@ -598,15 +704,17 @@ postscript(file="/tmp/filter-effect-expected-het-rate-est.ps",
 	   paper="letter")
 
 foo <- (Allstats[,"het.y.1s_1c"]+Allstats[,"het.n.1s_1c"])*
-       (Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"]+Allstats[,"nocall.1s_1c"])/(Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"])
+       (Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"]+Allstats[,"nocall.1s_1c"])/
+       (Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"])
 foo[11:20] <- (Allstats[,"het.y.1s_3c"]+Allstats[,"het.n.1s_3c"])*
-       (Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"]+Allstats[,"nocall.1s_3c"])/(Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"])
+       (Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"]+Allstats[,"nocall.1s_3c"])/
+       (Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"])
 foo[21:30] <- (Allstats[,"het.y.2s_3c"]+Allstats[,"het.n.2s_3c"])*
-       (Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"]+Allstats[,"nocall.2s_3c"])/(Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"])
-foo <- foo * 100
+       (Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"]+Allstats[,"nocall.2s_3c"])/
+       (Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"])
 
 barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10)))]),
-	ylim=c(0,500000),
+	ylim=c(0,5000),
 	space=c(0,rep(c(0,0,1),9),0,0),
 	col=gray(c(.8)),
 	ylab="Number of heterozygous calls expected with full coverage",
@@ -629,13 +737,86 @@ postscript(file="/tmp/filter-effect-expected-het-rate-maqstat.ps",
 foo <- (Allstats[,"het.y.1s_1c"]+Allstats[,"het.n.1s_1c"]) * 6743440 / Allstats[,"covers.1s_1c"]
 foo[11:20] <- (Allstats[,"het.y.1s_3c"]+Allstats[,"het.n.1s_3c"]) * 6743440 / Allstats[,"covers.1s_1c"]
 foo[21:30] <- (Allstats[,"het.y.2s_3c"]+Allstats[,"het.n.2s_3c"]) * 6743440 / Allstats[,"covers.1s_1c"]
-foo <- foo * 100
 
 barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10)))]),
-	ylim=c(0,500000),
+	ylim=c(0,5000),
 	space=c(0,rep(c(0,0,1),9),0,0),
 	col=gray(c(.8)),
 	ylab="Number of heterozygous calls expected with full coverage",
+	xlab="1s1c, 1s3c, 2s3c for each participant",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*4-2.5,
+     tick=FALSE)
+
+
+postscript(file="/tmp/filter-effect-expected-het-rate-est-dbsnp-novel.ps",
+	   title="/tmp/filter-effect-expected-het-rate-est-dbsnp-novel.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+dbsnp <- (Allstats[,"het.y.1s_1c"])*
+       (Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"]+Allstats[,"nocall.1s_1c"])/
+       (Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"])
+novel <- (Allstats[,"het.n.1s_1c"])*
+       (Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"]+Allstats[,"nocall.1s_1c"])/
+       (Allstats[,"con.1s_1c"]+Allstats[,"dis.1s_1c"])
+dbsnp[11:20] <- (Allstats[,"het.y.1s_3c"])*
+       (Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"]+Allstats[,"nocall.1s_3c"])/
+       (Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"])
+novel[11:20] <- (Allstats[,"het.n.1s_3c"])*
+       (Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"]+Allstats[,"nocall.1s_3c"])/
+       (Allstats[,"con.1s_3c"]+Allstats[,"dis.1s_3c"])
+dbsnp[21:30] <- (Allstats[,"het.y.2s_3c"])*
+       (Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"]+Allstats[,"nocall.2s_3c"])/
+       (Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"])
+novel[21:30] <- (Allstats[,"het.n.2s_3c"])*
+       (Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"]+Allstats[,"nocall.2s_3c"])/
+       (Allstats[,"con.2s_3c"]+Allstats[,"dis.2s_3c"])
+
+barplot(t(cbind(dbsnp,novel))[,order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10)))],
+	ylim=c(0,5000),
+	space=c(0,rep(c(0,0,1),9),0,0),
+	col=gray(c(.8,.5)),
+	ylab="Number of heterozygous calls expected with full coverage (dbsnp, novel)",
+	xlab="1s1c, 1s3c, 2s3c for each participant",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*4-2.5,
+     tick=FALSE)
+
+
+postscript(file="/tmp/filter-effect-expected-het-rate-maqstat-dbsnp-novel.ps",
+	   title="/tmp/filter-effect-expected-het-rate-maqstat-dbsnp-novel.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+dbsnp <- (Allstats[,"het.y.1s_1c"])*
+	6743440 / Allstats[,"covers.1s_1c"]
+novel <- (Allstats[,"het.n.1s_1c"])*
+	6743440 / Allstats[,"covers.1s_1c"]
+dbsnp[11:20] <- (Allstats[,"het.y.1s_3c"])*
+	6743440 / Allstats[,"covers.1s_1c"]
+novel[11:20] <- (Allstats[,"het.n.1s_3c"])*
+	6743440 / Allstats[,"covers.1s_1c"]
+dbsnp[21:30] <- (Allstats[,"het.y.2s_3c"])*
+	6743440 / Allstats[,"covers.1s_1c"]
+novel[21:30] <- (Allstats[,"het.n.2s_3c"])*
+	6743440 / Allstats[,"covers.1s_1c"]
+
+barplot(t(cbind(dbsnp,novel))[,order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10)))],
+	ylim=c(0,5000),
+	space=c(0,rep(c(0,0,1),9),0,0),
+	col=gray(c(.8,.5)),
+	ylab="Number of heterozygous calls expected with full coverage (dbsnp, novel)",
 	xlab="1s1c, 1s3c, 2s3c for each participant",
 	xaxt="n")
 axis(1,
