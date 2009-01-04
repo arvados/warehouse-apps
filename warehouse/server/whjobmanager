@@ -15,6 +15,8 @@ use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 use Warehouse;
 use Warehouse::Stream;
 
+$ENV{"TMPDIR"} ||= "/tmp";
+
 do '/etc/warehouse/warehouse-server.conf';
 
 my $have_slurm = exists $ENV{SLURM_JOBID} && exists $ENV{SLURM_NODELIST};
@@ -244,15 +246,15 @@ else
   Log (undef, "Install revision ".$Job->{revision});
   my $nodelist = join(",", @node);
   $ENV{"MR_REVISION"} = $Job->{revision};
-  $ENV{"MR_REVISION_INSTALLDIR"} = "/tmp/mrcompute/revision/$Job->{revision}";
+  $ENV{"MR_REVISION_INSTALLDIR"} = "$ENV{TMPDIR}/mrcompute/revision/$Job->{revision}";
   $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
   $ENV{"INSTALL_REPOS"} = $whc->get_config("svn_root");
   $ENV{"INSTALL_REVISION"} = $Job->{revision};
   my @srunargs = ("srun",
 		  "--nodelist=$nodelist",
-		  "-D", "/tmp", "--job-name=$job_id");
+		  "-D", $ENV{TMPDIR}, "--job-name=$job_id");
   my @execargs = ("sh", "-c",
-		  "mkdir -p /tmp/mrcompute/revision && cd /tmp/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet \"\$INSTALL_REPOS/installrevision\" && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
+		  "mkdir -p $ENV{TMPDIR}/mrcompute/revision && cd $ENV{TMPDIR}/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet \"\$INSTALL_REPOS/installrevision\" && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
 
   my $installpid = fork();
   if ($installpid == 0)
@@ -271,8 +273,8 @@ else
   my $cleanpid = fork();
   if ($cleanpid == 0)
   {
-    srun (["srun", "--nodelist=$nodelist", "-D", "/tmp"],
-	  [qw(rm -rf /tmp/mrcompute/work)]);
+    srun (["srun", "--nodelist=$nodelist", "-D", $ENV{TMPDIR}],
+	  [qw(rm -rf), "$ENV{TMPDIR}/mrcompute/work"]);
     exit (1);
   }
   while (1)
@@ -388,14 +390,14 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     my @srunargs = (
       "srun",
       "--nodelist=".$childnode,
-      qw(-n1 -c1 -N1 -D /tmp),
+      qw(-n1 -c1 -N1 -D), $ENV{TMPDIR},
       "--job-name=$job_id.$id.$$",
 	);
     my @execargs = (
       "sh",
       "-c",
-      "mkdir -p /tmp/mrcompute/revision "
-      ."&& cd /tmp/mrcompute "
+      "mkdir -p $ENV{TMPDIR}/mrcompute/revision "
+      ."&& cd $ENV{TMPDIR}/mrcompute "
 		    );
     if (!$skip_install)
     {
