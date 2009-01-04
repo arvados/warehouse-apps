@@ -2061,19 +2061,23 @@ sub _unsafe_decrypt_block
                                 homedir => $self->{gpg_homedir},
                               );
 
-    my ( $input, $output, $error, $status ) =
+    my ( $input, $output, $error, $status, $passphrase ) =
        ( IO::Handle->new(),
          IO::Handle->new(),
          IO::Handle->new(),
          IO::Handle->new(),
+	 IO::Handle->new(),
        );
 
-    my $handles = GnuPG::Handles->new( stdin  => $input,
-                                       stdout => $output,
-                                       stderr => $error,
-                                       status => $status );
+    my $handles = GnuPG::Handles->new( stdin      => $input,
+                                       stdout     => $output,
+                                       stderr     => $error,
+                                       status     => $status,
+				       passphrase => $passphrase);
 
     my $pid = $gnupg->decrypt( handles => $handles );
+
+    close $passphrase;
 
     print $input $$dataref;
     close $input;
