@@ -38,6 +38,7 @@ my @files;
 my $m = new Warehouse::Manifest (whc => $whc,
 				 key => $ENV{MR_INPUT0});
 $m->rewind;
+SUBDIR:
 while (my $s = $m->subdir_next)
 {
   $s->rewind;
@@ -67,7 +68,7 @@ while (my $s = $m->subdir_next)
     }
     if (@files >= $ENV{KNOB_MAX_MERGE})
     {
-      last if $ENV{KNOB_PARTIAL};
+      last SUBDIR if $ENV{KNOB_PARTIAL};
       system ("./usr/bin/maq mapmerge out/$outfile.map *.map")
 	  == 0 or die "maq mapmerge exited $?";
       unlink @files;
