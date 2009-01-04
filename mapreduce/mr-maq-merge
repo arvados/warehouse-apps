@@ -7,6 +7,8 @@
 ###MR_KNOBS:REFERENCE=99259f4330907e84fe7253bd4e52dd3e
 ###MR_KNOBS:REFERENCEFILE=homo_sapiens.bfa
 ###MR_KNOBS:MAX_MERGE=100
+###MR_KNOBS:PARTIAL=0
+###MR_KNOBS:FIFO=0
 
 use strict;
 use Warehouse;
@@ -17,6 +19,8 @@ $ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
 $ENV{KNOB_REFERENCE} ||= "99259f4330907e84fe7253bd4e52dd3e";
 $ENV{KNOB_REFERENCEFILE} ||= "homo_sapiens.bfa";
 $ENV{KNOB_MAX_MERGE} ||= 100;
+$ENV{KNOB_PARTIAL} ||= 0;
+$ENV{KNOB_FIFO} ||= 0;
 
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 chdir ($tmp) or die "chdir $tmp: $!";
@@ -57,15 +61,51 @@ while (my $s = $m->subdir_next)
 	next;
       }
       next if 0 < $start_after--;
-      open F, ">", $filename or die "open $filename: $!";
-      $s->seek ($pos);
-      while (my $dataref = $s->read_until ($pos+$size))
-      {
-	print F $$dataref;
-      }
-      close F or die "close $filename: $!";
+
+      $filename =~ s{.*/}{};
       push @files, $filename;
+
+      my $need_to_write = 1;
+      my $exit_after_writing = 0;
+      if ($ENV{KNOB_FIFO})
+      {
+	# make a named pipe, start a child proc to copy data from the
+	# warehouse to the parent
+
+	my $child;
+	unlink "$filename";
+	$child = fork() if system ("mkfifo", $filename) == 0;
+	if ($child > 0)
+	{
+	  # parent
+	  $need_to_write = 0;
+	}
+	elsif (defined $child)
+	{
+	  # child
+	  close STDIN;
+	  close STDOUT;
+	  $0 = "mr-maq-merge read $filename";
+	  $exit_after_writing = 1;
+	}
+	else
+	{
+	  unlink $filename or die "unlink $filename: $!";
+	}
+      }
+      if ($need_to_write)
+      {
+	open F, ">", $filename or die "open $filename: $!";
+	$s->seek ($pos);
+	while (my $dataref = $s->read_until ($pos+$size))
+	{
+	  print F $$dataref;
+	}
+	close F or die "close $filename: $!";
+	exit 0 if $exit_after_writing;
+      }
     }
+  ok_got_the_file:
     if (@files >= $ENV{KNOB_MAX_MERGE})
     {
       last SUBDIR if $ENV{KNOB_PARTIAL};
@@ -84,16 +124,26 @@ if ($queue_only)
   exit 0;
 }
 
-system ("./usr/bin/maq mapmerge out/$outfile.map *.map")
-    == 0 or die "maq mapmerge exited $?";
+Safepipe::readfrom ("main::MAQ",
+		    "./usr/bin/maq mapmerge - *.map",
+		    "whput --as-stream --use-filename=$outfile.map -",
+		    )
+    or die "Safepipe failed";
+my $stream = <MAQ>;
+close MAQ or die "mapmerge pipe failed";
 
-system ("./usr/bin/maq mapcheck $ENV{KNOB_REFERENCEFILE} out/$outfile.map >out/mapcheck.txt")
-    == 0 or die "maq mapcheck exited $?";
+my (@hashes) = $stream =~ /\b([0-9a-f]{32}\S*)/g;
+my $hashes = join (",", @hashes);
+Safepipe::readfrom ("main::MAQ",
+		    "whget $hashes -",
+		    "./usr/bin/maq mapcheck \"$ENV{KNOB_REFERENCEFILE}\" -",
+		    "whput --as-stream --use-filename=mapcheck.txt -",
+		    )
+    or die "Safepipe failed";
+$stream .= <MAQ>;
+close MAQ or die "mapcheck pipe failed";
 
-my $key = `whput out/`;
-$key =~ s/^(.*? |)([0-9a-f]{32}\S*).*/$2/s
-    or die "whput did not provide a manifest key";
-print STDERR "+++mrout $key+++\n";
+print STDERR "+++mrout $stream+++\n";
 exit 0;
 
 sub fetch_to_file
