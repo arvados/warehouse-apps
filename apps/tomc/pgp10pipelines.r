@@ -363,6 +363,31 @@ foo[11:20,] <- Allstats[,c("het.y.1s_3c","hom.y.1s_3c","het.n.1s_3c","hom.n.1s_3
 foo[21:30,] <- Allstats[,c("het.y.2s_3c","hom.y.2s_3c","het.n.2s_3c","hom.n.2s_3c")]
 
 barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10))),]),
+	ylim=c(0,10000),
+	space=c(0,rep(c(0,0,1),9),0,0),
+	ylab="het,dbsnp - hom,dbsnp - het,other - hom,other",
+	xlab="1s1c, 1s3c, 2s3c for each participant",
+	xaxt="n")
+axis(1,
+     labels=c(1:10),
+     at=(1:10)*4-2.5,
+     tick=FALSE)
+
+
+postscript(file="/tmp/filter-effect-on-het-and-dbsnp-hg18.ps",
+	   title="/tmp/filter-effect-on-het-and-dbsnp-hg18.ps",
+	   width=6,
+	   height=6,
+	   horizontal=F,
+	   onefile=F,
+	   paper="letter")
+
+foo <- Allstats[,c("het.y.1s_1c_hg18","hom.y.1s_1c_hg18","het.n.1s_1c_hg18","hom.n.1s_1c_hg18")]
+foo[11:20,] <- Allstats[,c("het.y.1s_3c_hg18","hom.y.1s_3c_hg18","het.n.1s_3c_hg18","hom.n.1s_3c_hg18")]
+foo[21:30,] <- Allstats[,c("het.y.2s_3c_hg18","hom.y.2s_3c_hg18","het.n.2s_3c_hg18","hom.n.2s_3c_hg18")]
+
+barplot(t(foo[order(c(3*(1:10)-2,3*(1:10)-1,3*(1:10))),]),
+	ylim=c(0,10000),
 	space=c(0,rep(c(0,0,1),9),0,0),
 	ylab="het,dbsnp - hom,dbsnp - het,other - hom,other",
 	xlab="1s1c, 1s3c, 2s3c for each participant",
