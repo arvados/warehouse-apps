@@ -20,6 +20,26 @@ if ($ENV{KNOB_SNPREFERENCE})
 		       $#$a <=> $#$b ) } @snpref;
 }
 
+if ($ENV{KNOB_POPULATION_SNPS_ONLY})
+{
+    use Safepipe;
+    Safepipe::readfrom("main::POP",
+		       "whget -r $ENV{MR_INPUT0}/ -",
+		       "gzip -cdf",
+		       "egrep ^chr",
+		       "cut -f1-4",
+		       "perl -pe 's/[\t ]/-/g'",
+		       "egrep -v '[NX]\$'",
+		       "egrep -v \"A-A|C-C|G-G|T-T\"",
+		       "egrep -e \"-[ACGT]-\"",
+		       "cut -f1-2 -d-",
+		       "sort -u >$ENV{MR_JOBSTEP_TMP}/popsnp.txt");
+    while (<POP>) { }
+    close POP or die "Pipe failed: $!";
+    open STDIN, "-|", "perl -pe 's/[ \t]/-/' | sort -u -sk1,1 | join $ENV{MR_JOBSTEP_TMP}/popsnp.txt - | perl -pe 's/-/\t/' | sort -snk2,2 | sort -sk1,1"
+	or die "Pipe failed: $!";
+}
+
 my $srmin = 0;
 my $srmax = 0;
 
@@ -40,6 +60,7 @@ while(<>)
 	    &findsnpref (@snplist[0,1,1]),
 	    );
 }
+close STDIN or die "Pipe failed: $!";
 
 sub findsnpref
 {
