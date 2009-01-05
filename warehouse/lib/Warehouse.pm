@@ -2038,6 +2038,7 @@ sub _decrypt_block
     if ($child == 0)
     {
 	close STDIN;
+	close STDERR;
 	$dataref = $self->_unsafe_decrypt_block ($dataref);
 	print $$dataref;
 	exit 0;
