@@ -56,8 +56,11 @@ sub level1
   my $input = shift;
   my $outdir = shift;
 
+  my ($last_infile) = $input =~ /.* \d+:\d+:(\S+)/;
   my %special = ("%" => "%",
-		 "N" => $ENV{MR_ID});
+		 "N" => $ENV{MR_ID},
+		 "F" => $last_infile,
+		 );
   $ENV{KNOB_OUTPUTNAME} =~ s/%(.)/$special{$1}/ge;
 
   # maybe I can write an output manifest without reading or writing any data blocks.
