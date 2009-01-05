@@ -26,22 +26,20 @@ elsif ($ENV{MR_LEVEL} == 1)
 
   my $tmp = $ENV{MR_JOBSTEP_TMP};
   chdir ($tmp) or die "chdir $tmp: $!";
-  mkdir "$x" or die "mkdir $x: $!";
 
   fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
   system ("dpkg --extract maq.deb .")
       == 0 or die "dpkg exited $?";
 
-  system ("whget $ENV{MR_INPUT0}/ $tmp/")
-      == 0 or die "whget $ENV{MR_INPUT0}/ $tmp/ exited $?";
+  Safepipe::readfrom ("main::MAQ",
+		      "whget $ENV{MR_INPUT0}/consensus.cns -",
+		      "./usr/bin/maq cns2$x -",
+		      "whput --as-stream --use-filename=cns.$x.txt -")
+      or die "Safepipe failed: $!";
+  my $stream = <MAQ>;
+  close MAQ or die "Pipe failed: $!";
 
-  system ("./usr/bin/maq cns2$x ./consensus.cns >$x/cns.$x.txt")
-      == 0 or die "maq cns2$x exited $?";
-
-  my $key = `whput $x/`;
-  $key =~ s/^(.*? |)([0-9a-f]{32}\S*).*/$2/s
-      or die "whput did not provide a manifest key";
-  print STDERR "+++mrout $key+++\n";
+  print STDERR "+++mrout $stream+++\n";
   exit 0;
 }
 

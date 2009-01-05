@@ -21,17 +21,15 @@ fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
 
-system ("whget $ENV{MR_INPUT0}/ $tmp/")
-    == 0 or die "whget $ENV{MR_INPUT0}/ $tmp/ exited $?";
+Safepipe::readfrom ("main::MAQ",
+		    "whget $ENV{MR_INPUT0}/all.map -",
+		    "./usr/bin/maq mapview -",
+		    "whput --as-stream --use-filename=all.aln.txt -")
+    or die "Safepipe failed: $!";
+my $stream = <MAQ>;
+close MAQ or die "Pipe failed: $!";
 
-system ("./usr/bin/maq mapview all.map >out/all.aln.txt")
-    == 0 or die "maq mapview exited $?";
-
-my $key = `whput out/`;
-$key =~ s/^(.*? |)([0-9a-f]{32}\S*).*/$2/s
-    or die "whput did not provide a manifest key";
-
-print STDERR "+++mrout $key+++\n";
+print STDERR "+++mrout $stream+++\n";
 exit 0;
 
 sub fetch_to_file

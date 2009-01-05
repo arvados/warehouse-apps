@@ -31,20 +31,18 @@ fetch_to_file ($whc, $ENV{KNOB_MAQ_DEB}, "maq.deb");
 system ("dpkg --extract maq.deb .")
     == 0 or die "dpkg exited $?";
 
-system ("whget $ENV{MR_INPUT0}/ $tmp/")
-    == 0 or die "whget $ENV{MR_INPUT0}/ $tmp/ exited $?";
-
 system ("whget $ENV{KNOB_REFERENCE}/ $tmp/")
     == 0 or die "whget $ENV{KNOB_REFERENCE}/ $tmp/ exited $?";
 
-system ("./usr/bin/maq assemble -N 2 -q $ENV{KNOB_QMIN} -Q $ENV{KNOB_QMAX} out/consensus.cns $ENV{KNOB_REFERENCEFILE} all.map")
-    == 0 or die "maq assemble exited $?";
+Safepipe::readfrom ("main::MAQ",
+		    "whget $ENV{MR_INPUT0}/all.map -",
+		    "./usr/bin/maq assemble -N 2 -q $ENV{KNOB_QMIN} -Q $ENV{KNOB_QMAX} - $ENV{KNOB_REFERENCEFILE} -",
+		    "whput --as-stream --use-filename=consensus.cns -")
+    or die "Safepipe failed: $!";
+my $stream = <MAQ>;
+close MAQ or die "Pipe failed: $!";
 
-my $key = `whput out/`;
-$key =~ s/^(.*? |)([0-9a-f]{32}\S*).*/$2/s
-    or die "whput did not provide a manifest key";
-
-print STDERR "+++mrout $key+++\n";
+print STDERR "+++mrout $stream+++\n";
 exit 0;
 
 sub fetch_to_file
