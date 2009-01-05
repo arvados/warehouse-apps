@@ -37,7 +37,7 @@ system ("whget $ENV{KNOB_REFERENCE}/ $tmp/")
 
 my $queue_only = $ENV{MR_LEVEL} == 0 && $ENV{KNOB_PARTIAL};
 my $start_after = $ENV{MR_LEVEL} == 1 ? $ENV{MR_INPUT} : 0;
-my $outfile = $ENV{KNOB_PARTIAL} ? sprintf ("%03d", $start_after) : "all";
+my $outfile = $ENV{KNOB_PARTIAL} ? sprintf ("%03d", $ENV{MR_ID}) : "all";
 my @files;
 my $m = new Warehouse::Manifest (whc => $whc,
 				 key => $ENV{MR_INPUT0});
