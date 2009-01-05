@@ -321,9 +321,9 @@ sub snap
 sub shellquote
 {
     my $arg = shift;
-    if ($arg =~ /[^-\.\w=\@\+]/)
+    if ($arg =~ /[^-\.\w=\@\+,]/)
     {
-	$arg =~ s{[\"\`]}{\\$&}gx;
+	$arg =~ s{[\"\`\$]}{\\$&}gx;
 	$arg = "\"$arg\"";
     }
     $arg;
