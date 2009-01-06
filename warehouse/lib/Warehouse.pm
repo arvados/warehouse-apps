@@ -1981,26 +1981,35 @@ sub _encrypt_block
                                 homedir => $self->{gpg_homedir},
                               );
 
+    my $child = open PLAIN, "-|";
+    die "Pipe failed: $!" if !defined $child;
+    if ($child == 0)
+    {
+	close STDIN;
+	print $$dataref;
+	close STDOUT;
+	exit 0;
+    }
+
     my ( $input, $output, $error, $status ) =
        ( IO::Handle->new(),
          IO::Handle->new(),
          IO::Handle->new(),
          IO::Handle->new(),
        );
+    $input->fdopen (fileno(PLAIN),"r") or die;
 
     my $handles = GnuPG::Handles->new( stdin  => $input,
                                        stdout => $output,
                                        stderr => $error,
                                        status => $status );
+    $handles->options ('stdin', { direct => 1 } );
 
     foreach my $key (@{$self->{config}->{encrypt}}) {
       $gnupg->options->push_recipients( $key );
     }
 
     my $pid = $gnupg->encrypt( handles => $handles );
-
-    print $input $$dataref;
-    close $input;
 
     local $/ = undef;
     my $encrypted = <$output>;
@@ -2010,6 +2019,7 @@ sub _encrypt_block
     close $output;
     close $error;
     close $status;
+    close $input;
 
     waitpid $pid, 0;
 
@@ -2043,8 +2053,7 @@ sub _decrypt_block
     {
 	close STDIN;
 	close STDERR;
-	$dataref = $self->_unsafe_decrypt_block ($dataref);
-	print $$dataref;
+	$self->_unsafe_decrypt_block ($dataref);
 	exit 0;
     }
     local $/ = undef;
@@ -2073,12 +2082,14 @@ sub _unsafe_decrypt_block
          IO::Handle->new(),
 	 IO::Handle->new(),
        );
+    $output->fdopen(fileno(STDOUT),"w");
 
     my $handles = GnuPG::Handles->new( stdin      => $input,
                                        stdout     => $output,
                                        stderr     => $error,
                                        status     => $status,
 				       passphrase => $passphrase);
+    $handles->options ('stdout', { "direct" => 1 } );
 
     my $pid = $gnupg->decrypt( handles => $handles );
 
@@ -2088,7 +2099,6 @@ sub _unsafe_decrypt_block
     close $input;
 
     local $/ = undef;
-    my $decrypted = <$output>;
     my $error_output = <$error>;
     my $status_output = <$status>;
 
@@ -2099,13 +2109,15 @@ sub _unsafe_decrypt_block
     waitpid $pid, 0;
 
     if ($status_output =~ /NODATA/) {
-      # This data is not encrypted. Return input unchanged.
-      return $dataref;
+	# This data is not encrypted. Return input unchanged.
+	print $$dataref;
+	return 1;
     }
 
     if ($status_output =~ /NO_SECKEY/) {
-      # Properly encrypted data, but we don't have the secret key. Return input unchanged.
-      return $dataref;
+	# Properly encrypted data, but we don't have the secret key. Return input unchanged.
+	print $$dataref;
+	return 1;
     }
 
     if (!( $status_output =~ /DECRYPTION_OKAY/)) {
@@ -2113,7 +2125,7 @@ sub _unsafe_decrypt_block
       die "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
     }
 
-    return \$decrypted;
+    return 1;
 }
 
 sub _verify
