@@ -2017,6 +2017,8 @@ sub _encrypt_block
       die "_encrypt_block() error encrypting:\nError output: $error_output\nStatus output: $status_output\n";
     }
 
+    printf STDERR "gpg: encrypt -> %s\n", Digest::MD5::md5_hex($encrypted)
+	if $ENV{DEBUG_GPG};
     return \$encrypted;
 
 }
