@@ -340,7 +340,9 @@ sub store_block
     my $size = length $$dataref;
     my $hash = "$md5+$size";
 
-    my $alreadyhave = $self->fetch_block_ref ($hash, 1, 1);
+    my $alreadyhave;
+    $alreadyhave = $self->fetch_block_ref ($hash, 1, 1)
+	if !$ENV{NOPLAIN};
     if ($alreadyhave && $$dataref eq $$alreadyhave)
     {
 	return $hash;
