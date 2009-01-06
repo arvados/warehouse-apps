@@ -1343,7 +1343,8 @@ sub _sign
 
     $gnupg->options->hash_init( armor    => 1,
                                 homedir => $self->{gpg_homedir},
-                              );
+				meta_interactive => 0,
+				);
 
     my ( $input, $output, $error, $status ) =
        ( IO::Handle->new(),
@@ -1854,7 +1855,9 @@ sub _cryptsetup
 
     eval {
 	my $gnupg = GnuPG::Interface->new();
-	$gnupg->options->hash_init (homedir => $self->{gpg_homedir});
+	$gnupg->options->hash_init( homedir => $self->{gpg_homedir},
+				    meta_interactive => 0,
+				    );
 
 	my ( $input, $output, $error, $status ) =
 		( IO::Handle->new(),
@@ -1979,7 +1982,8 @@ sub _encrypt_block
 
     $gnupg->options->hash_init( armor    => 0,
                                 homedir => $self->{gpg_homedir},
-                              );
+				meta_interactive => 0,
+				);
 
     my $child = open PLAIN, "-|";
     die "Pipe failed: $!" if !defined $child;
@@ -2072,8 +2076,8 @@ sub _unsafe_decrypt_block
     my $gnupg = GnuPG::Interface->new();
     $gnupg->options->hash_init( armor    => 1,
                                 homedir => $self->{gpg_homedir},
-                              );
-
+				meta_interactive => 0,
+				);
     my ( $input, $output, $error, $status, $passphrase ) =
        ( IO::Handle->new(),
          IO::Handle->new(),
@@ -2087,9 +2091,8 @@ sub _unsafe_decrypt_block
                                        stdout     => $output,
                                        stderr     => $error,
                                        status     => $status,
-				       (-w "/dev/tty"
-					? (passphrase => $passphrase)
-					: ()));
+				       passphrase => $passphrase,
+				       );
     $handles->options ('stdout', { "direct" => 1 } );
 
     my $pid = $gnupg->decrypt( handles => $handles );
@@ -2142,7 +2145,8 @@ sub _verify
 
   $gnupg->options->hash_init( armor    => 1,
                               homedir => $self->{gpg_homedir},
-                            );
+			      meta_interactive => 0,
+			      );
   my ( $input, $output, $error, $status ) =
      ( IO::Handle->new(),
        IO::Handle->new(),
