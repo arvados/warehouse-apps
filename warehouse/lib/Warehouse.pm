@@ -2052,7 +2052,6 @@ sub _decrypt_block
     if ($child == 0)
     {
 	close STDIN;
-	close STDERR;
 	$self->_unsafe_decrypt_block ($dataref);
 	exit 0;
     }
@@ -2120,7 +2119,7 @@ sub _unsafe_decrypt_block
 	return 1;
     }
 
-    if (!( $status_output =~ /DECRYPTION_OKAY/)) {
+    if ($status_output !~ /DECRYPTION_OKAY/) {
       # Something else went wrong...
       die "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
     }
