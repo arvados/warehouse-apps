@@ -771,7 +771,8 @@ sub readfrompipes
       print STDERR $buf if $ENV{MR_DEBUG};
       $jobstep[$job]->{stderr} .= $buf;
       preprocess_stderr ($job);
-      if (length ($jobstep[$job]->{stderr}) > 16384)
+      if (length ($jobstep[$job]->{stderr}) > 16384 &&
+	  $jobstep[$job]->{stderr} !~ /\+\+\+mr/)
       {
 	substr ($jobstep[$job]->{stderr}, 0, 8192) = "";
       }
