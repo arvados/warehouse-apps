@@ -1970,6 +1970,16 @@ sub _encrypt_block
 
     my ($self, $dataref) = @_;
 
+    my $child = open ENC, "-|";
+    die "Pipe failed: $!" if !defined $child;
+    if ($child > 0)
+    {
+	local $/ = undef;
+	my $enc = <ENC>;
+	close ENC or die "Encrypt child failed: exit $?";
+	return \$enc;
+    }
+
     printf STDERR "gpg: encrypt %s\n", Digest::MD5::md5_hex($$dataref)
 	if $ENV{DEBUG_GPG};
 
@@ -2033,8 +2043,8 @@ sub _encrypt_block
 
     printf STDERR "gpg: encrypt -> %s\n", Digest::MD5::md5_hex($encrypted)
 	if $ENV{DEBUG_GPG};
-    return \$encrypted;
-
+    print $encrypted;
+    exit 0;
 }
 
 sub _decrypt_block
