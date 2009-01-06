@@ -2087,7 +2087,9 @@ sub _unsafe_decrypt_block
                                        stdout     => $output,
                                        stderr     => $error,
                                        status     => $status,
-				       passphrase => $passphrase);
+				       (-w "/dev/tty"
+					? (passphrase => $passphrase)
+					: ()));
     $handles->options ('stdout', { "direct" => 1 } );
 
     my $pid = $gnupg->decrypt( handles => $handles );
