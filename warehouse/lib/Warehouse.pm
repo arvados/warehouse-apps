@@ -2116,7 +2116,6 @@ sub _unsafe_decrypt_block
     my $error_output = <$error>;
     my $status_output = <$status>;
 
-    close $output;
     close $error;
     close $status;
 
