@@ -2115,7 +2115,6 @@ sub _unsafe_decrypt_block
 				       );
     $handles->options ( 'stdout', { "direct" => 1 } );
     $handles->options ( 'stdin', { "direct" => 1 } );
-    close ENC;
 
     my $pid = $gnupg->decrypt( handles => $handles );
 
