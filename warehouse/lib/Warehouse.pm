@@ -2083,6 +2083,15 @@ sub _unsafe_decrypt_block
     eval "use GnuPG::Interface";
     die "_decrypt_block() GnuPG::Interface not found" if $@;
 
+    my $child = open ENC, "-|";
+    die "Pipe failed: $!" if !defined $child;
+    if ($child == 0)
+    {
+	close STDIN;
+	print $$dataref;
+	exit 0;
+    }
+
     my $gnupg = GnuPG::Interface->new();
     $gnupg->options->hash_init( armor    => 1,
                                 homedir => $self->{gpg_homedir},
@@ -2095,6 +2104,7 @@ sub _unsafe_decrypt_block
          IO::Handle->new(),
 	 IO::Handle->new(),
        );
+    $input->fdopen(fileno(ENC),"r");
     $output->fdopen(fileno(STDOUT),"w");
 
     my $handles = GnuPG::Handles->new( stdin      => $input,
@@ -2103,14 +2113,13 @@ sub _unsafe_decrypt_block
                                        status     => $status,
 				       passphrase => $passphrase,
 				       );
-    $handles->options ('stdout', { "direct" => 1 } );
+    $handles->options ( 'stdout', { "direct" => 1 } );
+    $handles->options ( 'stdin', { "direct" => 1 } );
+    close ENC;
 
     my $pid = $gnupg->decrypt( handles => $handles );
 
     close $passphrase;
-
-    print $input $$dataref;
-    close $input;
 
     local $/ = undef;
     my $error_output = <$error>;
