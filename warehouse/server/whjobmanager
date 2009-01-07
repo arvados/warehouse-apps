@@ -973,10 +973,9 @@ sub save_meta
   my $key = $m->as_key;
   undef $metastream if !$justcheckpoint; # otherwise Log() will try to use it
   Log (undef, "meta key is $key");
-  $dbh->do ("update mrjob set metakey=? where id=?",
-	    undef,
-	    $key, $job_id)
-      if $have_database;
+  dbh_do ("update mrjob set metakey=? where id=?",
+	  undef,
+	  $key, $job_id);
 }
 
 
