@@ -463,12 +463,13 @@ sub concordance_pipeline
 	my $allsnplists = join (",", @snpagree);
  	$me->{"snplist2bed"} = findjob
  	    ( { mrfunction => "filefilter",
- 		revision => [ 2636, ],
+ 		revision => [ 2658, ],
  		inputkey => $allsnplists,
  		knobs => makeknobs
- 		    ("allsnps",
+ 		    ("snplist2bed",
  		     "COMMAND=egrep ^chr | cut -f1-4 | perl -ne 'print if /[A-MO-WYZ]\$/' | mrs-snplist2bed",
  		     "OUTPUTNAME=snplist%N.bed",
+		     "POPULATION_SNPS_ONLY=1",
 		     $pipeline->{input}->{"snplist"}
 		     ? ("SNPREFERENCE=".$pipeline->{input}->{"snplist"}."/")
 		     : ()
@@ -477,12 +478,13 @@ sub concordance_pipeline
 	&buildoutputs ($me, "snplist2bed", map { "snplist$_.bed" } (1..(1+$#snpagree)));
 	$me->{"snpstats"} = findjob
 	    ( { mrfunction => "filefilter",
-		revision => [ 2632, ],
+		revision => [ 2660, ],
 		inputkey => $allsnplists,
 		knobs => makeknobs
 		    ("snpstats",
 		     "COMMAND=mrs-snplist-stats",
 		     "OUTPUTNAME=snpstats%N.txt",
+		     "POPULATION_SNPS_ONLY=1",
 		     $pipeline->{input}->{"snplist"}
 		     ? ("SNPREFERENCE=".$pipeline->{input}->{"snplist"}."/")
 		     : ()
