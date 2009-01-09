@@ -31,7 +31,7 @@ while(<REFERENCE>){
     $annot{$line[3]} = $line[0] . "\t" . $line[1] . "\t" . $line[2];
     $exons[$count] = $curr;
 
-    print STDERR "$count\r";
+    print STDERR "$count\r" if -t STDERR;
     for($i=0; $i<(length($curr)/2)+30; $i++){
 	# store all 4 possible reads from this position
 	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 13, 6);
@@ -57,48 +57,73 @@ $s[3] = "T";
 while(<STDIN>){
     chop $_;
     if($_!~/\./){
+	my $min_mm = 999;
 	@line = split(/\t/, $_);
 	
 #expand read into all possible 1bp substitution variants, and search each against reference list
 	@curr_read_array = split(//, $line[4]);
-	for($pos = 0; $pos < 24; $pos++){
-	    for($base=0; $base<4; $base++){
-		
-		@new_seqarray = @curr_read_array;
-		$new_seqarray[$pos] = $s[$base];
-		$new_seq = join(/""/,@new_seqarray);
-		
-		$r1 = substr($new_seq, 0, 12);
-		$r2 = substr($new_seq, 12, 12);
-		
+	for (my $pos1 = 0; $pos1 < 24; $pos1++) {
+	    for (my$base1 = 0; $base1 < 4; $base1++) {
+
+		my $mm1 = $curr_read_array[$pos1] ne $s[$base1];
+		# No need to check "no first mismatch" 24 times.
+		next if $pos1 > 0 && !$mm1;
+
+		for (my $pos2 = $pos1; $pos2 < 24; $pos2++) {
+
+		    next if $pos1 != $pos2
+			&& 2 > $ENV{KNOB_MAX_MISMATCHES};
+
+		    for (my $base2 = 0; $base2 < 4; $base2++) {
+
+			next if $pos1 == $pos2
+			    && $base1 != $base2;
+			next if $pos1 != $pos2
+			    && $curr_read_array[$pos2] eq $s[$base2];
+
+			my $mm2 = $pos1 != $pos2;
+
+			@new_seqarray = @curr_read_array;
+			$new_seqarray[$pos1] = $s[$base1];
+			$new_seqarray[$pos2] = $s[$base2];
+			$new_seq = join(/""/,@new_seqarray);
+
+			$r1 = substr($new_seq, 0, 12);
+			$r2 = substr($new_seq, 12, 12);
+
 #match 13 - 16 bp in between the reads (25--28EcoP15 - 12bp read)
 #match1 holds the sequences of all exons matching read 1 (with current substitution), match2 holds
 #the subset of match1 which also matches read 2 (with current substitution); 
-		# determine whether r1 matches any exons
-		@match0 = ();
-		if(exists $LUT{$r1}){
-		    @ex1 = split(/\t/, $LUT{$r1});
-		    for($i=0; $i<$#ex1+1; $i++){
-			$ex1h{$ex1[$i]}++;
-		    }
+			# determine whether r1 matches any exons
+			@match0 = ();
+			if(exists $LUT{$r1}){
+			    @ex1 = split(/\t/, $LUT{$r1});
+			    for($i=0; $i<$#ex1+1; $i++){
+				$ex1h{$ex1[$i]}++;
+			    }
 
-		    @ex2 = split(/\t/, $LUT{$r2});
-		    if(exists $LUT{$r2}){
-			for($i=0; $i<$#ex2+1; $i++){
-			    if($ex1h{$ex2[$i]} > 0){
-				push(@match0, $exons[$ex2[$i]]);
+			    @ex2 = split(/\t/, $LUT{$r2});
+			    if(exists $LUT{$r2}){
+				for($i=0; $i<$#ex2+1; $i++){
+				    if($ex1h{$ex2[$i]} > 0){
+					push(@match0, $exons[$ex2[$i]]);
+				    }
+				}
+			    }
+			}
+			undef %ex1h;
+			
+			for (@match0)
+			{
+			    $curr_seq = substr($_, 0, length($_)/2);
+			    $hash{$annot{$curr_seq}}++;
+			    if ($min_mm > $mm1 + $mm2)
+			    {
+				$min_mm = $mm1 + $mm2;
+				$mutated_seq = $new_seq;
 			    }
 			}
 		    }
-		}
-		undef %ex1h;
-		$s2 = @match0;
-		
-		for($i=0; $i<$s2; $i++){
-		    $curr_seq = $match0[$i];
-		    $curr_seq = substr($curr_seq, 0, length($curr_seq)/2);
-		    $hash{$annot{$curr_seq}}++;
-		    $mutated_seq = $new_seq;
 		}
 	    }
 	}
@@ -115,7 +140,7 @@ while(<STDIN>){
 	    print "0\t$num_matching_pairs\t.\t.\t.\t.\t.\t$input\n";
 	}
 	elsif($num_matching_pairs == 1){
-	    print "U\t$num_matching_pairs\t$annot{$curr_seq}\t$curr_seq\t$mutated_seq\t$input\n";
+	    print "U\t$num_matching_pairs\t$annot{$curr_seq}\t$curr_seq\t$mutated_seq\t$input\t$min_mm\n";
 	}
 	else{
 	    print "N\t$num_matching_pairs\t.\t.\t.\t.\t.\t$input\n";
