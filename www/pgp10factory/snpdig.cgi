@@ -83,7 +83,7 @@ while (@snplists)
 		    }
 		    next;
 		}
-		elsif ($$dataref =~ /^(\S+) \t (\d+) $/x)
+		elsif ($$dataref =~ /^(\S+) \t (\d+) (\t \d+)? $/x)
 		{
 		    push @calls, [ $1, $2, $$dataref ];
 		    next;
@@ -155,6 +155,8 @@ while (@snplists)
 		    push @filterrecs, $callfilter->[1]->[2] if $has;
 		}
 
+		my $allele_count = {};
+		my $allele_quality = {};
 		my $got;
 		my $html;
 		$html = qq{<a name="$chr,$pos"><code><b>$inrec</b></code></a>\n};
@@ -176,13 +178,26 @@ while (@snplists)
 		    $html .= qq{<pre>} if !$got;
 		    $got = 1;
 		    $html .=
-			&ascii_art ($pos, $refbase, $callbase, $aligns[$a]);
+			&ascii_art ($pos,
+				    $refbase, $callbase,
+				    $aligns[$a],
+				    $allele_count,
+				    $allele_quality);
 		}
 		if ($got)
 		{
-		    $html .= sprintf ("%*s%*s</pre>",
+		    $html .= sprintf ("%*s%*s\n",
 				      $targetcolumn+1, "*",
 				      $targetcolumn+8, "*");
+		    map {
+			$html .= sprintf ("%*s %d sum(q)=%d\n",
+					  $targetcolumn+1, $_,
+					  $allele_count->{$_},
+					  $allele_quality->{$_});
+		    } sort {
+			$allele_count->{$b} <=> $allele_count->{$a}
+		    } keys %$allele_count;
+		    $html .= "</pre>\n";
 		}
 		else
 		{
@@ -205,7 +220,7 @@ while (@snplists)
 
 sub ascii_art
 {
-    my ($target, $refbase, $callbase, $align) = @_;
+    my ($target, $refbase, $callbase, $align, $allele_count, $allele_quality) = @_;
     my $alignpos = $align->[1];
     my @align = split (/\t/, $align->[3]);
     if ($targetcolumn < $target - $alignpos)
@@ -215,13 +230,27 @@ sub ascii_art
     my $indent = $targetcolumn - $target + $alignpos;
     my $art = sprintf "%${indent}.${indent}s", "";
     my $pretty = lc $align[-2];
+    my $readlength = length $pretty;
     substr ($pretty, $target - $alignpos, 1) =~ tr/a-z/A-Z/;
     substr ($pretty, $target - $alignpos, 1) =~
 	s{(.)}{
-	    (fasta2bin($1) & (fasta2bin($callbase) || 0xf) & ~fasta2bin($refbase)) ? "<B>$1</B>" : $1}e;
+	    ++$allele_count->{uc $1} if $allele_count;
+	    $allele_quality->{uc $1} += ord (substr ($align[-1], $target - $alignpos, 1)) - 33 if $allele_quality;
+	    (fasta2bin($1)
+	     & (fasta2bin($callbase) || 0xf)
+	     & ~fasta2bin($refbase))
+		? "<B>$1</B>" : $1;
+    }e;
+    my $prettyq = $align[-1];
+    substr ($prettyq, $target - $alignpos) =~ s{(.)(.*)}{
+ 	"<B>" . $q->escapeHTML($1) . "</B>" . $q->escapeHTML($2)
+    }e;
+    substr ($prettyq, 0, $target - $alignpos) =~ s{(.+)}{
+ 	$q->escapeHTML($1)
+    }e;
     $art .= $pretty;
-    $art .= "        ";
-    $art .= $q->escapeHTML ($align[-1]);
+    $art .= sprintf ("%*s", 8 + $targetcolumn - $readlength, "");
+    $art .= $prettyq;
     $art .= "\n";
     return $art;
 }
