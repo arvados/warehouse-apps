@@ -396,7 +396,8 @@ sub store_block
 	{
 	    $self->{errstr} = $@;
 	    return scalar $self->store_in_keep (dataref => $dataref,
-						nnodes => 2);
+						nnodes => 2, 
+						noencrypt => 1 );
 	}
     }
 
@@ -767,7 +768,7 @@ sub store_in_keep
     {
 	$md5 = Digest::MD5::md5_hex ($$dataref);
 	@hints = length($$dataref);
-	if (@ { $self->{config}->{encrypt} })
+	if (@ { $self->{config}->{encrypt} } && (!exists $arg{noencrypt} || ($arg{noencrypt} != 1)))
 	{
 	    my ($enchash, $encdataref)
 		= $self->_cryptmap_fetchable ($dataref, "$md5+$hints[0]");
