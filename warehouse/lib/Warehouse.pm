@@ -395,9 +395,16 @@ sub store_block
 	or do
 	{
 	    $self->{errstr} = $@;
-	    return scalar $self->store_in_keep (dataref => $dataref,
-						nnodes => 2, 
-						noencrypt => 1 );
+	    my $keephash = scalar $self->store_in_keep (dataref => $dataref,
+							nnodes => 2,
+							noencrypt => 1);
+	    if ($keephash =~ /^([0-9a-f]{32})/ &&
+		$1 eq $md5 &&
+		$keephash =~ /(\+K[^\+]+)/)
+	    {
+		return $hash.$1;
+	    }
+	    return $keephash;
 	}
     }
 
