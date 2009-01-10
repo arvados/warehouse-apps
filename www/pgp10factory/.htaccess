@@ -7,7 +7,7 @@ RewriteCond %{REQUEST_FILENAME} cache|session/
 RewriteRule . / [F]
 
 # We need HOME to be set for transparent encryption/decryption
-SetEnv HOME ~www-data
+SetEnv HOME /var/www
 
 <Files ~ "admin|download|snpdig|whget">
   Satisfy all
