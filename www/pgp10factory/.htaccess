@@ -6,7 +6,7 @@ RewriteCond %{REQUEST_FILENAME} !/cache/images/.
 RewriteCond %{REQUEST_FILENAME} cache|session/
 RewriteRule . / [F]
 
-<Files ~ "admin|download|snpdig">
+<Files ~ "admin|download|snpdig|whget">
   Satisfy all
   Require valid-user
 </Files>

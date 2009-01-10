@@ -136,7 +136,7 @@ sub fillflow
 	$flow->{json}->{pipeline} = [ {
 	    label => "Convert to BFA",
 	    job => [
-		jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
+		jsonjob ("Request", { outputlinks => ["<a href='whget.cgi/$inputpath'>input data</a>"], success => 1 }),
 		jsonjob ("Convert to BFA", $me->{fasta2bfa}),
 		] } ];
 	print "# finished ".$flow->{json}->{pipeline}->[0]->{label}." $in\n"
@@ -768,7 +768,7 @@ sub affyscan_pipeline
     push (@ { $flow->{json}->{pipeline} },
 	  { label => $pipeline->{label},
 	    job => [
-		    jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
+		    jsonjob ("Request", { outputlinks => ["<a href='whget.cgi/$inputpath'>input data</a>"], success => 1 }),
 		    jsonjob ("Prune Affy map", $me->{"affy2snplist"}),
 		    jsonjob ("Look up SNP IDs", $me->{"affyscan2snplist"}),
 		    jsonjob ("Convert to BED", $me->{"snplist2bed"}),
@@ -1039,7 +1039,7 @@ sub maq_pipeline
 	  { label => $pipeline->{label},
 	    image => mapcheck_png ($me->{merge}),
 	    job => [
-		    jsonjob ("Request", { outputlinks => ["<a href='http://templeton-controller.freelogy.org/whget.cgi/$inputpath'>input data</a>"], success => 1 }),
+		    jsonjob ("Request", { outputlinks => ["<a href='whget.cgi/$inputpath'>input data</a>"], success => 1 }),
 		    @jsonjobs,
 		    ] } );
 
@@ -1140,7 +1140,7 @@ sub buildoutputs
 	my @outputlinks;
 	foreach (@filename)
 	{
-	    push @outputlinks, "<a href='http://templeton-controller.freelogy.org/whget.cgi/$manifest/$_'>$_</a>";
+	    push @outputlinks, "<a href='whget.cgi/$manifest/$_'>$_</a>";
 	}
 	$job->{outputlinks} = [@outputlinks];
 
@@ -1350,7 +1350,7 @@ sub jsonjob
 	    my $meta = $job->{metakey};
 	    $x->{outputfiles} = [
 		($meta
-		 ? qq{<a href="http://templeton-controller.freelogy.org/whget.cgi/$meta.txt">view errors</a>}
+		 ? qq{<a href="whget.cgi/$meta.txt">view errors</a>}
 		 : ()),
 		qq{<button id="retry-$id" onclick="pipeline_retryjob($id);">retry job</button>},
 		];
