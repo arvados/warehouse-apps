@@ -6,6 +6,9 @@ RewriteCond %{REQUEST_FILENAME} !/cache/images/.
 RewriteCond %{REQUEST_FILENAME} cache|session/
 RewriteRule . / [F]
 
+# We need HOME to be set for transparent encryption/decryption
+SetEnv HOME ~www-data
+
 <Files ~ "admin|download|snpdig|whget">
   Satisfy all
   Require valid-user
