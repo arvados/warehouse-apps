@@ -751,7 +751,7 @@ sub affyscan_pipeline
 	$me->{"snplist2bed"}->{"outputkey"})
     {
 	my $bigmanifesthash = &buildbigmanifest
-	    ($id, map {
+	    ($id, $me, map {
 		/^\S+/ ? ($&) : ()
 	     } @{$me->{"outputs"}});
 	$me->{gzip} = findjob
@@ -1021,7 +1021,7 @@ sub maq_pipeline
     if ($me->{snptranslate} && $me->{snptranslate}->{outputkey})
     {
 	my $bigmanifesthash = buildbigmanifest
-	    ($id, map {
+	    ($id, $me, map {
 		/^\S+/ ? ($&) : ()
 	     } @{$me->{outputs}});
 	$me->{gzip} = findjob
@@ -1056,12 +1056,25 @@ sub maq_pipeline
 
 sub buildbigmanifest
 {
-    my ($pipeline_id, @outputs) = @_;
+    my ($pipeline_id, $pipeline, @outputs) = @_;
+
+    my $last_job_finish = 0;
+    for my $job (values %$pipeline)
+    {
+	if ($job && ref $job eq "HASH" && $job->{"outputkey"})
+	{
+	    my $ft = $Job { $job->{"id"} }->{"finishtime_s"};
+	    $last_job_finish = $ft if $last_job_finish < $ft;
+	}
+    }
+
     my $bigmanifesthash;
     my $bigmanifest = "";
     if ($bigmanifesthash = readlink "$workdir/$pipeline_id.bigmanifesthash")
     {
-	return $bigmanifesthash;
+	lstat "$workdir/$pipeline_id.bigmanifesthash";
+	return $bigmanifesthash if ((time - ((-M _) * 86400)) > $last_job_finish);
+	unlink "$workdir/$pipeline_id.bigmanifesthash";
     }
     print "Building big output manifest for pipeline $pipeline_id\n";
     for (@outputs)
