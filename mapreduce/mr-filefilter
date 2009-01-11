@@ -62,6 +62,7 @@ sub level1
 		 "F" => $last_infile,
 		 );
   $ENV{KNOB_OUTPUTNAME} =~ s/%(.)/$special{$1}/ge;
+  $ENV{LAST_INFILENAME} = $last_infile;
 
   # maybe I can write an output manifest without reading or writing any data blocks.
   my $want_gz = $ENV{KNOB_OUTPUTNAME} =~ /\.gz$/;
