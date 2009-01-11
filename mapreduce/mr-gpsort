@@ -5,6 +5,7 @@ use Warehouse;
 use Safepipe;
 
 $ENV{KNOB_BUCKETS} ||= 100;
+$ENV{KNOB_OUTPUTNAME} ||= "bucket%N.gz";
 
 if ($ENV{MR_LEVEL} == 0)
 {
@@ -40,7 +41,6 @@ else
 {
     $ENV{MR_LEVEL} = 0;
     $ENV{KNOB_COMMAND} = "mrs-gpsort-select|sort -nk4,4|sort -sk1,1";
-    $ENV{KNOB_OUTPUTNAME} = "bucket%N.gz";
     $ENV{KNOB_CONCATENATE} = 1;
     $ENV{KNOB_BUCKET} = $ENV{MR_INPUT};
     exec "mr-filefilter";
