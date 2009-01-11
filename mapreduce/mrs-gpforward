@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+
+while (<>)
+{
+    chomp;
+    my @a = split;
+    if ($a[2] eq "R")
+    {
+	# fix intra-exon coordinate
+	$a[3] = $a[1] - $a[3] - 1;
+
+	# complement bases
+	for(4,5)
+	{
+	    $a[$_]=~tr/ACGT/TGCA/;
+	}
+	$_ = join("\t",@a) . "\n";
+    }
+    print;
+}
