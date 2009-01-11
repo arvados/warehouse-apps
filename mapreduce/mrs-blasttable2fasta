@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-my $max_mm = $ENV{KNOB_MAX_MISMATCH} + 0;
+my $max_mm = $ENV{KNOB_MAX_MISMATCHES} + 0;
 
 while (<>)
 {
