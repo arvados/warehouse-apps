@@ -1,0 +1,95 @@
+#!/usr/bin/perl
+#
+# Parses the output from place_reads_1sub.pl, used to place
+# 24bp Polonator reads from the 10282008_A experiment.
+#
+# Greg Porreca 12-03-2008
+#
+
+
+use FileHandle;
+STDOUT->autoflush(1);
+
+# distances searched by the read placement algorithm
+$min_dist = 13;
+$max_dist = 16;
+
+
+while(<>){
+    chop $_;
+    
+    # only output data for unique placements
+    if($_=~/^U/){
+	@line = split(/\t/, $_);
+	$original_read = $line[11];
+	$placed_read = $line[6];
+	$exon = $line[5] . $line[5];
+
+	@original_array = split(//, $original_read);
+	@placed_array = split(//, $placed_read);
+
+	# split the read into its 4 parts
+	$r1a = substr($placed_read, 0, 6);
+	$r1b = substr($placed_read, 6, 6);
+	$r2a = substr($placed_read, 12, 6);
+	$r2b = substr($placed_read, 18, 6);
+
+	#locate reads in the exon
+	for($i=0; $i<length($exon); $i++){
+
+	    # does the first half of read 1 start here?
+	    if(substr($exon, $i, 6) eq $r1a){ # if so, is the second half within range?
+		$pos = index(substr($exon, $i + 6), $r1b);
+		if(($pos >= $min_dist) && ($pos <= $max_dist)){
+		    # if so, this is the position of the read; remember these coords
+		    $read_start[0] = $i;
+		    $read_start[1] = $i + 6 + $pos;
+		}
+	    }
+
+	    # does the first half of read 2 start here?
+	    if(substr($exon, $i, 6) eq $r2a){
+		$pos = index(substr($exon, $i + 6), $r2b);
+		if(($pos >= $min_dist) && ($pos <= $max_dist)){
+		    $read_start[2] = $i;
+		    $read_start[3] = $i + 6 + $pos;
+		}
+	    }
+	}
+
+	# now output positions and calls; one row per call, 24 rows per input line (4 reads per input line)
+	for($i=0; $i<4; $i++){ #for each sub-read
+	    for($j=0; $j<6; $j++){ #for each base in the sub-read
+
+		# exonID, exon length, strand
+		print "$line[2]\t$line[3]\t$line[4]\t";
+
+		# intra-RCA coordinate
+		print "" . $read_start[$i] + $j . "\t";
+
+		# Polonator basecall
+		print "" . $original_array[($i*6)+$j] . "\t";
+
+		# reference base
+		print "" . $placed_array[($i*6)+$j] . "\t";
+
+		# "M"atch or "S"ubstitution relative to reference?
+		if($original_array[($i*6)+$j] eq $placed_array[($i*6)+$j]){
+		    print "M\t";
+		}
+		else{
+		    print "S\t";
+		}
+
+		# quality score
+		print "" . $line[($i*6)+$j+12] . "\t";
+
+		# bead info: flowcell, lane, image, bead
+		print "$line[7]\t$line[8]\t$line[9]\t$line[10]\t";
+
+		# position in Polonator read
+		print "" . $i*6 + $j . "\n";
+	    }
+	}
+    }
+}
