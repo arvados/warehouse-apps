@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+my $max_mm = $ENV{KNOB_MAX_MISMATCH} + 0;
+
+while (<>)
+{
+    chomp;
+    my @a = split;
+    if ($a[3] >= $a[14] - $max_mm)
+    {
+	$ref = (("n"x$a[6])
+		. $a[13]
+		. ("n"x($a[14]-$a[3]-$a[6])));
+	$ref =~ s/.{1,50}/$&\n/g;
+	print (">$a[0]=$a[1]\@",
+	       ($a[8]-$a[6]),
+	       "-",
+	       ($a[8]-$a[6]+$a[14]-1),
+	       "\n",
+	       $ref);
+    }
+}
+
+__END__
+
+in:
+
+14      chr10   100.00  113     0       0       16      128     283316  283428  1e-56   224     attacttttataatgcccacagctaaaggtcactcaagaaccaagagcaaagaaaggacgacgtaatcaaagtgtggagcccaaaaaggaagtaagttgcccacctcgcagta       attacttttataatgcccacagctaaaggtcactcaagaaccaagagcaaagaaaggacgacgtaatcaaagtgtggagcccaaaaaggaagtaagttgcccacctcgcagta    143
+17      chr10   100.00  167     0       0       16      182     288266  288432  9e-89   331     tgccccgatttcttacctgcagtgctacaactgtgaggaggaggccatgtaccactgctgctggaacacatcctactgctccatcaagtgccagcaggagcactggcacgcggagcacaagcgcacctgccgccggaaaagatgaagctggcccttcccggagtcac      tgccccgatttcttacctgcagtgctacaactgtgaggaggaggccatgtaccactgctgctggaacacatcctactgctccatcaagtgccagcaggagcactggcacgcggagcacaagcgcacctgccgccggaaaagatgaagctggcccttcccggagtcac 197
+19      chr10   100.00  168     0       0       16      183     317118  317285  2e-89   333     aagctgcaagctcacgacttaccattccgtaacgcttttatgggctctgatgaccgaggtctcaatgtcgattgggtggtaccgcatgccccgcagctccatggcttcgtccagtgcccctaccacgtagagggcatcatggcgctctgtggagtaatgacagcctgc     aagctgcaagctcacgacttaccattccgtaacgcttttatgggctctgatgaccgaggtctcaatgtcgattgggtggtaccgcatgccccgcagctccatggcttcgtccagtgcccctaccacgtagagggcatcatggcgctctgtggagtaatgacagcctgc        198
+21      chr10   100.00  119     0       0       16      134     322191  322309  3e-60   236     tctcggaggacactcaactcacctctccaaggtgtgagtcccccagcggtccttttgtttctgggttggcaattataatccgaacccctggaagtatctatttgggagaggaaaagtct tctcggaggacactcaactcacctctccaaggtgtgagtcccccagcggtccttttgtttctgggttggcaattataatccgaacccctggaagtatctatttgggagaggaaaagtct      149
+
+out:
+
+>14=chr10@283300-283442
+nnnnnnnnnnnnnnnnattacttttataatgcccacagctaaaggtcact
+caagaaccaagagcaaagaaaggacgacgtaatcaaagtgtggagcccaa
+aaaggaagtaagttgcccacctcgcagtannnnnnnnnnnnnn
+>17=chr10@288250-288446
+nnnnnnnnnnnnnnnntgccccgatttcttacctgcagtgctacaactgt
+gaggaggaggccatgtaccactgctgctggaacacatcctactgctccat
+caagtgccagcaggagcactggcacgcggagcacaagcgcacctgccgcc
+ggaaaagatgaagctggcccttcccggagtcacnnnnnnnnnnnnnn
+>19=chr10@317102-317299
+nnnnnnnnnnnnnnnnaagctgcaagctcacgacttaccattccgtaacg
+cttttatgggctctgatgaccgaggtctcaatgtcgattgggtggtaccg
+catgccccgcagctccatggcttcgtccagtgcccctaccacgtagaggg
+catcatggcgctctgtggagtaatgacagcctgcnnnnnnnnnnnnnn
+>21=chr10@322175-322323
+nnnnnnnnnnnnnnnntctcggaggacactcaactcacctctccaaggtg
+tgagtcccccagcggtccttttgtttctgggttggcaattataatccgaa
+cccctggaagtatctatttgggagaggaaaagtctnnnnnnnnnnnnnn
