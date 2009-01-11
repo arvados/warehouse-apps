@@ -1,0 +1,13 @@
+#!/usr/bin/perl
+
+my ($bucket_start, $bucket_end) = split (/ /, $ENV{MR_INPUT});
+
+while(<>)
+{
+    my ($id) = /^(\S+)/;
+    if ($id cmp $bucket_start >= 0 &&
+	$id cmp $bucket_end <= 0)
+    {
+	print;
+    }
+}

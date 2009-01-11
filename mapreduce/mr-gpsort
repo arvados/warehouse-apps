@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+use strict;
+use Warehouse;
+use Safepipe;
+
+$ENV{KNOB_BUCKETS} ||= 100;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+    &Safepipe::readfrom ("main::ALL",
+			 "whget -r $ENV{MR_INPUT0}/ -",
+			 "gzip -cdf",
+			 )
+	or die "Pipe failed: $!";
+
+    my %saw;
+    my $incount;
+    while (<ALL>)
+    {
+	my ($exon_id) = /^(\S+)/;
+	++$saw{$exon_id};
+	print STDERR "\r$incount" if (++$incount % 10000 == 0);
+    }
+    close ALL or die "close ALL: $!";
+
+    my @id = sort keys %saw;
+    my $start_index = 0;
+    for (my $jobstep = 1; $jobstep <= $ENV{KNOB_BUCKETS}; $jobstep++)
+    {
+	my $end_index = int($#id * $jobstep / $ENV{KNOB_BUCKETS});
+	print STDERR "+++mrjobstep 1 $id[$start_index] $id[$end_index]+++\n"
+	    if $start_index <= $end_index;
+	$start_index = $end_index + 1;
+    }
+    print STDERR "++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+    exit 0;
+}
+else
+{
+    $ENV{MR_LEVEL} = 0;
+    $ENV{KNOB_COMMAND} = "mrs-gpsort-select|sort -nk4,4|sort -sk1,1";
+    $ENV{KNOB_OUTPUTNAME} = "bucket%N.gz";
+    $ENV{KNOB_CONCATENATE} = 1;
+    $ENV{KNOB_BUCKET} = $ENV{MR_INPUT};
+    exec "mr-filefilter";
+}
