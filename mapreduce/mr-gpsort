@@ -21,7 +21,7 @@ if ($ENV{MR_LEVEL} == 0)
     {
 	my ($exon_id) = /^(\S+)/;
 	++$saw{$exon_id};
-	print STDERR "\r$incount" if (++$incount % 10000 == 0);
+	print STDERR "\r$incount" if (++$incount % 10000 == 0 && -t STDERR);
     }
     close ALL or die "close ALL: $!";
 
