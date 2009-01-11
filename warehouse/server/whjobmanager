@@ -218,6 +218,7 @@ my @jobstep_tomerge = ();
 my $jobstep_tomerge_level = 0;
 my $squeue_checked;
 my $squeue_kill_checked;
+my $output_in_keep = 0;
 
 
 
@@ -454,6 +455,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     {
       $main::please_info = 0;
       freeze();
+      collate_output();
       save_meta(1);
       update_progress_stats();
     }
@@ -486,7 +488,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 Log (undef, "wait for last ".(scalar keys %proc)." children to finish");
 while (%proc)
 {
-  $main::please_info = 0, freeze(), save_meta(1) if $main::please_info;
+  $main::please_info = 0, freeze(), collate_output(), save_meta(1) if $main::please_info;
   readfrompipes ();
   if (!reapchildren())
   {
@@ -530,43 +532,9 @@ goto ONELEVEL if !defined $success;
 
 
 release_allocation();
-
 freeze();
-Log (undef, "reduce");
-
-my $output_in_keep = 0;
-$whc->write_start (1);
-for (@jobstep)
-{
-  next if !exists $_->{output} || $_->{exitcode} != 0;
-  my $output = $_->{output};
-  if ($output !~ /^[0-9a-f]{32}/)
-  {
-    $output_in_keep ||= $output =~ / [0-9a-f]{32}\S*\+K/;
-    $whc->write_data ($output);
-  }
-  elsif (defined (my $outblock = $whc->fetch_block ($output)))
-  {
-    $output_in_keep ||= $outblock =~ / [0-9a-f]{32}\S*\+K/;
-    $whc->write_data ($outblock);
-  }
-  else
-  {
-    my $errstr = $whc->errstr;
-    $whc->write_data ("XXX fetch_block($output) failed: $errstr XXX\n");
-    $success = 0;
-  }
-}
-my $key = $whc->write_finish;
-if ($key)
-{
-  Log (undef, "output key is $key");
-}
-else
-{
-  Log (undef, "no output key");
-}
-
+my $key = &collate_output();
+$success = 0 if !$key;
 
 
 if ($key)
@@ -584,7 +552,7 @@ if ($key)
     push @keepkey, $keephash;
   }
   my $keepkey = join (",", @keepkey);
-  Log (undef, "output+K key is $keepkey");
+  Log (undef, "outputkey+K $keepkey");
   print "$keepkey\n" if $success;
 
   if ($output_in_keep)
@@ -858,6 +826,47 @@ sub process_stderr
 }
 
 
+sub collate_output
+{
+  Log (undef, "collate");
+  $whc->write_start (1);
+  for (@jobstep)
+  {
+    next if !exists $_->{output} || $_->{exitcode} != 0;
+    my $output = $_->{output};
+    if ($output !~ /^[0-9a-f]{32}/)
+    {
+      $output_in_keep ||= $output =~ / [0-9a-f]{32}\S*\+K/;
+      $whc->write_data ($output);
+    }
+    elsif (defined (my $outblock = $whc->fetch_block ($output)))
+    {
+      $output_in_keep ||= $outblock =~ / [0-9a-f]{32}\S*\+K/;
+      $whc->write_data ($outblock);
+    }
+    else
+    {
+      my $errstr = $whc->errstr;
+      $whc->write_data ("XXX fetch_block($output) failed: $errstr XXX\n");
+      $success = 0;
+    }
+  }
+  my $key = $whc->write_finish;
+  if ($key)
+  {
+    Log (undef, "outputkey $key");
+    dbh_do ("update mrjob set output=? where id=?", undef,
+	    $key, $job_id)
+	or Log (undef, "db update failed: ".$DBI::errstr);
+  }
+  else
+  {
+    Log (undef, "outputkey undef");
+  }
+  return $key;
+}
+
+
 sub killem
 {
   foreach (@_)
@@ -944,6 +953,7 @@ sub croak
   my $message = "@_ at $file line $line\n";
   Log (undef, $message);
   freeze() if @jobstep_todo;
+  collate_output() if @jobstep_todo;
   cleanup() if $dbh;
   save_meta() if $metastream;
   die;
@@ -1000,6 +1010,7 @@ sub freeze_if_want_freeze
       }
     }
     freeze();
+    collate_output();
     cleanup();
     save_meta();
     exit 0;
