@@ -35,7 +35,12 @@ while(<>){
 	$r2b = substr($placed_read, 18, 6);
 
 	#locate reads in the exon
-	for($i=0; $i<length($exon); $i++){
+	my @read_start;
+	for($i=0;
+	    $i<length($exon) &&
+	    !(defined $read_start[0] &&
+	      defined $read_start[2]);
+	    $i++){
 
 	    # does the first half of read 1 start here?
 	    if(substr($exon, $i, 6) eq $r1a){ # if so, is the second half within range?
