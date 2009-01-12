@@ -6,6 +6,7 @@ use Safepipe;
 
 $ENV{KNOB_BUCKETS} ||= 100;
 $ENV{KNOB_OUTPUTNAME} ||= "bucket%N.gz";
+$ENV{KNOB_SORTBUFFER} ||= "25%";
 
 if ($ENV{MR_LEVEL} == 0)
 {
@@ -40,7 +41,7 @@ if ($ENV{MR_LEVEL} == 0)
 else
 {
     $ENV{MR_LEVEL} = 0;
-    $ENV{KNOB_COMMAND} = "mrs-gpsort-select|sort -sk1,1";
+    $ENV{KNOB_COMMAND} = "mrs-gpsort-select|sort --buffer-size=$ENV{KNOB_SORTBUFFER} -sk1,1";
     $ENV{KNOB_CONCATENATE} = 1;
     $ENV{KNOB_BUCKET} = $ENV{MR_INPUT};
     exec "mr-filefilter";
