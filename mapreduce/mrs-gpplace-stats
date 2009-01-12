@@ -6,14 +6,8 @@ while (<>)
     ++$stat{total};
     ++$stat{placed} if !/^0/;
     ++$stat{unique} if /^U/;
-    ++$stat{exact} if /^U/ && is_exact($_);
+    ++$stat{"mm$1"} if /^U.*(\d)$/;
 }
 
 print join "\t", map { "$_=$stat{$_}" } qw(total placed unique exact);
 print "\n";
-
-sub is_exact
-{
-    my @in = split (/\t/, shift);
-    $in[6] eq $in[11];
-}
