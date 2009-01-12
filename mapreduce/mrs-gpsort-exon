@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+
+use strict;
+
+my @buf;
+my $lastid;
+
+while(<>)
+{
+    my ($id, $x, $x, $pos) = split /\t/;
+    flush() if $id ne $lastid;
+    push @buf, [$pos, $_];
+    $lastid=$id;
+}
+flush();
+
+sub flush
+{
+    map { print $_->[1] } sort { $a->[0] <=> $b->[0] } @buf;
+    @buf=();
+}
