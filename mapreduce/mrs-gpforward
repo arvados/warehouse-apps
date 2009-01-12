@@ -6,7 +6,7 @@ while (<>)
     my @a = split;
     if ($a[2] eq "R")
     {
-	# fix intra-exon coordinate
+	# fix intra-exon coordinate (distance from start in F direction)
 	$a[3] = $a[1] - $a[3] - 1;
 
 	# complement bases
@@ -14,7 +14,13 @@ while (<>)
 	{
 	    $a[$_]=~tr/ACGT/TGCA/;
 	}
-	$_ = join("\t",@a) . "\n";
     }
+
+    # fix intra-exon coordinate (might be negative or >= exon length
+    # if alignment crosses date line)
+
+    $a[3] = $a[3] % $a[1];
+    $_ = join("\t",@a);
     print;
+    print "\n";
 }
