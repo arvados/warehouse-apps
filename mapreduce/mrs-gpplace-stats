@@ -9,5 +9,5 @@ while (<>)
     ++$stat{"mm$1"} if /^U.*(\d)$/;
 }
 
-print join "\t", map { "$_=$stat{$_}" } qw(total placed unique exact);
+print join "\t", map { "$_=$stat{$_}" } sort keys %stat;
 print "\n";
