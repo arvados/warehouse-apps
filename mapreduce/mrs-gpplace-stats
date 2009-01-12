@@ -6,7 +6,7 @@ while (<>)
     ++$stat{total};
     ++$stat{placed} if !/^0/;
     ++$stat{unique} if /^U/;
-    ++$stat{exact} if /^U/ && is_exact();
+    ++$stat{exact} if /^U/ && is_exact($_);
 }
 
 print join "\t", map { "$_=$stat{$_}" } qw(total placed unique exact);
