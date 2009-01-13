@@ -14,6 +14,8 @@ STDOUT->autoflush(1);
 $min_dist = 13;
 $max_dist = 16;
 
+my $notfound = 0;
+my $found = 0;
 
 while(<>){
     chop $_;
@@ -36,31 +38,19 @@ while(<>){
 
 	#locate reads in the exon
 	my @read_start;
-	for($i=0;
-	    $i<length($exon) &&
-	    !(defined $read_start[0] &&
-	      defined $read_start[2]);
-	    $i++){
+	$read_start[0] = index ($exon, $r1a);
+	$read_start[1] = index ($exon, $r1b, $read_start[0] + 6 + $min_dist);
+	$read_start[2] = index ($exon, $r2a, $read_start[1] + 6);
+	$read_start[3] = index ($exon, $r2b, $read_start[2] + 6 + $min_dist);
 
-	    # does the first half of read 1 start here?
-	    if(substr($exon, $i, 6) eq $r1a){ # if so, is the second half within range?
-		$pos = index(substr($exon, $i + 6), $r1b);
-		if(($pos >= $min_dist) && ($pos <= $max_dist)){
-		    # if so, this is the position of the read; remember these coords
-		    $read_start[0] = $i;
-		    $read_start[1] = $i + 6 + $pos;
-		}
-	    }
-
-	    # does the first half of read 2 start here?
-	    if(substr($exon, $i, 6) eq $r2a){
-		$pos = index(substr($exon, $i + 6), $r2b);
-		if(($pos >= $min_dist) && ($pos <= $max_dist)){
-		    $read_start[2] = $i;
-		    $read_start[3] = $i + 6 + $pos;
-		}
-	    }
+	if ($read_start[1] - $read_start[0] - 6 > $max_dist ||
+	    $read_start[3] - $read_start[2] - 6 > $max_dist ||
+	    grep { $_ < 0 } @read_start)
+	{
+	    ++$notfound;
+	    next;
 	}
+	++$found;
 
 	# now output positions and calls; one row per call, 24 rows per input line (4 reads per input line)
 	for($i=0; $i<4; $i++){ #for each sub-read
@@ -98,3 +88,5 @@ while(<>){
 	}
     }
 }
+
+print STDERR "$found found, $notfound not found\n";
