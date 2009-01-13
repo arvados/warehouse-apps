@@ -1160,7 +1160,7 @@ sub _job_list
     my $self = shift;
     my %what = @_;
     my $url = "http://".$self->{job_warehouse_servers}."/job/list";
-    $url .= "?".$what{id_min}."-".$what{id_max}
+    $url .= "?".($what{id_min} || "")."-".($what{id_max} || "")
 	if $what{id_min} || $what{id_max};
     my $resp = $self->{ua}->get ($url);
     if ($resp->is_success)
@@ -1867,6 +1867,8 @@ sub _cryptsetup
 				    meta_interactive => 0,
 				    );
 
+	open (TMP, "/etc/warehouse/gnupg-keys.pub.asc") or die;
+
 	my ( $input, $output, $error, $status ) =
 		( IO::Handle->new(),
 		  IO::Handle->new(),
@@ -1879,7 +1881,6 @@ sub _cryptsetup
 					   stderr => $error,
 					   status => $status );
 
-	open(TMP,"/etc/warehouse/gnupg-keys.pub.asc");
 	my $pid = $gnupg->import_keys ( handles => $handles);
 
 	local $/ = undef;
@@ -1978,7 +1979,8 @@ sub _encrypt_block
 
     my ($self, $dataref) = @_;
 
-    my $child = open ENC, "-|";
+    my $child;
+    $child = open ENC, "-|";
     die "Pipe failed: $!" if !defined $child;
     if ($child > 0)
     {
@@ -2003,7 +2005,7 @@ sub _encrypt_block
 				meta_interactive => 0,
 				);
 
-    my $child = open PLAIN, "-|";
+    $child = open PLAIN, "-|";
     die "Pipe failed: $!" if !defined $child;
     if ($child == 0)
     {
