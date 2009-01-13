@@ -82,11 +82,11 @@ sub level1
 	my $token = $1;
 	if ($token =~ /^(\d+):(\d+):/)
 	{
-	  $shortcut_ok &&= (!$want_gz || $token =~ /\.gz$/);
-	  $shortcut_ok &&= ($1 == $endoffiles);
 	  $endoffiles += $2;
+	  $shortcut_ok &&= ($1 == $endoffiles);
+	  $shortcut_ok &&= (!!$want_gz == ($token =~ /\.gz$/));
 	}
-	if ($token =~ /\+(\d+)/)
+	elsif ($token =~ /\+(\d+)/)
 	{
 	  $streamlength += $1;
 	}
@@ -98,11 +98,12 @@ sub level1
       my $whc = new Warehouse;
       $whc->write_start;
       $whc->write_data ($outdir);
+      pos ($input) = undef;
       while ($input =~ /(.+)/gm)
       {
 	my $inputline = $1;
 	$inputline =~ s/^\S+\s+//;
-	while ($shortcut_ok && $inputline =~ /(\S+)/g)
+	while ($inputline =~ /(\S+)/g)
 	{
 	  my $token = $1;
 	  last if $token =~ /^(\d+):(\d+):/;
@@ -116,10 +117,13 @@ sub level1
     }
   }
 
-  if (!open INSTREAM, "-|")
+  my $child = open INSTREAM, "-|";
+  die "fork failed: $!" if !defined $child;
+  if (!$child)
   {
     close STDIN;
     my $whc = new Warehouse;
+    pos ($input) = undef;
     while ($input =~ /(.+)/gm)
     {
       my $inputline = $1;
