@@ -21,7 +21,7 @@ print CGI->header (-cookie => [session::togo()]);
 my $whc = new Warehouse;
 
 my @snplists = map {
-    [ m{^/?(.*?)([0-9a-f]{32})?(/\S+)?$} ];
+    [ m{^/?(.*?)([0-9a-f]{32}(?:,[0-9a-f]{32})*)?(/\S+)?$} ];
     # eg. {hash}/snplist.tab
     # eg. agrees-{hash}/snplist.tab
     # eg. disagrees-{hash}/snplist.tab
@@ -45,6 +45,11 @@ while (@snplists)
 	next;
     }
 
+    # read alignments and snp calls
+
+    my @calls;
+    my @aligns;
+
     my $m = new Warehouse::Manifest (whc => $whc, key => $hash);
     while (my $s = $m->subdir_next)
     {
@@ -54,11 +59,6 @@ while (@snplists)
 	{
 	    last if !defined $pos;
 	    next if length ($wantfile) && ".$wantfile" ne "$subdir/$file";
-
-	    # read alignments and snp calls
-
-	    my @calls;
-	    my @aligns;
 
 	    $s->seek ($pos);
 	    my $line = 0;
@@ -72,14 +72,14 @@ while (@snplists)
 		    push @calls, [ $1, $2, $$dataref ];
 		    next;
 		}
-		elsif ($$dataref =~ /^\S+ \t (\S+) \t (\d+) \t [-\+] \t
+		elsif ($$dataref =~ /^\S+ \t (\S+) \t (\d+) \t [-\+] \t?
 				      .* \t (\d+) \t (\S+) \t \S+$/x
 		       && $3 == length $4)
 		{
 		    if (!@snplists)
 		    {
 			push @aligns, [ $1, $2, $2 + $3 - 1, $$dataref ];
-			$targetcolumn ||= $3;
+			$targetcolumn = $3 if $targetcolumn < $3;
 		    }
 		    next;
 		}
@@ -90,132 +90,132 @@ while (@snplists)
 		}
 		die "$0 $hash $subdir/$file line $line noparse $$dataref\n";
 	    }
-
-	    # sort
-
-	    @calls = sort
-	    { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @calls;
-
-	    @aligns = sort
-	    { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @aligns;
-
-	    # if this is just a filter (ie. not the first snplist specified)...
-
-	    if (@snplists)
-	    {
-		unshift @callfilters, [ $filtertype, @calls ];
-		next;
-	    }
-
-	    # merge
-
-	    my $npositions;
-	  CALL:
-	    for (@calls)
-	    {
-		my ($chr, $pos, $inrec) = @$_;
-		my ($refbase, $callbase) = $inrec =~ /^\S+\s\d+\s(\S+)\s(\S+)/;
-		my @filterrecs;
-
-		next CALL if $filtertype =~ /\bhet-/ && !is_het($callbase);
-		next CALL if $filtertype =~ /\bhom-/ && !is_hom($callbase);
-		next CALL if $filtertype =~ /\bcall-/ && is_nocall($callbase);
-		next CALL if $filtertype =~ /\bnocall-/ && !is_nocall($callbase);
-
-		for my $callfilter (@callfilters)
-		{
-		    splice @$callfilter, 1, 1
-			while ($chr gt $callfilter->[1]->[0]
-			       ||
-			       ($chr eq $callfilter->[1]->[0] &&
-				$pos > $callfilter->[1]->[1]));
-		    my $has = ($chr eq $callfilter->[1]->[0] &&
-			       $pos == $callfilter->[1]->[1]);
-
-		    next CALL if !$has && $callfilter->[0] =~ "\bisin-";
-
-		    my ($filterbase)
-			= $callfilter->[1]->[2] =~ /^\S+\s\d+\s\S+\s(\S+)/;
-		    
-		    my $agree = (fasta2bin ($callbase)
-				 == fasta2bin ($filterbase));
-		    my $nocall = &is_nocall ($filterbase);
-		    my $ignore = (&is_nocall ($callbase) ||
-				  $nocall ||
-				  !$has);
-		    my $disagree = !$agree && !$ignore;
-		    $agree &&= !$ignore;
-		    next CALL if $callfilter->[0] =~ /\bagree-/ && !$agree;
-		    next CALL if $callfilter->[0] =~ /\bdisagree-/ && !$disagree;
-		    next CALL if $callfilter->[0] =~ /\bhet-/ && !is_het($filterbase);
-		    next CALL if $callfilter->[0] =~ /\bhom-/ && !is_hom($filterbase);
-		    next CALL if $callfilter->[0] =~ /\bnocall-/ && !$nocall;
-		    next CALL if $callfilter->[0] =~ /\bcall-/ && $nocall || !$has;
-
-		    push @filterrecs, $callfilter->[1]->[2] if $has;
-		}
-
-		my $allele_count = {};
-		my $allele_quality = {};
-		my $got;
-		my $html;
-		$html = qq{<a name="$chr,$pos"><code><b>$inrec</b></code></a>\n};
-		$html .= join ("", map { "<br><code>".$q->escapeHTML($_)."</code>" } @filterrecs);
-
-		shift @aligns while (@aligns &&
-				     $chr gt $aligns[0]->[0]);
-		shift @aligns while (@aligns &&
-				     $chr eq $aligns[0]->[0] &&
-				     $pos > $aligns[0]->[2]);
-		for (my $a = 0;
-		     $a <= $#aligns &&
-		     $chr eq $aligns[$a]->[0] &&
-		     $pos >= $aligns[$a]->[1];
-		     $a++)
-		{
-		    next unless ($pos <= $aligns[$a]->[2]);
-
-		    $html .= qq{<pre>} if !$got;
-		    $got = 1;
-		    $html .=
-			&ascii_art ($pos,
-				    $refbase, $callbase,
-				    $aligns[$a],
-				    $allele_count,
-				    $allele_quality);
-		}
-		if ($got)
-		{
-		    $html .= sprintf ("%*s%*s\n",
-				      $targetcolumn+1, "*",
-				      $targetcolumn+8, "*");
-		    map {
-			$html .= sprintf ("%*s %d sum(q)=%d\n",
-					  $targetcolumn+1, $_,
-					  $allele_count->{$_},
-					  $allele_quality->{$_});
-		    } sort {
-			$allele_count->{$b} <=> $allele_count->{$a}
-		    } keys %$allele_count;
-		    $html .= "</pre>\n";
-		}
-		else
-		{
-		    $html .= "<br />";
-		}
-
-		if ($callbase ne $refbase &&
-		    $callbase ne "N" &&
-		    $callbase ne "X")
-		{
-		    $html = qq{<div style="background: #ffc;">$html</div>};
-		}
-		print $html."\n";
-		++$npositions;
-	    }
-	    print qq{<hr noshade size=1 />$npositions positions listed\n};
 	}
     }
+
+    # sort
+
+    @calls = sort
+    { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @calls;
+
+    @aligns = sort
+    { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @aligns;
+
+    # if this is just a filter (ie. not the first snplist specified)...
+
+    if (@snplists)
+    {
+	unshift @callfilters, [ $filtertype, @calls ];
+	next;
+    }
+
+    # merge
+
+    my $npositions;
+  CALL:
+    for (@calls)
+    {
+	my ($chr, $pos, $inrec) = @$_;
+	my ($refbase, $callbase) = $inrec =~ /^\S+\s\d+\s(\S+)\s(\S+)/;
+	my @filterrecs;
+
+	next CALL if $filtertype =~ /\bhet-/ && !is_het($callbase);
+	next CALL if $filtertype =~ /\bhom-/ && !is_hom($callbase);
+	next CALL if $filtertype =~ /\bcall-/ && is_nocall($callbase);
+	next CALL if $filtertype =~ /\bnocall-/ && !is_nocall($callbase);
+
+	for my $callfilter (@callfilters)
+	{
+	    splice @$callfilter, 1, 1
+		while ($chr gt $callfilter->[1]->[0]
+		       ||
+		       ($chr eq $callfilter->[1]->[0] &&
+			$pos > $callfilter->[1]->[1]));
+	    my $has = ($chr eq $callfilter->[1]->[0] &&
+		       $pos == $callfilter->[1]->[1]);
+
+	    next CALL if !$has && $callfilter->[0] =~ "\bisin-";
+
+	    my ($filterbase)
+		= $callfilter->[1]->[2] =~ /^\S+\s\d+\s\S+\s(\S+)/;
+
+	    my $agree = (fasta2bin ($callbase)
+			 == fasta2bin ($filterbase));
+	    my $nocall = &is_nocall ($filterbase);
+	    my $ignore = (&is_nocall ($callbase) ||
+			  $nocall ||
+			  !$has);
+	    my $disagree = !$agree && !$ignore;
+	    $agree &&= !$ignore;
+	    next CALL if $callfilter->[0] =~ /\bagree-/ && !$agree;
+	    next CALL if $callfilter->[0] =~ /\bdisagree-/ && !$disagree;
+	    next CALL if $callfilter->[0] =~ /\bhet-/ && !is_het($filterbase);
+	    next CALL if $callfilter->[0] =~ /\bhom-/ && !is_hom($filterbase);
+	    next CALL if $callfilter->[0] =~ /\bnocall-/ && !$nocall;
+	    next CALL if $callfilter->[0] =~ /\bcall-/ && $nocall || !$has;
+
+	    push @filterrecs, $callfilter->[1]->[2] if $has;
+	}
+
+	my $allele_count = {};
+	my $allele_quality = {};
+	my $got;
+	my $html;
+	$html = qq{<a name="$chr,$pos"><code><b>$inrec</b></code></a>\n};
+	$html .= join ("", map { "<br><code>".$q->escapeHTML($_)."</code>" } @filterrecs);
+
+	shift @aligns while (@aligns &&
+			     $chr gt $aligns[0]->[0]);
+	shift @aligns while (@aligns &&
+			     $chr eq $aligns[0]->[0] &&
+			     $pos > $aligns[0]->[2]);
+	for (my $a = 0;
+	     $a <= $#aligns &&
+	     $chr eq $aligns[$a]->[0] &&
+	     $pos >= $aligns[$a]->[1];
+	     $a++)
+	{
+	    next unless ($pos <= $aligns[$a]->[2]);
+
+	    $html .= qq{<pre>} if !$got;
+	    $got = 1;
+	    $html .=
+		&ascii_art ($pos,
+			    $refbase, $callbase,
+			    $aligns[$a],
+			    $allele_count,
+			    $allele_quality);
+	}
+	if ($got)
+	{
+	    $html .= sprintf ("%*s%*s\n",
+			      $targetcolumn+1, "*",
+			      $targetcolumn+8, "*");
+	    map {
+		$html .= sprintf ("%*s %d sum(q)=%d\n",
+				  $targetcolumn+1, $_,
+				  $allele_count->{$_},
+				  $allele_quality->{$_});
+	    } sort {
+		$allele_count->{$b} <=> $allele_count->{$a}
+	    } keys %$allele_count;
+	    $html .= "</pre>\n";
+	}
+	else
+	{
+	    $html .= "<br />";
+	}
+
+	if ($callbase ne $refbase &&
+	    $callbase ne "N" &&
+	    $callbase ne "X")
+	{
+	    $html = qq{<div style="background: #ffc;">$html</div>};
+	}
+	print $html."\n";
+	++$npositions;
+    }
+    print qq{<hr noshade size=1 />$npositions positions listed\n};
 }
 
 sub ascii_art
@@ -231,6 +231,7 @@ sub ascii_art
     my $art = sprintf "%${indent}.${indent}s", "";
     my $pretty = lc $align[-2];
     my $readlength = length $pretty;
+    $pretty =~ s/n/./g;
     substr ($pretty, $target - $alignpos, 1) =~ tr/a-z/A-Z/;
     substr ($pretty, $target - $alignpos, 1) =~
 	s{(.)}{
