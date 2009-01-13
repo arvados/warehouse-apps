@@ -2,10 +2,52 @@
 
 use strict;
 
+$ENV{KNOB_INPUT_ZERO_POS} = 1 if !length $ENV{KNOB_INPUT_ZERO_POS};
+$ENV{KNOB_OUTPUT_ZERO_POS} = 1 if !length $ENV{KNOB_OUTPUT_ZERO_POS};
+$ENV{KNOB_REFERENCE_ZERO_POS} = 1 if !length $ENV{KNOB_REFERENCE_ZERO_POS};
+
+# Internally, all coordinates are zero-based.
+
+my %xref;
+if ($ENV{KNOB_REFERENCE_FASTA})
+{
+    open (R, "-|") or do {
+	open (STDIN, "-|", "whget", "-r", "$ENV{KNOB_REFERENCE_FASTA}", "-")
+	    or die "whget -r $ENV{KNOB_REFERENCE_FASTA} - failed: $!";
+	exec "gzip", "-cdf";
+	die "exec failed: $!";
+    };
+    my $cur;
+    while (<R>)
+    {
+	if (/^>(\S+)=(\S+)\@(\d+)-(\d+)$/)
+	{
+	    $xref{$1} = $cur = [$2, $3 - $ENV{KNOB_REFERENCE_ZERO_POS}, ""];
+	}
+	elsif (/^>/)
+	{
+	    undef $cur;
+	}
+	elsif ($ENV{KNOB_REFERENCE_MASK} && $cur)
+	{
+	    chomp;
+	    $cur->[2] .= $_;
+	}
+    }
+    close R or die "close whget pipe: $!";
+}
+
 
 my $started = 0;
 my $reffield;
 my $posfield;
+
+if ($ENV{KNOB_TRANSLATE_FIELDS})
+{
+    ($reffield, $posfield) = split (/,/, $ENV{KNOB_TRANSLATE_FIELDS});
+    $started = 1;
+}
+
 while (<>)
 {
     chomp;
@@ -28,12 +70,32 @@ while (<>)
 	}
 	$posfield = $reffield + 1;
     }
-    my @in = split (/\s+/, $_, $reffield + 3);
+    my @in = split (/\s+/,
+		    $_,
+		    2 + ($reffield > $posfield ? $reffield : $posfield));
     $in[$posfield] =~ /^\d+$/
 	or die "did not find non-negative integer in position field: \$in[$posfield] == ".$in[$posfield];
-    $in[$reffield] =~ /.*=(\S+)\@(\d+)-(\d+)$/
-	or die "could not parse annotated-reference field";
-    $in[$reffield] = $1;
-    $in[$posfield] += $2 - 1;
+    my ($refchr, $refpos);
+    if ($ENV{KNOB_REFERENCE_FASTA})
+    {
+	my $xref = $xref{$in[$reffield]}
+	or die "could not find xref for $in[$reffield]";
+	($refchr, $refpos) = @$xref;
+	if ($ENV{KNOB_REFERENCE_MASK})
+	{
+	    if (substr ($xref->[2], $in[$posfield], 1) =~ /^[nx]/i)
+	    {
+		next;
+	    }
+	}
+    }
+    else
+    {
+	$in[$reffield] =~ /.*=(\S+)\@(\d+)-(\d+)$/
+	    or die "could not parse annotated-reference field: $in[$reffield]";
+	($refchr, $refpos) = ($1, $2 - $ENV{KNOB_REFERENCE_ZERO_POS});
+    }
+    $in[$reffield] = $refchr;
+    $in[$posfield] += $refpos + $ENV{KNOB_OUTPUT_ZERO_POS} - $ENV{KNOB_INPUT_ZERO_POS};
     print join ("\t", @in), "\n";
 }
