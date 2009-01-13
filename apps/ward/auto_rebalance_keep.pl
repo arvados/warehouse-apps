@@ -1,10 +1,8 @@
 #!/usr/bin/perl
 
-# This script rebalances a Keep node. It expects a list of paths on STDIN that
-# should be Keep data files to be inspected. The script will attempt to move the
-# files to the preferred locations (0 and 1) in the lookup order, if possible.
-#
-# See also auto_rebalance_keep.pl, which autodetects the Keep data files.
+# This script rebalances a Keep node. It will autodetect the local Keep
+# directories and will move data files to the preferred locations (0 and 1) in
+# the lookup order, if possible.
 
 # Ward Vandewege, 2009-01-13
 
@@ -31,6 +29,20 @@ map { $opt{$1} = $2 if /(.+?)=(.*)/s } @ARGV;
 # separate opts like FOO="bar baz" instead of knobs="FOO=bar baz".
 $opt{'knobs'} =~ s/ /\n/g;
 
+# Locate the Keep directories we want to process
+my @dirs = ();
+my @kfiles = ();
+map {
+	push @dirs, "$1/keep" if m/^\/dev\/\S+ on (\S+) / && -d "$1/keep" && $1 ne "/"
+} `mount`;
+
+# Now collect the files we want to check
+foreach my $kdir (@dirs) {
+	opendir(DIR, $kdir) || die "can't opendir $kdir: $!";
+	push @kfiles, map { "$kdir/$_" } grep { ! /\.meta$/ && -f "$kdir/$_" } readdir(DIR);
+	closedir DIR;
+}
+
 my $whc;
 $whc = new Warehouse ($opt{warehouse_name}
 		      ? (warehouse_name => $opt{warehouse_name})
@@ -42,7 +54,7 @@ $hostname =~ s/\..*$//;
 
 print STDERR "Local hostname: $hostname\n\n" if ($ENV{DEBUG_KEEP});
 
-while (<STDIN>) {
+foreach (@kfiles) {
 	chomp();
 	my $filename = $_;
 	next if ($filename =~ /\.meta|^$/);
