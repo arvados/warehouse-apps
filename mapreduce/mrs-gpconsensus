@@ -18,7 +18,7 @@ sub flush
 {
     return if !@buf;
 
-    my @out = @{$buf[0]}[0,3,4];
+    my @out = @{$buf[0]}[0,3,5];
 
     # sort by quality
     @buf = sort { $a->[7] <=> $b->[7] } @buf;
