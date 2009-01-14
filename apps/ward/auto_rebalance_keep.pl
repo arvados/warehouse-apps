@@ -74,7 +74,7 @@ foreach (@kfiles) {
 		my $tmp = @{$keeps_arrayref}[$t];
 		$tmp =~ s/:.*$//;
 		if ($tmp eq $hostname) {
-			print STDERR "Found $hostname at pos $cnt\n";
+			print STDERR "Found $hostname at pos $cnt\n" if ($ENV{DEBUG_KEEP});
 			if ($cnt > $MAX_NODE_POSITION) {
 				# Push blocks to higher-priority nodes. Note that the following comment
 				# is not always correct, if the nodes in probeorder 0 and 1 are not
@@ -100,7 +100,7 @@ foreach (@kfiles) {
 				# Now verify we can get the data from those nodes
 				# Just in case, temporarily rename the local copy so that keep won't find it anymore
 				rename($filename,"$filename-TMP");
-				print STDERR "Verifying...\n";
+				print STDERR "Verifying $hash...\n";
 				my $dataref = $whc->fetch_from_keep ($hash, { nnodes => 2 });
 				if (!defined $dataref) {
 					print STDERR "ERROR: could not verify $hash on 2 primary nodes\n";
