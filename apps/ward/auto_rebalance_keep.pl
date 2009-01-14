@@ -16,6 +16,17 @@ use strict;
 
 use Warehouse;
 
+$SIG{INT} = "cleanup";        # traps Ctrl-C
+my $renamed = '';
+
+sub cleanup {
+	if (($renamed ne '') && (-f $renamed)) {
+		my $tmp = $renamed;
+		$tmp =~ s/-TMP$//;
+		rename($renamed,$tmp);
+	}
+	die("\rAborted cleanly after Ctrl-C\n");
+}
 
 my $MAX_NODE_POSITION = 3;
 
@@ -47,6 +58,10 @@ my $whc;
 $whc = new Warehouse ($opt{warehouse_name}
 		      ? (warehouse_name => $opt{warehouse_name})
 		      : ());
+
+# We're merely shifting data around. We don't care about encryption/decryption.
+$whc->{config}->{nodecrypt} = 1;
+$whc->{config}->{encrypt} = ();
 
 my $hostname = `hostname`;
 chomp($hostname);
@@ -99,15 +114,18 @@ foreach (@kfiles) {
 				print STDERR "returned: $hash_with_hints on $nnodes\n";
 				# Now verify we can get the data from those nodes
 				# Just in case, temporarily rename the local copy so that keep won't find it anymore
+				$renamed = "$filename-TMP";
 				rename($filename,"$filename-TMP");
 				print STDERR "Verifying $hash...\n";
 				my $dataref = $whc->fetch_from_keep ($hash, { nnodes => 2 });
 				if (!defined $dataref) {
 					print STDERR "ERROR: could not verify $hash on 2 primary nodes\n";
 					rename("$filename-TMP","$filename");
+					$renamed = "";
 				} else {
 					unlink("$filename-TMP");
 					unlink("$filename.meta");
+					$renamed = "";
 				}
 			} else {
 				print STDERR "Position OK for this block\n" if ($ENV{DEBUG_KEEP});

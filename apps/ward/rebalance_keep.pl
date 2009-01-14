@@ -36,6 +36,10 @@ $whc = new Warehouse ($opt{warehouse_name}
 		      ? (warehouse_name => $opt{warehouse_name})
 		      : ());
 
+# We're merely shifting data around. We don't care about encryption/decryption.
+$whc->{config}->{nodecrypt} = 1;
+$whc->{config}->{encrypt} = ();
+
 my $hostname = `hostname`;
 chomp($hostname);
 $hostname =~ s/\..*$//;
