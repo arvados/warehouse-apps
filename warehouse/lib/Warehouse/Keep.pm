@@ -529,8 +529,10 @@ sub _store
 
 sub _log
 {
+    my $self = shift;
     my $c = shift;
-    print (scalar(localtime) . " " . $c->peerhost() . " L " . @_ . "\n");
+    my $message = shift;
+    print (scalar(localtime) . " " . $c->peerhost() . " L " . $message . "\n");
 }
 
 1;
