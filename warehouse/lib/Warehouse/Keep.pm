@@ -265,6 +265,7 @@ sub run
 
 		if (!$self->_store ($md5, \$newdata, \$metadata))
 		{
+		    $self->_log($c,$self->{errstr});
 		    $c->send_response (HTTP::Response->new
 				       (500, "Fail",
 					[], $self->{errstr}));
@@ -331,6 +332,7 @@ sub run
 		}
 		else
 		{
+		    $self->_log($c,$self->{errstr});
 		    $c->send_response (HTTP::Response->new
 				       (500, "Fail", [], $self->{errstr}));
 		    last;
