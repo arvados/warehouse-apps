@@ -65,7 +65,7 @@ foreach (@kfiles) {
 	my $hash = $filename;
 	$hash =~ s/^.*\/([^\/]+)$/$1/;
 
-	print STDERR "Processing $hash:\n";
+	print STDERR "Processing $hash:\n" if ($ENV{DEBUG_KEEP});
 
 	my ($keeps_arrayref, @probeorder) = $whc->_hash_keeps(undef, $hash);
 	
