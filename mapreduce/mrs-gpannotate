@@ -40,7 +40,7 @@ while(<>){
 	my @read_start;
 	$read_start[0] = index ($exon, $r1a);
 	$read_start[1] = index ($exon, $r1b, $read_start[0] + 6 + $min_dist);
-	$read_start[2] = index ($exon, $r2a, $read_start[1] + 6);
+	$read_start[2] = index ($exon, $r2a);
 	$read_start[3] = index ($exon, $r2b, $read_start[2] + 6 + $min_dist);
 
 	if ($read_start[1] - $read_start[0] - 6 > $max_dist ||
