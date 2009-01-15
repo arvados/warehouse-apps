@@ -19,4 +19,11 @@ while (<>)
 print join "\t", map { "$_=$stat{$_}" } sort keys %stat;
 print "\n";
 
-for (0..1000) { print "q $_ $qbin_total[$_] $qbin_mm[$_]\n"; }
+for (0..1000)
+{
+    printf ("total_%04d=%d\tmm_%04d=%d\n",
+	    $_,
+	    $qbin_total[$_],
+	    $_,
+	    $qbin_mm[$_]);
+}
