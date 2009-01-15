@@ -1844,13 +1844,12 @@ sub _cryptsetup
     }
     $self->{config}->{cryptmap_name_prefix} ||= "/gpg/".Digest::MD5::md5_hex (join (",", sort @{$self->{config}->{encrypt}}))."/";
 
-    if (-w "$ENV{HOME}/.gnupg" || (-w $ENV{HOME} && !-e "$ENV{HOME}/.gnupg"))
+    if (length ($ENV{HOME}) &&
+	(-w "$ENV{HOME}/.gnupg"
+	 || (-w "$ENV{HOME}" &&
+	     !-e "$ENV{HOME}/.gnupg")))
     {
 	$self->{gpg_homedir} = "$ENV{HOME}/.gnupg";
-    }
-    elsif (-w ($self->{gpg_homedir} = "/etc/warehouse/.gnupg"))
-    {
-	;
     }
     else
     {
