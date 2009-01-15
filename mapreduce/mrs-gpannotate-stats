@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+my %stat;
+my @qbin_total;
+my @qbin_mm;
+for (0..1000) { push @qbin_total, 0; push @qbin_mm, 0; }
+while (<>)
+{
+    chomp;
+    my @in = split;
+    ++$stat{total};
+    my $quality = $in[7];
+    $quality =~ s/^0+//;
+    $quality = 1000 if $quality > 1000;
+    ++$qbin_total[$quality];
+    ++$qbin_mm[$quality] if $in[4] ne $in[5];
+}
+
+print join "\t", map { "$_=$stat{$_}" } sort keys %stat;
+print "\n";
+
+for (0..1000) { print "q $_ $qbin_total[$_] $qbin_mm[$_]\n"; }
