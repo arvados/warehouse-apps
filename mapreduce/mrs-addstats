@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+my %stat;
+while (<>)
+{
+    chomp;
+    for (split /\t/)
+    {
+	if (/=/)
+	{
+	    $stat{$`} += $';
+	}
+    }
+}
+print map { "$_=$stat{$_}\n" } sort keys %stat;
