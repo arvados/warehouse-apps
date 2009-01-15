@@ -58,10 +58,12 @@ while(<STDIN>){
     chop $_;
     if($_!~/\./){
 	my $min_mm = 999;
+	my $num_matching_pairs = 0;
 	@line = split(/\t/, $_);
 	
 #expand read into all possible 1bp substitution variants, and search each against reference list
 	@curr_read_array = split(//, $line[4]);
+      TRY_MM:
 	for (my $pos1 = 0; $pos1 < 24; $pos1++) {
 	    for (my$base1 = 0; $base1 < 4; $base1++) {
 
@@ -91,49 +93,35 @@ while(<STDIN>){
 			$r1 = substr($new_seq, 0, 12);
 			$r2 = substr($new_seq, 12, 12);
 
-#match 13 - 16 bp in between the reads (25--28EcoP15 - 12bp read)
-#match1 holds the sequences of all exons matching read 1 (with current substitution), match2 holds
-#the subset of match1 which also matches read 2 (with current substitution); 
-			# determine whether r1 matches any exons
-			@match0 = ();
+			my $matching_exon;
 			if(exists $LUT{$r1}){
-			    @ex1 = split(/\t/, $LUT{$r1});
-			    for($i=0; $i<$#ex1+1; $i++){
-				$ex1h{$ex1[$i]}++;
-			    }
+			    my %ex1h; # how many r1 alignments in each exon
+			    my @ex1 = split(/\t/, $LUT{$r1});
+			    map { $ex1h{$_}++ } @ex1;
 
-			    @ex2 = split(/\t/, $LUT{$r2});
-			    if(exists $LUT{$r2}){
-				for($i=0; $i<$#ex2+1; $i++){
-				    if($ex1h{$ex2[$i]} > 0){
-					push(@match0, $exons[$ex2[$i]]);
+			    if (exists $LUT{$r2}) {
+				my @ex2 = split(/\t/, $LUT{$r2});
+				for (@ex2) {
+				    if ($ex1h{$_} > 0) {
+					$matching_exon = $exons[$_];
+					$num_matching_pairs += $ex1h{$_};
+					last TRY_MM if $num_matching_pairs > 1;
 				    }
 				}
 			    }
 			}
-			undef %ex1h;
 			
-			for (@match0)
+			if ($matching_exon)
 			{
-			    $curr_seq = substr($_, 0, length($_)/2);
-			    $hash{$annot{$curr_seq}}++;
-			    if ($min_mm > $mm1 + $mm2)
-			    {
-				$min_mm = $mm1 + $mm2;
-				$mutated_seq = $new_seq;
-			    }
+			    $curr_seq = substr($matching_exon,
+					       0, length($matching_exon)/2);
+			    $mutated_seq = $new_seq;
+			    $min_mm = $mm1 + $mm2;
 			}
 		    }
 		}
 	    }
 	}
-	
-	
-	$num_matching_pairs = 0;
-	while(($key, $value) = each %hash){
-	    $num_matching_pairs++;
-	}
-	undef %hash;
 	
 	$input = join("\t", @line);
 	if($num_matching_pairs == 0){
