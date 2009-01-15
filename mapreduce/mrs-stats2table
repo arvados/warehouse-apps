@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+
+my %col;
+my $rowmax;
+while (<>)
+{
+    chomp;
+    for (split /\t/)
+    {
+	if (/(.*?)_0*(\d+)=(\d+)/)
+	{
+	    $col{$1} ||= [];
+	    $col{$1}->[$2] += $3;
+	    $rowmax = $2 if $rowmax < $2;
+	}
+    }
+}
+my @col = sort keys %col;
+print (join ("\t", "X", @col), "\n");
+my $fmt = join ("\t", map { "%d" } ("X", @col)) . "\n";
+for (my $r=0; $r<$rowmax; $r++)
+{
+    printf ($fmt, $r, map { $col{$_}->[$r] + 0 } @col);
+}
