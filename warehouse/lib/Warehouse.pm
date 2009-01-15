@@ -1898,6 +1898,11 @@ sub _cryptsetup
 
 	waitpid $pid, 0;
     };
+
+    if (!-w $self->{gpg_homedir})
+    {
+	$self->{config}->{nodecrypt} = 1;
+    }
 }
 
 
