@@ -21,27 +21,44 @@ $count=0;
 while(<REFERENCE>){
     chop $_;
     @line = split(/\t/, $_);
-    $line[3] =~ tr/[acgt]/[ACGT]/;
-
-#    $x = reverse $line[3];
-#    push(@ref, $x . $x . $x);
+    $line[3] = uc $line[3];
 
     $curr = $line[3] . $line[3];
 
-    $annot{$line[3]} = $line[0] . "\t" . $line[1] . "\t" . $line[2];
-    $exons[$count] = $curr;
+    $annot[$count] = $line[0] . "\t" . $line[1] . "\t" . $line[2];
+    $exons[$count] = $line[3];
 
-    print STDERR "$count\r" if -t STDERR;
+    if ($count % 1000 == 0 && -t STDERR)
+    {
+	my $status = "$count";
+	if ($ENV{DEBUG_MEMORY})
+	{
+	    if (open F, "<", "/proc/$$/stat")
+	    {
+		my $mem = (split / /, scalar <F>)[22];
+		$status .= sprintf " %dM", $mem/2**20;
+		close F;
+	    }
+	}
+	print STDERR "\r$status";
+    }
     for($i=0; $i<(length($curr)/2)+30; $i++){
 	# store all 4 possible reads from this position
-	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 13, 6);
-	$LUT{$read} = $LUT{$read} . "$count\t";
-	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 14, 6);
-	$LUT{$read} = $LUT{$read} . "$count\t";
-	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 15, 6);
-	$LUT{$read} = $LUT{$read} . "$count\t";
-	$read = substr($curr, $i, 6) . substr($curr, $i + 6 + 16, 6);
-	$LUT{$read} = $LUT{$read} . "$count\t";
+
+	my $packedcount = pack "L", $count;
+	my $r1n = read2n(substr($curr, $i, 6)) << 12;
+
+	$read = $r1n | read2n(substr($curr, $i + 6 + 13, 6));
+	$LUT[$read] .= $packedcount;
+
+	$read = $r1n | read2n(substr($curr, $i + 6 + 14, 6));
+	$LUT[$read] .= $packedcount;
+
+	$read = $r1n | read2n(substr($curr, $i + 6 + 15, 6));
+	$LUT[$read] .= $packedcount;
+
+	$read = $r1n | read2n(substr($curr, $i + 6 + 16, 6));
+	$LUT[$read] .= $packedcount;
     }
     $count++;
 }
@@ -90,31 +107,28 @@ while(<STDIN>){
 			$new_seqarray[$pos2] = $s[$base2];
 			$new_seq = join(/""/,@new_seqarray);
 
-			$r1 = substr($new_seq, 0, 12);
-			$r2 = substr($new_seq, 12, 12);
+			$r1 = read2n(substr($new_seq, 0, 12));
+			$r2 = read2n(substr($new_seq, 12, 12));
 
-			my $matching_exon;
-			if(exists $LUT{$r1}){
-			    my %ex1h; # how many r1 alignments in each exon
-			    my @ex1 = split(/\t/, $LUT{$r1});
-			    map { $ex1h{$_}++ } @ex1;
+			undef $curr_seq;
+			if(exists $LUT[$r1]){
+			    my $ex1h = {};
+			    map { $ex1h->{$_}++ } unpack "L*", $LUT[$r1];
 
-			    if (exists $LUT{$r2}) {
-				my @ex2 = split(/\t/, $LUT{$r2});
-				for (@ex2) {
-				    if ($ex1h{$_} > 0) {
-					$matching_exon = $exons[$_];
-					$num_matching_pairs += $ex1h{$_};
+			    if (exists $LUT[$r2]) {
+				for (unpack "L*", $LUT[$r2]) {
+				    if ($ex1h->{$_} > 0) {
+					$curr_seq = $exons[$_];
+					$curr_exon_id = $_;
+					$num_matching_pairs += $ex1h->{$_};
 					last TRY_MM if $num_matching_pairs > 1;
 				    }
 				}
 			    }
 			}
 			
-			if ($matching_exon)
+			if ($curr_seq)
 			{
-			    $curr_seq = substr($matching_exon,
-					       0, length($matching_exon)/2);
 			    $mutated_seq = $new_seq;
 			    $min_mm = $mm1 + $mm2;
 			}
@@ -128,10 +142,22 @@ while(<STDIN>){
 	    print "0\t$num_matching_pairs\t.\t.\t.\t.\t.\t$input\n";
 	}
 	elsif($num_matching_pairs == 1){
-	    print "U\t$num_matching_pairs\t$annot{$curr_seq}\t$curr_seq\t$mutated_seq\t$input\t$min_mm\n";
+	    print "U\t$num_matching_pairs\t$annot[$curr_exon_id]\t$curr_seq\t$mutated_seq\t$input\t$min_mm\n";
 	}
 	else{
 	    print "N\t$num_matching_pairs\t.\t.\t.\t.\t.\t$input\n";
 	}	
     }
+}
+
+sub read2n
+{
+    my $fasta = shift;
+    my $n = 0;
+    for (split (//, $fasta))
+    {
+	tr/ACGTacgt/01230123/ || die;
+	$n = ($n << 2) | $_;
+    }
+    return $n;
 }
