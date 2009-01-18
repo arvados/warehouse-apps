@@ -7,6 +7,7 @@ while (<>)
     if (/^Query= /)
     {
 	print @buf;
+	@buf = ();
 	chomp ($thisquery = $_);
 	$ok = 1;
     }
