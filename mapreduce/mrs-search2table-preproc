@@ -7,10 +7,12 @@ while (<>)
     if (/^Query= /)
     {
 	print @buf;
+	chomp ($thisquery = $_);
 	$ok = 1;
     }
     elsif (@buf > 10000)  # hope anything with >10000 lines is useless
     {
+	warn "skip oversized query results: $thisquery";
 	$ok = 0;
 	@buf = ();
     }
