@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+my $ok = 1;
+my @buf;
+while (<>)
+{
+    if (/^Query= /)
+    {
+	print @buf;
+	$ok = 1;
+    }
+    elsif (@buf > 10000)  # hope anything with >10000 lines is useless
+    {
+	$ok = 0;
+	@buf = ();
+    }
+    if ($ok)
+    {
+	push @buf, $_;
+    }
+}
+print @buf;
