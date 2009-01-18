@@ -120,18 +120,14 @@ while (defined ($input = <STDIN>))
 			    if (exists $LUT[$r2]) {
 				for (unpack "L*", $LUT[$r2]) {
 				    if ($ex1h->{$_} > 0) {
-					$curr_exon_id = $_;
 					$num_matching_pairs += $ex1h->{$_};
 					last TRY_MM if $num_matching_pairs > 1;
+					$mutated_seq = $new_seq;
+					$min_mm = $mm1 + $mm2;
+					$curr_exon_id = $_;
 				    }
 				}
 			    }
-			}
-			
-			if (defined $curr_exon_id)
-			{
-			    $mutated_seq = $new_seq;
-			    $min_mm = $mm1 + $mm2;
 			}
 		    }
 		}
