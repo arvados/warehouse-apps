@@ -65,8 +65,11 @@ if( $output ) {
 }
 
 while( my $r = $in->next_result ) {
+    my $hsps = 0;
     while( my $hit = $r->next_hit ) {
 	while( my $hsp = $hit->next_hsp ) {
+	    last if ($ENV{KNOB_MAX_HSP_PER_QUERY} &&
+		     ++$hsps > $ENV{KNOB_MAX_HSP_PER_QUERY});
 	    my $mismatchcount = $hsp->length('total') - 
 		($hsp->num_conserved + $hsp->gaps('total'));
 	    print $out join("\t", ( $r->query_name,
