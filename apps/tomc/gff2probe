@@ -1,5 +1,12 @@
 #!/usr/bin/perl
 
+my %opt;
+while ($ARGV[0] =~ /^--(\S+?)(=(.*))?$/)
+{
+    $opt{$1} = defined($2) ? $3 : 1;
+    shift @ARGV;
+}
+
 my $gff_in = shift;
 my $fasta_dir = shift;
 my $context = shift || 0;
@@ -40,7 +47,16 @@ while (<STDIN>)
     {
 	$inname = $desc{"transcript_id"}.".".$desc{"exon_number"};
     }
-    print ">".$inname.":chr".$inchr.":".$start.":".$end.":".$infield[6]."\n";
+    my $outname;
+    if ($opt{"one-based"})
+    {
+	$outname = $inname."=chr".$inchr."\@".($start+1)."-".$end;
+    }
+    else
+    {
+	$outname = $inname.":chr".$inchr.":".$start.":".$end.":".$infield[6];
+    }
+    print ">$outname\n";
     $str =~ s/(.{50})/$1\n/g;
     chomp $str;
     print $str;
