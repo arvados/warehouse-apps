@@ -71,12 +71,15 @@ $s[1] = "C";
 $s[2] = "G";
 $s[3] = "T";
 
-while(<STDIN>){
-    chop $_;
-    if($_!~/\./){
+my $input;
+while (defined ($input = <STDIN>))
+{
+    chomp $input;
+    if($input !~ /\./){
 	my $min_mm = 999;
+	my $curr_exon_id;
 	my $num_matching_pairs = 0;
-	@line = split(/\t/, $_);
+	@line = split(/\t/, $input);
 	
 #expand read into all possible 1bp substitution variants, and search each against reference list
 	@curr_read_array = split(//, $line[4]);
@@ -110,7 +113,6 @@ while(<STDIN>){
 			$r1 = read2n(substr($new_seq, 0, 12));
 			$r2 = read2n(substr($new_seq, 12, 12));
 
-			undef $curr_seq;
 			if(exists $LUT[$r1]){
 			    my $ex1h = {};
 			    map { $ex1h->{$_}++ } unpack "L*", $LUT[$r1];
@@ -118,7 +120,6 @@ while(<STDIN>){
 			    if (exists $LUT[$r2]) {
 				for (unpack "L*", $LUT[$r2]) {
 				    if ($ex1h->{$_} > 0) {
-					$curr_seq = $exons[$_];
 					$curr_exon_id = $_;
 					$num_matching_pairs += $ex1h->{$_};
 					last TRY_MM if $num_matching_pairs > 1;
@@ -127,7 +128,7 @@ while(<STDIN>){
 			    }
 			}
 			
-			if ($curr_seq)
+			if (defined $curr_exon_id)
 			{
 			    $mutated_seq = $new_seq;
 			    $min_mm = $mm1 + $mm2;
@@ -137,12 +138,11 @@ while(<STDIN>){
 	    }
 	}
 	
-	$input = join("\t", @line);
 	if($num_matching_pairs == 0){
 	    print "0\t$num_matching_pairs\t.\t.\t.\t.\t.\t$input\n";
 	}
 	elsif($num_matching_pairs == 1){
-	    print "U\t$num_matching_pairs\t$annot[$curr_exon_id]\t$curr_seq\t$mutated_seq\t$input\t$min_mm\n";
+	    print "U\t$num_matching_pairs\t$annot[$curr_exon_id]\t$exons[$curr_exon_id]\t$mutated_seq\t$input\t$min_mm\n";
 	}
 	else{
 	    print "N\t$num_matching_pairs\t.\t.\t.\t.\t.\t$input\n";
