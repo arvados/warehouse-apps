@@ -1,0 +1,163 @@
+#!/usr/bin/perl
+
+eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
+use strict;
+use Warehouse;
+use Warehouse::Stream;
+
+my %opt;
+while ($ARGV[0] =~ /^--(\S+)(?:=(.*))?/)
+{
+    $opt{$1} = defined($2) ? $2 : 1;
+    shift @ARGV;
+}
+
+if (@ARGV != 1)
+{
+    die <<EOF;
+usage: whence [options] {key|jobid}[\@warehouse]
+options:
+       --skip-thawed     don\'t follow freeze/thaw cycles
+       --node-seconds    show total #nodes * seconds allocated to each job
+       --slots           show number of slots (maximum concurrent job steps)
+       --slot-seconds    show number of slots * job duration
+       --failure-seconds show total slot seconds for failed job steps
+       --success-seconds show total slot seconds for successful job steps
+       --idle-seconds    show total slot seconds not accounted for by job steps
+       --reverse         do a 'reverse' whence: show which data has been produced from this key/jobid
+EOF
+}
+
+my %opts;
+$opts{warehouse_name} = $1 if $ARGV[0] =~ s/\@(.+)//;
+my $whc = new Warehouse (%opts);
+
+my $joblist = $whc->job_list;
+my %did;
+my %id_to_job;
+for my $job (@$joblist)
+{
+    $id_to_job{$job->{id}} = $job;
+}
+
+my %inputdata;
+my %outputdata;
+my @todo;
+my %depends;
+
+map { /^\d{1,31}$/ ? push (@todo, $id_to_job{$_}) : &enqueue (/([0-9a-f]{32})/g) } @ARGV;
+
+while (@todo)
+{
+    my $targetjob = shift @todo;
+    print STDERR "Processing: $targetjob->{id} -> " . $targetjob->{outputkey} . "\n" if ($ENV{DEBUG});
+    next if ++$did{$targetjob->{id}} != 1;
+
+    my $listref = $whc->job_follow_output($targetjob);
+    foreach my $e (@$listref) {
+	print STDERR "DOWNSTREAM for $targetjob->{id}: " . $e->{id} . " -> " . $e->{inputkey} . "\n" if ($ENV{DEBUG});
+}
+
+    printf "#%d\@%s\n", $targetjob->{id}, $whc->{warehouse_name};
+    print_times ($whc->job_stats ($targetjob->{id}));
+    printf "  mrfunction = %s r%d\n", $targetjob->{mrfunction}, $targetjob->{revision};
+
+    if (($opt{"skip-thawed"} && $targetjob->{revision} != -1)
+	|| !$targetjob->{thawedfromkey})
+    {
+	printf "  output = %s\n", $targetjob->{outputkey};
+	printf "  input = %s\n", $targetjob->{inputkey};
+	map { printf "  %s\n", $_ } split (/\\n/, $targetjob->{knobs});
+	print "\n";
+
+	&enqueue ($targetjob->{outputkey});
+    }
+    else
+    {
+	printf "  output = %s\n", $targetjob->{outputkey};
+	printf ("  thawedfromkey = %s\n", $targetjob->{thawedfromkey});
+	unshift @todo, $whc->job_follow_thawedfrom ($targetjob);
+    }
+}
+
+print "\nOutputs:\n";
+print map { "$_\n" } sort keys %outputdata;
+
+sub enqueue
+{
+    my @hashes = map { /([0-9a-f]{32})/g } @_;
+    foreach my $hash (@hashes)
+    {
+	$hash =~ s/\+([^,]*)//g;
+	my $jobs = $whc->{job_by_input}->{$hash};
+
+	if (defined($jobs)) {
+		foreach (@$jobs) {
+			print STDERR "Found via input for $hash: $_->{id} with knob $_->{inputkey}\n" if ($ENV{DEBUG});
+			$outputdata{$_->{outputkey}} = 1;
+		}
+		unshift @todo, @$jobs 
+	}
+
+	$jobs = $whc->{job_by_knobs}->{$hash};
+	if (defined($jobs)) {
+		foreach (@$jobs) {
+			print STDERR "Found via knob for $hash: $_->{id} with knob $_->{knobs}\n" if ($ENV{DEBUG});
+			$outputdata{$_->{outputkey}} = 1;
+		}
+		unshift @todo, @$jobs 
+	}
+
+    }
+}
+
+sub enqueue_orig
+{
+    my @hashes = map { /([0-9a-f]{32})/g } @_;
+    while (@hashes)
+    {
+	my $upto;
+	for ($upto = $#hashes; $upto >= 0; $upto--)
+	{
+	    my $targethash = join (",", @hashes[0..$upto]);
+	    my $jobmade = $whc->job_follow_input ({ inputkey => $targethash });
+	    if ($jobmade)
+	    {
+		unshift @todo, $jobmade;
+		splice @hashes, 0, $upto + 1;
+		last;
+	    }
+	}
+	if ($upto < 0)
+	{
+	    ++$upto;
+	    $inputdata{shift @hashes} = 1;
+	}
+    }
+}
+
+sub print_times
+{
+    my $job = shift;
+    my $metastats = $job->{meta_stats};
+    if ($job)
+    {
+	printf ("  --node-seconds = %d = %d nodes * %d seconds\n",
+		$job->{nodeseconds},
+		$job->{nnodes},
+		$job->{elapsed});
+	printf ("  --slot-seconds = %d = %d slots * %d seconds\n",
+		$metastats->{slot_seconds},
+		$metastats->{slots},
+		$job->{elapsed});
+	foreach (qw(success failure idle))
+	{
+	    printf ("  --$_-seconds = %d%s\n",
+		    $metastats->{$_."_seconds"},
+		    $metastats->{$_."_percent"}
+		    ? " = ".$metastats->{$_."_percent"}."%" : "");
+	}
+    }
+}
