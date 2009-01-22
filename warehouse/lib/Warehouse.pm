@@ -1606,6 +1606,8 @@ sub _refresh_job_list
     {
 	$self->{job_list_arrayref} = $self->_job_list;
 	$self->{job_by_output} = {};
+	$self->{job_by_input} = {};
+	$self->{job_by_knobs} = {};
 	foreach (@{$self->{job_list_arrayref}})
 	{
 	    if (!$self->{job_hashref}->{$_->{id}} ||
@@ -1616,6 +1618,20 @@ sub _refresh_job_list
 		$_->{cache_fetched} = time;
 	    }
 	    $self->{job_by_output}->{striphints($_->{outputkey})} = $_ if $_->{outputkey} && $_->{success};
+	    if ($_->{inputkey} && $_->{success}) {
+		my @inputkeys = split(/,/,striphints($_->{inputkey}));
+		foreach my $ik (@inputkeys) {
+			$self->{job_by_input}->{$ik} = () if (!defined($self->{job_by_input}->{$ik}));
+		    	push(@{$self->{job_by_input}->{$ik}},$_);
+		}
+	    }
+	    if ($_->{knobs} && $_->{success}) {
+		my @inputkeys = map { /([0-9a-f]{32})/g } $_->{knobs};
+		foreach my $ik (@inputkeys) {
+			$self->{job_by_knobs}->{$ik} = () if (!defined($self->{job_by_knobs}->{$ik}));
+		    	push(@{$self->{job_by_knobs}->{$ik}},$_);
+		}
+	    }
 	}
 	$self->{job_list_fetched} = time;
     }
@@ -1727,6 +1743,22 @@ sub job_stats
     }
     $job->{meta_stats} = $self->{meta_stats_hashref}->{$job->{metakey}} || {};
     return $job;
+}
+
+sub job_follow_output
+{
+    my $self = shift;
+    my $targetjob = shift;
+
+    $self->_read_cache;
+    $self->_refresh_job_list;
+    my $next = $self->{job_by_input}->{striphints($targetjob->{outputkey})};
+		if ($next && $targetjob->{id} && $next->{id} <= $targetjob->{id}) {
+    	printf STDERR ("Found job output id smaller than or equal to job input id - this should never happen. Ignoring result.\n"),
+			return undef;
+		}
+    return $next if ($next);
+    return undef;
 }
 
 sub job_follow_input
