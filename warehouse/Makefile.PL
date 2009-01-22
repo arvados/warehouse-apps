@@ -8,6 +8,7 @@ WriteMakefile
      NAME => 'Warehouse',
      VERSION_FROM => 'lib/Warehouse.pm',
      EXE_FILES => [
+		   'client/auto_rebalance_keep.pl',
 		   'client/wh',
 		   'client/whcopy',
 		   'client/whence',
@@ -15,6 +16,7 @@ WriteMakefile
 		   'client/whless',
 		   'client/whput',
 		   'client/whget.cgi',
+		   'client/rwhence',
 		   'server/memcached-install.sh',
 		   'server/memcached-show-servers.pl',
 		   'server/mogilefs-install.sh',
