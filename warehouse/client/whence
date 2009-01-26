@@ -58,7 +58,10 @@ while (@todo)
     {
 	printf "  output = %s\n", $targetjob->{outputkey};
 	printf "  input = %s\n", $targetjob->{inputkey};
-	map { printf "  %s\n", $_ } split (/\\n/, $targetjob->{knobs});
+	my $knobs = $targetjob->{knobs};
+	my %unescape = ("n" => "\n", "\\" => "\\");
+	$knobs =~ s/\\(.)/$unescape{$1}/ge;
+	map { printf "  %s\n", $_ } split (/\n/, $knobs);
 	print "\n";
 
 	&enqueue ($targetjob->{inputkey},
