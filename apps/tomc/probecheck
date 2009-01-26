@@ -128,7 +128,7 @@ sub flush
 
 		# (no clues in answer key? assume first one found
 		# is correct)
-		$iscorrect &&= !$foundcorrect{$id};
+		$iscorrect &&= !$foundcorrect{$id} if !$opt{all};
 
 		if ($iscorrect)
 		{
@@ -142,17 +142,22 @@ sub flush
 		    ++$stat{foundfalsealign};
 		    report_falsealign ($prev, $align);
 		}
+		report_bed ($prev, $align) if $iscorrect;
+		$probe{$align->[3]}->{hit_incorrect} ++ if !$iscorrect;
+		$probe{$align->[3]}->{hit_correct} ++ if $iscorrect;
 	    }
 	}
 	push @{$sawprobe{$id}}, $align;
     }
 }
 
+&report_probestats;
+
 $stat{foundfalseprobe} = scalar grep { $_ > 0 } values %foundfalseprobe;
 
 foreach my $id (keys %probe)
 {
-    if ($probe{$id}->{foundrefpos0} && $probe{$id}->{foundrefpos1})
+    if ($foundcorrect{$id})
     {
 	++$stat{found};
     }
@@ -202,6 +207,12 @@ sub report_correct
     {
 	print $a->[-1].$b->[-1];
     }
+}
+
+sub report_bed
+{
+    my ($a, $b) = @_;
+
     if ($opt{bed})
     {
 	my @pos = ($a->[6], $a->[7], $b->[6], $b->[7]);
@@ -214,6 +225,18 @@ sub report_correct
 		$orig_id,	# original probe ID
 		$a->[5], $pos[1], $pos[2]-1, # bed-style intron coordinates
 		);
+    }
+}
+
+sub report_probestats
+{
+    return if !$opt{probestats};
+    for (sort keys %probe)
+    {
+	printf ("%s\t%d\t%d\n",
+		$_,
+		$probe{$_}->{hit_correct},
+		$probe{$_}->{hit_incorrect});
     }
 }
 
