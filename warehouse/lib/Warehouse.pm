@@ -348,7 +348,7 @@ sub store_block
     {
 	return $hash;
     }
-    if (my $alreadyhavehash = $self->_cryptmap_fetchable ($dataref, $hash))
+    if (my $alreadyhavehash = $self->_cryptmap_fetchable ($dataref, $md5))
     {
 	return $alreadyhavehash;
     }
@@ -370,7 +370,7 @@ sub store_block
 				length $$dataref,
 				$md5);
 
-	$self->_cryptmap_write ($hash, $hash_enc);
+	$self->_cryptmap_write ($md5, $hash_enc);
 	$md5 = $md5_enc;
 	$hash = $hash_enc;
 	$dataref = $enc;
@@ -605,11 +605,28 @@ sub fetch_block_ref
 
     return \qq{} if $hash =~ /^d41d8cd98f00b204e9800998ecf8427e\b/;
 
+    my $tried_keep;
+    my $tried_cryptmap;
+
     if ($hash =~ /\+K/ || $ENV{NOCACHE_READ} || $ENV{NOCACHE})
     {
 	my $dataref = $self->fetch_from_keep
 	    ($hash, { nodecrypt => $options->{nodecrypt} });
+	if (!$dataref && !$options->{nodecrypt} && $hash !~ /\+G/)
+	{
+	    # Perhaps an encrypted copy exists even though the plain
+	    # data is gone.
+
+	    my ($enchash, $encdataref, $decdataref)
+		= $self->_cryptmap_fetchable (undef, $hash);
+	    if ($enchash && $decdataref)
+	    {
+		return $decdataref;
+	    }
+	    $tried_cryptmap = 1;
+	}
 	return $dataref if $dataref || $ENV{NOCACHE_READ} || $ENV{NOCACHE};
+	$tried_keep = 1;
     }
 
     my $sizehint;
@@ -694,7 +711,7 @@ sub fetch_block_ref
 	$self->{stats_read_blocks} ++;
     }
 
-    if (!defined $dataref && $hash !~ /\+K/)
+    if (!defined $dataref && !$tried_keep)
     {
 	# didn't try Keep earlier, and other methods failed, so try it now
 	$dataref = $self->fetch_from_keep ($hash, { nodecrypt => 1 });
@@ -709,6 +726,20 @@ sub fetch_block_ref
 				$options->{offset} || 0,
 				$options->{length});
 	    return $dataref;
+	}
+    }
+
+    if (!$dataref &&
+	!$tried_cryptmap &&
+	!$options->{nodecrypt} &&
+	$hash !~ /\+G/)
+    {
+	local $self->{errstr};
+	my ($enchash, $encdataref, $decdataref)
+	    = $self->_cryptmap_fetchable (undef, $hash);
+	if ($enchash && $decdataref)
+	{
+	    return $decdataref;
 	}
     }
 
@@ -790,7 +821,7 @@ sub store_in_keep
 		$dataref = $self->_encrypt_block ($dataref);
 		my $encmd5 = Digest::MD5::md5_hex ($$dataref);
 		my $encsize = length $$dataref;
-		$self->_cryptmap_write ("$md5+$hints[0]", "$encmd5+$encsize");
+		$self->_cryptmap_write ($md5, "$encmd5+$encsize");
 		($md5, @hints) = ($encmd5, $encsize, "GS".$hints[0], "GM".$md5);
 	    }
 	}
@@ -1969,15 +2000,18 @@ sub _cryptmap_fetchable
     # and make sure the encrypted block can really be decrypted.
 
     my $self = shift;
-    my $dataref = shift;
+    my $dataref = shift;	# optional if $hash is provided
     my $hash = shift;		# optional
 
     return undef if !@{$self->{config}->{encrypt}};
 
-    $hash ||= Digest::MD5::md5_hex ($$dataref) . "+" . length($$dataref);
+    $hash ||= Digest::MD5::md5_hex ($$dataref);
+    $hash =~ s/\+.*//;
+    return undef if $hash !~ /^[0-9a-f]{32}$/;
 
     my $enchash;
     my $encdataref;
+    my $decdataref;
     eval
     {
 	local $self->{name_warehouse_servers} =
@@ -1987,24 +2021,30 @@ sub _cryptmap_fetchable
 	    or die "no cryptmap for $hash";
 
 	$enchash =~ s/\+G[^\+]*//g;
-	$enchash .= "+GS".length($$dataref);
+	$enchash .= "+GS".length($$dataref) if $dataref;
 	my ($plainmd5) = $hash =~ /^([0-9a-f]+)/;
 	$enchash .= "+GM$plainmd5";
 
 	$encdataref = $self->fetch_block_ref
 	    ($enchash, { verify => 1, nowarn => 1, nodecrypt => 1 })
 	    or die "fetch $enchash fail";
-	$$encdataref ne $$dataref or die "encrypted eq orig";
-	my $decdataref = $self->_decrypt_block ($encdataref)
+	if ($dataref && $$encdataref eq $$dataref)
+	{
+	    die "encrypted eq orig";
+	}
+	$decdataref = $self->_decrypt_block ($encdataref)
 	    or die "decrypt $enchash fail";
-	$$decdataref eq $$dataref or die "decrypted ne orig";
+	if ($dataref && $$decdataref ne $$dataref)
+	{
+	    die "decrypted $enchash ne orig $hash";
+	}
     };
     $enchash = undef if $@;
 
     printf STDERR "gpg: _cryptmap_fetchable %s %s (%s)\n", $hash, $enchash, $@
 	if $ENV{DEBUG_GPG};
 
-    return ($enchash, $encdataref) if wantarray;
+    return ($enchash, $encdataref, $decdataref) if wantarray;
     return $enchash;
 }
 
