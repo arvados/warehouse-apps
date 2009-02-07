@@ -5,7 +5,7 @@ use Safepipe;
 open IN, "<&STDIN";
 Safepipe::readfrom("main::POP",
 		   ["main::IN", "gzip -cdf"],
-		   "egrep ^chr",
+		   "perl -ne 'print if /^chr/'",
 		   "cut -f1-4",
 		   "perl -pe 's/[\t ]/-/g'",
 		   "egrep -v '[NX]\$'",
@@ -19,3 +19,5 @@ Safepipe::readfrom("main::POP",
 close STDIN;
 close IN;
 print while <POP>;
+close POP or die "close pipe: $!";
+while (0 <= (my $pid = wait)) { die "child $pid exited $?" if $?; }
