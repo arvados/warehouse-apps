@@ -467,7 +467,7 @@ sub concordance_pipeline
  		inputkey => $allsnplists,
  		knobs => makeknobs
  		    ("snplist2bed",
- 		     "COMMAND=egrep ^chr | cut -f1-4 | perl -ne 'print if /[A-MO-WYZ]\$/' | mrs-snplist2bed",
+ 		     "COMMAND=cut -f1-4 | perl -ne 'print if /^chr.*[A-MO-WYZ]\$/' | mrs-snplist2bed",
  		     "OUTPUTNAME=snplist%N.bed",
 		     "POPULATION_SNPS_ONLY=1",
 		     $pipeline->{input}->{"snplist"}
@@ -581,9 +581,28 @@ sub get_layout
     local $/ = undef;
     my $layoutdata = <L>;
     my @pipelinefiles;
-    while ($layoutdata =~ m{"id": "(.*?)"}g)
+    while ($layoutdata =~ m{{(.*?)}}g)
     {
-	push @pipelinefiles, $1;
+	my $pipelinejson = $1;
+	if ($pipelinejson =~ m{"id": "([^"]+?)"})
+	{
+	    push @pipelinefiles, $1;
+	}
+	else
+	{
+	    my $pipelinefile = "";
+	    while ($pipelinejson =~ m{"([^"]*?)": ("(.*?)"|(\d+))}g)
+	    {
+		my $key = $1;
+		my $value = defined ($3) ? $3 : $4;
+		$key = "pipeline" if $key eq "pipelinetype";
+		$pipelinefile .= "$key=$value\n"
+		    unless ($key eq "id" ||
+			    $key eq "position" ||
+			    $value eq "");
+	    }
+	    push @pipelinefiles, md5_hex ($pipelinefile);
+	}
     }
     close L;
     my @pipelines;
@@ -605,6 +624,7 @@ sub get_layout
 sub build_concordance_chart
 {
     my ($id, $flow, $pipeline, $outfile, $xref, $yref) = @_;
+    return if !$xref || !$yref;
     my @x = @$xref;
     my @y = @$yref;
 
@@ -612,6 +632,8 @@ sub build_concordance_chart
     for (@x, @y)
     {
 	my $pipelinehash = $_->{"id"};
+	if (!$pipelinehash) { warn "$id not ready because a pipeline has no id - try re-saving the input layouts"; }
+	return if !$pipelinehash;
 	my $pipelinefile = "$workdir/$pipelinehash.ispipeline";
 	my $inhash;
 	map { $inhash=$2 if /^(reads|affyscan)=(\S+)/ } <P>
@@ -689,7 +711,7 @@ sub build_snplist_union
 	    knobs => makeknobs ("snplistunion",
 				"CONCATENATE=1",
 				"OUTPUTNAME=snplist.txt",
-				"COMMAND=egrep ^chr|cut -f1,2|sort -nk2|sort -sk1,1|uniq",
+				"COMMAND=perl -ne 'print if /^chr/'|cut -f1,2|sort -nk2|sort -sk1,1|uniq",
 		),
 	  } ) unless $me->{snplistunion};
     my $joblist = $flow->{json}->{pipeline}->[-1]->{job};
