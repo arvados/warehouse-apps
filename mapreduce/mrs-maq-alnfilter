@@ -24,7 +24,7 @@ while (<R>)
     ++$snpref[-1]->[1]
 	if ($snpref[-1]->[1]+1 == $snpref[-1]->[2]);
 }
-close R;
+close R or die "SNPREFERENCE pipe failed: $!";
 
 @snpref = sort { ( $a->[0] cmp $b->[0] ||
 		   $a->[1] <=> $b->[1] ||
