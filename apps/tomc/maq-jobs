@@ -311,7 +311,7 @@ sub concordance_pipeline
 	{
 	    $me->{"cnsfilter$n"} = findjob
 		( { mrfunction => "filefilter",
-		    revision => [ 2622, ],
+		    revision => [ 2774, ],
 		    inputkey => $assemble->{outputkey},
 		    knobs => makeknobs
 			("cnsfilter",
@@ -338,7 +338,7 @@ sub concordance_pipeline
 
 	    $me->{"snpdetail$n"} = findjob
 		( { mrfunction => "filefilter",
-		    revision => [ 2631, ],
+		    revision => [ 2774, ],
 		    inputkey => $mapview->{outputkey},
 		    knobs => makeknobs
 			("snpdetail",
@@ -933,7 +933,7 @@ sub maq_pipeline
 	{
 	    $me->{cnsfilter} = findjob
 		( { mrfunction => "filefilter",
-		    revision => [ 2559, ],
+		    revision => [ 2774, ],
 		    inputkey => $me->{assemble}->{outputkey},
 		    knobs => makeknobs
 			("cnsfilter",
@@ -1025,7 +1025,7 @@ sub maq_pipeline
 
 	$me->{snpdetail} = findjob
 	    ( { mrfunction => "filefilter",
-		revision => [ 2596, ],
+		revision => [ 2774, ],
 		inputkey => $me->{mapview}->{outputkey},
 		knobs => makeknobs
 		    ("snpdetail",
