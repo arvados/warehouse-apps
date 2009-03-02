@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+use strict;
+
+my %addslashes = qw(A A
+		    C C
+		    G G
+		    T T
+		    M A/C
+		    R A/G
+		    W A/T
+		    S C/G
+		    Y C/T
+		    K G/T
+		    V A/C/G
+		    H A/C/T
+		    D A/G/T
+		    B C/G/T
+		    N A/C/G/T
+		    X A/C/G/T);
+
+while (<>)
+{
+    chomp;
+    my @in = split;
+    my $bp = $addslashes{uc $in[3]};
+    print join ("\t",
+		$in[0],
+		"maq", "SNP",
+		$in[1], $in[1],
+		".", "+", ".",
+		"alleles $bp;ref_allele $in[2];read_depth $in[5]");
+    print "\n";
+}
