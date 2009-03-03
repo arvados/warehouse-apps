@@ -35,6 +35,14 @@ my $json = qq{{ "workflow": { "id": "$specmd5", "message": "Pipeline submitted t
 if (sysopen F, "$workdir/$specmd5.ispipeline", O_WRONLY|O_CREAT|O_EXCL)
 {
     syswrite F, $spec;
+    close F;
+}
+else
+{
+    if (sysopen F, "$workdir/$specmd5.ispipeline", O_RDWR)
+    {
+	close F;
+    }
 }
 if (!sysopen F, "$workdir/$specmd5", O_WRONLY|O_CREAT|O_EXCL)
 {

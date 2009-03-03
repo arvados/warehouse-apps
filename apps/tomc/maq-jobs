@@ -45,13 +45,20 @@ for (@$joblist)
 @Job = sort { $b->{id} <=> $a->{id} } values %Job;
 
 my %new_job_id;
+my %is;
 
 my $mychildren = 0;
 opendir (D, $workdir) or die "$workdir: $!";
+foreach (readdir D)
+{
+    $is{$1} = $2 if /^([0-9a-f]{32})\.is(.+)/;
+}
+rewinddir D;
 for my $workfile (sort readdir D)
 {
     next if $workfile =~ /\./;
-    next if $workfile !~ /^[0-9a-f]{32}/;
+    next if $workfile !~ /^[0-9a-f]{32}$/;
+    next if !$is{$workfile};
     fillflow ($workfile);
 }
 closedir D;
@@ -74,76 +81,63 @@ sub fillflow
 
     $flow->{input_in_manifest} = !-e "$workdir/$in.nomanifest";
 
-    if (-l "$workdir/$in.stored")
+    if ($is{$in} eq "url")
     {
-	my $inputhash = readlink "$workdir/$in.stored";
-	$flow->{json}->{input}->{id} = $inputhash;
+	if (-l "$workdir/$in.stored")
+	{
+	    my $inputhash = readlink "$workdir/$in.stored";
+	    $flow->{json}->{input}->{id} = $inputhash;
 
-	if (!-e "$workdir/$inputhash")
-	{
-	    open W, ">>", "$workdir/$inputhash";
-	    close W;
-	}
-	if (open L, "<", "$workdir/$in.fetched")
-	{
-	    my ($url) = <L>;
-	    my @stat = stat L;
-	    my $localmtime = localtime ($stat[9]);
-	    $flow->{json}->{message} = "Downloaded from $url at $localmtime";
-	}
-    }
-    elsif (-e "$workdir/$in.isurl")
-    {
-	if (open L, "<", "$workdir/$in.isurl")
-	{
-	    my ($url) = <L>;
-	    close L;
-	    if (-e "$workdir/$in.fail")
+	    if (!-e "$workdir/$inputhash")
 	    {
-		my @stat = stat "$workdir/$in.fail";
+		open W, ">>", "$workdir/$inputhash";
+		close W;
+	    }
+	    if (open L, "<", "$workdir/$in.fetched")
+	    {
+		my ($url) = <L>;
+		my @stat = stat L;
 		my $localmtime = localtime ($stat[9]);
-		$flow->{json}->{message} = "Download of $url <b>failed</b> at $localmtime";
+		$flow->{json}->{message} = "Downloaded from $url at $localmtime";
 	    }
-	    elsif (!-e "$workdir/$in.lock")
+	}
+	else
+	{
+	    if (open L, "<", "$workdir/$in.isurl")
 	    {
-		$flow->{json}->{message} = "Source data at $url is queued for downloading.";
-		fork_downloader ("$workdir/$in");
+		my ($url) = <L>;
+		close L;
+		if (-e "$workdir/$in.fail")
+		{
+		    my @stat = stat "$workdir/$in.fail";
+		    my $localmtime = localtime ($stat[9]);
+		    $flow->{json}->{message} = "Download of $url <b>failed</b> at $localmtime";
+		}
+		elsif (!-e "$workdir/$in.lock")
+		{
+		    $flow->{json}->{message} = "Source data at $url is queued for downloading.";
+		    fork_downloader ("$workdir/$in");
+		}
+		else
+		{
+		    my @stat = stat "$workdir/$in.lock";
+		    my $localmtime = localtime ($stat[9]);
+		    $flow->{json}->{message} = "Started downloading from $url at $localmtime.";
+		}
+		close L;
+		$flow->{json}->{input}->{id} = $in;
 	    }
-	    else
-	    {
-		my @stat = stat "$workdir/$in.lock";
-		my $localmtime = localtime ($stat[9]);
-		$flow->{json}->{message} = "Started downloading from $url at $localmtime.";
-	    }
-	    close L;
-	    $flow->{json}->{input}->{id} = $in;
 	}
     }
-    elsif (-e "$workdir/$in.isgenome")
+    elsif ($is{$in} eq "pipeline")
     {
-	my $me = $flow->{"Prepare for maq"};
-	$me->{fasta2bfa} = findjob
-	    ( { mrfunction => "fasta2bfa",
-		revision => [ 2334, ],
-		inputkey => $in,
-		knobs => makeknobs
-		    ("fasta2bfa",
-		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
-		     "REMOVE_LC=0",
-		    ),
-	      } );
-	my $inputpath = $flow->{input_in_manifest} ? "$in/" : "$in/=/$in.gz";
-	$flow->{json}->{pipeline} = [ {
-	    label => "Convert to BFA",
-	    job => [
-		jsonjob ("Request", { outputlinks => ["<a href='whget.cgi/$inputpath'>input data</a>"], success => 1 }),
-		jsonjob ("Convert to BFA", $me->{fasta2bfa}),
-		] } ];
-	print "# finished ".$flow->{json}->{pipeline}->[0]->{label}." $in\n"
-	    if $override{debug};
-    }
-    elsif (-e "$workdir/$in.ispipeline")
-    {
+	if (2 > -M "$workdir/$in.ispipeline")
+	{
+	    # nobody has looked at this pipeline for days; maybe
+	    # nobody cares any more
+	    print "# skip old $in\n";
+	    next;
+	}
 	$flow->{json}->{id} = $in;
 
 	sysopen F, "$workdir/$in.ispipeline", O_RDONLY;
@@ -217,7 +211,7 @@ sub fillflow
 	}
 	%override = %override_was;
     }
-    elsif (-e "$workdir/$in.islayout")
+    elsif ($is{$in} eq "layout")
     {
 	next;
     }
@@ -995,6 +989,23 @@ sub maq_pipeline
 		      "cns.translated.snp.txt");
     }
     push @jsonjobs, jsonjob ("SNPtranslate", $me->{snptranslate});
+    if ($me->{snptranslate} && $me->{snptranslate}->{outputkey})
+    {
+	$me->{snp2gff} = findjob
+	    ( { mrfunction => "filefilter",
+		revision => [ 2776, ],
+		inputkey => $me->{snptranslate}->{outputkey},
+		nodes => 1,
+		knobs => makeknobs
+		    ("snp2gff",
+		     "COMMAND=mrs-snp2gff",
+		     "OUTPUTNAME=snp.gff",
+		     ),
+		} ) unless $me->{snp2gff};
+	buildoutputs ($me, "snp2gff",
+		      "snp.gff");
+    }
+    push @jsonjobs, jsonjob ("snp2gff", $me->{snp2gff});
 
     my $snplist;
     if ($pipeline->{input}->{affymap})
