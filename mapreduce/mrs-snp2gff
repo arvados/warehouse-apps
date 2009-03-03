@@ -26,6 +26,7 @@ while (<>)
     next if $in[1] !~ /^\d+$/;
     my $bp = $addslashes{uc $in[3]};
     next if !$bp;
+    next if $bp eq "A/C/G/T";
     print join ("\t",
 		$in[0],
 		"maq", "SNP",
