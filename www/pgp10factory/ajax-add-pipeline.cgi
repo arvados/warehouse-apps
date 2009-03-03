@@ -44,7 +44,12 @@ else
 	close F;
     }
 }
-if (!sysopen F, "$workdir/$specmd5", O_WRONLY|O_CREAT|O_EXCL)
+if (sysopen F, "$workdir/$specmd5", O_WRONLY|O_CREAT|O_EXCL)
+{
+    print F $json;
+    close F;
+}
+else
 {
     if (sysopen F, "$workdir/$specmd5", O_RDONLY)
     {
