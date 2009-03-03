@@ -54,12 +54,16 @@ foreach (readdir D)
     $is{$1} = $2 if /^([0-9a-f]{32})\.is(.+)/;
 }
 rewinddir D;
+my $firstletter;
 for my $workfile (sort readdir D)
 {
     next if $workfile =~ /\./;
     next if $workfile !~ /^[0-9a-f]{32}$/;
     next if !$is{$workfile};
     fillflow ($workfile);
+
+    $workfile =~ /^(.)/;
+    if ($1 ne $firstletter) { print "mark $workfile\n"; $firstletter = $1; }
 }
 closedir D;
 --$mychildren while 0 < wait;
@@ -83,6 +87,7 @@ sub fillflow
 
     if ($is{$in} eq "url")
     {
+	return if 2 < -M "$workdir/$in.isurl";
 	if (-l "$workdir/$in.stored")
 	{
 	    my $inputhash = readlink "$workdir/$in.stored";
@@ -131,12 +136,11 @@ sub fillflow
     }
     elsif ($is{$in} eq "pipeline")
     {
-	if (2 > -M "$workdir/$in.ispipeline")
+	if (2 < -M "$workdir/$in.ispipeline")
 	{
 	    # nobody has looked at this pipeline for days; maybe
 	    # nobody cares any more
-	    print "# skip old $in\n";
-	    next;
+	    return;
 	}
 	$flow->{json}->{id} = $in;
 
@@ -213,13 +217,13 @@ sub fillflow
     }
     elsif ($is{$in} eq "layout")
     {
-	next;
+	return;
     }
     else
     {
 	print "# skipped $in, don\'t know what it is.\n"
 	    if $override{debug};
-	next;
+	return;
     }
 
     if (open F, "<", "$workdir/$in.comment")
@@ -602,6 +606,10 @@ sub get_layout
     my @pipelines;
     foreach (@pipelinefiles)
     {
+	# make sure pipelines don't get skipped because of old modtime
+	sysopen F, "$workdir/$_.ispipeline", O_RDWR;
+	close F;
+
 	open P, "<", "$workdir/".$_ or return undef;
 	push @pipelines, { id => $_ };
 	my $pipelinejson = <P>;
@@ -989,23 +997,6 @@ sub maq_pipeline
 		      "cns.translated.snp.txt");
     }
     push @jsonjobs, jsonjob ("SNPtranslate", $me->{snptranslate});
-    if ($me->{snptranslate} && $me->{snptranslate}->{outputkey})
-    {
-	$me->{snp2gff} = findjob
-	    ( { mrfunction => "filefilter",
-		revision => [ 2776, ],
-		inputkey => $me->{snptranslate}->{outputkey},
-		nodes => 1,
-		knobs => makeknobs
-		    ("snp2gff",
-		     "COMMAND=mrs-snp2gff",
-		     "OUTPUTNAME=snp.gff",
-		     ),
-		} ) unless $me->{snp2gff};
-	buildoutputs ($me, "snp2gff",
-		      "snp.gff");
-    }
-    push @jsonjobs, jsonjob ("snp2gff", $me->{snp2gff});
 
     my $snplist;
     if ($pipeline->{input}->{affymap})
@@ -1052,6 +1043,25 @@ sub maq_pipeline
     push @jsonjobs, jsonjob ("Pileup filtered calls", $me->{snpdetail});
 
     if ($me->{snptranslate} && $me->{snptranslate}->{outputkey})
+    {
+	$me->{snp2gff} = findjob
+	    ( { mrfunction => "filefilter",
+		revision => [ 2779, ],
+		inputkey => $me->{snpdetail}->{outputkey},
+		nodes => 1,
+		knobs => makeknobs
+		    ("snp2gff",
+		     "COMMAND=mrs-snp2gff",
+		     "OUTPUTNAME=snp.gff",
+		     ),
+		} ) unless $me->{snp2gff};
+	buildoutputs ($me, "snp2gff",
+		      "snp.gff");
+    }
+    push @jsonjobs, jsonjob ("snp2gff", $me->{snp2gff});
+
+    if ($me->{snptranslate} && $me->{snptranslate}->{outputkey} &&
+	$me->{snp2gff} && $me->{snp2gff}->{outputkey})
     {
 	my $bigmanifesthash = buildbigmanifest
 	    ($id, $me, map {
