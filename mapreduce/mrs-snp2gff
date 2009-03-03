@@ -23,7 +23,9 @@ while (<>)
 {
     chomp;
     my @in = split;
+    next if $in[1] !~ /^\d+$/;
     my $bp = $addslashes{uc $in[3]};
+    next if !$bp;
     print join ("\t",
 		$in[0],
 		"maq", "SNP",
