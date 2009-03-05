@@ -10,6 +10,7 @@ use HTTP::Request::Common;
 use Date::Parse;
 use IO::Handle;
 use Warehouse::Stream;
+use CGI;
 
 
 $memcached_max_data = 1000000;
@@ -1181,8 +1182,8 @@ sub list_manifests
 sub job_list
 {
     my $self = shift;
-    $self->_read_cache;
     if (@_) { return $self->_job_list (@_); }
+    $self->_read_cache;
     $self->_refresh_job_list;
     return $self->{job_list_arrayref};
 }
@@ -1192,8 +1193,14 @@ sub _job_list
     my $self = shift;
     my %what = @_;
     my $url = "http://".$self->{job_warehouse_servers}."/job/list";
-    $url .= "?".($what{id_min} || "")."-".($what{id_max} || "")
+    $url .= "?";
+    $url .= "".($what{id_min} || "")."-".($what{id_max} || "")
 	if $what{id_min} || $what{id_max};
+    for (keys %what)
+    {
+	$url .= ";$_=".CGI->escape($what{$_})
+	    unless /^id(_.*)?$/;
+    }
     my $resp = $self->{ua}->get ($url);
     if ($resp->is_success)
     {
