@@ -189,7 +189,8 @@ create table if not exists mrjob (
  steps_todo int,
  steps_done int,
  steps_running int,
- unique(global_id)
+ unique(global_id),
+ index(output)
 )
   },
 	   qq{
@@ -233,7 +234,11 @@ alter table mrjob add thawedfromkey text after frozentokey
   },
 	   qq{
 alter table mrjob add stepspernode int after nodes
-  })
+  },
+	   qq{
+alter table mrjob add index(output)
+  },
+	   )
   {
     my $sth = $dbh->prepare ($_);
     $sth->{PrintWarn} = 0;
