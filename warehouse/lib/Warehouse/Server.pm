@@ -290,18 +290,27 @@ sub run
 	    }
 	    elsif ($r->method eq "GET" and $r->url->path eq "/job/list")
 	    {
+		my @bindvars;
 		my $where = "1=1";
-		if ($r->url->query =~ /^(\d+)-(\d+)$/)
+		for (split (/;/, $r->url->query))
 		{
-		    $where = "id >= $1 and id <= $2";
-		}
-		elsif ($r->url->query =~ /^(\d+)-$/)
-		{
-		    $where = "id >= $1";
-		}
-		elsif ($r->url->query =~ /^(\d+)$/)
-		{
-		    $where = "id = $1";
+		    if (/^outputkey=(.*)/)
+		    {
+			$where .= " and output=?";
+			push @bindvars, $1;
+		    }
+		    elsif (/^(\d+)-(\d+)$/)
+		    {
+			$where .= " and id >= $1 and id <= $2";
+		    }
+		    elsif (/^(\d+)-$/)
+		    {
+			$where .= " and id >= $1";
+		    }
+		    elsif (/^(\d+)$/)
+		    {
+			$where .= " and id = $1";
+		    }
 		}
 
 		my $resp = HTTP::Response->new (200, "OK", []);
@@ -309,7 +318,7 @@ sub run
 		$resp->{sth} = $self->{dbh}->prepare
 		    ("select * from $mrdb.mrjob where $where order by id")
 		    or die DBI->errstr;
-		$resp->{sth}->execute()
+		$resp->{sth}->execute (@bindvars)
 		    or die DBI->errstr;
 		$resp->{md5_ctx} = Digest::MD5->new;
 		$resp->{sth_finished} = 0;
