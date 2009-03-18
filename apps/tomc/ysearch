@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+
+use CGI;
+use LWP::UserAgent;
+use HTTP::Request::Common;
+
+die "No YAHOOAPIKEY environment variable" if 32 > length $ENV{YAHOOAPIKEY};
+
+my $cache = "/tmp/ysearch-$<";
+-d $cache or mkdir $cache or die "mkdir $cache: $!";
+my $ua = LWP::UserAgent->new;
+
+while (<>)
+{
+    if (!/([A-Z]+[\dA-Z]+)[,\s]+\*?([A-Z]+\d+[\dA-Z]*|[\dA-Z]*\d[A-Z]+)/)
+    {
+	warn "No {gene, change} found";
+	next;
+    }
+    my $query = escape CGI ("$1 $2");
+    my $xml;
+    if (open F, "<", "$cache/$query.xml")
+    {
+	local $/ = undef;
+	$xml = <F>;
+	close F;
+    }
+    else
+    {
+	my $url = "http://boss.yahooapis.com/ysearch/web/v1/$query?appid=$ENV{YAHOOAPIKEY}&format=xml";
+	my $req = HTTP::Request->new (GET => $url);
+	my $r = $ua->request ($req);
+	if (!$r->is_success)
+	{
+	    warn "Query failed";
+	    next;
+	}
+	$xml = $r->content;
+
+	open F, ">", "$cache/$query.xml" or die "open $cache/$query.xml: $!";
+	print F $xml;
+	close F;
+    }
+    my ($nresults) = $xml =~ /<resultset_web\b[^>]*\bdeephits="(\d+)">/;
+    print "$nresults\t$query.xml\t$_";
+}
