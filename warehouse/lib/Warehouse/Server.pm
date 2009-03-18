@@ -299,6 +299,16 @@ sub run
 			$where .= " and output=?";
 			push @bindvars, $1;
 		    }
+		    elsif (/^inputkey=(.*)/)
+		    {
+			$where .= " and input0=?";
+			push @bindvars, $1;
+		    }
+		    elsif (/^(revision)=(.*)/)
+		    {
+			$where .= " and $1=?";
+			push @bindvars, $2;
+		    }
 		    elsif (/^(\d+)-(\d+)$/)
 		    {
 			$where .= " and id >= $1 and id <= $2";
