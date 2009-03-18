@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+use strict;
+use Warehouse;
+use Warehouse::Manifest;
+
+my @gff;
+nextgff();
+
+my $chr;
+my $chrpos;
+
+open R, "-|", "bash -c 'set -o pipefail; whget \"\$KNOB_REFERENCE\" - | gzip -cdf'" or die "$!";
+while (<R>)
+{
+    chomp;
+    if (/^>(.*)/)
+    {
+	$chr = $1;
+	$chrpos = 0;
+	next;
+    }
+    my $len = length;
+    while ($gff[0] eq $chr && $gff[3]-1 >= $chrpos && $gff[3]-1 < $chrpos + $len)
+    {
+	my ($inbp) = $gff[8] =~ /alleles ([A-Z]+)/;
+	$inbp =~ tr/a-z/A-Z/;
+	my $refbp = uc substr ($_, $gff[3]-1-$chrpos, 1);
+	if ($inbp ne $refbp)
+	{
+	    $gff[8] .= ";ref_allele $refbp";
+	    &printgff;
+	}
+	&nextgff;
+    }
+    $chrpos += $len;
+}
+
+sub printgff
+{
+    print (join ("\t", @gff), "\n");
+}
+
+sub nextgff
+{
+    my $gff = <STDIN>;
+    exit 0 if !defined $gff;
+    chomp $gff;
+    @gff = split /\t/, $gff;
+}

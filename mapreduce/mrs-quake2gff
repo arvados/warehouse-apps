@@ -1,0 +1,14 @@
+#!/usr/bin/perl
+
+$qmin = $ENV{"KNOB_MINQUALITY"} + 0;
+
+while(<>)
+{
+    my ($chr, $pos, $alleles, $quality) = /^0*(\d+)_0*(\d+)\s([A-Z]+)\s(\d\S*)/;
+    next if $quality < $qmin;
+    $chr = "X" if $chr == 23;
+    $chr = "Y" if $chr == 24;
+    if ($alleles =~ /AA|CC|GG|TT/) { $alleles = substr($alleles,0,1); }
+    else { $alleles =~ s/(.)/$1\//; }
+    print "chr$chr\t.\tSNP\t$pos\t$pos\t$quality\t+\t.\talleles $alleles\n";
+}
