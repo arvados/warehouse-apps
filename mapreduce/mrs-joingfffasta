@@ -44,7 +44,11 @@ sub printgff
 sub nextgff
 {
     my $gff = <STDIN>;
-    exit 0 if !defined $gff;
+    if (!defined $gff)
+    {
+	while (<R>) { }
+	exit 0;
+    }
     chomp $gff;
     @gff = split /\t/, $gff;
 }
