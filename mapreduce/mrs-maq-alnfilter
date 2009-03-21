@@ -68,7 +68,8 @@ if ($ENV{KNOB_SNPFILTER_ARGS})
 	  "mrs-maq",
 	  "/usr/bin/maq.pl",
 	  "SNPfilter",
-	  split (/\s+/, $ENV{KNOB_SNPFILTER_ARGS})) or die "mrs-maq: $!";
+	  split (/\s+/, $ENV{KNOB_SNPFILTER_ARGS}),
+	  "-") or die "mrs-maq: $!";
 }
 print_snpskeptic() if $want_snpskeptic;
 
