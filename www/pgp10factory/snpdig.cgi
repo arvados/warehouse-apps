@@ -111,7 +111,7 @@ while (@snplists)
 
     # merge
 
-    my $npositions;
+    my $npositions = 0;
   CALL:
     for (@calls)
     {
@@ -127,10 +127,11 @@ while (@snplists)
 	for my $callfilter (@callfilters)
 	{
 	    splice @$callfilter, 1, 1
-		while ($chr gt $callfilter->[1]->[0]
-		       ||
-		       ($chr eq $callfilter->[1]->[0] &&
-			$pos > $callfilter->[1]->[1]));
+		while ($#$callfilter > 1 &&
+		       ($chr gt $callfilter->[1]->[0]
+			||
+			($chr eq $callfilter->[1]->[0] &&
+			 $pos > $callfilter->[1]->[1])));
 	    my $has = ($chr eq $callfilter->[1]->[0] &&
 		       $pos == $callfilter->[1]->[1]);
 
