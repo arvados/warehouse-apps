@@ -87,7 +87,7 @@ sub fillflow
 
     if ($is{$in} eq "url")
     {
-	return if 2 < -M "$workdir/$in.isurl";
+	return if 4 < -M "$workdir/$in.isurl";
 	if (-l "$workdir/$in.stored")
 	{
 	    my $inputhash = readlink "$workdir/$in.stored";
@@ -136,7 +136,7 @@ sub fillflow
     }
     elsif ($is{$in} eq "pipeline")
     {
-	if (2 < -M "$workdir/$in.ispipeline")
+	if (4 < -M "$workdir/$in.ispipeline")
 	{
 	    # nobody has looked at this pipeline for days; maybe
 	    # nobody cares any more
@@ -607,7 +607,7 @@ sub get_layout
     foreach (@pipelinefiles)
     {
 	# make sure pipelines don't get skipped because of old modtime
-	sysopen F, "$workdir/$_.ispipeline", O_RDWR;
+	utime undef, undef, "$workdir/$_.ispipeline";
 	close F;
 
 	open P, "<", "$workdir/".$_ or return undef;
@@ -966,6 +966,9 @@ sub maq_pipeline
     push @jsonjobs, jsonjob ("Consensus", $me->{cns2x});
     if ($me->{cns2x} && $me->{cns2x}->{outputkey})
     {
+	my @userknobs;
+	push @userknobs, "SNPFILTER_ARGS=-q ".$pipeline->{input}->{minconsensusquality}
+	    if $pipeline->{input}->{minconsensusquality};
 	$me->{snpfilter} = findjob
 	    ( { mrfunction => "maq-snpfilter",
 		revision => [ 2346, ],
@@ -974,6 +977,7 @@ sub maq_pipeline
 		knobs => makeknobs
 		    ("maq-snpfilter",
 		     "MAQ_DEB=ec9aba3c23989d66f813589e2d4450db",
+		     @userknobs,
 		     ),
 		} ) unless $me->{snpfilter};
 	buildoutputs ($me, "snpfilter",
@@ -1024,6 +1028,8 @@ sub maq_pipeline
 	    if $pipeline->{input}->{minstarts};
 	push @userknobs, "SNPCALL_MIN_STARTS=2"
 	    if !length ($pipeline->{input}->{minstarts});
+	push @userknobs, "MINCONSENSUSQUALITY=".$pipeline->{input}->{minconsensusquality}
+	    if $pipeline->{input}->{minconsensusquality};
 
 	$me->{snpdetail} = findjob
 	    ( { mrfunction => "filefilter",
@@ -1042,7 +1048,7 @@ sub maq_pipeline
     buildoutputs ($me, "snpdetail", "snplist.txt");
     push @jsonjobs, jsonjob ("Pileup filtered calls", $me->{snpdetail});
 
-    if ($me->{snptranslate} && $me->{snptranslate}->{outputkey})
+    if ($me->{snpdetail} && $me->{snpdetail}->{outputkey})
     {
 	$me->{snp2gff} = findjob
 	    ( { mrfunction => "filefilter",
