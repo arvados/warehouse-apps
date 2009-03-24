@@ -60,6 +60,9 @@ sub do_url
 sub do_hash
 {
     my ($want) = @_;
+
+    utime undef, undef, "$workdir/$want.ispipeline";
+
     if (-s "$workdir/$want" &&
 	open (F, "<", "$workdir/$want"))
     {

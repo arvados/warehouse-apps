@@ -39,10 +39,7 @@ if (sysopen F, "$workdir/$specmd5.ispipeline", O_WRONLY|O_CREAT|O_EXCL)
 }
 else
 {
-    if (sysopen F, "$workdir/$specmd5.ispipeline", O_RDWR)
-    {
-	close F;
-    }
+    utime undef, undef, "$workdir/$specmd5.ispipeline";
 }
 if (sysopen F, "$workdir/$specmd5", O_WRONLY|O_CREAT|O_EXCL)
 {

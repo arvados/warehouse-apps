@@ -92,7 +92,7 @@ for (my $PID = 0; $PID < 16; $PID++)
 <p>
 <select id="selectpipelinetype_$PID" name="pipelinetype_$PID" size="1" onchange="select_selectors($PID);">
 <option value="">Choose pipeline</option>
-<option value="maq:reads:reads:genome:genome:affymap:affymap?:snplist:snplist?:minstarts:#2:mincoverage:#">Place reads with Maq</option>
+<option value="maq:reads:reads:genome:genome:affymap:affymap?:snplist:snplist?:minstarts:#2:mincoverage:#:minconsensusquality:#">Place reads with Maq</option>
 <option value="affyscan:affyscan:affyscan:affymap:affymap:genome:genome:probemargin:#0">Xref affy scan</option>
 <option value="concordance:layout0:layout:layout1:layout:snplist:snplist?">Concordance between layouts</option>
 </select><br />
