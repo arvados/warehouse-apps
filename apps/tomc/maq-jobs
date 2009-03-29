@@ -313,7 +313,7 @@ sub concordance_pipeline
 		    inputkey => $assemble->{outputkey},
 		    knobs => makeknobs
 			("cnsfilter",
-			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter|mrs-maq /usr/bin/maq.pl SNPfilter -q 40 -w 5 -N 2 -d 1 -D 256 -n 20 -",
+			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter",
 			 "OUTPUTNAME=snplist.txt",
 			 "SNPREFERENCE=".$me->{snplistunion}->{outputkey}."/snplist.txt",
 			),
@@ -328,6 +328,8 @@ sub concordance_pipeline
 	    $mapview->{outputkey})
 	{
 	    my @knobs;
+	    push @knobs, "MINCONSENSUSQUALITY=$1"
+		if $snpdetail->{knobs} =~ /MINCONSENSUSQUALITY=(\d+)/;
 	    push @knobs, "SNPCALL_MIN_COVER=$1"
 		if $snpdetail->{knobs} =~ /SNPCALL_MIN_COVER=(\d+)/;
 	    push @knobs, "SNPCALL_MIN_STARTS=$1"
