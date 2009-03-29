@@ -304,16 +304,21 @@ sub concordance_pipeline
 
 	if ($me->{snplistunion} &&
 	    $me->{snplistunion}->{outputkey} &&
+	    $snpdetail &&
+	    $snpdetail->{knobs} &&
 	    $assemble &&
 	    $assemble->{outputkey})
 	{
+	    my $snpfilter_args = "-W 0";
+	    $snpfilter_args .= " -q $1"
+		if $snpdetail->{knobs} =~ /MINCONSENSUSQUALITY=(\d+)/;
 	    $me->{"cnsfilter$n"} = findjob
 		( { mrfunction => "filefilter",
 		    revision => [ 2774, ],
 		    inputkey => $assemble->{outputkey},
 		    knobs => makeknobs
 			("cnsfilter",
-			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter",
+			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter|SNPfilter -q 40 -w 5 -N 2 -d 3 -D 256 -n 20 $snpfilter_args",
 			 "OUTPUTNAME=snplist.txt",
 			 "SNPREFERENCE=".$me->{snplistunion}->{outputkey}."/snplist.txt",
 			),
@@ -338,7 +343,7 @@ sub concordance_pipeline
 
 	    $me->{"snpdetail$n"} = findjob
 		( { mrfunction => "filefilter",
-		    revision => [ 2774, ],
+		    revision => [ 2792, ],
 		    inputkey => $mapview->{outputkey},
 		    knobs => makeknobs
 			("snpdetail",
