@@ -318,7 +318,7 @@ sub concordance_pipeline
 		    inputkey => $assemble->{outputkey},
 		    knobs => makeknobs
 			("cnsfilter",
-			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter|SNPfilter -q 40 -w 5 -N 2 -d 3 -D 256 -n 20 $snpfilter_args",
+			 "COMMAND=mrs-maq-cns2view|mrs-reftranslate|mrs-maq-alnfilter|SNPfilter -q 40 -w 5 -N 2 -d 3 -D 256 -n 20 $snpfilter_args -",
 			 "OUTPUTNAME=snplist.txt",
 			 "SNPREFERENCE=".$me->{snplistunion}->{outputkey}."/snplist.txt",
 			),
