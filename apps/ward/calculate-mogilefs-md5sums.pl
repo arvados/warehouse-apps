@@ -2,13 +2,13 @@
 
 # This script calculates md5sums for all files in mogilefs.
 #
-# It requires a filename as argument, pointing to a file that does not exist
+# It requires one filename as argument, pointing to a file that does not exist
 # yet, into which the output of the script will be saved.
 #
 # The script optionally takes a second filename as argument, which can contain
 # (partial) output from a previous run of this script.
 #
-# The output is formatted like this (one entry per line):
+# It outputs to stdout, in the format (one entry per line):
 #
 #   INODE-MTIME-FILENAME-MD5SUM
 #
