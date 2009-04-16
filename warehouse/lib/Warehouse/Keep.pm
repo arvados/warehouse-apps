@@ -4,10 +4,13 @@ package Warehouse::Keep;
 
 use Warehouse;
 use HTTP::Daemon;
+use POSIX; 
 use HTTP::Response;
 use Digest::MD5 qw(md5_hex);
 use Warehouse;
-use Fcntl;
+use Fcntl ':flock';
+
+use strict;
 
 =head1 NAME
 
@@ -22,7 +25,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
@@ -65,6 +68,10 @@ Port number to listen on.  Default is 25107.
 
 =cut
 
+my $children = 0;
+my %Children = 0;
+my $TotalChildren = 0;
+
 
 sub new
 {
@@ -98,10 +105,73 @@ sub _init
 
     $self->{whc} = new Warehouse;
 
+    $SIG{HUP} = $SIG{INT} = $SIG{TERM} = sub {
+      # Any sort of death trigger results in death of all
+      my $sig = shift;
+      $SIG{$sig} = 'IGNORE';
+      kill 'INT' => keys %{$Warehouse::Keep::Children};
+      die "killed by $sig\n";
+      exit;
+    };
+
+    # We'll handle our child reaper in a separate sub
+    $SIG{CHLD} = \&REAPER;
+
+    $self->{ChildLifeTime} = 100;
+
+    $Warehouse::Keep::TotalChildren = $#{$self->{Directories}} + 1;
+    print STDERR "Total children: " . $Warehouse::Keep::TotalChildren . "\n" if ($ENV{DEBUG});
+
+    $Warehouse::Keep::children = 0;
+
     return $self;
 }
 
+sub NewChild
+{
+    my $self = shift;
+      # Daemonize away from the parent process.
+      my $pid;
+      die "Cannot fork child: $!\n" unless defined ($pid = fork);
+      if ($pid) {
+        $Warehouse::Keep::Children{$pid} = 1;
+        $Warehouse::Keep::children++;
+        print STDERR "forked new child, we now have " . $Warehouse::Keep::children . " children\n" if ($ENV{DEBUG});
+        return;
+      }
+      print STDERR "CHILD: child happy - childlifetime is $self->{ChildLifeTime}\n" if ($ENV{DEBUG});
+      # Loop for a certain number of times
+      my $i = 0;
 
+      while ($i < $self->{ChildLifeTime}) {
+        print STDERR "CHILD: in loop\n" if ($ENV{DEBUG});
+        $i++;
+        # Accept a connection from HTTP::Daemon
+        my $c = $self->{daemon}->accept or last;
+        print STDERR "CHILD: accepted a connection\n" if ($ENV{DEBUG});
+        $c->autoflush(1);
+        print STDERR "CHILD: connect:". $c->peerhost . "\n" if ($ENV{DEBUG});
+
+        $self->process($c);
+      }
+
+      warn "child terminated after $i requests";
+      exit;
+}
+
+sub REAPER 
+{
+    my $stiff;
+    while (($stiff = waitpid(-1, &WNOHANG)) > 0) {
+        print STDERR "child $stiff terminated -- status $?" if ($ENV{DEBUG});
+        $Warehouse::Keep::children--;
+        print STDERR "in Reaper: children at $Warehouse::Keep::children\n" if ($ENV{DEBUG});
+        #delete ${$self->{Children}}{$stiff};
+        delete $Warehouse::Keep::Children{$stiff};
+    }
+
+    $SIG{CHLD} = \&REAPER;
+}
 
 =head2 url
 
@@ -128,227 +198,236 @@ Listens for connections, and handles requests from clients.
 =cut
 
 
-my $kill = 0;
+sub run {
+  my $self = shift;
 
-sub run
+  # We are going to spawn as many children as we have entries in 
+  # $self->{Directories}. This is how we are going to limit having maximum one 
+  # concurrent reader/writer per disk. Well, technically this will limit us to one
+  # concurrent reader/writer per partition, but for maximum performance there
+  # should be no more than 1 (Keep) partition per disk.
+  # We'll need a little help from a per-disk lock file in $self->_store as well.
+
+  print STDERR "children at: $Warehouse::Keep::children\n" if ($ENV{DEBUG});
+  print STDERR "TotalChildren at: $Warehouse::Keep::TotalChildren\n" if ($ENV{DEBUG});
+
+  while ( 1 ) {
+    for (my $i = $Warehouse::Keep::children; $i < $Warehouse::Keep::TotalChildren; $i++ ) {
+      $self->NewChild();
+      print STDERR "Forked new; children is at $Warehouse::Keep::children; TotalChildren is at $Warehouse::Keep::TotalChildren\n" if ($ENV{DEBUG});
+    }
+    sleep;
+  };
+}
+
+sub process 
 {
     my $self = shift;
-
-    local $SIG{INT} = sub { $Warehouse::Keep::kill = 1; };
-    local $SIG{TERM} = sub { $Warehouse::Keep::kill = 1; };
-    local $SIG{CHLD} = "IGNORE";
-    local $| = 1;
-    while (my $c = $self->{daemon}->accept)
+    my $c = shift;
+    while (my $r = $c->get_request)
     {
-	while (my $r = $c->get_request)
-	{
-	    print(scalar (localtime) .
-		  " " . $c->peerhost() .
-		  " R" .
-		  " " . $r->method .
-		  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
-		  "\n");
+        print(scalar (localtime) .
+    	  " " . $c->peerhost() .
+    	  " R" .
+    	  " " . $r->method .
+    	  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
+    	  "\n");
 
-	    if ($r->method eq "GET" || $r->method eq "HEAD")
-	    {
-		if ($r->url->path eq "/index")
-		{
-		    if (my $child = fork()) { undef $c; last }
+    	if ($r->method eq "GET" || $r->method eq "HEAD")
+    	{
+    	    if ($r->url->path eq "/index")
+    	    {
+    		_index_callback_init ($self);
+    		$c->send_response (HTTP::Response->new
+    			       (200, "OK", [],
+    				\&_index_callback));
+    		last;
+    	    }
+    	    my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
+    	    if (!$md5)
+    	    {
+    		$c->send_response (HTTP::Response->new
+    			       (400, "Bad request",
+    				[], "Bad request\n"));
+    		last;
+    	    }
+    	    my $dataref = $self->_fetch ($md5);
+    	    if (!$dataref)
+    	    {
+    		$c->send_response (HTTP::Response->new
+    			       (404, "Not found", [], "Not found\n"));
+    		last;
+    	    }
+    	    $c->send_response (HTTP::Response->new
+    			   (200, "OK",
+    			    ["X-Block-Size", length($$dataref)],
+    			    $r->method eq "GET" ? $$dataref : ""));
+    	}
+    	elsif ($r->method eq "PUT")
+    	{
+    	my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
+    	if (!$md5)
+    	{
+    	    $c->send_response (HTTP::Response->new
+    			       (400, "Bad request",
+    				[], "Bad request\n"));
+    	    last;
+    	}
 
-		    _index_callback_init ($self);
-		    $c->send_response (HTTP::Response->new
-				       (200, "OK", [],
-					\&_index_callback));
-		    exit;
-		}
-		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
-		if (!$md5)
-		{
-		    $c->send_response (HTTP::Response->new
-				       (400, "Bad request",
-					[], "Bad request\n"));
-		    last;
-		}
-		my $dataref = $self->_fetch ($md5);
-		if (!$dataref)
-		{
-		    $c->send_response (HTTP::Response->new
-				       (404, "Not found", [], "Not found\n"));
-		    last;
-		}
-		$c->send_response (HTTP::Response->new
-				   (200, "OK",
-				    ["X-Block-Size", length($$dataref)],
-				    $r->method eq "GET" ? $$dataref : ""));
-	    }
-	    elsif ($r->method eq "PUT")
-	    {
-		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
-		if (!$md5)
-		{
-		    $c->send_response (HTTP::Response->new
-				       (400, "Bad request",
-					[], "Bad request\n"));
-		    last;
-		}
+    	# verify signature
+    	$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
+    	my $signedmessage = $1;
+    	my $plainmessage = $2;
+    	my $newdata = $3;
 
-		# verify signature
-		$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
-		my $signedmessage = $1;
-		my $plainmessage = $2;
-		my $newdata = $3;
+    	my ($verified,$keyid) = Warehouse::_verify($signedmessage);
 
-		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
-
-		if (!$verified)
-		{
-		    $self->_log ($c, "SigFail");
-		}
-		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
-		$checktime += 0;
+    	if (!$verified)
+    	{
+    	    $self->_log ($c, "SigFail");
+    	}
+    	my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
+    	$checktime += 0;
 #		if (!$verified ||
-		if (time - $checktime > 300 ||
-		    time - $checktime < -300 ||
-		    $checkmd5 ne $md5)
-		{
-		    my $resp = HTTP::Response->new
-			(401, "SigFail",
-			 [], "Signature verification failed.\n");
-		    $c->send_response ($resp);
-		    last;
-		}
-		if (!$verified)
-		{
-		    $self->_log ($c, "SigFail ignored");
-		}
+    	if (time - $checktime > 300 ||
+    	    time - $checktime < -300 ||
+    	    $checkmd5 ne $md5)
+    	{
+    	    my $resp = HTTP::Response->new
+    		(401, "SigFail",
+    		 [], "Signature verification failed.\n");
+    	    $c->send_response ($resp);
+    	    last;
+    	}
+    	if (!$verified)
+    	{
+    	    $self->_log ($c, "SigFail ignored");
+    	}
 
-		my $dataref = $self->_fetch ($md5, { touch => 1 });
-		if ($dataref && ($newdata eq "" || $$dataref eq $newdata))
-		{
-		    $c->send_response (HTTP::Response->new
-				       (200, "OK",
-					["X-Block-Size", length($$dataref)],
-					"$md5\n"));
-		    next;
-		}
+    	my $dataref = $self->_fetch ($md5, { touch => 1 });
+    	if ($dataref && ($newdata eq "" || $$dataref eq $newdata))
+    	{
+    	    $c->send_response (HTTP::Response->new
+    			       (200, "OK",
+    				["X-Block-Size", length($$dataref)],
+    				"$md5\n"));
+    	    next;
+    	}
 
-		if ($dataref)
-		{
-		    $c->send_response (HTTP::Response->new
-				       (400, "Collision",
-					[], "$md5\n"));
-		    next;
-		}
+    	if ($dataref)
+    	{
+    	    $c->send_response (HTTP::Response->new
+    			       (400, "Collision",
+    				[], "$md5\n"));
+    	    next;
+    	}
 
-		my $metadata = "remote_addr=".$c->peerhost()."\n"
-		    . "time=".$checktime."\n"
-		    . "\n"
-		    . "$signedmessage";
+    	my $metadata = "remote_addr=".$c->peerhost()."\n"
+    	    . "time=".$checktime."\n"
+    	    . "\n"
+    	    . "$signedmessage";
 
-		if ($newdata eq "")
-		{
-		    if (!$self->{whc})
-		    {
-			$c->send_response (HTTP::Response->new
-					   (500, "No client object",
-					    [], "No client object\n"));
-			next;
-		    }
-		    if (!defined ($newdata = $self->{whc}->fetch_block ($md5)))
-		    {
-			$c->send_response (HTTP::Response->new
-					   (404, "Data not found in cache",
-					    [], "Data not found in cache\n"));
-			next;
-		    }
-		}
+    	if ($newdata eq "")
+    	{
+    	    if (!$self->{whc})
+    	    {
+    		$c->send_response (HTTP::Response->new
+    				   (500, "No client object",
+    				    [], "No client object\n"));
+    		next;
+    	    }
+    	    if (!defined ($newdata = $self->{whc}->fetch_block ($md5)))
+    	    {
+    		$c->send_response (HTTP::Response->new
+    				   (404, "Data not found in cache",
+    				    [], "Data not found in cache\n"));
+    		next;
+    	    }
+    	}
 
-		if (!$self->_store ($md5, \$newdata, \$metadata))
-		{
-		    $self->_log($c,$self->{errstr});
-		    $c->send_response (HTTP::Response->new
-				       (500, "Fail",
-					[], $self->{errstr}));
-		    next;
-		}
-		$c->send_response (HTTP::Response->new
-				   (200, "OK",
-				    ["X-Block-Size", length($newdata)],
-				    "$md5\n"));
-	    }
-	    elsif ($r->method eq "DELETE")
-	    {
-		my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
-		if (!$md5)
-		{
-		    $c->send_response (HTTP::Response->new
-				       (400, "Bad request",
-					[], "Bad request\n"));
-		    last;
-		}
+    	if (!$self->_store ($md5, \$newdata, \$metadata))
+    	{
+    	    $self->_log($c,$self->{errstr});
+    	    $c->send_response (HTTP::Response->new
+    			       (500, "Fail",
+    				[], $self->{errstr}));
+    	    next;
+    	}
+    	$c->send_response (HTTP::Response->new
+    			   (200, "OK",
+    			    ["X-Block-Size", length($newdata)],
+    			    "$md5\n"));
+        }
+        elsif ($r->method eq "DELETE")
+        {
+    	my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
+    	if (!$md5)
+    	{
+    	    $c->send_response (HTTP::Response->new
+    			       (400, "Bad request",
+    				[], "Bad request\n"));
+    	    last;
+    	}
 
-		# verify signature
-		$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
-		my $signedmessage = $1;
-		my $plainmessage = $2;
-		my $newdata = $3;
+    	# verify signature
+    	$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
+    	my $signedmessage = $1;
+    	my $plainmessage = $2;
+    	my $newdata = $3;
 
-		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
+    	my ($verified,$keyid) = Warehouse::_verify($signedmessage);
 
-		if (!$verified)
-		{
-		    $self->_log($c, "SigFail");
-		}
-		my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
-		$checktime += 0;
+    	if (!$verified)
+    	{
+    	    $self->_log($c, "SigFail");
+    	}
+    	my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
+    	$checktime += 0;
 #		if (!$verified ||
-		if (time - $checktime > 300 ||
-		    time - $checktime < -300 ||
-		    $checkmd5 ne $md5)
-		{
-		    my $resp = HTTP::Response->new
-			(401, "SigFail",
-			 [], "Signature verification failed.\n");
-		    $c->send_response ($resp);
-		    last;
-		}
-		if (!$verified)
-		{
-		    $self->_log($c, "SigFail ignored");
-		}
-		if ($c->peerhost() ne $Warehouse::keep_controller_ip)
-		{
-		    my $resp = HTTP::Response->new
-			(401, "Unauthorized",
-			 [], "Only the controller can do that.\n");
-		    $c->send_response ($resp);
-		    last;
-		}
+    	if (time - $checktime > 300 ||
+    	    time - $checktime < -300 ||
+    	    $checkmd5 ne $md5)
+    	{
+    	    my $resp = HTTP::Response->new
+    		(401, "SigFail",
+    		 [], "Signature verification failed.\n");
+    	    $c->send_response ($resp);
+    	    last;
+    	}
+    	if (!$verified)
+    	{
+    	    $self->_log($c, "SigFail ignored");
+    	}
+    	if ($c->peerhost() ne $Warehouse::keep_controller_ip)
+    	{
+    	    my $resp = HTTP::Response->new
+    		(401, "Unauthorized",
+    		 [], "Only the controller can do that.\n");
+    	    $c->send_response ($resp);
+    	    last;
+    	}
 
-		if ($self->_delete ($md5))
-		{
-		    $c->send_response (HTTP::Response->new
-				       (200, "OK", [], "$md5\n"));
-		}
-		else
-		{
-		    $self->_log($c,$self->{errstr});
-		    $c->send_response (HTTP::Response->new
-				       (500, "Fail", [], $self->{errstr}));
-		    last;
-		}
-	    }
-	    else
-	    {
-		$c->send_response (HTTP::Response->new
-				   (501, "Not implemented",
-				    [], "Not implemented.\n"));
-	    }
-	    last if $kill;
-	}
-	$c->close if $c;
-	last if $kill;
+    	if ($self->_delete ($md5))
+    	{
+    	    $c->send_response (HTTP::Response->new
+    			       (200, "OK", [], "$md5\n"));
+    	}
+    	else
+    	{
+    	    $self->_log($c,$self->{errstr});
+    	    $c->send_response (HTTP::Response->new
+    			       (500, "Fail", [], $self->{errstr}));
+    	    last;
+    	}
+        }
+        else
+        {
+    	$c->send_response (HTTP::Response->new
+    			   (501, "Not implemented",
+    			    [], "Not implemented.\n"));
+        }
     }
+    $c->close if $c;
     print(scalar (localtime) . " " . "stop\n");
 }
 
@@ -490,12 +569,21 @@ sub _store
     my @errstr;
     my $errstr;
     my $dirs = $self->{Directories};
+    my $fhandle;
     for (0..$#$dirs)
     {
-	my $dir = $dirs->[0];
+        my $dir = $dirs->[0];
+      	$dir =~ /^(.*?)\/([^\/]+)$/;
+        open($fhandle,">$1/$2/.lock");
+        print STDERR "LOCK: opened file\n" if ($ENV{DEBUG});
+        if (not flock($fhandle,LOCK_EX | LOCK_NB)) {
+            close($fhandle);
+            next;
+	}
 	if (!sysopen (F, "$dir/$md5", O_WRONLY|O_CREAT|O_EXCL))
 	{
 	    $errstr = "can't create $dir/$md5: $!";
+            close($fhandle);
 	    next;
 	}
 	if (!print F $$dataref)
@@ -503,12 +591,14 @@ sub _store
 	    $errstr = "can't write $dir/$md5: $!";
 	    close F;
 	    unlink "$dir/$md5";
+            close($fhandle);
 	    next;
 	}
 	if (!close F)
 	{
 	    $errstr = "error closing $dir/$md5: $!";
 	    unlink "$dir/$md5";
+            close($fhandle);
 	    next;
 	}
 	if (sysopen (M, "$dir/$md5.meta", O_RDWR|O_CREAT))
@@ -517,6 +607,8 @@ sub _store
 	    print M $$metaref;
 	    close M;
 	}
+        close($fhandle);
+
 	return $md5;
     }
     continue
