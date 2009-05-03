@@ -134,7 +134,7 @@ close MAQ or die "mapmerge pipe failed";
 
 my (@hashes) = $stream =~ /\b([0-9a-f]{32}\S*)/g;
 my $hashes = join (",", @hashes);
-$stream .= `whget $hashes - | ./usr/bin/maq mapcheck \"$ENV{KNOB_REFERENCEFILE}\" - | whput --as-stream --use-filename=mapcheck.txt -`;
+$stream .= `whget $hashes - | ./usr/bin/maq mapcheck \"$ENV{KNOB_REFERENCEFILE}\" /dev/stdin | whput --as-stream --use-filename=mapcheck.txt -`;
 $? == 0 or die "mapcheck pipe failed: $!";
 
 print STDERR "+++mrout $stream+++\n";
