@@ -36,21 +36,28 @@ else
 {
     traverse ($localbase, "", ".", \$manifest);
 
-    $whc->write_start;
-    $whc->write_data ($manifest);
-    my $manifest_key = $whc->write_finish;
-
-    print "$manifest_key\n";
-
-    if (my $manifestname = $opt{"name"})
+    if ($opt{"as-stream"})
     {
-	print STDERR "storing: $manifestname => $manifest_key\n" if $opt{"verbose"};
+	print $manifest;
+    }
+    else
+    {
+	$whc->write_start;
+	$whc->write_data ($manifest);
+	my $manifest_key = $whc->write_finish;
 
-	my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
-	$whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
+	print "$manifest_key\n";
 
-	my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
-	print STDERR "$manifestname => $checkkey\n" if $opt{"verbose"};
+	if (my $manifestname = $opt{"name"})
+	{
+	    print STDERR "storing: $manifestname => $manifest_key\n" if $opt{"verbose"};
+
+	    my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
+	    $whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
+
+	    my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
+	    print STDERR "$manifestname => $checkkey\n" if $opt{"verbose"};
+	}
     }
 }
 
