@@ -2229,6 +2229,13 @@ sub _unsafe_decrypt_block
 	return 1;
     }
 
+    if ($status_output !~ /\S/ &&
+	$error_output =~ /zlib inflate problem: incorrect header check/) {
+	# This data is probably (!) not encrypted. Return input unchanged.
+	print $$dataref;
+	return 1;
+    }
+
     if ($status_output =~ /NO_SECKEY/) {
 	# Properly encrypted data, but we don't have the secret key. Return input unchanged.
 	print $$dataref;
