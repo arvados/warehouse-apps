@@ -1,0 +1,15 @@
+#!/bin/bash
+
+###MR_DESCRIPTION:gap build
+###MR_INPUT:manifest
+
+set -o pipefail
+set -e
+
+cd "$MR_JOB_TMP"
+whget -r "$MR_INPUT0/" - | gzip -cdf | tar --strip 1 -xf -
+time make >make.log
+time make install >make-install.log
+rm -rf build
+out=`tar --exclude=build -czf - . | whput --in-manifest --use-filename=gap.tgz -`
+echo >&2 "+++mrout $out+++"
