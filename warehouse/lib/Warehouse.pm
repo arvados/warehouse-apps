@@ -1913,6 +1913,11 @@ sub _cryptsetup
     {
 	$self->{config}->{encrypt} = [ split (/\s*,\s*/, $ENV{ENCRYPT_ALL}) ];
     }
+    elsif ($ENV{NODECRYPT})
+    {
+	$self->{config}->{nodecrypt} = 1;
+	return;
+    }
     $self->{config}->{cryptmap_name_prefix} ||= "/gpg/".Digest::MD5::md5_hex (join (",", sort @{$self->{config}->{encrypt}}))."/";
 
     if (length ($ENV{HOME}) &&
