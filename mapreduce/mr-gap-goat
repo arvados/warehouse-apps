@@ -1,0 +1,91 @@
+#!/usr/bin/perl
+
+###MR_DESCRIPTION:gap goat
+###MR_INPUT:manifest
+###MR_KNOBS:REFERENCE_FASTA=d8015b94de9332dcdedd138542f6a278
+###MR_KNOBS:GAP_TGZ=d5c65c54a5b7ecf1fb21ab2894803b67
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+
+$ENV{KNOB_REFERENCE_FASTA} ||= "d8015b94de9332dcdedd138542f6a278";
+$ENV{KNOB_GAP_TGZ} ||= "d5c65c54a5b7ecf1fb21ab2894803b67";
+
+chdir ($ENV{MR_JOBSTEP_TMP}) or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+    my $ref = new Warehouse::Manifest (whc => $whc,
+				       key => $ENV{MR_INPUT0});
+    while (my $s = $ref->subdir_next)
+    {
+	my $stream = $s->as_string;
+	print STDERR "+++mrjobstep 1 $stream+++\n";
+    }
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+    exit 0;
+}
+
+if ($ENV{MR_LEVEL} == 1)
+{
+    mkdir ("Data");
+
+    # Make sure we have the GAP binaries in MR_JOB_TMP
+
+    my $target = "$ENV{MR_JOB_TMP}/gap_tgz";
+    if (open (L, "+>>", "$target.lock") &&
+	flock (L, LOCK_EX) &&
+	!-e ("$target.done") &&
+	!-e ("$target.started"))
+    {
+	open (D, "+>>", "$target.started");
+	close D;
+	system ("whget -r $ENV{KNOB_GAP_TGZ}/ - | tar -C $ENV{MR_JOB_TMP} -xzf -") == 0
+	    or die "whget|tar died";
+	open (D, "+>>", "$target.done");
+	close D;
+    }
+    close L;
+    die if !-e ("$target.done");
+
+    # Get the images
+
+    mkdir ("Images");
+
+    my $hashes = join (",", $ENV{MR_INPUT} =~ / ([0-9a-f]{32}\S*)/g);
+    system ("whget $hashes - | gzip -cdf | tar -C Images -xf -") == 0
+	or die "whget $hashes - |gzip -cdf|tar died";
+
+    # Get the reference genome and prepare it for pipeline
+    # (TODO -- or put in separate mrfunction?)
+
+    # Create Makefiles etc.
+
+    system ("$ENV{MR_JOB_TMP}/bin/goat_pipeline.py ./Images --make . >goat_pipeline.log") == 0
+	or die "goat_pipeline failed";
+
+    chdir (`echo -n Data/*Firecrest*`) or die "chdir failed";
+    open OFFSETS, ">", "default_offsets.txt";
+    print OFFSETS <<EOF;
+ 0 0 0 0
+ 0 0 0 0
+ 0 0 0 0
+ 0 0 0 0
+EOF
+;
+    close OFFSETS or die;
+
+    system ("time make recursive >../../make.log") == 0 or die "make failed";
+
+    mkdir ("$ENV{MR_JOBSTEP_TMP}/out");
+    system ("mv Bustard*/*qseq* $ENV{MR_JOBSTEP_TMP}/out/") == 0 or die;
+    chdir ("$ENV{MR_JOBSTEP_TMP}/out");
+    my $out = `whput --as-stream .`;
+    chomp $out;
+    print "+++mrout $out+++\n";
+}
