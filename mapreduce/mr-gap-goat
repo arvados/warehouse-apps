@@ -15,7 +15,9 @@ use Fcntl ':flock';
 $ENV{KNOB_REFERENCE_FASTA} ||= "d8015b94de9332dcdedd138542f6a278";
 $ENV{KNOB_GAP_TGZ} ||= "d5c65c54a5b7ecf1fb21ab2894803b67";
 
-chdir ($ENV{MR_JOBSTEP_TMP}) or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
+mkdir ($ENV{MR_JOBSTEP_TMP}."/RunFolder");
+chdir ($ENV{MR_JOBSTEP_TMP}."/RunFolder") or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
+
 my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
@@ -87,5 +89,5 @@ EOF
     chdir ("$ENV{MR_JOBSTEP_TMP}/out");
     my $out = `whput --as-stream .`;
     chomp $out;
-    print "+++mrout $out+++\n";
+    print STDERR "+++mrout $out+++\n";
 }
