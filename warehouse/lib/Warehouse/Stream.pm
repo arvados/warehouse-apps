@@ -56,6 +56,7 @@ sub _init
   $self->{bufpos} = 0;
   $self->{bufcursor} = 0;
   $self->{buf} = "";
+  $self->{async_writes} = 0;
   $self->rewind;
   return $self;
 }
@@ -270,24 +271,109 @@ sub _write_flush
       return 1;
     }
 
-    my $hash = $self->{whc}->store_block (substr ($self->{write_buf},
-						  0, $writesize));
-    if (!$hash)
+    $self->_finish_async_writes ($ENV{ASYNC_WRITE} - 1) or return undef;
+    my $pid;
+    my $r;
+    my $w;
+    if ($ENV{ASYNC_WRITE} > $self->{async_writes} &&
+	pipe ($r, $w) &&
+	defined ($pid = fork()))
     {
-      sleep 1;
-      return undef;
+      if ($pid > 0)
+      {
+	++$self->{async_writes};
+	printf STDERR ("spawned child %d reader %s\n",
+		       $pid, $r)
+	    if $ENV{DEBUG_ASYNC_WRITE};
+	close $w;
+	push @{$self->{myhashes}}, { pid => $pid, readhandle => $r };
+      }
+      else
+      {
+	close $r;
+	close STDOUT;
+	close STDIN;
+	select $w;
+	my $hash = $self->{whc}->store_block (substr ($self->{write_buf},
+						      0, $writesize));
+	if ($hash)
+	{
+	  print $w $hash;
+	  close $w;
+	  exit 1 if $ENV{DEBUG_ASYNC_WRITE_FAIL};
+	  exit 0;
+	}
+	exit 1;
+      }
     }
-
-    if ($self->{write_hint_keep})
+    else
     {
-      my $keephash = $self->{whc}->store_in_keep (hash => $hash);
-      $hash = $keephash if $keephash;
-    }
+      my $hash = $self->{whc}->store_block (substr ($self->{write_buf},
+						    0, $writesize));
+      if (!$hash)
+      {
+	sleep 1;
+	return undef;
+      }
 
-    push @{$self->{myhashes}}, $hash;
+      if ($self->{write_hint_keep})
+      {
+	my $keephash = $self->{whc}->store_in_keep (hash => $hash);
+	$hash = $keephash if $keephash;
+      }
+
+      push @{$self->{myhashes}}, $hash;
+    }
     substr $self->{write_buf}, 0, $writesize, "";
   }
+
+  if ($flushall)
+  {
+    $self->_finish_async_writes (0) or return undef;
+  }
+
   return 1;
+}
+
+sub _finish_async_writes
+{
+  my $self = shift;
+  my $wantmax = shift;
+  my $ok = 1;
+  for (my $i = 0; $i <= $#{$self->{myhashes}}; $i++)
+  {
+    return $ok if ($self->{async_writes} <= $wantmax ||
+		   $self->{async_writes} == 0);
+
+    if (ref $self->{myhashes}->[$i])
+    {
+      printf STDERR ("child %d read\n",
+		     $self->{myhashes}->[$i]->{pid})
+	  if $ENV{DEBUG_ASYNC_WRITE};
+
+      my $r = $self->{myhashes}->[$i]->{readhandle};
+      my $hash = <$r>;
+      $ok = undef if !$hash;
+
+      printf STDERR ("child %d returned %s\n",
+		     $self->{myhashes}->[$i]->{pid},
+		     $hash)
+	  if $ENV{DEBUG_ASYNC_WRITE};
+
+      waitpid $self->{myhashes}->[$i]->{pid}, 0;
+      $ok = undef if $? != 0;
+
+      printf STDERR ("child %d finished exit 0x%x\n",
+		     $self->{myhashes}->[$i]->{pid},
+		     $?)
+	  if $ENV{DEBUG_ASYNC_WRITE};
+
+      $self->{myhashes}->[$i] = $hash;
+
+      --$self->{async_writes};
+    }
+  }
+  return $ok;
 }
 
 
