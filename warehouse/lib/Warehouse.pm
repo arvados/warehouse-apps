@@ -1139,6 +1139,52 @@ sub store_manifest_by_name
     my $reqtext = "$newkey $oldkey $name";
     my $signedreq = $self->_sign ($reqtext);
 
+    if ($ENV{TEST_SCRUBBED_MANIFEST} && @{$self->{config}->{encrypt}})
+    {
+	# make a scrubbed manifest and store it as ${name}~
+	my $scrubbed = "";
+	my $unscrubbed = $self->fetch_block ($newkey);
+	return undef if !defined $scrubbed;
+	while ($unscrubbed =~ /(.*?)\n/g)
+	{
+	    my $line = $1;
+	    my $streamsize = 0;
+	    $scrubbed .= ".";
+	    while ($line =~ /(\S+)/g)
+	    {
+		my $word = $1;
+		last if $word =~ /^\d+:\d+:/;
+		if ($word =~ /^([0-9a-f]{32})/)
+		{
+		    my $hash = $1;
+		    my ($size) = $word =~ /\+(\d+)/;
+		    $streamsize = undef if !defined $size;
+		    $streamsize += $size if defined $streamsize;
+		    if (defined $size)
+		    {
+			$scrubbed .= " $hash+$size+K@".$self->{keep_name};
+		    }
+		    else
+		    {
+			$scrubbed .= " $hash+K@".$self->{keep_name};
+		    }
+		}
+	    }
+	    if (defined $streamsize)
+	    {
+		$scrubbed .= "0:$streamsize:-\n";
+	    }
+	    else
+	    {
+		$scrubbed .= "0:0:-\n";
+	    }
+	}
+	local $self->{config}->{encrypt} = [];
+	my $scrubbedkey = $self->store_in_keep (dataref => \$scrubbed);
+	my $oldkey = $self->fetch_manifest_key_by_name ($name."~");
+	$self->store_manifest_by_name ($scrubbedkey, $oldkey, $name."~");
+    }
+
     my $url = "http://".$self->{name_warehouse_servers}."/put";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $signedreq);
