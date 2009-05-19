@@ -68,7 +68,7 @@ if ($ENV{MR_LEVEL} == 1)
 
     # Create Makefiles etc.
 
-    system ("$ENV{MR_JOB_TMP}/bin/goat_pipeline.py ./Images --make . >goat_pipeline.log") == 0
+    system ("$ENV{MR_JOB_TMP}/bin/goat_pipeline.py ./Images --make >goat_pipeline.log") == 0
 	or die "goat_pipeline failed";
 
     chdir (`echo -n Data/*Firecrest*`) or die "chdir failed";
