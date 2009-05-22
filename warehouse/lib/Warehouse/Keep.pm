@@ -542,9 +542,16 @@ sub _fetch
     for my $dir (@$dirs)
     {
 	sysopen (F, "$dir/$md5", O_RDONLY) or next;
+
+	my $lockhandle;
+        open($lockhandle,">>$dir/.lock");
+	flock($lockhandle,LOCK_EX);
+
 	local $/ = undef;
 	my $data = <F>;
 	close F;
+
+	close($lockhandle);
 
 	if ($opt->{touch})
 	{
@@ -568,22 +575,26 @@ sub _store
     my $metaref = shift;
     my @errstr;
     my $errstr;
-    my $dirs = $self->{Directories};
-    my $fhandle;
-    for (0..$#$dirs)
+    my $dirs = $self->{Directories}; # should shuffle this XXX
+    my $lockhandle;
+    for my $try (0..($#$dirs * 2 + 1))
     {
         my $dir = $dirs->[0];
-      	$dir =~ /^(.*?)\/([^\/]+)$/;
-        open($fhandle,">$1/$2/.lock");
+
+	# First time around, try a non-blocking lock on each disk.
+	# Second time around, wait for the first disk to be free.
+
+        open($lockhandle,">>$dir/.lock");
         print STDERR "LOCK: opened file\n" if ($ENV{DEBUG});
-        if (not flock($fhandle,LOCK_EX | LOCK_NB)) {
-            close($fhandle);
+	my $lock_non_block = ($try <= $#$dirs) ? LOCK_NB : 0;
+        if (not flock($lockhandle, LOCK_EX | $lock_non_block)) {
+            close($lockhandle);
             next;
 	}
 	if (!sysopen (F, "$dir/$md5", O_WRONLY|O_CREAT|O_EXCL))
 	{
 	    $errstr = "can't create $dir/$md5: $!";
-            close($fhandle);
+            close($lockhandle);
 	    next;
 	}
 	if (!print F $$dataref)
@@ -591,14 +602,14 @@ sub _store
 	    $errstr = "can't write $dir/$md5: $!";
 	    close F;
 	    unlink "$dir/$md5";
-            close($fhandle);
+            close($lockhandle);
 	    next;
 	}
 	if (!close F)
 	{
 	    $errstr = "error closing $dir/$md5: $!";
 	    unlink "$dir/$md5";
-            close($fhandle);
+            close($lockhandle);
 	    next;
 	}
 	if (sysopen (M, "$dir/$md5.meta", O_RDWR|O_CREAT))
@@ -607,7 +618,7 @@ sub _store
 	    print M $$metaref;
 	    close M;
 	}
-        close($fhandle);
+        close($lockhandle);
 
 	return $md5;
     }
