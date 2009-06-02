@@ -908,7 +908,7 @@ sub store_in_keep
 	    }
 	}
     }
-    $arg{nnodes} ||= 1;
+    $arg{nnodes} = 1 if $arg{nnodes} < 1;
 
     my $reqtext = time . " " . $md5;
     my $signedreq = $self->_sign ($reqtext);
@@ -963,7 +963,7 @@ sub store_in_keep
 	next if /^K.*\@(.*)/ && $1 eq $self->{keep_name};
 	$hash .= "+$_";
     }
-    $hash .= "+K".unpack("H*", $bits)."\@".$self->{keep_name};
+    $hash .= "+K\@" . $self->{keep_name};
     return $hash if !wantarray;
     return ($hash, $nnodes);
 }

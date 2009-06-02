@@ -263,9 +263,9 @@ sub snap
 	$whc->write_data (". ");
 	foreach (split (",", $key))
 	{
-	    if ($key !~ /\+K\d+\@\Q$warehouse_name\E\b/ && $opt{'keep'})
+	    if ($key !~ /\+K[0-9a-f]*\@\Q$warehouse_name\E\b/ && $opt{'keep'})
 	    {
-		$key .= "+K03\@$warehouse_name";
+		$key .= "+K\@$warehouse_name";
 	    }
 	    $whc->write_data ($key." ");
 	}
@@ -289,9 +289,9 @@ sub snap
 		my $needthis = 0;
 		foreach (split (",", $arg))
 		{
-		    if ($opt{'keep'} && !/\+K\d+\@\Q$warehouse_name\E\b/)
+		    if ($opt{'keep'} && !/\+K[0-9a-f]*\@\Q$warehouse_name\E\b/)
 		    {
-			$_ .= "+K03\@$warehouse_name";
+			$_ .= "+K\@$warehouse_name";
 		    }
 		    push @snapblocks, $_;
 		    s/^([0-9a-f]{32})(\+.*)?$/$1/;

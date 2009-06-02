@@ -21,7 +21,7 @@ my @manifest = $whc->list_manifests;
 foreach (@manifest)
 {
     my ($key, $name) = @$_;
-    if ($key =~ /\+K([0-9a-f]{2})/)
+    if ($key =~ /\+K([0-9a-f]{0,2})/)
     {
 	print STDERR ".";
 	next if $key !~ /^([0-9a-f]{32})\b/;
@@ -195,6 +195,14 @@ sub expecthowmany
 		++$expect;
 	    }
 	}
+    }
+    elsif ($hash =~ /\+K([0-9a-f])/)
+    {
+	$expect = $1;
+    }
+    elsif ($hash =~ /\+K/)
+    {
+	$expect = 2;
     }
     return $expect || 1;
 }
