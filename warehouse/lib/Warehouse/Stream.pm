@@ -405,6 +405,7 @@ sub write_finish
 				  $self->{write_filename});
   delete $self->{write_filename};
   delete $self->{write_filepos};
+  return 1;
 }
 
 
