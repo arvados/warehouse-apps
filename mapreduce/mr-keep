@@ -34,7 +34,7 @@ elsif ($ENV{MR_LEVEL} == 1)
   foreach (@hash)
   {
     last if /^\d+:/;
-    if (/\+K([0-9a-f]{2})\@(\w+)/ && $2 eq $whc->{warehouse_name})
+    if (/\+K([0-9a-f]{0,2})\@(\w+)/ && $2 eq $whc->{warehouse_name})
     {
       # already stored in Keep -- try to fetch required number of copies
       if ($whc->fetch_from_keep ($_, { nnodes => $nnodes }))
