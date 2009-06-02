@@ -43,8 +43,8 @@ else
     else
     {
 	$whc->write_start;
-	$whc->write_data ($manifest);
-	my $manifest_key = $whc->write_finish;
+	$whc->write_data ($manifest) or die "Failed to write manifest: ".$whc->errstr;
+	my $manifest_key = $whc->write_finish or die "Failed to write manifest: ".$whc->errstr;
 
 	print "$manifest_key\n";
 
@@ -81,7 +81,7 @@ sub write_file
     my $ok;
     while ($ok = read F, $buf, 2**26)
     {
-	$s->write_data ($buf);
+	$s->write_data ($buf) or die "Warehouse::Stream::write_data failed";
     }
     die "Error reading $filename: $!" if !defined $ok;
     close F;
@@ -138,17 +138,23 @@ sub traverse
     closedir D;
     my @stream_hashes = $whc->write_finish;
 
-    for (@file_positions) { s/ /_/g; }
-    my $subdir_stream = "$remotedir @stream_hashes @file_positions\n";
-    $$manifestref .= $subdir_stream;
+    if (@file_positions) {
 
-    printf STDERR ("$remotedir: stored %d files in %d blocks\n",
-		   scalar @file_positions,
-		   scalar @stream_hashes)
-        if $opt{v} >= 1;
+	die "Write failed: ".$whc->errstr if !@stream_hashes;
 
-    printf STDERR $whc->iostats 
-        if $opt{v} >= 2;
+	for (@file_positions) { s/ /_/g; }
+
+	my $subdir_stream = "$remotedir @stream_hashes @file_positions\n";
+	$$manifestref .= $subdir_stream;
+
+	printf STDERR ("$remotedir: stored %d files in %d blocks\n",
+		       scalar @file_positions,
+		       scalar @stream_hashes)
+	    if $opt{v} >= 1;
+
+	printf STDERR $whc->iostats 
+	    if $opt{v} >= 2;
+    }
 
     foreach my $subdir (@subdir)
     {
