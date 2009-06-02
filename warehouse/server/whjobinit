@@ -190,7 +190,8 @@ create table if not exists mrjob (
  steps_done int,
  steps_running int,
  unique(global_id),
- index(output)
+ index(output(255)),
+ index(input0(255))
 )
   },
 	   qq{
