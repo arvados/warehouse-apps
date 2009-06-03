@@ -69,7 +69,7 @@ Port number to listen on.  Default is 25107.
 =cut
 
 my $children = 0;
-my %Children = 0;
+my %Children = ();
 my $TotalChildren = 0;
 
 
@@ -109,7 +109,7 @@ sub _init
       # Any sort of death trigger results in death of all
       my $sig = shift;
       $SIG{$sig} = 'IGNORE';
-      kill 'INT' => keys %{$Warehouse::Keep::Children};
+      kill 'INT' => keys %Warehouse::Keep::Children;
       die "killed by $sig\n";
       exit;
     };
@@ -119,7 +119,7 @@ sub _init
 
     $self->{ChildLifeTime} = 100;
 
-    $Warehouse::Keep::TotalChildren = $#{$self->{Directories}} + 1;
+    $Warehouse::Keep::TotalChildren = 4 * ($#{$self->{Directories}} + 1);
     print STDERR "Total children: " . $Warehouse::Keep::TotalChildren . "\n" if ($ENV{DEBUG});
 
     $Warehouse::Keep::children = 0;
@@ -164,12 +164,10 @@ sub REAPER
     my $stiff;
     while (($stiff = waitpid(-1, &WNOHANG)) > 0) {
         print STDERR "child $stiff terminated -- status $?" if ($ENV{DEBUG});
+        delete $Warehouse::Keep::Children{$stiff};
         $Warehouse::Keep::children--;
         print STDERR "in Reaper: children at $Warehouse::Keep::children\n" if ($ENV{DEBUG});
-        #delete ${$self->{Children}}{$stiff};
-        delete $Warehouse::Keep::Children{$stiff};
     }
-
     $SIG{CHLD} = \&REAPER;
 }
 
