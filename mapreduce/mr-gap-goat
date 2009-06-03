@@ -88,6 +88,5 @@ EOF
     system ("mv Bustard*/*qseq* $ENV{MR_JOBSTEP_TMP}/out/") == 0 or die;
     chdir ("$ENV{MR_JOBSTEP_TMP}/out");
     my $out = `whput --as-stream .`;
-    chomp $out;
     print STDERR "+++mrout $out+++\n";
 }
