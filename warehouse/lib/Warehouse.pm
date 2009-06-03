@@ -1019,6 +1019,7 @@ sub fetch_from_keep
 	$self->{stats_keepread_attempts} ++;
 	my $keep_host_port = $keeps->[$keep_id];
 	my $url = "http://".$keep_host_port."/".$md5;
+	warn "Keep GET $url\n" if $ENV{DEBUG_KEEP} >= 2;
 	my $req = HTTP::Request->new (GET => $url);
 	my $r = $self->{ua}->request ($req);
 	if ($r->is_success)
