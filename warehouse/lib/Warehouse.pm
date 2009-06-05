@@ -995,7 +995,7 @@ sub fetch_from_keep
     my ($kbits, $kwhid);
     foreach (@hints)
     {
-	if (/^K([0-9a-f]+)(?:\@(\w+))$/)
+	if (/^K([0-9a-f]*)(?:\@(\w+))$/)
 	{
 	    $kbits = pack ("H*", $1);
 	    map { $kwhid = $_ if $2 eq $warehouses->[$_]->{name} }
