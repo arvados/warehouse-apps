@@ -63,12 +63,21 @@ if ($ENV{MR_LEVEL} == 1)
     system ("whget $hashes - | gzip -cdf | tar -C Images -xf -") == 0
 	or die "whget $hashes - |gzip -cdf|tar died";
 
+    open CONFIG, ">", "config.txt";
+    print CONFIG <<EOF;
+ANALYSIS sequence
+USE_BASES all
+SEQUENCE_FORMAT --fastq
+EOF
+;
+    close CONFIG or die;
+
     # Get the reference genome and prepare it for pipeline
     # (TODO -- or put in separate mrfunction?)
 
     # Create Makefiles etc.
 
-    system ("$ENV{MR_JOB_TMP}/bin/goat_pipeline.py ./Images --make >goat_pipeline.log") == 0
+    system ("$ENV{MR_JOB_TMP}/bin/goat_pipeline.py ./Images --GERALD=./config.txt --make >goat_pipeline.log") == 0
 	or die "goat_pipeline failed";
 
     chdir (`echo -n Data/*Firecrest*`) or die "chdir failed";
@@ -85,7 +94,7 @@ EOF
     system ("time make recursive >../../make.log") == 0 or die "make failed";
 
     mkdir ("$ENV{MR_JOBSTEP_TMP}/out");
-    system ("mv Bustard*/*qseq* $ENV{MR_JOBSTEP_TMP}/out/") == 0 or die;
+    system ("mv Bustard*/GERALD*/*sequence.txt $ENV{MR_JOBSTEP_TMP}/out/") == 0 or die;
     chdir ("$ENV{MR_JOBSTEP_TMP}/out");
     my $out = `whput --as-stream .`;
     print STDERR "+++mrout $out+++\n";
