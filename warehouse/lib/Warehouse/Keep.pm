@@ -265,166 +265,166 @@ sub process
     	}
     	elsif ($r->method eq "PUT")
     	{
-    	my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
-    	if (!$md5)
-    	{
-    	    $c->send_response (HTTP::Response->new
-    			       (400, "Bad request",
-    				[], "Bad request\n"));
-    	    last;
-    	}
+	    my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
+	    if (!$md5)
+	    {
+		$c->send_response (HTTP::Response->new
+				   (400, "Bad request",
+				    [], "Bad request\n"));
+		last;
+	    }
 
-    	# verify signature
-    	$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
-    	my $signedmessage = $1;
-    	my $plainmessage = $2;
-    	my $newdata = $3;
+	    # verify signature
+	    $r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
+	    my $signedmessage = $1;
+	    my $plainmessage = $2;
+	    my $newdata = $3;
 
-    	my ($verified,$keyid) = $whc->_verify($signedmessage);
+	    my ($verified,$keyid) = $whc->_verify($signedmessage);
 
-    	if (!$verified)
-    	{
-    	    $self->_log ($c, "SigFail");
-    	}
-    	my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
-    	$checktime += 0;
+	    if (!$verified)
+	    {
+		$self->_log ($c, "SigFail");
+	    }
+	    my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
+	    $checktime += 0;
 #		if (!$verified ||
-    	if (time - $checktime > 300 ||
-    	    time - $checktime < -300 ||
-    	    $checkmd5 ne $md5)
-    	{
-    	    my $resp = HTTP::Response->new
-    		(401, "SigFail",
-    		 [], "Signature verification failed.\n");
-    	    $c->send_response ($resp);
-    	    last;
-    	}
-    	if (!$verified)
-    	{
-    	    $self->_log ($c, "SigFail ignored");
-    	}
+	    if (time - $checktime > 300 ||
+		time - $checktime < -300 ||
+		$checkmd5 ne $md5)
+	    {
+		my $resp = HTTP::Response->new
+		    (401, "SigFail",
+		     [], "Signature verification failed.\n");
+		$c->send_response ($resp);
+		last;
+	    }
+	    if (!$verified)
+	    {
+		$self->_log ($c, "SigFail ignored");
+	    }
 
-    	my $dataref = $self->_fetch ($md5, { touch => 1 });
-    	if ($dataref && ($newdata eq "" || $$dataref eq $newdata))
-    	{
-    	    $c->send_response (HTTP::Response->new
-    			       (200, "OK",
-    				["X-Block-Size", length($$dataref)],
-    				"$md5\n"));
-    	    next;
-    	}
+	    my $dataref = $self->_fetch ($md5, { touch => 1 });
+	    if ($dataref && ($newdata eq "" || $$dataref eq $newdata))
+	    {
+		$c->send_response (HTTP::Response->new
+				   (200, "OK",
+				    ["X-Block-Size", length($$dataref)],
+				    "$md5\n"));
+		next;
+	    }
 
-    	if ($dataref)
-    	{
-    	    $c->send_response (HTTP::Response->new
-    			       (400, "Collision",
-    				[], "$md5\n"));
-    	    next;
-    	}
+	    if ($dataref)
+	    {
+		$c->send_response (HTTP::Response->new
+				   (400, "Collision",
+				    [], "$md5\n"));
+		next;
+	    }
 
-    	my $metadata = "remote_addr=".$c->peerhost()."\n"
-    	    . "time=".$checktime."\n"
-    	    . "\n"
-    	    . "$signedmessage";
+	    my $metadata = "remote_addr=".$c->peerhost()."\n"
+		. "time=".$checktime."\n"
+		. "\n"
+		. "$signedmessage";
 
-    	if ($newdata eq "")
-    	{
-    	    if (!$self->{whc})
-    	    {
-    		$c->send_response (HTTP::Response->new
-    				   (500, "No client object",
-    				    [], "No client object\n"));
-    		next;
-    	    }
-    	    if (!defined ($newdata = $self->{whc}->fetch_block ($md5)))
-    	    {
-    		$c->send_response (HTTP::Response->new
-    				   (404, "Data not found in cache",
-    				    [], "Data not found in cache\n"));
-    		next;
-    	    }
-    	}
+	    if ($newdata eq "")
+	    {
+		if (!$self->{whc})
+		{
+		    $c->send_response (HTTP::Response->new
+				       (500, "No client object",
+					[], "No client object\n"));
+		    next;
+		}
+		if (!defined ($newdata = $self->{whc}->fetch_block ($md5)))
+		{
+		    $c->send_response (HTTP::Response->new
+				       (404, "Data not found in cache",
+					[], "Data not found in cache\n"));
+		    next;
+		}
+	    }
 
-    	if (!$self->_store ($md5, \$newdata, \$metadata))
-    	{
-    	    $self->_log($c,$self->{errstr});
-    	    $c->send_response (HTTP::Response->new
-    			       (500, "Fail",
-    				[], $self->{errstr}));
-    	    next;
-    	}
-    	$c->send_response (HTTP::Response->new
-    			   (200, "OK",
-    			    ["X-Block-Size", length($newdata)],
-    			    "$md5\n"));
+	    if (!$self->_store ($md5, \$newdata, \$metadata))
+	    {
+		$self->_log($c,$self->{errstr});
+		$c->send_response (HTTP::Response->new
+				   (500, "Fail",
+				    [], $self->{errstr}));
+		next;
+	    }
+	    $c->send_response (HTTP::Response->new
+			       (200, "OK",
+				["X-Block-Size", length($newdata)],
+				"$md5\n"));
         }
         elsif ($r->method eq "DELETE")
         {
-    	my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
-    	if (!$md5)
-    	{
-    	    $c->send_response (HTTP::Response->new
-    			       (400, "Bad request",
-    				[], "Bad request\n"));
-    	    last;
-    	}
+	    my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
+	    if (!$md5)
+	    {
+		$c->send_response (HTTP::Response->new
+				   (400, "Bad request",
+				    [], "Bad request\n"));
+		last;
+	    }
 
-    	# verify signature
-    	$r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
-    	my $signedmessage = $1;
-    	my $plainmessage = $2;
-    	my $newdata = $3;
+	    # verify signature
+	    $r->content =~ /(-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE.*?-----END PGP SIGNATURE-----\n)(.*)$/s;
+	    my $signedmessage = $1;
+	    my $plainmessage = $2;
+	    my $newdata = $3;
 
-    	my ($verified,$keyid) = $whc->_verify($signedmessage);
+	    my ($verified,$keyid) = $whc->_verify($signedmessage);
 
-    	if (!$verified)
-    	{
-    	    $self->_log($c, "SigFail");
-    	}
-    	my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
-    	$checktime += 0;
+	    if (!$verified)
+	    {
+		$self->_log($c, "SigFail");
+	    }
+	    my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
+	    $checktime += 0;
 #		if (!$verified ||
-    	if (time - $checktime > 300 ||
-    	    time - $checktime < -300 ||
-    	    $checkmd5 ne $md5)
-    	{
-    	    my $resp = HTTP::Response->new
-    		(401, "SigFail",
-    		 [], "Signature verification failed.\n");
-    	    $c->send_response ($resp);
-    	    last;
-    	}
-    	if (!$verified)
-    	{
-    	    $self->_log($c, "SigFail ignored");
-    	}
-    	if ($c->peerhost() ne $Warehouse::keep_controller_ip)
-    	{
-    	    my $resp = HTTP::Response->new
-    		(401, "Unauthorized",
-    		 [], "Only the controller can do that.\n");
-    	    $c->send_response ($resp);
-    	    last;
-    	}
+	    if (time - $checktime > 300 ||
+		time - $checktime < -300 ||
+		$checkmd5 ne $md5)
+	    {
+		my $resp = HTTP::Response->new
+		    (401, "SigFail",
+		     [], "Signature verification failed.\n");
+		$c->send_response ($resp);
+		last;
+	    }
+	    if (!$verified)
+	    {
+		$self->_log($c, "SigFail ignored");
+	    }
+	    if ($c->peerhost() ne $Warehouse::keep_controller_ip)
+	    {
+		my $resp = HTTP::Response->new
+		    (401, "Unauthorized",
+		     [], "Only the controller can do that.\n");
+		$c->send_response ($resp);
+		last;
+	    }
 
-    	if ($self->_delete ($md5))
-    	{
-    	    $c->send_response (HTTP::Response->new
-    			       (200, "OK", [], "$md5\n"));
-    	}
-    	else
-    	{
-    	    $self->_log($c,$self->{errstr});
-    	    $c->send_response (HTTP::Response->new
-    			       (500, "Fail", [], $self->{errstr}));
-    	    last;
-    	}
+	    if ($self->_delete ($md5))
+	    {
+		$c->send_response (HTTP::Response->new
+				   (200, "OK", [], "$md5\n"));
+	    }
+	    else
+	    {
+		$self->_log($c,$self->{errstr});
+		$c->send_response (HTTP::Response->new
+				   (500, "Fail", [], $self->{errstr}));
+		last;
+	    }
         }
         else
         {
-    	$c->send_response (HTTP::Response->new
-    			   (501, "Not implemented",
-    			    [], "Not implemented.\n"));
+	    $c->send_response (HTTP::Response->new
+			       (501, "Not implemented",
+				[], "Not implemented.\n"));
         }
     }
     $c->close if $c;
