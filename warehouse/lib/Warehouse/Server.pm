@@ -95,6 +95,8 @@ sub _init
 
     $self->{daemon} or die "HTTP::Daemon::new failed";
 
+    $self->{whc} = new Warehouse;
+
     $self->_reconnect;
 
     return $self;
@@ -209,7 +211,7 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
+		my ($verified,$keyid) = $self->{whc}->_verify($signedmessage);
 
 		if (!$verified)
 		{
@@ -343,7 +345,7 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
+		my ($verified,$keyid) = $self->{whc}->_verify($signedmessage);
 
 		if (!$verified)
 		{
@@ -443,7 +445,7 @@ sub run
 		# verify signature
 		$signedmessage =~ /-----BEGIN PGP SIGNED MESSAGE-----\n.*?\n\n(.*?)\n-----BEGIN PGP SIGNATURE/s;
 		my $plainmessage = $1;
-		my ($verified,$keyid) = Warehouse::_verify($signedmessage);
+		my ($verified,$keyid) = $self->{whc}->_verify($signedmessage);
 
 		if (!$verified)
 		{

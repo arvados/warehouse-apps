@@ -169,6 +169,7 @@ sub REAPER
         print STDERR "in Reaper: children at $Warehouse::Keep::children\n" if ($ENV{DEBUG});
     }
     $SIG{CHLD} = \&REAPER;
+    alarm 1;
 }
 
 =head2 url
@@ -222,6 +223,7 @@ sub process
 {
     my $self = shift;
     my $c = shift;
+    my $whc = new Warehouse;
     while (my $r = $c->get_request)
     {
         print(scalar (localtime) .
@@ -278,7 +280,7 @@ sub process
     	my $plainmessage = $2;
     	my $newdata = $3;
 
-    	my ($verified,$keyid) = Warehouse::_verify($signedmessage);
+    	my ($verified,$keyid) = $whc->_verify($signedmessage);
 
     	if (!$verified)
     	{
@@ -373,7 +375,7 @@ sub process
     	my $plainmessage = $2;
     	my $newdata = $3;
 
-    	my ($verified,$keyid) = Warehouse::_verify($signedmessage);
+    	my ($verified,$keyid) = $whc->_verify($signedmessage);
 
     	if (!$verified)
     	{

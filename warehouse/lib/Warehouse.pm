@@ -929,13 +929,19 @@ sub store_in_keep
 	$req->header ('Content-Length' => length $signedreq);
 	$req->content ($signedreq);
 
+	if ($ENV{DEBUG_KEEP})
+	{
+	    printf STDERR ("bucket %d %s ",
+			   $bucket, $keep_host_port);
+	}
+
 	my $r = $self->{ua}->request ($req);
 	if ($ENV{DEBUG_KEEP})
 	{
-	    printf STDERR ("bucket %d %s %d %s\n",
-			   $bucket, $keep_host_port,
+	    printf STDERR ("%d %s\n",
 			   $r->is_success, $r->status_line);
 	}
+
 	if ($r->is_success)
 	{
 	    $self->{stats_keepwrote_blocks} ++;
@@ -2387,7 +2393,10 @@ sub _verify
 {
   warn "gpg: _verify\n" if $ENV{DEBUG_GPG};
 
+  my $self = shift;
   my $text = shift;
+
+  return undef if $self->{config}->{nodecrypt};
 
   eval "use GnuPG::Interface";
   return (0,'') if $@;
