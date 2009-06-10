@@ -35,8 +35,10 @@ if ($ENV{MR_LEVEL} == 0)
   }
   elsif ($$in =~ m{ ^\.(/\S+)? (\ [0-9a-f]{32}\S*)+ \ \d+:\d+: }sx)
   {
+    my $linenumber = 0;
     foreach (split ("\n", $$in))
     {
+      ++$linenumber;
       if (m{ ^\.(/\S+)?	# stream name
 		 ( (?:\ [0-9a-f]{32}\S*) +) # data blocks
 		 ( (\ \d+:\d+:(\S+)_1\.fastq(\.gz)?\ \d+:\d+:(\S+)_2\.fastq(\.gz)?) +)
@@ -55,7 +57,7 @@ if ($ENV{MR_LEVEL} == 0)
       }
       elsif ($$in =~ m{ ^\.(/\S+)?	# stream name
 			    ( (?:\ [0-9a-f]{32}\S*) +) # data blocks
-			    ( (\ \d+:\d+:(\S+)\.fastq(\.gz)?) + )
+			    ( (\ \d+:\d+:(\S+)(\.fastq|\.txt)(\.gz)?) + )
 			    $ }sx)
       {
 	# unpaired reads
@@ -67,6 +69,10 @@ if ($ENV{MR_LEVEL} == 0)
 	{
 	  print STDERR "+++mrjobstep 1 $datablocks $_+++\n";
 	}
+      }
+      else
+      {
+	warn "Did not find .fastq or .txt files on line $linenumber";
       }
     }
     print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
