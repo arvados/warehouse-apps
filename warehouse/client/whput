@@ -81,7 +81,7 @@ sub write_file
     my $ok;
     while ($ok = read F, $buf, 2**26)
     {
-	$s->write_data ($buf) or die "Warehouse::Stream::write_data failed";
+	$s->write_data (\$buf) or die "Warehouse::Stream::write_data failed: ".$s->errstr;
     }
     die "Error reading $filename: $!" if !defined $ok;
     close F;

@@ -308,13 +308,15 @@ sub _write_flush
     }
     else
     {
-      my $hash = $self->{whc}->store_block (substr ($self->{write_buf},
-						    0, $writesize));
-      if (!$hash)
+      my $hash;
+      for (1..4)
       {
+	$hash = $self->{whc}->store_block (substr ($self->{write_buf},
+						   0, $writesize));
+	last if $hash;
 	sleep 1;
-	return undef;
       }
+      return undef if !$hash;
 
       if ($self->{write_hint_keep})
       {
@@ -327,11 +329,7 @@ sub _write_flush
     substr $self->{write_buf}, 0, $writesize, "";
   }
 
-  if ($flushall)
-  {
-    $self->_finish_async_writes (0) or return undef;
-  }
-
+  return $self->_finish_async_writes (0) if ($flushall);
   return 1;
 }
 
@@ -661,6 +659,20 @@ sub tell
 {
     my $self = shift;
     return $self->{bufpos} + $self->{bufcursor};
+}
+
+
+
+=head2 errstr
+
+    warn $stream->errstr;
+
+=cut
+
+sub errstr
+{
+  my $self = shift;
+  return $self->{whc}->errstr;
 }
 
 1;
