@@ -86,6 +86,7 @@ sub _init
     my Warehouse::Keep $self = shift;
     
     ref $self->{Directories} eq "ARRAY" or die "No Directories specified";
+    $#{$self->{Directories}} >= 0 or die "No Directories specified";
 
     $self->{ListenAddress} = "0.0.0.0"
 	if !defined $self->{ListenAddress};
@@ -591,7 +592,7 @@ sub _store
     my $errstr;
     my $dirs = $self->{Directories}; # should shuffle this XXX
     my $lockhandle;
-    for my $try (0..($#$dirs * 2 + 1))
+    for (my $try = 0; $try < ($#$dirs * 2 + 2); $try++)
     {
         my $dir = $dirs->[0];
 
