@@ -592,7 +592,8 @@ sub _store
     my $errstr;
     my $dirs = $self->{Directories}; # should shuffle this XXX
     my $lockhandle;
-    for (my $try = 0; $try < ($#$dirs * 2 + 2); $try++)
+    my $try = 0;
+    while ($try < ($#$dirs * 2 + 2))
     {
         my $dir = $dirs->[0];
 
@@ -641,6 +642,7 @@ sub _store
     {
 	push @errstr, $errstr;
 	push @$dirs, shift @$dirs;
+	++$try;
     }
     $self->{errstr} = join (", ", @errstr);
     return undef;
