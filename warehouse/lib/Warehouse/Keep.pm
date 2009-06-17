@@ -383,14 +383,28 @@ sub process
 	    }
 	    my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 	    $checktime += 0;
-#		if (!$verified ||
-	    if (time - $checktime > 300 ||
-		time - $checktime < -300 ||
-		$checkmd5 ne $md5)
+	    if (0 && !$verified)
 	    {
 		my $resp = HTTP::Response->new
 		    (401, "SigFail",
 		     [], "Signature verification failed.\n");
+		$c->send_response ($resp);
+		last;
+	    }
+	    if (time - $checktime > 300 ||
+		time - $checktime < -300)
+	    {
+		my $resp = HTTP::Response->new
+		    (401, "TimeFail",
+		     [], "Timestamp verification failed.\n");
+		$c->send_response ($resp);
+		last;
+	    }
+	    if ($checkmd5 ne $md5)
+	    {
+		my $resp = HTTP::Response->new
+		    (401, "MD5Fail",
+		     [], "MD5 verification failed.\n");
 		$c->send_response ($resp);
 		last;
 	    }
