@@ -1268,17 +1268,17 @@ sub keys_are_equal
 sub knobs_are_equal
 {
     my ($a, $b) = @_;
-    my @a = split "\\n", $a;
-    my @b = split "\\n", $b;
+    my @a = split /\\n/, $a;
+    my @b = split /\\n/, $b;
     for (@b) {
 	if (@a && $a[0] eq $_) { shift @a; next; }
-	if (s/^([^=]+)\?=/$1=/) {
-	    if ($a[0] eq $_) { shift @a; next; }
+	if (s/^([^=]+)\?=/${1}=/) {
+	    if (@a && $a[0] eq $_) { shift @a; next; }
 	} else {
 	    return undef;
 	}
     }
-    return !@a;
+    return @a == 0;
 }
 
 sub start_new_job
@@ -1289,7 +1289,7 @@ sub start_new_job
     my $revision = $want->{revision}->[1] || $revision_default;
     $revision = $want->{revision}->[0] if $revision < $want->{revision}->[0];
     my $knobs = $want->{knobs};
-    $knobs =~ s/(^|\\n)[^=]+\?=.*?(\\n|$)//;
+    $knobs =~ s/(^|\\n)[^=]+\?=.*?(\\n|$)/$1/g;
     my %jobspec = ("nodes" => $nodes,
 		   "photons" => 1,
 		   "revision" => $revision,
@@ -1310,7 +1310,8 @@ sub start_new_job
 	return;
     }
 
-    my $id = $whc->job_new (%jobspec) || -1;
+    my $id = -1;
+    #my $id = $whc->job_new (%jobspec) || -1;
     print ("$id -- queued ",
 	   scalar(localtime),
 	   "\n",
