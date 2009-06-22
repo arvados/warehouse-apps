@@ -1310,8 +1310,7 @@ sub start_new_job
 	return;
     }
 
-    my $id = -1;
-    #my $id = $whc->job_new (%jobspec) || -1;
+    my $id = $whc->job_new (%jobspec) || -1;
     print ("$id -- queued ",
 	   scalar(localtime),
 	   "\n",
