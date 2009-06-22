@@ -3,13 +3,13 @@
 
 ###MR_DESCRIPTION:maq mapview
 ###MR_INPUT:manifest
-###MR_KNOBS:MAQ_DEB=ec9aba3c23989d66f813589e2d4450db
+###MR_KNOBS:MAQ_DEB=715ba7d3755667609193c68cdb5dec04
 
 use strict; 
 use Warehouse;
 use Safepipe;
 
-$ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
+$ENV{KNOB_MAQ_DEB} ||= "715ba7d3755667609193c68cdb5dec04";
 
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 chdir ($tmp) or die "chdir $tmp: $!";

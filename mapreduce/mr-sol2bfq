@@ -4,7 +4,7 @@
 ###MR_DESCRIPTION:convert solexa reads to <=2000000-read bfq streams
 ###MR_INPUT:hash
 ###MR_KNOBS:ALL2STD_PL=3733b1cc64cf5f8e59511c0ecdc42d44
-###MR_KNOBS:MAQ_DEB=ec9aba3c23989d66f813589e2d4450db
+###MR_KNOBS:MAQ_DEB=715ba7d3755667609193c68cdb5dec04
 ###MR_KNOBS:INPUTFORMAT=solexa
 
 use strict; 
@@ -12,7 +12,7 @@ use Warehouse;
 use Safepipe;
 
 $ENV{KNOB_ALL2STD_PL} ||= "3733b1cc64cf5f8e59511c0ecdc42d44";
-$ENV{KNOB_MAQ_DEB} ||= "ec9aba3c23989d66f813589e2d4450db";
+$ENV{KNOB_MAQ_DEB} ||= "715ba7d3755667609193c68cdb5dec04";
 $ENV{KNOB_INPUTFORMAT} ||= "solexa";
 
 my $tmp = $ENV{MR_JOBSTEP_TMP};
