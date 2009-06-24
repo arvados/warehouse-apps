@@ -515,28 +515,43 @@ sub _index
     my $index = "";
     for my $dir (@$dirs)
     {
-	opendir (D, "$dir/") or next;
-	while (local $_ = readdir D)
+	$self->_scandir ($dir, \$index);
+    }
+    return $index;
+}
+
+
+sub _scandir
+{
+    my $self = shift;
+    my $dir = shift;
+    my $index = shift;
+    my $dirhandle;
+    opendir ($dirhandle, "$dir/") or return;
+    while (local $_ = readdir $dirhandle)
+    {
+	if (/^[0-9a-f]{3}$/) {
+	    $self->_scandir ("$dir/$_", $index);
+	}
+	elsif (/^[0-9a-f]{32}$/)
 	{
-	    next unless /^[0-9a-f]{32}$/;
-	    $index .= $_;
+	    $$index .= $_;
 	    my @stat = stat "$dir/$_";
 	    if (@stat)
 	    {
-		$index .= "+$stat[7]";
+		$$index .= "+$stat[7]";
 		my $mtime = $stat[9];
 		@stat = stat "$dir/$_.meta";
 		if (@stat && $mtime < $stat[9])
 		{
 		    $mtime = $stat[9];
 		}
-		$index .= " $mtime";
+		$$index .= " $mtime";
 	    }
-	    $index .= "\n";
+	    $$index .= "\n";
 	}
-	closedir D;
     }
-    return $index;
+    closedir $dirhandle;
 }
 
 
@@ -570,7 +585,20 @@ sub _fetch
     my $dirs = $self->{Directories};
     for my $dir (@$dirs)
     {
-	sysopen (F, "$dir/$md5", O_RDONLY) or next;
+	my $realdir;
+	my ($first12bits) = $md5 =~ /^(...)/;
+	if (sysopen (F, "$dir/$md5", O_RDONLY))
+	{
+	    $realdir = $dir;
+	}
+	elsif (sysopen (F, "$dir/$first12bits/$md5", O_RDONLY))
+	{
+	    $realdir = "$dir/$first12bits";
+	}
+	else
+	{
+	    next;
+	}
 
 	my $lockhandle;
         open($lockhandle,">>$dir/.lock");
@@ -585,14 +613,14 @@ sub _fetch
 	if ($opt->{touch})
 	{
 	    my $now = time;
-	    if (!utime $now, $now, "$dir/$md5.meta") {
-		sysopen (F, "$dir/$md5.meta", O_CREAT|O_RDWR);
+	    if (!utime $now, $now, "$realdir/$md5.meta") {
+		sysopen (F, "$realdir/$md5.meta", O_CREAT|O_RDWR);
 		close F;
 	    }
 	}
 
 	return \$data if md5_hex ($data) eq $md5;
-	warn "Checksum mismatch: $dir/$md5\n";
+	warn "Checksum mismatch: $realdir/$md5\n";
     }
     $self->{errstr} = "Not found: $md5";
     return undef;
@@ -624,28 +652,32 @@ sub _store
             close($lockhandle);
             next;
 	}
-	if (!sysopen (F, "$dir/$md5", O_WRONLY|O_CREAT|O_EXCL))
+
+	my ($first12bits) = $md5 =~ /^(...)/;
+
+	mkdir "$dir/$first12bits";
+	if (!sysopen (F, "$dir/$first12bits/$md5", O_WRONLY|O_CREAT|O_EXCL))
 	{
-	    $errstr = "can't create $dir/$md5: $!";
+	    $errstr = "can't create $dir/$first12bits/$md5: $!";
             close($lockhandle);
 	    next;
 	}
 	if (!print F $$dataref)
 	{
-	    $errstr = "can't write $dir/$md5: $!";
+	    $errstr = "can't write $dir/$first12bits/$md5: $!";
 	    close F;
-	    unlink "$dir/$md5";
+	    unlink "$dir/$first12bits/$md5";
             close($lockhandle);
 	    next;
 	}
 	if (!close F)
 	{
-	    $errstr = "error closing $dir/$md5: $!";
-	    unlink "$dir/$md5";
+	    $errstr = "error closing $dir/$first12bits/$md5: $!";
+	    unlink "$dir/$first12bits/$md5";
             close($lockhandle);
 	    next;
 	}
-	if (sysopen (M, "$dir/$md5.meta", O_RDWR|O_CREAT))
+	if (sysopen (M, "$dir/$first12bits/$md5.meta", O_RDWR|O_CREAT))
 	{
 	    sysseek (M, 0, 2);
 	    print M $$metaref;
