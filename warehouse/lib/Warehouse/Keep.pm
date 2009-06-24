@@ -584,8 +584,11 @@ sub _fetch
 
 	if ($opt->{touch})
 	{
-	    sysopen (F, "$dir/$md5.meta", O_RDWR|O_CREAT);
-	    close F;
+	    my $now = time;
+	    if (!utime $now, $now, "$dir/$md5.meta") {
+		sysopen (F, "$dir/$md5.meta", O_CREAT|O_RDWR);
+		close F;
+	    }
 	}
 
 	return \$data if md5_hex ($data) eq $md5;
