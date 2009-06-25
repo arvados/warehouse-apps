@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+
+# This is meant to be run on each Keep storage node AFTER
+# libwarehouse-perl has been upgraded to 2838 or later *AND* keepd has
+# been restarted.
+
+use strict;
+
+my $hostname = `hostname -s`; chop $hostname;
+my @mount = `mount`;
+my @children;
+for (@mount)
+{
+    if (m|^/dev/\S+ on (\S+)|)
+    {
+	my $fs = $1;
+	if (chdir "$fs/keep")
+	{
+	    my $child = fork();
+	    do { warn "fork: $!"; next; } if !defined $child;
+	    do { push @children, $child; next; } if $child;
+
+	    $SIG{INT} = sub { $main::INT = 1; };
+
+	    my $p = 0;		# progress == number of files moved
+	    if (opendir D, ".")
+	    {
+		while (my $f = readdir D)
+		{
+		    if ($f =~ /^[0-9a-f]{32}$/)
+		    {
+			print STDERR "$hostname:$fs $p\n" if ++$p % 1000 == 1;
+			my ($pre) = $f =~ /^(...)/;
+			rename $f, "$pre/$f";
+			rename "$f.meta", "$pre/$f.meta";
+		    }
+		    do { warn "$hostname:$fs stopping\n"; last } if $main::INT;
+		}
+	    }
+	    exit 0;
+	}
+    }
+}
+$SIG{INT} = sub { kill 2, @children; warn "waiting for children\n"; };
+while (@children) { wait; pop @children; }
