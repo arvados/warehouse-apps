@@ -31,6 +31,7 @@ for (@mount)
 		    {
 			print STDERR "$hostname:$fs $p\n" if ++$p % 1000 == 1;
 			my ($pre) = $f =~ /^(...)/;
+			mkdir $pre unless -d $pre;
 			rename $f, "$pre/$f";
 			rename "$f.meta", "$pre/$f.meta";
 		    }
