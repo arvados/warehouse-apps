@@ -35,6 +35,12 @@ $Warehouse::warehouses
 	   mogilefs_directory_class => "directory",
 	   mogilefs_file_class => "file",
 	   keeps => [ map { "templeton$_" } (2..48) ],
+	   keeps_status => {
+	       "templeton3" => "down", # no disks
+	       "templeton6" => "down", # no disks
+	       "templeton12" => "down",
+	       "templeton27" => "down", # no disks
+	   },
        }
        ];
 
