@@ -1080,7 +1080,15 @@ sub _hash_keeps
     $warehouse_id = 0 if !$keeps && !defined $warehouse_id;
     $keeps = $warehouses->[$warehouse_id]->{keeps} if defined $warehouse_id;
 
-    map { s{$}{:25107} unless m{:} } @$keeps;
+    for (@$keeps)
+    {
+	if (!/:/)
+	{
+	    $self->{config}->{keeps_status}->{"$_:25107"} =
+		$self->{config}->{keeps_status}->{$_};
+	    s/$/:25107/;
+	}
+    }
 
     return ($keeps, 0) if $#$keeps < 1;
 
@@ -1101,7 +1109,13 @@ sub _hash_keeps
 	push @bucket, splice @avail, $pick, 1;
     }
 
-    return ($keeps, @bucket, @avail);
+    push @bucket, @avail;
+    for (my $i = 0; $i <= $#bucket; $i++)
+    {
+	splice (@bucket, $i, 1) if $self->{config}->{keeps_status}->{$keeps->[$bucket[$i]]} =~ /^down/;
+    }
+
+    return ($keeps, @bucket);
 }
 
 
