@@ -271,7 +271,11 @@ sub _write_flush
       return 1;
     }
 
-    $self->_finish_async_writes ($ENV{ASYNC_WRITE} - 1) or return undef;
+    if (!$self->_finish_async_writes ($ENV{ASYNC_WRITE} - 1))
+    {
+      warn "_finish_async_writes failed";
+      return undef;
+    }
     my $pid;
     my $r;
     my $w;
@@ -316,7 +320,10 @@ sub _write_flush
 	last if $hash;
 	sleep 1;
       }
-      return undef if !$hash;
+      if (!$hash) {
+	warn "store_block failed after 4 attempts";
+	return undef;
+      }
 
       if ($self->{write_hint_keep})
       {
