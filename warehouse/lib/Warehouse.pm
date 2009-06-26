@@ -920,10 +920,18 @@ sub store_in_keep
     my ($keeps, @bucket) = $self->_hash_keeps (undef, $md5);
     foreach my $bucket (0..$#bucket)
     {
-	last if $bucket > 7;
+	last if $bucket > 14;
+
 	my $keep_id = $bucket[$bucket];
-	$self->{stats_keepwrote_attempts} ++;
 	my $keep_host_port = $keeps->[$keep_id];
+
+	if ($self->{config}->{keeps_status}->{$keep_host_port} =~ /^full (\d+)/
+	    && $1 > time - 3600)
+	{
+	    next;
+	}
+
+	$self->{stats_keepwrote_attempts} ++;
 	my $url = "http://".$keep_host_port."/".$md5;
 	my $req = HTTP::Request->new (PUT => $url);
 	$req->header ('Content-Length' => length $signedreq);
@@ -954,6 +962,11 @@ sub store_in_keep
 	else
 	{
 	    $self->{errstr} = $r->status_line;
+	    if ($self->{errstr} eq "Full")
+	    {
+		$self->{config}->{keeps_status}->{$keep_host_port} =
+		    "full " . scalar time;
+	    }
 	}
     }
     if (!$nnodes)

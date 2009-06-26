@@ -106,6 +106,8 @@ sub _init
 
     $self->{whc} = new Warehouse;
 
+    $self->{dir_status} = {};
+
     $SIG{HUP} = $SIG{INT} = $SIG{TERM} = sub {
       # Any sort of death trigger results in death of all
       my $sig = shift;
@@ -363,8 +365,15 @@ sub process
 	    if (!$self->_store ($md5, \$newdata, \$metadata))
 	    {
 		$self->_log($c,$self->{errstr});
+		my $status_number = 500;
+		my $status_phrase = "Fail";
+		if ($self->{errstr} =~ /^no space left on device$/)
+		{
+		    $status_number = 503;
+		    $status_phrase = "Full";
+		}
 		$c->send_response (HTTP::Response->new
-				   (500, "Fail",
+				   ($status_number, $status_phrase,
 				    [], $self->{errstr}));
 		next;
 	    }
@@ -642,6 +651,12 @@ sub _store
     {
         my $dir = $dirs->[0];
 
+	if ($self->{dir_status}->{$dir} =~ /^full (\d+)/ && $1 > time - 3600)
+	{
+	    $errstr = "No space left on device";
+	    next;
+	}
+
 	# First time around, try a non-blocking lock on each disk.
 	# Second time around, wait for the first disk to be free.
 
@@ -659,12 +674,14 @@ sub _store
 	if (!sysopen (F, "$dir/$first12bits/$md5", O_WRONLY|O_CREAT|O_EXCL))
 	{
 	    $errstr = "can't create $dir/$first12bits/$md5: $!";
+	    $self->act_on_disk_error ($!, $dir);
             close($lockhandle);
 	    next;
 	}
 	if (!print F $$dataref)
 	{
 	    $errstr = "can't write $dir/$first12bits/$md5: $!";
+	    $self->act_on_disk_error ($!, $dir);
 	    close F;
 	    unlink "$dir/$first12bits/$md5";
             close($lockhandle);
@@ -673,6 +690,7 @@ sub _store
 	if (!close F)
 	{
 	    $errstr = "error closing $dir/$first12bits/$md5: $!";
+	    $self->act_on_disk_error ($!, $dir);
 	    unlink "$dir/$first12bits/$md5";
             close($lockhandle);
 	    next;
@@ -689,7 +707,7 @@ sub _store
     }
     continue
     {
-	push @errstr, $errstr;
+	push @errstr, $errstr if !@errstr || $errstr[-1] ne $errstr;
 	push @$dirs, shift @$dirs;
 	++$try;
     }
@@ -705,5 +723,17 @@ sub _log
     my $message = shift;
     print (scalar(localtime) . " " . $c->peerhost() . " L " . $message . "\n");
 }
+
+sub act_on_disk_error
+{
+    my $self = shift;
+    my $error = shift;
+    my $dir = shift;
+    if ($error =~ /no space left on device/i)
+    {
+	$self->{dir_status}->{$dir} = "full " . scalar time;
+    }
+}
+
 
 1;
