@@ -367,7 +367,7 @@ sub process
 		$self->_log($c,$self->{errstr});
 		my $status_number = 500;
 		my $status_phrase = "Fail";
-		if ($self->{errstr} =~ /^no space left on device$/)
+		if ($self->{errstr} =~ /^([^,]*no space left on device,* *)+$/)
 		{
 		    $status_number = 503;
 		    $status_phrase = "Full";
@@ -671,14 +671,14 @@ sub _store
 	mkdir "$dir/$first12bits";
 	if (!sysopen (F, "$dir/$first12bits/$md5", O_WRONLY|O_CREAT|O_EXCL))
 	{
-	    $errstr = "$dir/$first12bits/$md5: $!";
+	    $errstr = "create $dir/$first12bits/$md5: $!";
 	    $self->act_on_disk_error ($!, $dir);
             close($lockhandle);
 	    next;
 	}
 	if (!print F $$dataref)
 	{
-	    $errstr = "$dir/$first12bits/$md5: $!";
+	    $errstr = "write $dir/$first12bits/$md5: $!";
 	    $self->act_on_disk_error ($!, $dir);
 	    close F;
 	    unlink "$dir/$first12bits/$md5";
@@ -687,7 +687,7 @@ sub _store
 	}
 	if (!close F)
 	{
-	    $errstr = "$dir/$first12bits/$md5: $!";
+	    $errstr = "close $dir/$first12bits/$md5: $!";
 	    $self->act_on_disk_error ($!, $dir);
 	    unlink "$dir/$first12bits/$md5";
             close($lockhandle);
@@ -705,7 +705,7 @@ sub _store
     }
     continue
     {
-	push @errstr, $errstr if !@errstr || $errstr[-1] ne $errstr;
+	push @errstr, $errstr if !grep { $_ eq $errstr } @errstr;
 	push @$dirs, shift @$dirs;
 	++$try;
     }
