@@ -653,7 +653,7 @@ sub _store
 
 	if ($self->{dir_status}->{$dir} =~ /^full (\d+)/ && $1 > time - 3600)
 	{
-	    $errstr = "$dir/$first12bits/$md5: No space left on device";
+	    $errstr = "write $dir/$first12bits/$md5: No space left on device";
 	    next;
 	}
 
