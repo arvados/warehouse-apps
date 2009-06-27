@@ -367,7 +367,7 @@ sub process
 		$self->_log($c,$self->{errstr});
 		my $status_number = 500;
 		my $status_phrase = "Fail";
-		if ($self->{errstr} =~ /^([^,]*no space left on device,* *)+$/)
+		if ($self->{errstr} =~ /^([^,]*no space left on device,* *)+$/i)
 		{
 		    $status_number = 503;
 		    $status_phrase = "Full";
