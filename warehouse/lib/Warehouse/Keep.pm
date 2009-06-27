@@ -71,6 +71,7 @@ Port number to listen on.  Default is 25107.
 my $children = 0;
 my %Children = ();
 my $TotalChildren = 0;
+my $TERM = 0;
 
 
 sub new
@@ -111,14 +112,11 @@ sub _init
     $SIG{HUP} = $SIG{INT} = $SIG{TERM} = sub {
       # Any sort of death trigger results in death of all
       my $sig = shift;
-      $SIG{$sig} = 'IGNORE';
+      $SIG{$sig} = 'DEFAULT';
+      $Warehouse::Keep::TERM = 1;
       kill 'INT' => keys %Warehouse::Keep::Children;
-      die "killed by $sig\n";
-      exit;
+      warn "$$ killed by $sig\n";
     };
-
-    # We'll handle our child reaper in a separate sub
-    $SIG{CHLD} = \&REAPER;
 
     $self->{ChildLifeTime} = 100;
 
@@ -133,20 +131,23 @@ sub _init
 sub NewChild
 {
     my $self = shift;
-      # Daemonize away from the parent process.
-      my $pid;
-      die "Cannot fork child: $!\n" unless defined ($pid = fork);
-      if ($pid) {
+    # Daemonize away from the parent process.
+    my $pid;
+    die "Cannot fork child: $!\n" unless defined ($pid = fork);
+    if ($pid) {
         $Warehouse::Keep::Children{$pid} = 1;
         $Warehouse::Keep::children++;
         print STDERR "forked new child, we now have " . $Warehouse::Keep::children . " children\n" if ($ENV{DEBUG});
         return;
-      }
-      print STDERR "CHILD: child happy - childlifetime is $self->{ChildLifeTime}\n" if ($ENV{DEBUG});
-      # Loop for a certain number of times
-      my $i = 0;
+    }
+    print STDERR "CHILD: child happy - childlifetime is $self->{ChildLifeTime}\n" if ($ENV{DEBUG});
 
-      while ($i < $self->{ChildLifeTime}) {
+    $SIG{INT} = $SIG{HUP} = $SIG{TERM} = $SIG{CHLD} = 'DEFAULT';
+
+    # Loop for a certain number of times
+    my $i = 0;
+
+    while ($i < $self->{ChildLifeTime}) {
         print STDERR "CHILD: in loop\n" if ($ENV{DEBUG});
         $i++;
         # Accept a connection from HTTP::Daemon
@@ -156,24 +157,12 @@ sub NewChild
         print STDERR "CHILD: connect:". $c->peerhost . "\n" if ($ENV{DEBUG});
 
         $self->process($c);
-      }
-
-      warn "child terminated after $i requests";
-      exit;
-}
-
-sub REAPER 
-{
-    my $stiff;
-    while (($stiff = waitpid(-1, &WNOHANG)) > 0) {
-        print STDERR "child $stiff terminated -- status $?" if ($ENV{DEBUG});
-        delete $Warehouse::Keep::Children{$stiff};
-        $Warehouse::Keep::children--;
-        print STDERR "in Reaper: children at $Warehouse::Keep::children\n" if ($ENV{DEBUG});
     }
-    $SIG{CHLD} = \&REAPER;
-    alarm 1;
+
+    warn "child terminated after $i requests";
+    exit;
 }
+
 
 =head2 url
 
@@ -213,13 +202,19 @@ sub run {
   print STDERR "children at: $Warehouse::Keep::children\n" if ($ENV{DEBUG});
   print STDERR "TotalChildren at: $Warehouse::Keep::TotalChildren\n" if ($ENV{DEBUG});
 
-  while ( 1 ) {
+  while (!$Warehouse::Keep::TERM) {
     for (my $i = $Warehouse::Keep::children; $i < $Warehouse::Keep::TotalChildren; $i++ ) {
       $self->NewChild();
       print STDERR "Forked new; children is at $Warehouse::Keep::children; TotalChildren is at $Warehouse::Keep::TotalChildren\n" if ($ENV{DEBUG});
     }
-    sleep;
-  };
+    my $stiff = wait;
+    if ($stiff > 0) {
+        printf STDERR "child $stiff terminated, status %x", $? if $ENV{DEBUG};
+        delete $Warehouse::Keep::Children{$stiff};
+        $Warehouse::Keep::children--;
+        print STDERR " children=$Warehouse::Keep::children\n" if $ENV{DEBUG};
+    }
+  }
 }
 
 sub process 
