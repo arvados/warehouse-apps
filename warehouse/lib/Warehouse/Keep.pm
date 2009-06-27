@@ -646,7 +646,9 @@ sub _store
     {
         my $dir = $dirs->[0];
 
-	if ($self->{dir_status}->{$dir} =~ /^full (\d+)/ && $1 > time - 3600)
+	if (($self->{dir_status}->{$dir} =~ /^full (\d+)/ && $1 > time - 3600)
+	    ||
+	    (-l "$dir/full" && (readlink ("$dir/full") > time - 3600)))
 	{
 	    $errstr = "write $dir/$first12bits/$md5: No space left on device";
 	    next;
@@ -725,6 +727,7 @@ sub act_on_disk_error
     if ($error =~ /no space left on device/i)
     {
 	$self->{dir_status}->{$dir} = "full " . scalar time;
+	symlink scalar time, "$dir/full";
     }
 }
 
