@@ -230,7 +230,7 @@ sub _init
     $self->{debug_mogilefs_paths} = 0
 	if !defined $self->{debug_mogilefs_paths};
 
-    $self->{timeout} = 10
+    $self->{timeout} = 30
 	if !defined $self->{timeout};
 
     $self->{rand01} = int(rand 2);
