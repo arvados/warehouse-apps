@@ -466,7 +466,6 @@ sub process
         }
     }
     $c->close if $c;
-    print(scalar (localtime) . " " . "stop\n");
 }
 
 
