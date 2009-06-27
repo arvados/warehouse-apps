@@ -920,8 +920,6 @@ sub store_in_keep
     my ($keeps, @bucket) = $self->_hash_keeps (undef, $md5);
     foreach my $bucket (0..$#bucket)
     {
-	last if $bucket > 14;
-
 	my $keep_id = $bucket[$bucket];
 	my $keep_host_port = $keeps->[$keep_id];
 
