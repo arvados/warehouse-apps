@@ -645,6 +645,7 @@ sub _store
     my @errstr;
     my $errstr;
     my $dirs = $self->{Directories}; # should shuffle this XXX
+    my ($first12bits) = $md5 =~ /^(...)/;
     my $lockhandle;
     my $try = 0;
     while ($try < ($#$dirs * 2 + 2))
@@ -653,7 +654,7 @@ sub _store
 
 	if ($self->{dir_status}->{$dir} =~ /^full (\d+)/ && $1 > time - 3600)
 	{
-	    $errstr = "No space left on device";
+	    $errstr = "$dir/$first12bits/$md5: No space left on device";
 	    next;
 	}
 
@@ -668,19 +669,17 @@ sub _store
             next;
 	}
 
-	my ($first12bits) = $md5 =~ /^(...)/;
-
 	mkdir "$dir/$first12bits";
 	if (!sysopen (F, "$dir/$first12bits/$md5", O_WRONLY|O_CREAT|O_EXCL))
 	{
-	    $errstr = "can't create $dir/$first12bits/$md5: $!";
+	    $errstr = "$dir/$first12bits/$md5: $!";
 	    $self->act_on_disk_error ($!, $dir);
             close($lockhandle);
 	    next;
 	}
 	if (!print F $$dataref)
 	{
-	    $errstr = "can't write $dir/$first12bits/$md5: $!";
+	    $errstr = "$dir/$first12bits/$md5: $!";
 	    $self->act_on_disk_error ($!, $dir);
 	    close F;
 	    unlink "$dir/$first12bits/$md5";
@@ -689,7 +688,7 @@ sub _store
 	}
 	if (!close F)
 	{
-	    $errstr = "error closing $dir/$first12bits/$md5: $!";
+	    $errstr = "$dir/$first12bits/$md5: $!";
 	    $self->act_on_disk_error ($!, $dir);
 	    unlink "$dir/$first12bits/$md5";
             close($lockhandle);
