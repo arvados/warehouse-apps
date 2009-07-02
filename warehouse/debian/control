@@ -1,0 +1,13 @@
+Source: libwarehouse-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 4.0.2)
+Build-Depends-Indep: perl (>= 5.8.0-7), libmogilefs-client-perl, libdbi-perl, libcache-memcached-perl, libgnupg-interface-perl
+Maintainer: Ward Vandewege <ward@gnu.org>
+Standards-Version: 3.6.1
+
+Package: libwarehouse-perl
+Architecture: all
+Depends: ${perl:Depends}, ${misc:Depends}, libmogilefs-client-perl, libdbi-perl, libcache-memcached-perl (>= 1.24), libwww-perl, libio-stringy-perl, libtimedate-perl, libgnupg-interface-perl, libunix-syslog-perl, libbsd-resource-perl, libio-compress-zlib-perl, libdigest-sha-perl, bioperl, gcc, g++, libstdc++6, bison, perlmagick, imagemagick
+Description:  Warehouse -- Client and Server library for the storage warehouse.
+ Warehouse -- Client and Server library for the Free Factory storage warehouse.
