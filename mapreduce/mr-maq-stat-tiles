@@ -91,7 +91,7 @@ if ($ENV{MR_LEVEL} == 1)
   }
   die "no topdir" unless $topdir;
   my $MAQ_stat = "$MAQ_path mapstat - 2> out/cns.log";
-  my $MRS_STORE = "mrs-store ./$topdir $chr-$bucket1.snp | mrs-output";
+  my $MRS_STORE = "mrs-store ./$topdir $chr-$bucket1.txt | mrs-output";
   if ($bucket0 ne "-") {
     my $in;
     my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path mapmerge - $my_filename0 $my_filename1 | $MAQ_path rmdup - - | $MAQ_stat| $MRS_STORE"};
