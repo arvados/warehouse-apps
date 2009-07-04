@@ -93,14 +93,14 @@ if ($ENV{MR_LEVEL} == 1)
   my $MRS_STORE = "mrs-store ./$topdir $chr-$bucket1.txt | mrs-output";
   if ($bucket0 ne "-") {
     my $in;
-    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path mapmerge - $my_filename0 $my_filename1 | $MRS_STORE"};
+    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path mapmerge - $my_filename0 $my_filename1 | bzip2 -c | $MRS_STORE"};
     system ($cmd) == 0
       or die "merge failed";
     unlink $my_filename0;
     unlink $my_filename1;
   }
   else {
-    my $cmd = qq{/bin/bash -o pipefail -c "cat $my_filename1 | $MRS_STORE"};
+    my $cmd = qq{/bin/bash -o pipefail -c "cat $my_filename1 | bzip2 -c | $MRS_STORE"};
     system($cmd) == 0 or die "rmdup/stat failed";
     unlink $my_filename1;
   }
