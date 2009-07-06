@@ -90,18 +90,18 @@ if ($ENV{MR_LEVEL} == 1)
     }
   }
   die "no topdir" unless $topdir;
-  my $MAQ_indel = "$MAQ_path indelpe $ENV{KNOB_REFERENCEFILE} - 2> out/cns.log";
+  my $MAQ_indel = "$MAQ_path indelpe $ENV{KNOB_REFERENCEFILE} - $my_filename1 2> out/cns.log";
   my $MRS_STORE = "mrs-store ./$topdir $chr-$bucket1.indel | mrs-output";
   if ($bucket0 ne "-") {
     my $in;
-    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path mapmerge - $my_filename0 $my_filename1 | $MAQ_path rmdup - - | $MAQ_indel | $MRS_STORE"};
+    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_indel | $MRS_STORE"};
     system ($cmd) == 0
       or die "merge/rmdup indel failed";
     unlink $my_filename0;
     unlink $my_filename1;
   }
   else {
-    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_path rmdup - $my_filename1 | $MAQ_indel | $MRS_STORE"};
+    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_indel | $MRS_STORE"};
     system($cmd) == 0 or die "rmdup/indel failed";
     unlink $my_filename1;
   }
