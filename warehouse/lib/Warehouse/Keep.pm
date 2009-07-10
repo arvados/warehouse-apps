@@ -233,7 +233,7 @@ sub process
 
     	if ($r->method eq "GET" || $r->method eq "HEAD")
     	{
-    	    if ($r->url->path =~ /^\/index(\/([0-9a-f]{0,32}))?")
+    	    if ($r->url->path =~ /^\/index(\/([0-9a-f]{0,32}))?$/)
     	    {
     		_index_callback_init ($self, $2);
     		$c->send_response (HTTP::Response->new
