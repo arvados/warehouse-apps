@@ -233,9 +233,9 @@ sub process
 
     	if ($r->method eq "GET" || $r->method eq "HEAD")
     	{
-    	    if ($r->url->path eq "/index")
+    	    if ($r->url->path =~ /^\/index(\/([0-9a-f]{0,32}))?")
     	    {
-    		_index_callback_init ($self);
+    		_index_callback_init ($self, $2);
     		$c->send_response (HTTP::Response->new
     			       (200, "OK", [],
     				\&_index_callback));
@@ -465,12 +465,16 @@ sub process
 
 
 my $_callback_self;
+my $_callback_search;
 my $_callback_dir;
 my @_callback_dirs;
 sub _index_callback_init
 {
     $_callback_self = shift;
+    $_callback_search = shift;
     @_callback_dirs = @ { $_callback_self->{Directories} };
+
+    # open the first dir in the list [that works] in preparation for callback
     while (@_callback_dirs &&
 	   !(opendir (D, ($_callback_dir = shift @_callback_dirs))))
     { }
@@ -479,19 +483,59 @@ sub _index_callback_init
 sub _index_callback
 {
     my $file;
+
+    # get the next available file, opening the next directory if necessary
     while (1)
     {
 	$file = readdir D;
-	next if defined ($file) && $file !~ /^[0-9a-f]{32}$/;
-	last if defined $file;
-	while (1)
+
+	if (!defined $file)
 	{
-	    return undef if !@_callback_dirs;
-	    $_callback_dir = shift @_callback_dirs;
-	    next unless opendir D, $_callback_dir;
-	    last;
+	    # no files remaining in D, so open the next dir in the list
+	    while (1)
+	    {
+		# finished searching all dirs?
+		return undef if !@_callback_dirs;
+
+		$_callback_dir = shift @_callback_dirs;
+		last if opendir D, $_callback_dir;
+	    }
+	    next;
 	}
+
+	if (defined $_callback_search)
+	{
+	    if (length $_callback_search > length $file)
+	    {
+		next if $file ne
+		    substr ($_callback_search, 0, length $file);
+	    }
+	    else
+	    {
+		next if $_callback_search ne
+		    substr ($file, 0, length $_callback_search);
+	    }
+	}
+
+	# descend into subdirs using _scandir()
+	if ($file =~ /^[0-9a-f]{0,31}/ &&
+	    -d "$_callback_dir/$file") {
+	    my $index = "";
+	    $_callback_self->_scandir ("$_callback_dir/$file", \$index);
+	    next if !length $index;
+	    return $index;
+	}
+
+	# skip *.meta and other files that aren't data blocks
+	next if $file !~ /^[0-9a-f]{32}$/;
+
+	# found a data file; end loop
+	last;
     }
+
+    # the following block only handles the case where data files were
+    # stored with old code (all in one /keep dir instead of in
+    # /keep/{prefix} subdirs)
 
     my $index = $file;
     my @stat = stat "$_callback_dir/$file";
@@ -538,6 +582,11 @@ sub _scandir
 	}
 	elsif (/^[0-9a-f]{32}$/)
 	{
+	    if (defined $_callback_search &&
+		substr($_, 0, length $_callback_search) ne $_callback_search)
+	    {
+		next;
+	    }
 	    $$index .= $_;
 	    my @stat = stat "$dir/$_";
 	    if (@stat)
