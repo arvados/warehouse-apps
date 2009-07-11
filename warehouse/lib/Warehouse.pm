@@ -1509,6 +1509,16 @@ sub job_new
     my %job = @_;
     map { for ($job{$_}) { s/\\/\\\\/g; s/\n/\\n/g; } } keys %job;
 
+    if (!defined $job{"revision"})
+    {
+	my $repo = $self->get_config("svn_root");
+	$repo =~ s/\'/\'\\\'\'/g;
+	if (`svn info '$repo'` =~ /\nRevision:\s*(\d+)/)
+	{
+	    $job{"revision"} = $1;
+	}
+    }
+
     my $reqtext = join ("\n", map { $_."=".$job{$_} } keys %job);
     my $signedreq = $self->_sign ($reqtext);
 
