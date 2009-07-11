@@ -306,7 +306,7 @@ sub run
 			$where .= " and input0=?";
 			push @bindvars, $1;
 		    }
-		    elsif (/^(revision)=(.*)/)
+		    elsif (/^(revision|mrfunction|knobs|nodes)=(.*)/)
 		    {
 			$where .= " and $1=?";
 			push @bindvars, $2;
