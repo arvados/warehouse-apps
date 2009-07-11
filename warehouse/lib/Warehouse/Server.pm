@@ -306,10 +306,10 @@ sub run
 			$where .= " and input0=?";
 			push @bindvars, $1;
 		    }
-		    elsif (/^(revision|mrfunction|knobs|nodes)=(.*)/)
+		    elsif (/^(revision|mrfunction|knobs|nodes)=(.*)/s)
 		    {
 			$where .= " and $1=?";
-			push @bindvars, _unescape($2);
+			push @bindvars, $2;
 		    }
 		    elsif (/^(\d+)-(\d+)$/)
 		    {
