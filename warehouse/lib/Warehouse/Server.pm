@@ -309,7 +309,7 @@ sub run
 		    elsif (/^(revision|mrfunction|knobs|nodes)=(.*)/)
 		    {
 			$where .= " and $1=?";
-			push @bindvars, $2;
+			push @bindvars, _unescape($2);
 		    }
 		    elsif (/^(\d+)-(\d+)$/)
 		    {
