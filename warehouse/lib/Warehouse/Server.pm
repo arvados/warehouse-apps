@@ -3,6 +3,7 @@
 package Warehouse::Server;
 
 use Warehouse;
+use CGI;
 use HTTP::Daemon;
 use HTTP::Response;
 use Digest::MD5;
@@ -296,20 +297,20 @@ sub run
 		my $where = "1=1";
 		for (split (/;/, $r->url->query))
 		{
-		    if (/^outputkey=(.*)/)
+		    if (/^outputkey=(.*)/s)
 		    {
 			$where .= " and output=?";
-			push @bindvars, $1;
+			push @bindvars, CGI->unescape($1);
 		    }
-		    elsif (/^inputkey=(.*)/)
+		    elsif (/^inputkey=(.*)/s)
 		    {
 			$where .= " and input0=?";
-			push @bindvars, $1;
+			push @bindvars, CGI->unescape($1);
 		    }
 		    elsif (/^(revision|mrfunction|knobs|nodes)=(.*)/s)
 		    {
 			$where .= " and $1=?";
-			push @bindvars, $2;
+			push @bindvars, CGI->unescape($2);
 		    }
 		    elsif (/^(\d+)-(\d+)$/)
 		    {
