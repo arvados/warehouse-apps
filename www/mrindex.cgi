@@ -41,7 +41,7 @@ my $sth = $dbh->prepare("
       knobs,
       mrjob.starttime,
       mrjob.finishtime,
-      if(mrjob.finishtime is null,now(),unix_timestamp(mrjob.finishtime))-unix_timestamp(mrjob.starttime),
+      unix_timestamp(if(mrjob.finishtime is null,now(),mrjob.finishtime))-unix_timestamp(mrjob.starttime),
       steps_todo,
       steps_done,
       steps_running,
