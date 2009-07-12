@@ -41,7 +41,7 @@ my $sth = $dbh->prepare("
       knobs,
       mrjob.starttime,
       mrjob.finishtime,
-      unix_timestamp(mrjob.finishtime)-unix_timestamp(mrjob.starttime),
+      if(mrjob.finishtime is null,now(),unix_timestamp(mrjob.finishtime))-unix_timestamp(mrjob.starttime),
       steps_todo,
       steps_done,
       steps_running,
@@ -68,9 +68,10 @@ while (my @row = $sth->fetchrow)
   for (@row) { $_ = escapeHTML($_); }
   for ($row[5]) { s/,/, /g; }
   for ($row[6]) { s/\n/<br>/g; s/,/, /g; s/=/ =/g; $_ = "<code><small>$_</small></code>"; }
+  for ($row[7]) { s/^\d\d\d\d-//; }
   for ($row[8]) { s/.* /.../; }
-  for ($row[9]) { $_ = "<b>$_</b>"; }
-  $row[0] = "<a href=\"mrjob.cgi?id=$jobid\">$row[0]</a>";
+  for ($row[9]) { $_ = "<b>$_</b>" if $row[13] || !length $row[13]; }
+  # $row[0] = "<a href=\"mrjob.cgi?id=$jobid\">$row[0]</a>";
   for (14, 15)
   {
     my $raw = $_ eq 15 ? "/=" : "";
