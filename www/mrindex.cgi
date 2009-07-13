@@ -82,6 +82,7 @@ while (my @row = $sth->fetchrow)
     }
   }
   my $input0 = pop @row;
+  $input0 =~ /(^|,)([0-9a-f]{32})\+[^,]+/$1$2/g;
   if ($input0 =~ /^[0-9a-f]{32}[,0-9a-f]*$/) {
     my $atag = "<a href=\"whget.cgi/$input0/\">";
     $row[3] .= "($atag<code>".substr($input0,0,8)."</code></a>)";
