@@ -2431,8 +2431,6 @@ sub _verify
   my $self = shift;
   my $text = shift;
 
-  return undef if $self->{config}->{nodecrypt};
-
   eval "use GnuPG::Interface";
   return (0,'') if $@;
 
@@ -2469,6 +2467,7 @@ sub _verify
   close $status;
 
   waitpid $pid, 0;
+  warn "status_output is $status_output\n" if $ENV{DEBUG_GPG};
 
   if (($status_output =~ /VALIDSIG/) && ($status_output =~ /GOODSIG/)) {
     warn "gpg: good signature, keyid=$keyid\n" if $ENV{DEBUG_GPG};
