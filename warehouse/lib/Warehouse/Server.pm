@@ -610,7 +610,7 @@ sub _log
 {
     my $self = shift;
     my $c = shift;
-    print (scalar(localtime) . " " . $c->peerhost() . " L " . @_ . "\n");
+    print (scalar(localtime) . " " . $c->peerhost() . " L " . join("", @_) . "\n");
 }
 
 1;
