@@ -304,9 +304,9 @@ sub run
 		    }
 		    elsif (/^inputkey=(.*)/s)
 		    {
-			my $k = $1;
+			my $k = CGI->unescape($1);
 			$k =~ s/(^|,)([0-9a-f]{32})\+[^,]+/$1$2/g;
-			if ($k =~ /^[0-9a-f]{32}/)
+			if ($k =~ /^[0-9a-f]{32}(,[0-9a-f]{32})+$/)
 			{
 			    # this would be unnecessary if +hints were
 			    # stripped off inputkeys before being
@@ -314,9 +314,9 @@ sub run
 			    # +K@remote wouldn't be possible
 
 			    $where .= " and input0 like ? and input0 regexp ?";
-			    push @bindvars, CGI->unescape($k."%");
+			    push @bindvars, $k."%";
 			    $k =~ s/([0-9a-f]{32})/$1([+][^,]+)?/g;
-			    push @bindvars, CGI->unescape($k);
+			    push @bindvars, $k;
 			}
 			else
 			{
