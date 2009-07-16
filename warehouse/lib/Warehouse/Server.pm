@@ -313,10 +313,12 @@ sub run
 			    # stored in the database... but then
 			    # +K@remote wouldn't be possible
 
-			    $where .= " and input0 like ? and input0 regexp ?";
+			    $where .= " and input0 like ?";
 			    push @bindvars, $k."%";
+
 			    $k =~ s/([0-9a-f]{32})/$1([+][^,]+)?/g;
-			    push @bindvars, $k;
+			    $where .= " and input0 regexp ?";
+			    push @bindvars, "^".$k."\$";
 			}
 			else
 			{
