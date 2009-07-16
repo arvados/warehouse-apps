@@ -160,7 +160,7 @@ sub job_show
 			    next J;
 			}
 		    }
-		    elsif ($opt{$_} ne $j->{$_})
+		    elsif ($_ ne "inputkey" && $opt{$_} ne $j->{$_})
 		    {
 			next J;
 		    }
