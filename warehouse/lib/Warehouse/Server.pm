@@ -306,7 +306,7 @@ sub run
 		    {
 			my $k = CGI->unescape($1);
 			$k =~ s/(^|,)([0-9a-f]{32})\+[^,]+/$1$2/g;
-			if ($k =~ /^[0-9a-f]{32}(,[0-9a-f]{32})+$/)
+			if ($k =~ /^[0-9a-f]{32}(,[0-9a-f]{32})*$/)
 			{
 			    # this would be unnecessary if +hints were
 			    # stripped off inputkeys before being
