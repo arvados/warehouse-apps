@@ -323,7 +323,7 @@ sub run
 			else
 			{
 			    $where .= " and input0=?";
-			    push @bindvars, CGI->unescape($k);
+			    push @bindvars, $k;
 			}
 		    }
 		    elsif (/^(revision|mrfunction|knobs|nodes)=(.*)/s)
