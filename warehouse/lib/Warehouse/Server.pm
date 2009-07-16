@@ -304,8 +304,25 @@ sub run
 		    }
 		    elsif (/^inputkey=(.*)/s)
 		    {
-			$where .= " and input0=?";
-			push @bindvars, CGI->unescape($1);
+			my $k = $1;
+			$k =~ s/(^|,)([0-9a-f]{32})\+[^,]+/$1$2/g;
+			if ($k =~ /^[0-9a-f]{32}/)
+			{
+			    # this would be unnecessary if +hints were
+			    # stripped off inputkeys before being
+			    # stored in the database... but then
+			    # +K@remote wouldn't be possible
+
+			    $where .= " and input0 like ? and input0 regexp ?";
+			    push @bindvars, CGI->unescape($k."%");
+			    $k =~ s/([0-9a-f]{32})/$1([+][^,]+)?/g;
+			    push @bindvars, CGI->unescape($k);
+			}
+			else
+			{
+			    $where .= " and input0=?";
+			    push @bindvars, CGI->unescape($k);
+			}
 		    }
 		    elsif (/^(revision|mrfunction|knobs|nodes)=(.*)/s)
 		    {
