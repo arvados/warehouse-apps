@@ -1,7 +1,6 @@
 Install prerequisites:
 
- sudo perl -MCPAN -e 'install Cache::Memcached'
- sudo perl -MCPAN -e 'install MogileFS::Client'
+ sudo apt-get install libcache-memcached-perl libmogilefs-client-perl
 
 Create accounts and database for warehouse system:
 
