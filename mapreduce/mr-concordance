@@ -1,0 +1,182 @@
+#!/usr/bin/perl
+
+use strict;
+
+close STDIN;
+open STDOUT, "|bash -c 'set -o pipefail; whput --as-stream --use-filename=concordance.html - | mrs-output'" or die $!;
+
+my @x;
+for (my $i=0; exists $ENV{"KNOB_X$i"}; $i++)
+{
+    push @x, $ENV{"KNOB_X$i"};
+    $x[-1] .= ":X$i" if $x[-1] !~ /:/;
+}
+my @y;
+for (my $i=0; exists $ENV{"KNOB_Y$i"}; $i++)
+{
+    push @y, $ENV{"KNOB_Y$i"};
+    $y[-1] .= ":Y$i" if $y[-1] !~ /:/;
+}
+
+print "<TABLE>";
+my @xlists;
+print "<TR><TH></TH>\n";
+for my $xfile (@x)
+{
+    printf "<TH><code>%8.8s</code></TH>\n", unique_part ($xfile, @x);
+    push @xlists, &readsnplist ($xfile);
+}
+print ("<!--\n", (map { "x $_\n" } @x), (map { "y $_\n" } @y), "-->\n");
+my @xhash = map { readlink($_) =~ /([0-9a-f]{32})/ || /([0-9a-f]{32})/ } @x;
+my @yhash = map { readlink($_) =~ /([0-9a-f]{32})/ || /([0-9a-f]{32})/ } @y;
+my @snpcounts;
+print "</TR>\n";
+for my $yfile (@y)
+{
+    printf "<TR><TH><CODE>%8.8s</CODE></TH>\n", unique_part ($yfile, @y);
+    my $ylist_orig = &readsnplist ($yfile);
+    my $yhash = shift @yhash;
+    my @xscore;
+    my $xhighscore = 0;
+    for (my $xi=0; $xi <= $#xlists; $xi++)
+    {
+	my $xlist_orig = $xlists[$xi];
+
+	my $xlist = [ @$xlist_orig ];
+	my $ylist = [ @$ylist_orig ];
+	my $score_nocall_x = 0;
+	my $score_nocall_y = 0;
+	my $score_yes = 0;
+	my $score_no = 0;
+	while (@$xlist && @$ylist)
+	{
+	    my $cmp = $xlist->[0]->[0] cmp $ylist->[0]->[0]
+		|| $xlist->[0]->[1] <=> $ylist->[0]->[1];
+	    if ($cmp < 0)
+	    {
+		shift @$xlist;
+	    }
+	    elsif ($cmp > 0)
+	    {
+		shift @$ylist;
+	    }
+	    else
+	    {
+		# same position
+		my $nocall_x = $xlist->[0]->[2] =~ /^[NX]/;
+		my $nocall_y = $ylist->[0]->[2] =~ /^[NX]/;
+		if ($nocall_x && !$nocall_y)
+		{
+		    ++$score_nocall_x;
+		}
+		elsif (!$nocall_x && $nocall_y)
+		{
+		    ++$score_nocall_y;
+		}
+		elsif ($nocall_x && $nocall_y)
+		{
+		}
+		elsif ($xlist->[0]->[2] eq
+		       $ylist->[0]->[2])
+		{
+		    ++$score_yes;
+		}
+		else
+		{
+		    ++$score_no;
+		}
+		shift @$xlist;
+		shift @$ylist;
+	    }
+	}
+	my $score = ($score_yes + $score_no)
+	    ? 100*$score_yes/($score_yes+$score_no)
+	    : "-";
+	push @xscore, [$score, $score_yes, $score_no, $score_nocall_x, $score_nocall_y];
+	$xhighscore = $score if $xhighscore < $score;
+    }
+    for (my $xi=0; $xi <= $#xscore; $xi++)
+    {
+	my $score = $xscore[$xi]->[0];
+	my $star = $score > $xhighscore*.9;
+	my $redness = ($score-60) * 128/40;
+	$redness = 0 if $redness < 0;
+	my $color = sprintf ("#ff%02x%02x",
+			     255 - $redness,
+			     255 - $redness);
+	printf "<TD style=\"background: $color\">%.0f%s</TD>", $xscore[$xi]->[0], $star ? "*" : "";
+	if ($star || ($xhighscore == 0 && $xi == 0))
+	{
+	    my $xhash = $xhash[$xi];
+	    my $label = sprintf ("<code>%8.8s / %8.8s</code>",
+				 &unique_part ($yfile, @y),
+				 &unique_part ($x[$xi], @x));
+	    my ($x, $yes, $no, $nocallx, $nocally) = @ { $xscore[$xi] };
+	    push @snpcounts, qq{<TR><TH>$label</TH><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">$yes</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">$no</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/nocall-$yhash;call-$xhash">$nocally</a></TD></TR>\n};
+	    push @snpcounts, qq{<!-- $yhash $xhash $yes $no $nocally -->\n};
+	}
+    }
+    print "</TR>\n";
+}
+print "</TABLE>\n";
+unshift @snpcounts, qq{<TR><TD><u>high scoring pair (y/x)</u></TD><TD><u>concordant</u></TD><TD><u>discordant</u></TD><TD><u>nocall_y:call_x</u></TD></TR>\n};
+print "<TABLE>", @snpcounts, "</TABLE>";
+
+close STDOUT or die "writer exited $?";
+
+sub readsnplist
+{
+    my $file = shift;
+    $file =~ s/:.*//;
+    if ($file =~ /^[0-9a-f]{32}/ && !-e $file)
+    {
+	open STDIN, "-|", "whget", "-r", $file, "-" or die "whget: $!";
+	open STDIN, "-|", "gzip", "-cdf" or die "gzip: $!";
+    }
+    else
+    {
+	open STDIN, "<", $file or die "$file: $!";
+    }
+    my @snplist;
+    while (<STDIN>)
+    {
+	chomp;
+	my ($chr, $pos, $refbp, $seqbp, $extra) = split (/\t/, $_, 5);
+	push @snplist, [$chr, $pos, fasta2bin ($seqbp)]
+	    if ($pos =~ /^\d+$/ && $refbp =~ /^.$/);
+    }
+    close STDIN or die "input: $!";
+    return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
+}
+
+sub fasta2bin
+{
+    my $fasta = shift;
+    return "N" if $fasta =~ /^N/;
+    return "X" if $fasta eq "X";
+    $fasta =~ tr/a-z/A-Z/;
+    $fasta =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
+    $fasta = hex($fasta);
+    while ($fasta & ~0xf)
+    {
+	$fasta = ($fasta & 0xf) | ($fasta >> 4);
+    }
+    return $fasta;
+}
+
+sub unique_part
+{
+    @_ = @_;
+    for (@_) { s/^.*?:(.)/$1/ || s/://; s/[\r\n]//g; }
+    my $this = shift;
+    my $thislen = length($this);
+    my $ustart = $thislen;
+    my $uend = $thislen;
+    for (@_)
+    {
+	$ustart-- while substr ($this, 0, $ustart) ne substr ($_, 0, $ustart);
+	$uend-- while $uend && substr ($this, $thislen-$uend) ne substr ($_, length($_)-$uend);
+    }
+    $ustart = 0 if $ustart <= 3;
+    return substr ($this, $ustart, $thislen - $uend - $ustart);
+}
