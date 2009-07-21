@@ -252,6 +252,10 @@ sub guesstype
     {
 	return 'text/plain';
     }
+    elsif ($filename =~ /\.html?$/i)
+    {
+	return 'text/html';
+    }
     elsif ($filename =~ /^(positions|cycles)$/i)
     {
 	return 'text/plain';
