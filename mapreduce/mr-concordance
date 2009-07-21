@@ -112,7 +112,10 @@ for my $yfile (@y)
 				 &unique_part ($yfile, @y),
 				 &unique_part ($x[$xi], @x));
 	    my ($x, $yes, $no, $nocallx, $nocally) = @ { $xscore[$xi] };
-	    push @snpcounts, qq{<TR><TH>$label</TH><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;agree-$xhash">$yes</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/$yhash;disagree-$xhash">$no</a></TD><TD><a href="http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/nocall-$yhash;call-$xhash">$nocally</a></TD></TR>\n};
+	    my $yeslink = snpdig_link ("$yhash;agree-$xhash", $yes);
+	    my $nolink = snpdig_link ("$yhash;disagree-$xhash", $no);
+	    my $nclink = snpdig_link ("nocall-$yhash;call-$xhash", $nocally);
+	    push @snpcounts, qq{<TR><TH>$label</TH><TD>$yeslink</TD><TD>$nolink</TD><TD>$nclink</TD></TR>\n};
 	    push @snpcounts, qq{<!-- $yhash $xhash $yes $no $nocally -->\n};
 	}
     }
@@ -179,4 +182,12 @@ sub unique_part
     }
     $ustart = 0 if $ustart <= 3;
     return substr ($this, $ustart, $thislen - $uend - $ustart);
+}
+
+sub snpdig_link
+{
+    my $pathinfo = shift;
+    my $label = shift;
+    return $label if !exists $ENV{"KNOB_SNPDIGURL"};
+    return "<a href=\"" . $ENV{"KNOB_SNPDIGURL"} . "/$pathinfo\">$label</a>";
 }
