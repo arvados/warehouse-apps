@@ -1,0 +1,130 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:sort GFF files per chromosome and bucket
+###MR_INPUT:manifest
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use MAQ::map;
+use human;
+use Fcntl ':flock';
+
+my $MAQ_bin_key = '225ad960b8c87dd2c2b4091194ea4461';
+$ENV{KNOB_REFERENCE} ||= "99259f4330907e84fe7253bd4e52dd3e";
+$ENV{KNOB_REFERENCEFILE} ||= "homo_sapiens.bfa";
+
+my $tmp = $ENV{MR_JOB_TMP};
+
+my $MAQ_path="$tmp/maq";
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+my $input_manifest_key = $ENV{MR_INPUT0} or die;
+my $BUCKET_SIZE = 1_000_000;
+
+chdir ($tmp) or die "chdir $tmp: $!";
+mkdir "out";
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  # queue a level 1 jobstep for each chromosome and bucket
+
+  foreach my $chr (sort keys %human::chr_lengths) {
+    for (my $bucket = 0 ; $bucket * $BUCKET_SIZE < $human::chr_lengths{$chr} ; $bucket++) {
+      my $bucket0 = $bucket == 0 ? "-" : (sprintf "%03d", ($bucket-1));
+      my $bucket1 = sprintf "%03d", ($bucket);
+      print STDERR "+++mrjobstep 1 $chr $bucket0 $bucket1+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($chr, $bucket0, $bucket1) = split (/ /, $ENV{MR_INPUT}, 3);
+  my $my_filename0 = "$chr-$bucket0.maph";
+  my $my_filename1 = "$chr-$bucket1.maph";
+  print STDERR "start $chr-$bucket0 $chr-$bucket1\n";
+
+  atomic_whget("$ENV{KNOB_REFERENCE}/$ENV{KNOB_REFERENCEFILE}", "$tmp/$ENV{KNOB_REFERENCEFILE}");
+  atomic_whget($MAQ_bin_key, $MAQ_path);
+  chmod 0755, $MAQ_path;
+
+  my $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
+  my $topdir;
+
+  while (my $stream = $ref->subdir_next)
+  {
+    my $subdir = $stream->name;
+    $subdir =~ s/^\.\///;
+
+    if (!$topdir) {
+      $topdir = $subdir;
+    }
+    while (my ($pos, $size, $filename) = $stream->file_next)
+    {
+      last if !defined $pos;
+      next if $filename ne $my_filename0 and $filename ne $my_filename1;
+      $stream->seek($pos);
+      my $buf;
+      while (my $dataref = $stream->read_until ($pos + $size)) {
+	$buf .= $$dataref;
+      }
+      my $nrec;
+      my $maq_in = new MAQ::map(\$buf, "r", 'noheader');
+      while (my %rec = $maq_in->read) {
+	$nrec++;
+      }
+      $maq_in->close or die;
+      $maq_in = new MAQ::map(\$buf, "r", 'noheader');
+      my $maq_out = new MAQ::map($filename, "w");
+      $maq_out->write_header($nrec, $chr);
+      while (my %rec = $maq_in->read) {
+	$maq_out->write(%rec);
+      }
+      $maq_out->close or die;
+      $maq_in->close or die;
+    }
+  }
+  die "no topdir" unless $topdir;
+  my $MAQ_pileup = "$MAQ_path pileup $ENV{KNOB_REFERENCEFILE} $my_filename1 2> out/cns.log";
+  my $MRS_STORE = "mrs-store ./$topdir $chr-$bucket1.pileup.gz | gzip -nc | mrs-output";
+  if ($bucket0 ne "-") {
+    my $in;
+    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_pileup | $MRS_STORE"};
+    system ($cmd) == 0
+      or die "merge/rmdup indel failed";
+    unlink $my_filename0;
+    unlink $my_filename1;
+  }
+  else {
+    my $cmd = qq{/bin/bash -o pipefail -c "$MAQ_pileup | $MRS_STORE"};
+    system($cmd) == 0 or die "rmdup/indel failed";
+    unlink $my_filename1;
+  }
+
+  exit 0;
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
