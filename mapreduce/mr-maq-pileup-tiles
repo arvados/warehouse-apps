@@ -90,7 +90,7 @@ if ($ENV{MR_LEVEL} == 1)
     }
   }
   die "no topdir" unless $topdir;
-  my $MAQ_pileup = "$MAQ_path pileup $ENV{KNOB_REFERENCEFILE} $my_filename1 2> out/cns.log | grep \",\" | gzip -nc";
+  my $MAQ_pileup = "$MAQ_path pileup $ENV{KNOB_REFERENCEFILE} $my_filename1 2> out/cns.log";
   my $MRS_STORE = "mrs-store ./$topdir $chr-$bucket1.pileup.gz | mrs-output";
   if ($bucket0 ne "-") {
     my $in;
