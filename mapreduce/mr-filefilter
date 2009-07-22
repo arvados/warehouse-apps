@@ -16,11 +16,17 @@ use Safepipe;
 die "no command specified" if $ENV{KNOB_COMMAND} !~ /\S/;
 die "no outputname specified" if $ENV{KNOB_OUTPUTNAME} !~ /\S/;
 
+my $inhashes = $ENV{MR_INPUT0};
+for (sort { $a <=> $b } map { /^KNOB_INPUT(\d+)$/ } keys %ENV)
+{
+  $inhashes .= "," . $ENV{"KNOB_INPUT$_"};
+}
+
 if ($ENV{MR_LEVEL} == 0 && $ENV{KNOB_CONCATENATE})
 {
   my $whc = new Warehouse;
   my $instream = new Warehouse::Stream (whc => $whc,
-					hash => [split (",", $ENV{MR_INPUT0})]);
+					hash => [split (",", $inhashes)]);
   my $manifest = "";
   while (my $dataref = $instream->read_until())
   {
@@ -31,11 +37,6 @@ if ($ENV{MR_LEVEL} == 0 && $ENV{KNOB_CONCATENATE})
 elsif ($ENV{MR_LEVEL} == 0)
 {
   my $whc = new Warehouse;
-  my $inhashes = $ENV{MR_INPUT0};
-  for (sort { $a <=> $b } map { /^KNOB_INPUT(\d+)$/ } keys %ENV)
-  {
-    $inhashes .= "," . $ENV{"KNOB_INPUT$_"};
-  }
   my $in = new Warehouse::Manifest (whc => $whc, key => $inhashes);
   $in->rewind;
   while (my $s = $in->subdir_next)
