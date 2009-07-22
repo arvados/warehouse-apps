@@ -31,7 +31,12 @@ if ($ENV{MR_LEVEL} == 0 && $ENV{KNOB_CONCATENATE})
 elsif ($ENV{MR_LEVEL} == 0)
 {
   my $whc = new Warehouse;
-  my $in = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
+  my $inhashes = $ENV{MR_INPUT0};
+  for (sort { $a <=> $b } map { /^KNOB_INPUT(\d+)$/ } keys %ENV)
+  {
+    $inhashes .= "," . $ENV{"KNOB_INPUT$_"};
+  }
+  my $in = new Warehouse::Manifest (whc => $whc, key => $inhashes);
   $in->rewind;
   while (my $s = $in->subdir_next)
   {
