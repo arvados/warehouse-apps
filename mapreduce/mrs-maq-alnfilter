@@ -17,7 +17,7 @@ my $cmd = "bash -c 'set -o pipefail; (whget -r \"$ENV{KNOB_SNPREFERENCE}\" -";
 $cmd .= "; whget -r \"$ENV{KNOB_POSREFERENCE}\" - | cut -f1,2" if $ENV{KNOB_POSREFERENCE};
 $cmd .= ") | gzip -cdf'";
 
-open R, "-|", "bash -c 'set -o pipefail; whget -r \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf'"
+open R, "-|", $cmd
     or die "whget: $!";
 my @snpref;
 while (<R>)
