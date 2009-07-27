@@ -1,0 +1,11 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict;
+
+if ($ENV{KNOB_MINCONSENSUSQUALITY} =~ /(\d+)/)
+{
+  $ENV{KNOB_SNPFILTER_ARGS} .= " -q $1";
+}
+
+exec "mrs-maq /usr/bin/maq.pl SNPfilter $ENV{KNOB_SNPFILTER_ARGS} -";
