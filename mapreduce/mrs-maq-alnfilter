@@ -13,6 +13,10 @@ $ENV{KNOB_SNPCALL_MIN_COVER} = 10 if !length $ENV{KNOB_SNPCALL_MIN_COVER};
 $ENV{KNOB_SNPCALL_MIN_STARTS} = 2 if !length $ENV{KNOB_SNPCALL_MIN_STARTS};
 die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
 
+my $cmd = "bash -c 'set -o pipefail; (whget -r \"$ENV{KNOB_SNPREFERENCE}\" -";
+$cmd .= "; whget -r \"$ENV{KNOB_POSREFERENCE}\" - | cut -f1,2" if $ENV{KNOB_POSREFERENCE};
+$cmd .= ") | gzip -cdf'";
+
 open R, "-|", "bash -c 'set -o pipefail; whget -r \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf'"
     or die "whget: $!";
 my @snpref;
