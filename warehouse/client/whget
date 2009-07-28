@@ -64,9 +64,13 @@ if (!defined $manifestkey)
 # make up the manifest.
 
 my @manifesthash = split (",", $manifestkey);
-my $manifest = $whc->fetch_block ($manifesthash[0]);
-die "fetch_block($manifesthash[0]) failed" if !defined $manifest;
-shift @manifesthash;
+my $manifest = "";
+while (!length $manifest && @manifesthash)
+{
+    $manifest = $whc->fetch_block ($manifesthash[0]);
+    die "fetch_block($manifesthash[0]) failed" if !defined $manifest;
+    shift @manifesthash;
+}
 
 if ($justrawmanifest)
 {
