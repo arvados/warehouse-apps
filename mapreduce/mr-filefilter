@@ -16,11 +16,11 @@ use Safepipe;
 die "no command specified" if $ENV{KNOB_COMMAND} !~ /\S/;
 die "no outputname specified" if $ENV{KNOB_OUTPUTNAME} !~ /\S/;
 
-my $inhashes = $ENV{MR_INPUT0};
 for (sort { $a <=> $b } map { /^KNOB_INPUT(\d+)$/ } keys %ENV)
 {
-  $inhashes .= "," . $ENV{"KNOB_INPUT$_"};
+  $ENV{MR_INPUT0} .= "," . $ENV{"KNOB_INPUT$_"};
 }
+my $inhashes = $ENV{MR_INPUT0};
 
 if ($ENV{MR_LEVEL} == 0 && $ENV{KNOB_CONCATENATE})
 {
