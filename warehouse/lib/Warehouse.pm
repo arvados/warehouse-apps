@@ -1384,8 +1384,8 @@ sub _job_list
 		    $h{$k} = $v;
 		}
 		$h{nnodes} = $self->_nodelist_to_nnodes ($h{nodes});
-		$h{starttime_s} = $self->_to_unixtime ($h{starttime});
-		$h{finishtime_s} = $self->_to_unixtime ($h{finishtime});
+		$h{starttime_s} = $self->_to_unixtime ($h{starttime}) if !exists $h{starttime_s};
+		$h{finishtime_s} = $self->_to_unixtime ($h{finishtime}) if !exists $h{finishtime_s};
 		push @ret, \%h;
 	    }
 	}

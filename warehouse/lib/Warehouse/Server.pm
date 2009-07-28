@@ -348,7 +348,7 @@ sub run
 		my $resp = HTTP::Response->new (200, "OK", []);
 		my $mrdb = $self->{MapReduceDB};
 		$resp->{sth} = $self->{dbh}->prepare
-		    ("select * from $mrdb.mrjob where $where order by id")
+		    ("select *, unix_timestamp(starttime) starttime_s, unix_timestamp(finishtime) finishtime_s from $mrdb.mrjob where $where order by id")
 		    or die DBI->errstr;
 		$resp->{sth}->execute (@bindvars)
 		    or die DBI->errstr;
