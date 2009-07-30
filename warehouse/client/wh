@@ -202,7 +202,7 @@ sub job_new
     {
 	if (!/[a-z]/)		# treat uppercase wh opts as job knobs
 	{
-	    push @knobs, $_."=".$opt{$_};
+	    push @knobs, $_."=".freezequote($opt{$_});
 	    delete $opt{$_};
 	}
     }
