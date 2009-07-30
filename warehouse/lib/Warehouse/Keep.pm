@@ -494,6 +494,8 @@ sub _index_callback
 	    # no files remaining in D, so open the next dir in the list
 	    while (1)
 	    {
+		closedir D;
+
 		# finished searching all dirs?
 		return undef if !@_callback_dirs;
 
