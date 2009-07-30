@@ -29,6 +29,7 @@ $ENV{TMPDIR} = $ENV{MR_JOBSTEP_TMP};
 foreach (split ("\n", $ENV{MR_KNOBS}))
 {
   my ($k, $v) = split ("=", $_, 2);
+  $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1/ges;
   $ENV{"KNOB_$k"} = $v;
 }
 
