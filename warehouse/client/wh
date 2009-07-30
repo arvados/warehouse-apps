@@ -171,9 +171,9 @@ sub job_show
 	    {
 		if ($_ eq "knobs")
 		{
-		    foreach (split (/\n/, freezeunquote ($j->{knobs})))
+		    foreach (split (/\n/, $j->{knobs}))
 		    {
-			push @out, shellquote($_);
+			push @out, shellquote (freezeunquote ($_));
 		    }
 		}
 		else
@@ -324,7 +324,7 @@ sub shellquote
     my $arg = shift;
     if ($arg =~ /[^-\.\w=\@\+,]/)
     {
-	$arg =~ s{[\"\`\$]}{\\$&}gx;
+	$arg =~ s{[\"\`\$\\]}{\\$&}gs;
 	$arg = "\"$arg\"";
     }
     $arg;
@@ -343,6 +343,6 @@ sub freezequote
 sub freezeunquote
 {
   my $s = shift;
-  $s =~ s{\\(.)}{$1 eq "n" ? "\n" : $1}ge;
+  $s =~ s{\\(.)}{$1 eq "n" ? "\n" : $1}ges;
   return $s;
 }

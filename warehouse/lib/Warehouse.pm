@@ -1381,6 +1381,7 @@ sub _job_list
 		foreach (split /\n/)
 		{
 		    my ($k, $v) = split /=/, $_, 2;
+		    $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1/ges;
 		    $h{$k} = $v;
 		}
 		$h{nnodes} = $self->_nodelist_to_nnodes ($h{nodes});
