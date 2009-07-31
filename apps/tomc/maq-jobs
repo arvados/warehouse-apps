@@ -890,6 +890,11 @@ sub maq_pipeline
 		} ) unless $me->{map};
     }
     push @jsonjobs, jsonjob ("Map", $me->{map});
+
+    my @maq_deb;
+    push @maq_deb, $1 if ($me->{map} &&
+			  $me->{map}->{knobs} =~ /(MAQ_DEB=[0-9a-f]+)/);
+
     if ($me->{map} && $me->{map}->{outputkey})
     {
 	$me->{merge} = findjob
@@ -898,7 +903,7 @@ sub maq_pipeline
 		inputkey => $me->{map}->{outputkey},
 		knobs => makeknobs
 		    ("maq-merge",
-		     "MAQ_DEB?=ec9aba3c23989d66f813589e2d4450db",
+		     @maq_deb,
 		     "REFERENCE=$ref",
 		     "REFERENCEFILE=$reffile",
 		     ),
@@ -914,7 +919,7 @@ sub maq_pipeline
 		inputkey => $me->{merge}->{outputkey},
 		knobs => makeknobs
 		    ("maq-mapview",
-		     "MAQ_DEB?=ec9aba3c23989d66f813589e2d4450db",
+		     @maq_deb,
 		     ),
 		} ) unless $me->{mapview};
 	buildoutputs ($me, "mapview", "all.aln.txt");
@@ -925,7 +930,7 @@ sub maq_pipeline
 		inputkey => $me->{merge}->{outputkey},
 		knobs => makeknobs
 		    ("maq-assemble",
-		     "MAQ_DEB?=ec9aba3c23989d66f813589e2d4450db",
+		     @maq_deb,
 		     "REFERENCE=$ref",
 		     "REFERENCEFILE=$reffile",
 		     ),
@@ -1268,8 +1273,8 @@ sub keys_are_equal
 sub knobs_are_equal
 {
     my ($a, $b) = @_;
-    my @a = split /\\n/, $a;
-    my @b = split /\\n/, $b;
+    my @a = split /\n/, $a;
+    my @b = split /\n/, $b;
     for (@b) {
 	if (@a && $a[0] eq $_) { shift @a; next; }
 	if (s/^([^=]+)\?=/${1}=/) {
@@ -1298,7 +1303,6 @@ sub start_new_job
 		   "knobs" => $knobs,
 	);
     $jobspec{stepspernode} = $want->{stepspernode} if $want->{stepspernode};
-    $jobspec{knobs} =~ s/\\(.)/$1 eq "n" ? "\n" : $1/ge;
     my $printable_jobspec
 	= join ("", map { "    $_=$jobspec{$_}\n" } sort keys %jobspec);
     $printable_jobspec =~ s/\n(\S)/\n          $1/gs;
@@ -1307,6 +1311,10 @@ sub start_new_job
     if (exists $override{newjoblimit} &&
 	--$override{newjoblimit} < 0)
     {
+	print ("new job deferred ",
+	       scalar(localtime),
+	       "\n",
+	       $printable_jobspec);
 	return;
     }
 
@@ -1346,9 +1354,9 @@ sub makeknobs
 	{
 	    $knobs .= $_;
 	}
-	$knobs .= "\\n";
+	$knobs .= "\n";
     }
-    $knobs =~ s/\\n$//s;
+    $knobs =~ s/\n$//s;
     return $knobs;
 }
 
