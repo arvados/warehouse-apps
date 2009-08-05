@@ -144,9 +144,19 @@ sub readsnplist
     while (<STDIN>)
     {
 	chomp;
-	my ($chr, $pos, $refbp, $seqbp, $extra) = split (/\t/, $_, 5);
-	push @snplist, [$chr, $pos, fasta2bin ($seqbp)]
-	    if ($pos =~ /^\d+$/ && $refbp =~ /^.$/);
+	my @fields = split (/\t/, $_, 9);
+	if ($fields[1] =~ /^\d+$/ && $fields[2] =~ /^.$/)
+	{
+	    my ($chr, $pos, $refbp, $seqbp, $extra) = @fields;
+	    push @snplist, [$chr, $pos, fasta2bin ($seqbp)];
+	}
+	elsif ($fields[3] =~ /^\d+$/ &&
+	       $fields[4] == $fields[3] &&
+	       $fields[8] =~ /alleles ([A-Z\/]+)\b/i)
+	{
+	    my ($chr, $pos, $seqbp) = (@fields[0,3], $1);
+	    push @snplist, [$chr, $pos, fasta2bin ($seqbp)];
+	}
     }
     close STDIN or die "input: $!";
     return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
@@ -158,6 +168,7 @@ sub fasta2bin
     return "N" if $fasta =~ /^N/;
     return "X" if $fasta eq "X";
     $fasta =~ tr/a-z/A-Z/;
+    $fasta =~ s/[^A-Z]//g;
     $fasta =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
     $fasta = hex($fasta);
     while ($fasta & ~0xf)
