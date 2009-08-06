@@ -18,8 +18,18 @@ print STDERR map { "opt{$_} = $opt{$_}\n" } keys %opt
     if $opt{v} >= 3;
 
 my $source = shift @ARGV or usage();
-my $localbase = shift @ARGV or usage();
+my $localbase = @ARGV ? shift @ARGV : "-";
 @ARGV == 0 or usage();
+
+if (-l $source && readlink ($source) =~ m|^[a-z]+://|)
+{
+    $source = readlink ($source);
+}
+
+if ($source =~ s|^warehouse://([^/]*)/||)
+{
+    $ENV{"WAREHOUSE"} = $1;
+}
 
 $source !~ m,/$,		# either you only want one file,
     or $localbase =~ s,/$,,	# or you specified a local directory/,
@@ -50,8 +60,7 @@ if ($path =~ m|^(.*)/([^/]*)$|)
 
 
 
-my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
-			 "mogilefs_trackers" => $opt{"mogilefs-trackers"},
+my $whc = new Warehouse ("mogilefs_trackers" => $opt{"mogilefs-trackers"},
 			 "debug_mogilefs_paths" => ($opt{v} >= 3),
 			 );
 if (!defined $manifestkey)
@@ -297,6 +306,8 @@ sub usage
 Fetch a file from a manifest:
        $me [options] key/[subdir/]filename localfile
        $me [options] /name/[subdir/]filename localfile
+       $me [options] warehouse:///key/[subdir/]filename localfile
+       $me [options] warehouse://warehousename/key/[subdir/]filename localfile
 Fetch a directory:
        $me [options] key/[subdir/] localdir/
        $me [options] /name/[subdir/] localdir/
@@ -316,8 +327,8 @@ options:
  -v    verbose: print md5sums of extracted files
  -vv   more verbose: info messages
  -vvv  more verbose: debug messages
- --warehouse-controllers=host:port,host:port
- --mogilefs-trackers=host:port,host:port
+environment:
+ WAREHOUSE  name of default warehouse (default = first in config file)
 EOF
 ;
 }
