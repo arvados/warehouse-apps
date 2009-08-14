@@ -260,7 +260,9 @@ sub _init
 
     if (!$ENV{NOCACHE_READ} || !$ENV{NOCACHE_WRITE})
     {
-	while (!$self->{mogc} && ++$attempts <= 5)
+	while ($self->{mogilefs_trackers} &&
+	       !$self->{mogc} &&
+	       ++$attempts <= 5)
 	{
 	    $self->{mogc} = eval {
 		MogileFS::Client->new
@@ -272,7 +274,8 @@ sub _init
 	    print STDERR "MogileFS connect failure #$attempts: $@\n";
 		sleep $attempts;
 	}
-	die "Can't connect to MogileFS" if !$self->{mogc};
+	warn "Can't connect to MogileFS"
+	    if $self->{mogilefs_trackers} && !$self->{mogc};
 
 	if (@{$self->{memcached_servers}} &&
 	    $self->{memcached_size_threshold} >= 0)
@@ -445,6 +448,9 @@ sub _mogilefs_write
     my $md5 = shift;
     my $dataref = shift;
     my $class = shift;
+
+    die "No MogileFS" if !$self->{mogc};
+
     $self->{stats_wrote_attempts} ++;
     my $mogfh = $self->{mogc}->new_file ($md5, $class);
     if (!$mogfh)
