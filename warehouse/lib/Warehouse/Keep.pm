@@ -278,22 +278,22 @@ sub process
 	    my $plainmessage = $2;
 	    my $newdata = $3;
 
-	    my ($verified,$keyid) = $whc->_verify($signedmessage);
-
-	    if (!$verified)
-	    {
-		$self->_log ($c, "SigFail");
-	    }
+#	    my ($verified,$keyid) = $whc->_verify($signedmessage);
+#
+#	    if (!$verified)
+#	    {
+#		$self->_log ($c, "SigFail");
+#	    }
 	    my ($checktime, $checkmd5) = split (/ /, $plainmessage, 2);
 	    $checktime += 0;
-	    if (0 && !$verified)
-	    {
-		my $resp = HTTP::Response->new
-		    (401, "SigFail",
-		     [], "Signature verification failed.\n");
-		$c->send_response ($resp);
-		last;
-	    }
+#	    if (0 && !$verified)
+#	    {
+#		my $resp = HTTP::Response->new
+#		    (401, "SigFail",
+#		     [], "Signature verification failed.\n");
+#		$c->send_response ($resp);
+#		last;
+#	    }
 	    if (time - $checktime > 300 ||
 		time - $checktime < -300)
 	    {
@@ -311,10 +311,10 @@ sub process
 		$c->send_response ($resp);
 		last;
 	    }
-	    if (!$verified)
-	    {
-		$self->_log ($c, "SigFail ignored");
-	    }
+#	    if (!$verified)
+#	    {
+#		$self->_log ($c, "SigFail ignored");
+#	    }
 
 	    my $dataref = $self->_fetch ($md5, { touch => 1 });
 	    if ($dataref && ($newdata eq "" || $$dataref eq $newdata))
