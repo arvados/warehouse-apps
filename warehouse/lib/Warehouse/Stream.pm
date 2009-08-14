@@ -298,8 +298,13 @@ sub _write_flush
 	close STDOUT;
 	close STDIN;
 	select $w;
-	my $hash = $self->{whc}->store_block (substr ($self->{write_buf},
-						      0, $writesize));
+	my $hash;
+	for (1..4)
+	{
+	  $hash = $self->{whc}->store_block (substr ($self->{write_buf},
+						     0, $writesize));
+	  last if $hash;
+	}
 	if ($hash)
 	{
 	  print $w $hash;
@@ -307,6 +312,7 @@ sub _write_flush
 	  exit 1 if $ENV{DEBUG_ASYNC_WRITE_FAIL};
 	  exit 0;
 	}
+	warn "async store_block failed after 4 attempts: " . $self->{whc}->errstr;
 	exit 1;
       }
     }
@@ -321,7 +327,7 @@ sub _write_flush
 	sleep 1;
       }
       if (!$hash) {
-	warn "store_block failed after 4 attempts";
+	warn "store_block failed after 4 attempts: " . $self->{whc}->errstr;
 	return undef;
       }
 
