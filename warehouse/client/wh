@@ -9,6 +9,7 @@ use Warehouse;
 
 my $commands = {
     "help" => \&help,
+    "block bucket" => \&block_bucket,
     "job freeze" => \&job_freeze,
     "job list" => \&job_list,
     "job new" => \&job_new,
@@ -48,6 +49,9 @@ sub help
     print qq{
 wh help
 
+wh block bucket hash=HASH
+wh block bucket <list-of-hashes
+
 wh job list [id_min=ID] [id_max=ID]
 wh job show id=ID
 wh job show id=ID outputkey
@@ -69,6 +73,20 @@ wh keep key=KEY [nnodes=N]
 wh snap
 
 };
+}
+
+sub block_bucket
+{
+    my $hash = $opt{hash};
+    while (1)
+    {
+	$hash = <> if !defined $opt{hash};
+	chomp $hash;
+	last if !defined $hash;
+	my ($keeps, @bucket) = $whc->_hash_keeps (undef, $hash);
+	print ($hash, (map { (" ", $keeps->[$_]) } @bucket), "\n");
+	last if defined $opt{hash};
+    }
 }
 
 sub job_freeze
