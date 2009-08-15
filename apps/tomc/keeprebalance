@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Example: cd; wget http://dev.freelogy.org/svn/polony/polony-tools/trunk/apps/tomc/keeprebalance && find /mogdata/*/keep -type f | grep -v meta | xargs -n 1 ls -s | egrep ^6....\  | sudo DEBUG=1 ~/keeprebalance
+# Example: wget -O ~/keeprebalance http://dev.freelogy.org/svn/polony/polony-tools/trunk/apps/tomc/keeprebalance && find /mogdata/*/keep -type f | grep -v meta | xargs -n 1 ls -s | egrep ^6....\  | sudo DEBUG=1 ~/keeprebalance
 
 # Warning: if you run this on multiple nodes at once, make sure they
 # agree about probe order!
