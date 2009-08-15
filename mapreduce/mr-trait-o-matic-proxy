@@ -42,6 +42,7 @@ if ($child == 0)
   # Submit locators to trait-o-matic
 
   exec ("curl",
+	"-s",
 	"-f",
 	"--cookie-jar",
 	"$tmp/cookies",
@@ -76,6 +77,7 @@ if ($child == 0)
   # Submit username and password
 
   exec ("curl",
+	"-s",
 	"-f",
 	"--cookie",
 	"$tmp/cookies",
@@ -119,6 +121,8 @@ until ($results =~ /<!-- processed (\S*) -->/
   {
     # fetch results
     exec ("curl",
+	  "-s",
+	  "-f",
 	  "--cookie",
 	  "$tmp/cookies",
 	  "-Fusername=$username",
