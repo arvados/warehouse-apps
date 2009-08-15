@@ -1,0 +1,148 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:use remote trait-o-matic service to process variants
+###MR_INPUT:manifest
+###MR_KNOBS:REMOTE_BASE=
+###MR_KNOBS:GENOTYPE=
+###MR_KNOBS:GENOTYPE_SUBDIR=
+###MR_KNOBS:COVERAGE=
+###MR_KNOBS:COVERAGE_SUBDIR=
+###MR_KNOBS:PROFILE=
+###MR_KNOBS:PROFILE_SUBDIR=
+###MR_KNOBS:PHENOTYPE_LOCATOR=
+
+use Warehouse;
+my $whc = new Warehouse;
+
+
+die "No REMOTE_BASE provided" if $ENV{KNOB_REMOTE_BASE} !~ /:\/\//;
+
+
+# TODO: Convert profile to trait-o-matic phenotype/profile if
+# PHENOTYPE_LOCATOR not provided
+
+my $phenotype_locator = $ENV{KNOB_PHENOTYPE_LOCATOR};
+
+
+my $genotype_locator = "warehouse:///" . $ENV{KNOB_GENOTYPE} . $ENV{KNOB_GENOTYPE_SUBDIR};
+
+
+my $coverage_locator = "warehouse:///" . $ENV{KNOB_COVERAGE} . $ENV{KNOB_COVERAGE_SUBDIR};
+
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+
+
+my $child = open STDIN, "-|";
+die "fork failed" if !defined $child;
+
+if ($child == 0)
+{
+  # Submit locators to trait-o-matic
+
+  exec ("curl",
+	"-f",
+	"--cookie-jar",
+	"$tmp/cookies",
+	"-Fgenotype_locator=$genotype_locator",
+	"-Fcoverage_locator=$coverage_locator",
+	"-Fphenotype_locator=$phenotype_locator",
+	"-Fsubmit-from-warehouse-form=Next",
+	"$ENV{KNOB_REMOTE_BASE}/query/",
+	);
+  exit 1;
+}
+
+$/ = undef;
+my $form2 = <STDIN>;
+close STDIN or die "close pipe: $!";
+
+my ($remote_job_id) = $form2 =~ /<input[^>]+name="job"[^>]+value="(\d+)"/i;
+die "Could not find job id in response from $ENV{KNOB_REMOTE_BASE}/query/"
+    if !defined $remote_job_id;
+
+
+# Make up a simple username and password to attach to the job
+
+my $username = "proxy-" . $ENV{MR_JOB_ID} . "-" . $whc->{warehouse_name};
+my $password = time;
+
+my $child = open STDIN, "-|";
+die "fork failed" if !defined $child;
+
+if ($child == 0)
+{
+  # Submit username and password
+
+  exec ("curl",
+	"-f",
+	"--cookie",
+	"$tmp/cookies",
+	"-Fusername=$username",
+	"-Fpassword=$password",
+	"-Fverify-password=$password",
+	"-Fjob=$remote_job_id",
+	"-Fsubmit-signup-form=Submit",
+	"$ENV{KNOB_REMOTE_BASE}/query/",
+	);
+  exit 1;
+}
+
+my $ignore_result = <STDIN>;
+close STDIN or die "close pipe: $!";
+
+
+my $failures = 0;
+my $results = "";
+my $sleep = 1;
+
+until ($results =~ /<!-- processed (\S*) -->/
+       ? length($1)
+       : ($results =~ /span class="count"/ &&
+	  $results =~ /chr\S\S?:\d+/))
+{
+  sleep $sleep;
+  ++$sleep if $sleep < 10;
+
+  if ($results)
+  {
+    open R, ">", "$tmp/results";
+    print R $results;
+    close R;
+  }
+
+  my $child = open STDIN, "-|";
+  die "fork failed" if !defined $child;
+
+  if ($child == 0)
+  {
+    # fetch results
+    exec ("curl",
+	  "--cookie",
+	  "$tmp/cookies",
+	  "-Fusername=$username",
+	  "-Fpassword=$password",
+	  "-Fsubmit-results-form=Submit",
+	  "$ENV{KNOB_REMOTE_BASE}/results/",
+	  );
+    exit 1;
+  }
+
+  $results = <STDIN>;
+  if (!close STDIN)
+  {
+    $results = "";
+    $sleep = 10;
+    if (++$failures > 3)
+    {
+      die "Exceeded max polling failures ($!), giving up";
+    }
+  }
+}
+
+
+open STDOUT, "| mrs-store . out.html | mrs-output";
+print STDOUT $results;
+close STDOUT or die "close pipe: $!";
+exit 0;
