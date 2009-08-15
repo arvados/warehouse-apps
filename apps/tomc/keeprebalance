@@ -1,0 +1,111 @@
+#!/usr/bin/perl
+
+# Example: cd; wget http://dev.freelogy.org/svn/polony/polony-tools/trunk/apps/tomc/keeprebalance && find /mogdata/*/keep -type f | grep -v meta | xargs -n 1 ls -s | egrep ^6....\  | sudo DEBUG=1 ~/keeprebalance
+
+# Warning: if you run this on multiple nodes at once, make sure they
+# agree about probe order!
+
+use strict;
+use Warehouse;
+
+my $whc = new Warehouse;
+my $myhostname = `hostname -s`; chomp $myhostname;
+my $redundancy = 2;
+
+while(<>)
+{
+    # Find the md5 hash and filename in the input
+
+    chomp;
+    my $file;
+    my $hash;
+    my @in = split;
+    if ($in[0] =~ /^\d+$/ && $in[1] =~ /([0-9a-f]{32})/) {
+	# "ls -s" output
+	$hash = $1;
+	$file = $in[1];
+    }
+    elsif ($in[0] =~ /([0-9a-f]{32})/)
+    {
+	$hash = $1;
+	$file = $in[0];
+    }
+    else
+    {
+	warn "Ignoring input: \"$_\"";
+	next;
+    }
+
+    # Determine probe order for a block with hash = $hash
+
+    my ($keeps, @bucket) = $whc->_hash_keeps (undef, $hash);
+
+    # Is this node one of the $redundancy optimal storage locations
+    # for this block?  If so, nothing needs to be done.
+
+    my $myprobeposition = $#bucket + 1;
+    for my $x (0..$#bucket)
+    {
+	$keeps->[$bucket[$x]] =~ /([^:]+)/;
+	$myprobeposition = $x if $1 eq $myhostname;
+    }
+    if ($myprobeposition < $redundancy)
+    {
+	warn "$hash puts me in position $myprobeposition, skipping\n"
+	    if $ENV{DEBUG};
+	next;
+    }
+
+    # Read the block
+
+    my $reqtext = time . " " . $hash;
+    my $signedreq = $whc->_fakesign ($reqtext, "NSR");
+    if (open F, "<", $file)
+    {
+	local $/ = undef;
+	$signedreq .= <F>;
+	close F;
+    }
+
+    # Copy to other nodes in probe order, until either [a] $redundancy
+    # successes are reported or [b] this node appears in probe order
+    # (in which case the file should not be deleted!)
+
+    my $successes = 0;
+    for my $x (0..$myprobeposition-1)
+    {
+	my $url = "http://".$keeps->[$bucket[$x]]."/".$hash;
+	my $req = HTTP::Request->new (PUT => $url);
+	$req->header ('Content-Length' => length $signedreq);
+	$req->content ($signedreq);
+	my $r = $whc->{ua}->request ($req);
+	if ($ENV{DEBUG})
+	{
+	    printf STDERR ("%s %s %d %s\n",
+			   $hash,
+			   $keeps->[$bucket[$x]],
+			   $r->is_success,
+			   $r->status_line);
+	}
+	if ($r->is_success)
+	{
+	    ++$successes;
+	    last if $successes == $redundancy;
+	}
+    }
+
+    # If there are $redundancy copies on nodes more optimal than this
+    # one, then this copy can be safely deleted.
+
+    if ($successes == $redundancy)
+    {
+	if (unlink $file)
+	{
+	    print STDERR "rm $file\n";
+	}
+	else
+	{
+	    print STDERR "rm $file: $!\n";
+	}
+    }
+}
