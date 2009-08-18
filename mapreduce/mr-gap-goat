@@ -75,6 +75,9 @@ EOF
     # Get the reference genome and prepare it for pipeline
     # (TODO -- or put in separate mrfunction?)
 
+    # Uncompress the images if necessary
+    system ("gunzip -r ./Images");
+
     # Create Makefiles etc.
 
     system ("$ENV{MR_JOB_TMP}/bin/goat_pipeline.py ./Images --GERALD=./config.txt --make >goat_pipeline.log") == 0
