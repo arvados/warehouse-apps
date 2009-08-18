@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+while(<>)
+{
+    next if /^Chromosome,Position\(Hs36\),Reference,Variant,/;
+    die "Inport format error" if $. == 1;
+
+    chomp;
+    ($chr,$pos,$ref,$call) = split /,/;
+    if ("$chr:$pos" eq $lastchrpos) {
+	$out =~ s/alleles /alleles $call\//;
+    } else {
+	print $out;
+	$out="chr$chr\t.\t.\t$pos\t$pos\t.\t+\t.\talleles $call; ref_allele $ref\n";
+    }
+    $lastchrpos="$chr:$pos";
+}
+
+print $out;
