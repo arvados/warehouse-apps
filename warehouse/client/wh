@@ -14,6 +14,7 @@ my $commands = {
     "job list" => \&job_list,
     "job new" => \&job_new,
     "job show" => \&job_show,
+    "job wait" => \&job_wait,
     "keep" => \&keep,
     "manifest list" => \&manifest_list,
     "manifest name" => \&manifest_name,
@@ -64,6 +65,8 @@ wh job new nodes=N photons=N thawedfromkey=KEY
 
 wh job freeze id=ID [stop=1]
 
+wh job wait id=ID
+
 wh manifest list [name=NAME] [key=KEY]
 wh manifest name name=NAME [oldkey=KEY] newkey=KEY
 wh manifest name name=NAME oldkey=KEY
@@ -86,6 +89,41 @@ sub block_bucket
 	my ($keeps, @bucket) = $whc->_hash_keeps (undef, $hash);
 	print ($hash, (map { (" ", $keeps->[$_]) } @bucket), "\n");
 	last if defined $opt{hash};
+    }
+}
+
+sub job_wait
+{
+    my $jobid = $opt{id} or die "No job id specified";
+    my $needcleanup;
+    while (1)
+    {
+	my $joblist = $whc->job_list (id_min => $jobid, id_max => $jobid);
+	@$joblist or die "job does not exist: $jobid\n";
+	my $j = $joblist->[0];
+	if ($j->{success})
+	{
+	    print STDERR "\n" if $needcleanup;
+	    print ($j->{outputkey}, "\n");
+	    exit 0;
+	}
+	elsif (length $j->{success})
+	{
+	    print STDERR "\n" if $needcleanup;
+	    die "job failed: $jobid\n";
+	}
+	if ($opt{tty} || -t)
+	{
+	    printf STDERR ("\r%d: %d elapsed %d done %d run %d todo   ",
+			   $jobid,
+			   time() - $j->{starttime_s},
+			   $j->{steps_done},
+			   $j->{steps_running},
+			   $j->{steps_todo},
+			   );
+	    $needcleanup = 1;
+	}
+	sleep 10;
     }
 }
 
