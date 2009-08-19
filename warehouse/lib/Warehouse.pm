@@ -187,7 +187,7 @@ sub _init
 	    my $evalblock = $r->content;
 	    if ($evalblock =~ /^\$warehouse_config = /)
 	    {
-		warn "$$ loading config from $url\n" if $ENV{DEBUG};
+		warn "$$ loading config from $url\n" if $ENV{DEBUG_CONFIG};
 		my $warehouse_config;
 		eval $evalblock;
 		$warehouse_config->{"configurl"} = $url;
@@ -198,7 +198,7 @@ sub _init
 			/^mogilefs_/)
 		    {
 			$warehouses->[$idx]->{$_} = $warehouse_config->{$_};
-			warn "$$ $_ => ".$warehouse_config->{$_}."\n" if $ENV{DEBUG};
+			warn "$$ $_ => ".$warehouse_config->{$_}."\n" if $ENV{DEBUG_CONFIG};
 		    }
 		}
 	    }
