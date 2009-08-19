@@ -555,11 +555,26 @@ sub run
 		}
 		my $config_pl = eval {
 		    use Data::Dumper;
-		    my $static = Data::Dumper->Dump([$self->{whc}->{config}],
-						   ["x"]);
-		    my $x;
+
+		    my $x = {};
+		    for (qw(controllers
+			    svn_root
+			    mogilefs_trackers
+			    mogilefs_directory_class
+			    mogilefs_file_class
+			    mogilefs_domain
+			    keeps
+			    keeps_status)) {
+			$x->{$_} = $self->{whc}->{config}->{$_};
+		    }
+
+		    # Disconnect array/hash refs from our own config
+		    my $static = Data::Dumper->Dump([$x], ["x"]);
 		    eval $static;
+
+		    # Mark dead slurm nodes as down in Keep as well
 		    map { $x->{keeps_status}->{$_} = "down" } @deadnode;
+
 		    Data::Dumper->Dump([$x], ["warehouse_config"]);
 		};
 
