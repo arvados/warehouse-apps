@@ -528,6 +528,52 @@ sub run
 		     [], $status == 200 ? "OK" : $error);
 		$c->send_response ($resp);
 	    }
+	    elsif ($r->method eq "GET" and $r->url->path eq "/config.pl")
+	    {
+		my @deadnode;
+		for (`sinfo --dead --noheader --format=%N`)
+		{
+		    chomp;
+		    while (/([^,\[]+)(\[([-,\d]+)\])?/g)
+		    {
+			my $node = $1;
+			my $ranges = $3;
+			if (defined $ranges) {
+			    for (split ",", $ranges) {
+				if (/-/ && $` < $') {
+				    for ($`..$') {
+					push @deadnode, "$node$_";
+				    }
+				} else {
+				    push @deadnode, "$node$_";
+				}
+			    }
+			} else {
+			    push @deadnode, $node;
+			}
+		    }
+		}
+		my $config_pl = eval {
+		    use Data::Dumper;
+		    my $static = Data::Dumper->Dump([$self->{whc}->{config}],
+						   ["x"]);
+		    my $x;
+		    eval $static;
+		    map { $x->{keeps_status}->{$_} = "down" } @deadnode;
+		    Data::Dumper->Dump([$x], ["warehouse_config"]);
+		};
+
+		if ($config_pl && !$@)
+		{
+		    my $resp = HTTP::Response->new (200, "OK", [], $config_pl);
+		    $c->send_response ($resp);
+		}
+		else
+		{
+		    my $resp = HTTP::Response->new (500, "Internal error", [], "Internal error: $@");
+		    $c->send_response ($resp);
+		}
+	    }
 	    else
 	    {
 		my $resp = HTTP::Response->new
