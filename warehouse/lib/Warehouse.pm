@@ -156,6 +156,9 @@ sub _init
     my Warehouse $self = shift;
     my $attempts = 0;
 
+    $self->{ua} = LWP::UserAgent->new;
+    $self->{ua}->timeout ($self->{timeout});
+
     die "Failed to load /etc/warehouse/warehouse-client.conf" if $no_warehouse_client_conf;
 
     my $warehouse_name =
@@ -173,6 +176,42 @@ sub _init
 	$warehouses->[$_]->{name} eq $warehouse_name
     } (0..$#$warehouses)
     or die "I know no warehouse named ".$warehouse_name;
+
+    if ($warehouses->[$idx]->{"configurl"})
+    {
+	my $url = $warehouses->[$idx]->{"configurl"};
+	my $req = HTTP::Request->new (GET => $url);
+	my $r = $self->{ua}->request ($req);
+	if ($r->is_success)
+	{
+	    my $evalblock = $r->content;
+	    if ($evalblock =~ /^\$warehouse_config = /)
+	    {
+		warn "$$ loading config from $url\n" if $ENV{DEBUG};
+		my $warehouse_config;
+		eval $evalblock;
+		$warehouse_config->{"configurl"} = $url;
+		for (keys %$warehouse_config)
+		{
+		    if (!exists $warehouses->[$idx]->{$_} ||
+			/^(controllers|keeps|keeps_status)$/ ||
+			/^mogilefs_/)
+		    {
+			$warehouses->[$idx]->{$_} = $warehouse_config->{$_};
+			warn "$$ $_ => ".$warehouse_config->{$_}."\n" if $ENV{DEBUG};
+		    }
+		}
+	    }
+	    else
+	    {
+		warn "Config url $url did not return expected format";
+	    }
+	}
+	else
+	{
+	    warn "Config url $url failed: " . $r->status_line;
+	}
+    }
 
     $self->{config} = $warehouses->[$idx];
     $self->_cryptsetup();
@@ -254,9 +293,6 @@ sub _init
     $self->{stats_keepwrote_bytes} = 0;
     $self->{stats_keepwrote_blocks} = 0;
     $self->{stats_keepwrote_attempts} = 0;
-
-    $self->{ua} = LWP::UserAgent->new;
-    $self->{ua}->timeout ($self->{timeout});
 
     if (!$ENV{NOCACHE_READ} || !$ENV{NOCACHE_WRITE})
     {
