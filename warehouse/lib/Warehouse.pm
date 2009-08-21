@@ -952,7 +952,8 @@ sub store_in_keep
     }
     $arg{nnodes} = 1 if $arg{nnodes} < 1;
 
-    my $reqtext = time . " " . $md5;
+    my $signedtime = time;
+    my $reqtext = $signedtime . " " . $md5;
     my $signedreq = $self->_sign ($reqtext);
     $signedreq .= $$dataref if $dataref;
 
@@ -969,6 +970,15 @@ sub store_in_keep
 	    && $1 > time - 3600)
 	{
 	    next;
+	}
+
+	if ($signedtime < time - 60)
+	{
+	    # re-sign the request if it was signed >1 minute ago
+	    $signedtime = time;
+	    $reqtext = $signedtime . " " . $md5;
+	    $signedreq = $self->_sign ($reqtext);
+	    $signedreq .= $$dataref if $dataref;
 	}
 
 	$self->{stats_keepwrote_attempts} ++;
