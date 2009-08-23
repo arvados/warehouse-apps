@@ -851,11 +851,16 @@ sub maq_pipeline
 	    revision => [ ($pipeline->{sol2bfq} ? 2356 : 2314), ],
 	    inputkey => $in,
 	    knobs => makeknobs ("sol2bfq",
+				"MAQ_DEB?=ec9aba3c23989d66f813589e2d4450db",
 				$pipeline->{sol2bfq}
 				? @{$pipeline->{sol2bfq}} : (),
 		),
 	} ) unless $me->{sol2bfq};
     push @jsonjobs, jsonjob ("Prepare reads", $me->{sol2bfq});
+
+    my @maq_deb;
+    push @maq_deb, $1 if ($me->{sol2bfq} &&
+			  $me->{sol2bfq}->{knobs} =~ /(MAQ_DEB=[0-9a-f]+)/);
 
     if ($pipeline->{input}->{affymap})
     {
@@ -883,7 +888,7 @@ sub maq_pipeline
 		inputkey => $me->{sol2bfq}->{outputkey},
 		knobs => makeknobs
 		    ("maq-map",
-		     "MAQ_DEB?=ec9aba3c23989d66f813589e2d4450db",
+		     @maq_deb ? @maq_deb : "MAQ_DEB?=ec9aba3c23989d66f813589e2d4450db",
 		     "REFERENCE=$ref",
 		     "REFERENCEFILE=$reffile",
 		     ),
@@ -891,8 +896,8 @@ sub maq_pipeline
     }
     push @jsonjobs, jsonjob ("Map", $me->{map});
 
-    my @maq_deb;
-    push @maq_deb, $1 if ($me->{map} &&
+    push @maq_deb, $1 if (!@maq_deb &&
+			  $me->{map} &&
 			  $me->{map}->{knobs} =~ /(MAQ_DEB=[0-9a-f]+)/);
 
     if ($me->{map} && $me->{map}->{outputkey})
