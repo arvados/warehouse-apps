@@ -175,7 +175,8 @@ while (0 < length $manifest)
 
 		my $sizehint;
 		while (@hash &&
-		       $hash[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)/ &&
+                       ($hash[0] =~ /^([0-9a-f]{32})?.*?\+GS()(\d+)/ ||
+                        $hash[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)/) &&
 		       $pos >= ($streampos
 				+ ($sizehint = ($2 eq '-'
 						? $Warehouse::blocksize - $3

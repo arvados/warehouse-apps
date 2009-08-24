@@ -508,7 +508,8 @@ sub seek
 
     my $sizehint;
     while (@{$self->{nexthashes}} &&
-	   $self->{nexthashes}->[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)/ &&
+	   ($self->{nexthashes}->[0] =~ /^([0-9a-f]{32})?.*?\+GS()(\d+)/ ||
+	    $self->{nexthashes}->[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)/) &&
 	   $pos >= ($self->{bufpos}
 		    + ($sizehint = ($2 eq '-'
 				    ? $Warehouse::blocksize - $3
