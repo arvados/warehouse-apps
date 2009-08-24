@@ -16,8 +16,11 @@ use Safepipe;
 $ENV{KNOB_MAQ_DEB} ||= "715ba7d3755667609193c68cdb5dec04";
 $ENV{KNOB_REFERENCE} ||= "99259f4330907e84fe7253bd4e52dd3e";
 $ENV{KNOB_REFERENCEFILE} ||= "homo_sapiens.bfa";
-$ENV{KNOB_PAIR_MIN_DISTANCE} ||= 0;
-$ENV{KNOB_PAIR_MAX_DISTANCE} ||= 250;
+$ENV{KNOB_PAIR_MIN_DISTANCE} = 0 if !defined $ENV{KNOB_PAIR_MIN_DISTANCE};
+$ENV{KNOB_PAIR_MAX_DISTANCE} = 250 if !defined $ENV{KNOB_PAIR_MAX_DISTANCE};
+
+$ENV{KNOB_PAIR_MIN_DISTANCE} += 0;
+$ENV{KNOB_PAIR_MAX_DISTANCE} += 0;
 
 if ($ENV{MR_LEVEL}==0)
 {
@@ -55,7 +58,7 @@ if ($ENV{MR_LEVEL}==1)
   system ("dpkg --extract maq.deb .")
       == 0 or die "dpkg exited $?";
 
-  system ("./usr/bin/maq map -n 2 -e 70 -i $ENV{KNOB_PAIR_MIN_DISTANCE} -a $ENV{KNOB_PAIR_MAX_DISTANCE} -u out/unmap1\@$subdirbase.txt out/aln1\@$subdirbase.map $ENV{KNOB_REFERENCEFILE} @files 2>out/stderr\@$subdirbase.txt")
+  system ("./usr/bin/maq map -n 2 -e 70 -i $ENV{KNOB_PAIR_MIN_DISTANCE} -a $ENV{KNOB_PAIR_MAX_DISTANCE} -u out/unmap1\@$subdirbase.txt out/aln1\@$subdirbase.map '$ENV{KNOB_REFERENCEFILE}' @files 2>out/stderr\@$subdirbase.txt")
       == 0 or die "maq exited $?";
 
   my $key = `whput out/`;
