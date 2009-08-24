@@ -807,7 +807,9 @@ sub _is_full
     {
 	return 1;
     }
-    if (-l "$dir/full" && ($fulltime = readlink ("$dir/full")))
+    if (-l "$dir/full" &&
+	($fulltime = readlink ("$dir/full")) &&
+	$fulltime > time - 3600)
     {
 	$self->{dir_status}->{$dir} = "full $fulltime";
 	return 1;
