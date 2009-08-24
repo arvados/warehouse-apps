@@ -783,7 +783,8 @@ sub act_on_disk_error
     if ($error =~ /no space left on device/i)
     {
 	$self->{dir_status}->{$dir} = "full " . scalar time;
-	symlink scalar time, "$dir/full";
+	symlink scalar time, "$dir/full~";
+	rename "$dir/full~", "$dir/full";
     }
 }
 
@@ -819,7 +820,8 @@ sub _is_full
 	&& $1 < 65536)
     {
 	$self->{dir_status}->{$dir} = "full " . scalar time;
-	symlink scalar time, "$dir/full";
+	symlink scalar time, "$dir/full~";
+	rename "$dir/full~", "$dir/full";
 	return 1;
     }
     $self->{dir_status}->{$dir} = "ok " . scalar time;
