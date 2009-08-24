@@ -31,9 +31,12 @@ for (@mount)
 		    {
 			print STDERR "$hostname:$fs $p\n" if ++$p % 1000 == 1;
 			my ($pre) = $f =~ /^(...)/;
-			mkdir $pre unless -d $pre;
-			rename $f, "$pre/$f";
-			rename "$f.meta", "$pre/$f.meta";
+			if (!-d $pre) { mkdir ($pre) or die "$pre: $!"; }
+			rename $f, "$pre/$f" or die "$f -> $pre/$f: $!";
+			if (-e "$f.meta")
+			{
+			    rename "$f.meta", "$pre/$f.meta" or die "$f -> $pre/$f: $!";
+			}
 		    }
 		    do { warn "$hostname:$fs stopping\n"; last } if $main::INT;
 		}
