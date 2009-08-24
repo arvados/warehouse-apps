@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+
+my $autosplit = shift @ARGV;
+my $part = shift @ARGV;
+
+while(<>)
+{
+    my @fq = ($_, scalar <>, scalar <>, scalar <>);
+    if ($part == 1)
+    {
+	$fq[1] =~ s/^(.{$autosplit}).*/$1/;
+	$fq[3] =~ s/^(.{$autosplit}).*/$1/;
+    }
+    else
+    {
+	$fq[1] =~ s/^(.{$autosplit})//;
+	$fq[3] =~ s/^(.{$autosplit})//;
+    }
+    print @fq;
+}

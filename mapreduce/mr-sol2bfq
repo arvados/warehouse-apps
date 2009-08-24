@@ -28,7 +28,7 @@ if ($ENV{MR_LEVEL} == 0)
   $whget_command = "whget '$ENV{MR_INPUT0}' -";
   my $in = $whc->fetch_block_ref ((split(",", $ENV{MR_INPUT0}))[0])
       or die "fetch_block_ref($ENV{MR_INPUT0}) failed";
-  if ($$in =~ m{ ^\.(/\S+)?\ ([0-9a-f]{32}\S*\ )+\d+:\d+:(\S+)\n$ }sx)
+  if (0 && $$in =~ m{ ^\.(/\S+)?\ ([0-9a-f]{32}\S*\ )+\d+:\d+:(\S+)\n$ }sx)
   {
     # just one file
     $whget_command = "whget '$ENV{MR_INPUT0}$1/$3' -";
@@ -123,14 +123,58 @@ if ($ENV{MR_LEVEL} == 1)
   while (my ($pos, $size, $filename) = $instream->file_next)
   {
     last if !defined $pos;
+
+    my $autosplit;
+
     $filename =~ s/\.gz$//;
     $instream->seek ($pos);
-    open PIPE, "|-", "bash -c 'set -o pipefail; $formatfilter | ./usr/bin/maq fastq2bfq -n 2000000 - out/$filename'";
     while (my $dataref = $instream->read_until ($pos + $size))
     {
+      if (!defined $autosplit)
+      {
+	$autosplit = 0;
+	my $filename1 = $filename;
+	my $filename2;
+	my $child = open (STDIN, "-|");
+	defined $child or die "no fork";
+	if ($child == 0)
+	{
+	  open (STDOUT, "|-", "gzip", "-cdf") or die;
+	  print STDOUT $$dataref;
+	  close STDOUT;
+	  exit 0;
+	}
+	local $/ = undef;
+	my $checkdata = <STDIN>;
+	close STDIN;
+	if ($checkdata =~ /\@[^\n]*\n(\S{64}\S*)/s)
+	{
+	  $autosplit = (length($1)+1) >> 1; # = ciel(readlength/2)
+	  $filename1 = "${base}_1";
+	  $filename2 = "${base}_2";
+	}
+	elsif ($checkdata !~ /\@[^\n]*\n\S+\n\+[^\n]*\n\S+\n/)
+	{
+	  die "fastq format error detected while looking for paired reads: $checkdata";
+	}
+	if ($autosplit)
+	{
+	  open PIPE, "|-", "bash -c 'set -o pipefail; $formatfilter | mrs-sol2bfq-autosplit $autosplit 1 | ./usr/bin/maq fastq2bfq -n 2000000 - out/$filename1'" or die "open pipe1: $!";
+	  open PIPE2, "|-", "bash -c 'set -o pipefail; $formatfilter | mrs-sol2bfq-autosplit $autosplit 2 | ./usr/bin/maq fastq2bfq -n 2000000 - out/$filename2'" or die "open pipe2: $!";
+	}
+	else
+	{
+	  open PIPE, "|-", "bash -c 'set -o pipefail; $formatfilter | ./usr/bin/maq fastq2bfq -n 2000000 - out/$filename1'" or die "open pipe1: $!";
+	}
+      }
       print PIPE $$dataref;
+      print PIPE2 $$dataref if $autosplit;
     }
     close PIPE or die "close(PIPE): exit status $?, $!";
+    if ($autosplit)
+    {
+      close PIPE2 or die "close(PIPE2): exit status $?, $!";
+    }
   }
   opendir D, "out" or die "opendir: $!";
   for my $f (readdir D)
