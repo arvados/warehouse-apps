@@ -357,6 +357,13 @@ sub process
 		}
 	    }
 
+	    if ($self->_is_full())
+	    {
+		$c->send_response (HTTP::Response->new
+				   (503, "Full", [], "Full"));
+		next;
+	    }
+
 	    if (!$self->_store ($md5, \$newdata, \$metadata))
 	    {
 		$self->_log($c,$self->{errstr});
@@ -691,15 +698,12 @@ sub _store
     my $errstr;
     my $dirs = $self->{Directories}; # should shuffle this XXX
     my ($first12bits) = $md5 =~ /^(...)/;
-    my $lockhandle;
     my $try = 0;
     while ($try < ($#$dirs * 2 + 2))
     {
         my $dir = $dirs->[0];
 
-	if (($self->{dir_status}->{$dir} =~ /^full (\d+)/ && $1 > time - 3600)
-	    ||
-	    (-l "$dir/full" && (readlink ("$dir/full") > time - 3600)))
+	if ($self->_is_full($dir))
 	{
 	    $errstr = "write $dir/$first12bits/$md5: No space left on device";
 	    next;
@@ -708,6 +712,7 @@ sub _store
 	# First time around, try a non-blocking lock on each disk.
 	# Second time around, wait for the first disk to be free.
 
+	my $lockhandle;
         open($lockhandle,">>$dir/.lock");
         print STDERR "LOCK: opened file\n" if ($ENV{DEBUG});
 	my $lock_non_block = ($try <= $#$dirs) ? LOCK_NB : 0;
@@ -780,6 +785,45 @@ sub act_on_disk_error
 	$self->{dir_status}->{$dir} = "full " . scalar time;
 	symlink scalar time, "$dir/full";
     }
+}
+
+sub _is_full
+{
+    my $self = shift;
+    my $dir = shift;
+
+    if (!$dir)
+    {
+	my $dirs = $self->{Directories};
+	for (@$dirs) {
+	    $self->_is_full ($_) || return 0;
+	}
+	return 1;
+    }
+
+    my $fulltime;
+    if ($self->{dir_status}->{$dir} =~ /^full (\d+)/ && $1 > time - 3600)
+    {
+	return 1;
+    }
+    if (-l "$dir/full" && ($fulltime = readlink ("$dir/full")))
+    {
+	$self->{dir_status}->{$dir} = "full $fulltime";
+	return 1;
+    }
+    if ($self->{dir_status}->{$dir} =~ /^ok (\d+)/ && $1 > time - 60)
+    {
+	return 0;
+    }
+    if (`df --block-size=1k '$dir'` =~ /^\S+\s+\d+\s+\d+\s+(-?\d+)\s+\d+%/m
+	&& $1 < 65536)
+    {
+	$self->{dir_status}->{$dir} = "full " . scalar time;
+	symlink scalar time, "$dir/full";
+	return 1;
+    }
+    $self->{dir_status}->{$dir} = "ok " . scalar time;
+    return 0;
 }
 
 
