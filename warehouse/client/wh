@@ -99,6 +99,12 @@ sub job_wait
     while (1)
     {
 	my $joblist = $whc->job_list (id_min => $jobid, id_max => $jobid);
+	if (!$joblist)
+	{
+	    # temporary error retrieving job list
+	    sleep 10;
+	    next;
+	}
 	@$joblist or die "job does not exist: $jobid\n";
 	my $j = $joblist->[0];
 	if ($j->{success})
