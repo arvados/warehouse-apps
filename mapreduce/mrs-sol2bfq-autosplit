@@ -16,5 +16,7 @@ while(<>)
 	$fq[1] =~ s/^(.{$autosplit})//;
 	$fq[3] =~ s/^(.{$autosplit})//;
     }
+    $fq[0] =~ s{$}{/$part};
+    $fq[2] =~ s{$}{/$part};
     print @fq;
 }
