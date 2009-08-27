@@ -120,7 +120,7 @@ sub _init
 
     $self->{ChildLifeTime} = 100;
 
-    $Warehouse::Keep::TotalChildren = 4 * ($#{$self->{Directories}} + 1);
+    $Warehouse::Keep::TotalChildren = 32;
     print STDERR "Total children: " . $Warehouse::Keep::TotalChildren . "\n" if ($ENV{DEBUG});
 
     $Warehouse::Keep::children = 0;
@@ -191,13 +191,6 @@ Listens for connections, and handles requests from clients.
 
 sub run {
   my $self = shift;
-
-  # We are going to spawn as many children as we have entries in 
-  # $self->{Directories}. This is how we are going to limit having maximum one 
-  # concurrent reader/writer per disk. Well, technically this will limit us to one
-  # concurrent reader/writer per partition, but for maximum performance there
-  # should be no more than 1 (Keep) partition per disk.
-  # We'll need a little help from a per-disk lock file in $self->_store as well.
 
   print STDERR "children at: $Warehouse::Keep::children\n" if ($ENV{DEBUG});
   print STDERR "TotalChildren at: $Warehouse::Keep::TotalChildren\n" if ($ENV{DEBUG});
