@@ -157,7 +157,6 @@ sub _init
     my $attempts = 0;
 
     $self->{ua} = LWP::UserAgent->new;
-    $self->{ua}->timeout ($self->{timeout});
 
     die "Failed to load /etc/warehouse/warehouse-client.conf" if $no_warehouse_client_conf;
 
@@ -181,6 +180,7 @@ sub _init
     {
 	my $url = $warehouses->[$idx]->{"configurl"};
 	my $req = HTTP::Request->new (GET => $url);
+	$self->{ua}->timeout (3);
 	my $r = $self->{ua}->request ($req);
 	if ($r->is_success)
 	{
@@ -212,6 +212,7 @@ sub _init
 	    warn "Config url $url failed: " . $r->status_line;
 	}
     }
+    $self->{ua}->timeout ($self->{timeout});
 
     $self->{config} = $warehouses->[$idx];
     $self->_cryptsetup();
