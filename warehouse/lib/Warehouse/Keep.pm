@@ -323,7 +323,7 @@ sub process
 				   (200, "OK",
 				    ["X-Block-Size", length($$dataref)],
 				    "$md5\n"));
-		next;
+		last;
 	    }
 
 	    if ($dataref)
@@ -331,7 +331,7 @@ sub process
 		$c->send_response (HTTP::Response->new
 				   (400, "Collision",
 				    [], "$md5\n"));
-		next;
+		last;
 	    }
 
 	    my $metadata = "remote_addr=".$c->peerhost()."\n"
@@ -346,14 +346,14 @@ sub process
 		    $c->send_response (HTTP::Response->new
 				       (500, "No client object",
 					[], "No client object\n"));
-		    next;
+		    last;
 		}
 		if (!defined ($newdata = $self->{whc}->fetch_block ($md5)))
 		{
 		    $c->send_response (HTTP::Response->new
 				       (404, "Data not found in cache",
 					[], "Data not found in cache\n"));
-		    next;
+		    last;
 		}
 	    }
 
@@ -361,7 +361,7 @@ sub process
 	    {
 		$c->send_response (HTTP::Response->new
 				   (503, "Full", [], "Full"));
-		next;
+		last;
 	    }
 
 	    if (!$self->_store ($md5, \$newdata, \$metadata))
@@ -377,7 +377,7 @@ sub process
 		$c->send_response (HTTP::Response->new
 				   ($status_number, $status_phrase,
 				    [], $self->{errstr}));
-		next;
+		last;
 	    }
 	    $c->send_response (HTTP::Response->new
 			       (200, "OK",
@@ -465,6 +465,7 @@ sub process
 	    $c->send_response (HTTP::Response->new
 			       (501, "Not implemented",
 				[], "Not implemented.\n"));
+	    last;
         }
     }
     $c->close if $c;
