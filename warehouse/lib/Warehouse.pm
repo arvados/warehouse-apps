@@ -967,10 +967,67 @@ sub store_in_keep
 	my $keep_id = $bucket[$bucket];
 	my $keep_host_port = $keeps->[$keep_id];
 
+	my $is_full;		# undef === don't know
 	if ($self->{config}->{keeps_status}->{$keep_host_port} =~ /^full (\d+)/
 	    && $1 > time - 3600)
 	{
-	    next;
+	    $is_full = 1;
+	}
+
+	if ($self->{config}->{keeps_status}->{$keep_host_port} =~ /^ok (\d+)/
+	    && $1 > time - 300)
+	{
+	    $is_full = 0;
+	}
+
+	if (!defined $is_full)
+	{
+	    printf STDERR ("bucket %d %s /is_full => ",
+			   $bucket, $keep_host_port)
+		if $ENV{DEBUG_KEEP};
+	    my $url = "http://".$keep_host_port."/is_full";
+	    my $req = HTTP::Request->new (GET => $url);
+	    my $r = $self->{ua}->request ($req);
+	    printf STDERR ("%s\n", $r->content)
+		if $ENV{DEBUG_KEEP};
+	    if ($r->is_success && $r->content =~ /^[01]$/)
+	    {
+		$is_full = $r->content;
+		if ($is_full)
+		{
+		    $self->{config}->{keeps_status}->{$keep_host_port} = "full " . scalar time;
+		}
+		else
+		{
+		    $self->{config}->{keeps_status}->{$keep_host_port} = "ok " . scalar time;
+		}
+	    }
+	}
+
+	if ($is_full ne 0)	# yes, or don't know
+	{
+	    printf STDERR ("bucket %d %s is_full=%s ",
+			   $bucket, $keep_host_port, $is_full)
+		if $ENV{DEBUG_KEEP};
+	    my $url = "http://".$keep_host_port."/".$md5;
+	    my $req = HTTP::Request->new (HEAD => $url);
+	    my $r = $self->{ua}->request ($req);
+	    if (!$r->is_success)
+	    {
+		if ($is_full)
+		{
+		    print STDERR "and HEAD fail, skip\n" if $ENV{DEBUG_KEEP};
+		    next;
+		}
+		else
+		{
+		    print STDERR "and HEAD fail, but trying\n" if $ENV{DEBUG_KEEP};
+		}
+	    }
+	    else
+	    {
+		print STDERR "but HEAD succeeds, trying\n" if $ENV{DEBUG_KEEP};
+	    }
 	}
 
 	if ($signedtime < time - 60)
@@ -1158,7 +1215,7 @@ sub _hash_keeps
 
     my @avail = (0..$#$keeps);
     my @bucket;
-    for (0..7)
+    for (local $_ = 0; @avail; $_ = ($_ + 1) % 8)
     {
 	# $hash ----> 0000111122223333aaaabbbbccccdddd
 	# $md5bits -> 00001111 22223333 aaaabbbb ccccdddd
@@ -1173,7 +1230,6 @@ sub _hash_keeps
 	push @bucket, splice @avail, $pick, 1;
     }
 
-    push @bucket, @avail;
     for (my $i = 0; $i <= $#bucket; $i++)
     {
 	splice (@bucket, $i, 1) if $self->{config}->{keeps_status}->{$keeps->[$bucket[$i]]} =~ /^down/;
