@@ -230,29 +230,37 @@ sub process
     	    {
     		_index_callback_init ($self, $2);
     		$c->send_response (HTTP::Response->new
-    			       (200, "OK", [],
-    				\&_index_callback));
+				   (200, "OK", [],
+				    \&_index_callback));
     		last;
     	    }
+	    if ($r->url->path =~ /^\/is_full$/)
+	    {
+		$c->send_response (HTTP::Response->new
+				   (200, "OK", [],
+				    $self->_is_full() ? "1" : "0"));
+		last;
+	    }
     	    my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
     	    if (!$md5)
     	    {
     		$c->send_response (HTTP::Response->new
-    			       (400, "Bad request",
-    				[], "Bad request\n"));
+				   (400, "Bad request",
+				    [], "Bad request\n"));
     		last;
     	    }
-    	    my $dataref = $self->_fetch ($md5);
-    	    if (!$dataref)
+    	    my ($dataref, $blocksize) = $self->_fetch
+		($md5, $r->method eq "HEAD" ? { "head" => 0 } : {});
+    	    if (!ref $dataref)
     	    {
     		$c->send_response (HTTP::Response->new
     			       (404, "Not found", [], "Not found\n"));
     		last;
     	    }
     	    $c->send_response (HTTP::Response->new
-    			   (200, "OK",
-    			    ["X-Block-Size", length($$dataref)],
-    			    $r->method eq "GET" ? $$dataref : ""));
+			       (200, "OK",
+				["X-Block-Size", $blocksize],
+				$$dataref));
     	}
     	elsif ($r->method eq "PUT")
     	{
@@ -309,12 +317,12 @@ sub process
 #		$self->_log ($c, "SigFail ignored");
 #	    }
 
-	    my $dataref = $self->_fetch ($md5, { touch => 1 });
+	    my ($dataref, $blocksize) = $self->_fetch ($md5, { touch => 1 });
 	    if ($dataref && ($newdata eq "" || $$dataref eq $newdata))
 	    {
 		$c->send_response (HTTP::Response->new
 				   (200, "OK",
-				    ["X-Block-Size", length($$dataref)],
+				    ["X-Block-Size", $blocksize],
 				    "$md5\n"));
 		last;
 	    }
@@ -655,6 +663,12 @@ sub _fetch
 	    next;
 	}
 
+	if ($opt->{head} eq "0")
+	{
+	    close F;
+	    return (\qq{}, -s ("$realdir/$md5"));
+	}
+
 	my $lockhandle;
         open($lockhandle,">>$dir/.lock");
 	flock($lockhandle,LOCK_EX);
@@ -674,7 +688,7 @@ sub _fetch
 	    }
 	}
 
-	return \$data if md5_hex ($data) eq $md5;
+	return (\$data, length $data) if md5_hex ($data) eq $md5;
 	warn "Checksum mismatch: $realdir/$md5\n";
     }
     $self->{errstr} = "Not found: $md5";
