@@ -27,10 +27,10 @@ my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
 			 );
 my $manifest = "";
 
+my $manifest_key;
 if ($localbase eq "-" || -f $localbase)
 {
-    write_file ($localbase);
-    exit 0;
+    $manifest_key = write_file ($localbase);
 }
 else
 {
@@ -44,20 +44,27 @@ else
     {
 	$whc->write_start;
 	$whc->write_data ($manifest) or die "Failed to write manifest: ".$whc->errstr;
-	my $manifest_key = $whc->write_finish or die "Failed to write manifest: ".$whc->errstr;
+	$manifest_key = $whc->write_finish or die "Failed to write manifest: ".$whc->errstr;
 
 	print "$manifest_key\n";
+    }
+}
 
-	if (my $manifestname = $opt{"name"})
-	{
-	    print STDERR "storing: $manifestname => $manifest_key\n" if $opt{"verbose"};
+if (my $manifestname = $opt{"name"})
+{
+    if (defined $manifest_key)
+    {
+	print STDERR "storing: $manifestname => $manifest_key\n" if $opt{"verbose"};
 
-	    my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
-	    $whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
+	my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
+	$whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
 
-	    my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
-	    print STDERR "$manifestname => $checkkey\n" if $opt{"verbose"};
-	}
+	my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
+	print STDERR "$manifestname => $checkkey\n" if $opt{"verbose"};
+    }
+    else
+    {
+	die "No manifest key to store; ignoring --name request"
     }
 }
 
@@ -92,15 +99,18 @@ sub write_file
 	$whc->write_data ($s->as_string);
 	my $k = join (",", $whc->write_finish);
 	print "$k\n";
+	return $k;
     }
     elsif ($opt{"as-stream"})
     {
 	print $s->as_string;
+	return undef;
     }
     else
     {
 	my $k = $s->as_key;
 	print "$k\n";
+	return $k;
     }
 }
 
