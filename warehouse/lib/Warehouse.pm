@@ -1232,7 +1232,7 @@ sub _hash_keeps
 
     for (my $i = 0; $i <= $#bucket; $i++)
     {
-	splice (@bucket, $i, 1) if $self->{config}->{keeps_status}->{$keeps->[$bucket[$i]]} =~ /^down/;
+	splice (@bucket, $i--, 1) if $self->{config}->{keeps_status}->{$keeps->[$bucket[$i]]} =~ /^down/;
     }
 
     return ($keeps, @bucket);
