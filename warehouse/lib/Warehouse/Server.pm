@@ -573,7 +573,7 @@ sub run
 		    eval $static;
 
 		    # Mark dead slurm nodes as down in Keep as well
-		    map { $x->{keeps_status}->{$_} = "down" } @deadnode;
+		    map { $x->{keeps_status}->{$_} = "down " . scalar time } @deadnode;
 
 		    Data::Dumper->Dump([$x], ["warehouse_config"]);
 		};
