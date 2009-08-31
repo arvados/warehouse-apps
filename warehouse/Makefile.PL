@@ -22,6 +22,7 @@ WriteMakefile
 		   'server/mogilefs-install.sh',
 		   'server/mogilefs-check.pl',
 		   'server/mogilefs-create-devices.pl',
+		   'server/warehouse-watchdog',
 		   'server/warehoused',
 		   'server/warehoused-initialize-tables.pl',
 		   'server/whjobinit',
