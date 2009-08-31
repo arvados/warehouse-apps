@@ -1253,7 +1253,6 @@ sub _get_current_keep_status
     }
     else
     {
-	printf STDERR "r: %s %s\n", $r->is_success, $r->content;
 	$self->{config}->{keeps_status}->{$keep_host_port} = "down " . scalar time;
     }
     return $self->{config}->{keeps_status}->{$keep_host_port};
