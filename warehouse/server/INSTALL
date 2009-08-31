@@ -55,4 +55,13 @@ Create supervised service:
  (echo '#!/bin/sh'; echo 'exec warehoused 2>&1') \
    | sudo bash -c "cat >$d/run"
  sudo chmod +x $d/run $d/log/run
+
+ d=/var/service/warehouse-watchdog
+ sudo mkdir -p $d/log/main
+ sudo chmod +t $d
+ (echo '#!/bin/sh'; echo 'exec svlogd -tt main') \
+   | sudo bash -c "cat >$d/log/run"
+ (echo '#!/bin/sh'; echo 'exec warehouse-watchdog 2>&1') \
+   | sudo bash -c "cat >$d/run"
+ sudo chmod +x $d/run $d/log/run
  )

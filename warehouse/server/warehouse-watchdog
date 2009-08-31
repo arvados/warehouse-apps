@@ -1,0 +1,152 @@
+#!/usr/bin/perl
+
+=head1 SYNOPSIS
+
+ warehouse-watchdog [config-file-path]
+
+Use "sinfo" and http://host:port/is_full to monitor up/down/full state
+of Keep storage nodes.  Maintain an up-to-date configuration file in
+config-file-path (default /var/run/warehouse/warehouse-client.conf).
+
+=cut
+
+use strict;
+use Fcntl;
+use Warehouse;
+
+if (!@ARGV)
+{
+    mkdir "/var/run/warehouse" unless -d "/var/run/warehouse";
+    @ARGV = "/var/run/warehouse/warehouse-client.conf";
+}
+my $TheConfigFile = shift @ARGV;
+
+my $whc = new Warehouse;
+
+$whc->{ua}->timeout(3);
+&update;
+$whc->{ua}->timeout(30);
+&update while sleep 1;
+
+sub update
+{
+    my ($keeps) = $whc->_hash_keeps (0, "00000000000000000000000000000000");
+    for my $keep_host_port (@$keeps)
+    {
+	my $previous = $whc->{config}->{keeps_status}->{$keep_host_port};
+
+	# don't check nodes that were marked as "down" in the last
+	# 5 minutes
+
+	if ($previous =~ /^down (\d+)/ &&
+	    $1 > time - 300 &&
+	    $1 <= time)
+	{
+	    next;
+	}
+
+	my $latest = $whc->_get_current_keep_status ($keep_host_port);
+
+	my ($previous_notime) = $previous =~ /(\S+)/;
+	my ($latest_notime) = $latest =~ /(\S+)/;
+	if ($previous_notime ne $latest_notime)
+	{
+	    print "$keep_host_port status changed from $previous_notime to $latest_notime\n";
+	}
+    }
+
+    my @deadnode;
+    for (`sinfo --dead --noheader --format=%N`)
+    {
+
+	# It would be great if I could find a sinfo(1) flag for
+	# printing one line per node instead of compressing them into
+	# a convenient compressed format like "foo[1,6-7,19],bar9"
+	# ... but I can't, so I'll parse the convenient compressed
+	# format.
+
+	chomp;
+	while (/([^,\[]+)(\[([-,\d]+)\])?/g)
+	{
+	    my $node = $1;
+	    my $ranges = $3;
+	    if (defined $ranges) {
+		for (split ",", $ranges) {
+		    if (/-/ && $` < $') {
+			for ($`..$') {
+			    push @deadnode, "$node$_";
+			}
+		    } else {
+			push @deadnode, "$node$_";
+		    }
+		}
+	    } else {
+		push @deadnode, $node;
+	    }
+	}
+    }
+    print STDERR "sinfo says these nodes are dead: @deadnode\n" if $ENV{DEBUG};
+
+    my $config_pl = eval {
+	use Data::Dumper;
+
+	my $x = {};
+	for (qw(controllers
+		svn_root
+		mogilefs_trackers
+		mogilefs_directory_class
+		mogilefs_file_class
+		mogilefs_domain
+		keeps
+		keeps_status)) {
+	    $x->{$_} = $whc->{config}->{$_};
+	}
+
+	# Disconnect array/hash refs from our own config
+	my $static = Data::Dumper->Dump([$x], ["x"]);
+	eval $static;
+
+	# Mark dead slurm nodes as down in Keep as well
+	for my $deadnode (@deadnode)
+	{
+	    for my $keep_host_port (@$keeps)
+	    {
+		if ($keep_host_port =~ /^([^:]*)/ && $1 eq $deadnode)
+		{
+		    $x->{keeps_status}->{$keep_host_port} = "down " . scalar time;
+		}
+	    }
+	}
+
+	Data::Dumper->Dump([$x], ["warehouse_config"]);
+    };
+
+    return unless $config_pl && !$@;
+
+    if (!sysopen TMP, "$TheConfigFile.tmp", O_WRONLY|O_CREAT|O_EXCL)
+    {
+
+	# Maybe there's another one of me running and actually using
+	# the tmp file
+
+	sleep 4;
+
+	# ...but it's probably just stale, so we'll delete it and take
+	# the risk that the other watchdog proc will not get to save
+	# its latest update
+
+	unlink "$TheConfigFile.tmp";
+
+	# Now maybe I can create a new tmp file.  If not, give up,
+	# quit, and let runit/daemontools/init decide whether to
+	# replace me with a fresh watchdog.
+
+	exit 1 if !sysopen TMP, "$TheConfigFile.tmp", O_WRONLY|O_CREAT|O_EXCL;
+    }
+
+    print TMP $config_pl;
+    select TMP;
+    $| = 1;
+    rename "$TheConfigFile.tmp", $TheConfigFile;
+    close TMP;
+}

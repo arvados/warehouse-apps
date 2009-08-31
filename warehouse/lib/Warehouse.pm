@@ -982,26 +982,10 @@ sub store_in_keep
 
 	if (!defined $is_full)
 	{
-	    printf STDERR ("bucket %d %s /is_full => ",
-			   $bucket, $keep_host_port)
-		if $ENV{DEBUG_KEEP};
-	    my $url = "http://".$keep_host_port."/is_full";
-	    my $req = HTTP::Request->new (GET => $url);
-	    my $r = $self->{ua}->request ($req);
-	    printf STDERR ("%s\n", $r->content)
-		if $ENV{DEBUG_KEEP};
-	    if ($r->is_success && $r->content =~ /^[01]$/)
-	    {
-		$is_full = $r->content;
-		if ($is_full)
-		{
-		    $self->{config}->{keeps_status}->{$keep_host_port} = "full " . scalar time;
-		}
-		else
-		{
-		    $self->{config}->{keeps_status}->{$keep_host_port} = "ok " . scalar time;
-		}
-	    }
+	    my $latest = $self->_get_current_keep_status ($keep_host_port);
+	    next if $latest =~ /^down/;
+	    $is_full = 1 if $latest =~ /^full /;
+	    $is_full = 0 if $latest =~ /^ok /;
 	}
 
 	if ($is_full ne 0)	# yes, or don't know
@@ -1205,7 +1189,7 @@ sub _hash_keeps
     {
 	if (!/:/)
 	{
-	    $self->{config}->{keeps_status}->{"$_:25107"} =
+	    $self->{config}->{keeps_status}->{"$_:25107"} ||=
 		$self->{config}->{keeps_status}->{$_};
 	    s/$/:25107/;
 	}
@@ -1236,6 +1220,43 @@ sub _hash_keeps
     }
 
     return ($keeps, @bucket);
+}
+
+
+sub _get_current_keep_status
+{
+    my $self = shift;
+    my $keep_host_port = shift;
+    printf STDERR ("bucket %d %s /is_full => ",
+		   $bucket, $keep_host_port)
+	if $ENV{DEBUG_KEEP};
+    my $url = "http://".$keep_host_port."/is_full";
+    my $req = HTTP::Request->new (GET => $url);
+    my $r = $self->{ua}->request ($req);
+    printf STDERR ("%s\n", $r->content)
+	if $ENV{DEBUG_KEEP};
+    if ($r->is_success && $r->content =~ /^[01]$/)
+    {
+	my $is_full = $r->content;
+	if ($is_full)
+	{
+	    $self->{config}->{keeps_status}->{$keep_host_port} = "full " . scalar time;
+	}
+	else
+	{
+	    $self->{config}->{keeps_status}->{$keep_host_port} = "ok " . scalar time;
+	}
+    }
+    elsif ($r->content =~ /unimplemented/i)
+    {
+	$self->{config}->{keeps_status}->{$keep_host_port} = "alive " . scalar time;
+    }
+    else
+    {
+	printf STDERR "r: %s %s\n", $r->is_success, $r->content;
+	$self->{config}->{keeps_status}->{$keep_host_port} = "down " . scalar time;
+    }
+    return $self->{config}->{keeps_status}->{$keep_host_port};
 }
 
 
