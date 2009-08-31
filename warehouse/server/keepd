@@ -4,6 +4,8 @@ use Warehouse::Keep;
 
 open STDERR, ">&STDOUT";
 
+$ENV{NODECRYPT} = 1;
+
 my $dirs = [];
 map {
     push @$dirs, "$1/keep"
