@@ -141,6 +141,7 @@ sub traverse
 	    push @subdir, $file;
 	    next;
 	}
+	printf STDERR ("storing %s\n", "$localdir/$file") if $opt{v} >= 3;
 	my $filesize = send_file ($whc, "$localdir/$file");
 	push @file_positions, "${streampos}:${filesize}:${file}";
 	$streampos += $filesize;
