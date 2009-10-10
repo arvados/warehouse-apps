@@ -17,6 +17,7 @@ my $commands = {
     "job wait" => \&job_wait,
     "keep" => \&keep,
     "manifest list" => \&manifest_list,
+    "manifest lookup" => \&manifest_lookup,
     "manifest name" => \&manifest_name,
     "snap" => \&snap,
 };
@@ -68,6 +69,7 @@ wh job freeze id=ID [stop=1]
 wh job wait id=ID
 
 wh manifest list [name=NAME] [key=KEY]
+wh manifest lookup [name=NAME]
 wh manifest name name=NAME [oldkey=KEY] newkey=KEY
 wh manifest name name=NAME oldkey=KEY
 
@@ -296,6 +298,19 @@ sub manifest_list
 	{
 	    print "$key $name $keyid\n";
 	}
+    }
+}
+
+sub manifest_lookup
+{
+    my $manifestkey = $whc->fetch_manifest_key_by_name ($opt{name});
+    if (defined $manifestkey)
+    {
+	print "$manifestkey\n";
+    }
+    else
+    {
+	die "Lookup failed: " . $whc->errstr . "\n";
     }
 }
 
