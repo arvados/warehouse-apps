@@ -1152,11 +1152,13 @@ sub fetch_from_keep
 	    else
 	    {
 		my $b = length $data;
-		warn "Checksum failed fetching $keep_host_port/$md5 ($b)\n";
+		warn "Keep checksum fail $keep_host_port $md5 $b\n";
 	    }
 	}
 	else
 	{
+	    warn "Keep !read $keep_host_port $md5 ".$r->status_line."\n"
+		if $ENV{DEBUG_KEEP};
 	    $self->{errstr} = $r->status_line;
 	}
     }
