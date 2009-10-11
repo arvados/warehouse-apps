@@ -11,6 +11,7 @@ use Date::Parse;
 use IO::Handle;
 use Warehouse::Stream;
 use CGI;
+use Time::HiRes;
 
 
 $memcached_max_data = 1000000;
@@ -1127,6 +1128,7 @@ sub fetch_from_keep
     my $successes = 0;
     foreach my $keep_id (@bucket)
     {
+	my $t = Time::HiRes::time();
 	$self->{stats_keepread_attempts} ++;
 	my $keep_host_port = $keeps->[$keep_id];
 	my $url = "http://".$keep_host_port."/".$md5;
@@ -1139,7 +1141,8 @@ sub fetch_from_keep
 	    my $datasize = length $data;
 	    if (Digest::MD5::md5_hex ($data) eq $md5)
 	    {
-		warn "Keep read $keep_host_port $md5 $datasize\n"
+		$t = Time::HiRes::time() - $t; $t =~ s/(\.\d\d\d).*/$1/;
+		warn "Keep ${t}s read $keep_host_port $md5 $datasize\n"
 		    if $ENV{DEBUG_KEEP};
 		$self->{stats_keepread_blocks} ++;
 		$self->{stats_keepread_bytes} += $datasize;
@@ -1152,12 +1155,14 @@ sub fetch_from_keep
 	    else
 	    {
 		my $b = length $data;
-		warn "Keep checksum fail $keep_host_port $md5 $b\n";
+		$t = Time::HiRes::time() - $t; $t =~ s/(\.\d\d\d).*/$1/;
+		warn "Keep ${t}s checksum fail $keep_host_port $md5 $b\n";
 	    }
 	}
 	else
 	{
-	    warn "Keep !read $keep_host_port $md5 ".$r->status_line."\n"
+	    $t = Time::HiRes::time() - $t; $t =~ s/(\.\d\d\d).*/$1/;
+	    warn "Keep ${t}s !read $keep_host_port $md5 ".$r->status_line."\n"
 		if $ENV{DEBUG_KEEP};
 	    $self->{errstr} = $r->status_line;
 	}
