@@ -12,6 +12,7 @@ use IO::Handle;
 use Warehouse::Stream;
 use CGI;
 use Time::HiRes;
+use HTTP::GHTTP;
 
 
 $memcached_max_data = 1000000;
@@ -1133,11 +1134,13 @@ sub fetch_from_keep
 	my $keep_host_port = $keeps->[$keep_id];
 	my $url = "http://".$keep_host_port."/".$md5;
 	warn "Keep GET $url\n" if $ENV{DEBUG_KEEP} >= 2;
-	my $req = HTTP::Request->new (GET => $url);
-	my $r = $self->{ua}->request ($req);
-	if ($r->is_success)
+	my $r = HTTP::GHTTP->new();
+	$r->set_uri($url);
+	$r->process_request();
+	my ($status_number, $status_phrase) = $r->get_status();
+	if ($status_number == 200)
 	{
-	    my $data = $r->content;
+	    my $data = $r->get_body();
 	    my $datasize = length $data;
 	    if (Digest::MD5::md5_hex ($data) eq $md5)
 	    {
@@ -1162,9 +1165,9 @@ sub fetch_from_keep
 	else
 	{
 	    $t = Time::HiRes::time() - $t; $t =~ s/(\.\d\d\d).*/$1/;
-	    warn "Keep ${t}s !read $keep_host_port $md5 ".$r->status_line."\n"
+	    warn "Keep ${t}s !read $keep_host_port $md5 $status_number $status_phrase\n"
 		if $ENV{DEBUG_KEEP};
-	    $self->{errstr} = $r->status_line;
+	    $self->{errstr} = "$status_number $status_phrase";
 	}
     }
     return undef;
