@@ -2,7 +2,7 @@ Source: libwarehouse-perl
 Section: perl
 Priority: optional
 Build-Depends: debhelper (>= 4.0.2)
-Build-Depends-Indep: perl (>= 5.8.0-7), libmogilefs-client-perl, libdbi-perl, libcache-memcached-perl, libgnupg-interface-perl
+Build-Depends-Indep: perl (>= 5.8.0-7), libmogilefs-client-perl, libdbi-perl, libcache-memcached-perl, libgnupg-interface-perl, libhttp-ghttp-perl
 Maintainer: Ward Vandewege <ward@gnu.org>
 Standards-Version: 3.6.1
 
