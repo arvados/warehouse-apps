@@ -114,10 +114,12 @@ my $failures = 0;
 my $html;
 my $sleep = 1;
 
-until ($html =~ /<!-- processed (\S*) -->/
-       ? length($1)
-       : ($html =~ /span class="count"/ &&
-	  $html =~ /chr\S\S?:\d+/))
+until ($html =~ /<!--.*"state":"(.*?)"/m
+       ? $1 eq "finished"
+       : ($html =~ /<!-- processed (\S*) -->/
+	  ? length($1)
+	  : ($html =~ /span class="count"/ &&
+	     $html =~ /chr\S\S?:\d+/)))
 {
   sleep $sleep;
   ++$sleep if $sleep < 10;
@@ -126,9 +128,9 @@ until ($html =~ /<!-- processed (\S*) -->/
   # processing isn't finished)
   $html = fetch_results ("/results/");
 
-  # If we didn't get any output at all, perhaps the server is
+  # If we didn't get a status message, perhaps the server is
   # down/broken
-  if (!defined $html || $html !~ /div id="results"/)
+  if (!defined $html || $html !~ /<!--.*"state":".*?"/)
   {
     $sleep = 10;
     if (++$failures > 3)
@@ -139,6 +141,12 @@ until ($html =~ /<!-- processed (\S*) -->/
 
   # For debugging purposes, save html output even if we end up
   # waiting to poll again
+
+  $html =~ s{(href|src)="/}{$1="$ENV{KNOB_REMOTE_BASE_PUBLIC}/}g;
+  $html =~ s{div id="head".*?(div id="body")}{$1}s;
+  $html =~ s{.*/(download|chmod|reprocess)/.*}{}gm;
+  $html =~ s{.*\Q$username\E.*}{}gm;
+
   open R, ">", "$tmp/out/out.html";
   print R $html;
   close R;
@@ -156,18 +164,15 @@ for (1..3)
 }
 if ($json)
 {
+  $json =~ s/"username":"\Q$username\E",//;
+  $json =~ s/"job_id":"\Q$remote_job_id\E",//;
   open J, ">", "$tmp/out/out.json";
   print J $json;
   close J or die "$tmp/out/out.json: $!";
 }
 
 
-$html =~ s{(href|src)="/}{$1="$ENV{KNOB_REMOTE_BASE_PUBLIC}/}g;
-$html =~ s{div id="head".*?(div id="body")}{$1}s;
-
-
 open STDOUT, "| whput -r --as-stream $tmp/out | mrs-output";
-print STDOUT $html;
 close STDOUT or die "close pipe: $!";
 exit 0;
 
@@ -189,6 +194,7 @@ sub fetch_results
 	  "-Fusername=$username",
 	  "-Fpassword=$password",
 	  "-Fsubmit-results-form=Submit",
+	  "-Fsuppress-timing-data=1",
 	  "$ENV{KNOB_REMOTE_BASE}$uri",
 	  );
     exit 1;
