@@ -345,6 +345,8 @@ sub manifest_lookup
 
 sub manifest_name
 {
+    if (defined $opt{oldkey} && $opt{oldkey} eq "*")
+    { $opt{oldkey} = $whc->fetch_manifest_key_by_name ($opt{name}); }
     if ($whc->store_manifest_by_name ($opt{newkey}, $opt{oldkey}, $opt{name}))
     { print "$opt{newkey}\n"; }
     else { warn ($whc->errstr . "\n"); }
