@@ -10,8 +10,8 @@ wh - command line interface to cloud computing and storage facilities
 
 Working with batch jobs:
 
+ wh job new ...              Submit a batch job (see SUBMITTING below)
  wh job wait id=123          Wait for job to stop; print output locator
- wh job new ...              Submit a batch job
  wh job show id=123          Describe job (function, version, inputs)
  wh job show id=123 X Y Z    Describe job specified fields
  wh job freeze id=123        Save state of a running job, leave it running
@@ -25,7 +25,32 @@ Working with named manifests:
 
 Working with data:
 
- See whget(n), whput(n), whless(n).
+ See whget(1p), whput(1p), whless(1p).
+
+=head1 SUBMITTING
+
+Example of a simple job submission, using only the minimum required options:
+
+ wh job new photons=1 nodes=1 mrfunction=gzip \
+            inputkey=ecd39d68e3db311b841dc4af4f4a59ed+252+K@templeton
+
+Significance of the required options:
+
+B<photons=1> indicates that the priority/urgency of this job is low.  A higher number indicates higher priority.
+
+B<nodes=1> indicates that this job should be run on 1 node.  The specified number of nodes will be allocated for the duration of the job, regardless of how many concurrent steps the job actually uses.
+
+B<mrfunction=gzip> indicates the program to be run.  In this case the program {repository-base}/mapreduce/mr-gzip will be run.
+
+B<inputkey=ecd39d68e3db311b841dc4af4f4a59ed+252+K@templeton> specifies the value to pass in the MR_INPUT0 environment variable in each invocation of the mr-function.
+
+Additional options:
+
+B<revision=2964> specifies the revision number to check out from the repository.  The default is to use the latest revision.
+
+B<stepspernode=3> limits the number of steps that will be run concurrently on a single node.  This is useful for mr-functions that use lots of RAM.  The default is the number of CPU cores in each node.
+
+B<FOO=bar> options with uppercase names are passed through to the mr-function as configuration settings ("knobs").  Each invocation of the mr-function will have an environment variables called "KNOB_FOO" with value "bar".
 
 =cut
 
