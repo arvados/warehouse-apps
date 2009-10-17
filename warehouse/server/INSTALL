@@ -65,3 +65,22 @@ Create supervised service:
    | sudo bash -c "cat >$d/run"
  sudo chmod +x $d/run $d/log/run
  )
+
+Set up configurl handler in nginx:
+
+ (
+ set -ex
+ sudo apt-get install nginx
+ sudo tee /etc/nginx/sites-available/warehouse <<EOF >/dev/null
+ server {
+	 listen   44848;
+	 server_name  localhost;
+	 location / {
+		 root   /var/run/warehouse;
+	 }
+ }
+ EOF
+ sudo ln -s ../sites-available/warehouse /etc/nginx/sites-enabled/
+ sudo rm /etc/nginx/sites-enabled/default
+ sudo /etc/init.d/nginx start
+ )
