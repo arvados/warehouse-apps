@@ -34,23 +34,45 @@ Example of a simple job submission, using only the minimum required options:
  wh job new photons=1 nodes=1 mrfunction=gzip \
             inputkey=ecd39d68e3db311b841dc4af4f4a59ed+252+K@templeton
 
-Significance of the required options:
+Required options:
+
+=over
+
+=item *
 
 B<photons=1> indicates that the priority/urgency of this job is low.  A higher number indicates higher priority.
 
+=item *
+
 B<nodes=1> indicates that this job should be run on 1 node.  The specified number of nodes will be allocated for the duration of the job, regardless of how many concurrent steps the job actually uses.
+
+=item *
 
 B<mrfunction=gzip> indicates the program to be run.  In this case the program {repository-base}/mapreduce/mr-gzip will be run.
 
+=item *
+
 B<inputkey=ecd39d68e3db311b841dc4af4f4a59ed+252+K@templeton> specifies the value to pass in the MR_INPUT0 environment variable in each invocation of the mr-function.
+
+=back
 
 Additional options:
 
+=over
+
+=item *
+
 B<revision=2964> specifies the revision number to check out from the repository.  The default is to use the latest revision.
+
+=item *
 
 B<stepspernode=3> limits the number of steps that will be run concurrently on a single node.  This is useful for mr-functions that use lots of RAM.  The default is the number of CPU cores in each node.
 
+=item *
+
 B<FOO=bar> options with uppercase names are passed through to the mr-function as configuration settings ("knobs").  Each invocation of the mr-function will have an environment variables called "KNOB_FOO" with value "bar".
+
+=back
 
 =cut
 

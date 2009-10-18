@@ -23,19 +23,29 @@ local machine:
 
 =over
 
+=item *
+
 Increase B<concurrency> by running tasks asynchronously, using many
 CPUs and network interfaces at once (especially beneficial for
 CPU-bound and I/O-bound tasks respectively).
+
+=item *
 
 Track inputs, outputs, and settings so you can verify that the
 B<sequence of programs> you used to arrive at an output is really what
 you think it was.
 
+=item *
+
 Ensure that your programs and workflows are B<repeatable> with
 different versions of your code, OS updates, etc.
 
+=item *
+
 B<Interrupt and resume> long-running jobs consisting of many short
 steps.
+
+=item *
 
 Maintain B<timing> statistics automatically, so they're there when you
 want them.
@@ -52,9 +62,13 @@ a given job.  The logic of a typical mr-function looks like this:
 
 =over
 
+=item *
+
 If this is the first step: examine the input, divide it into a number
 of asynchronous tasks, instruct the jobmanager (via stderr) to queue
 these tasks, output nothing, and indicate successful completion.
+
+=item *
 
 Otherwise, fetch our portion of the input from the cloud storage
 system, do some computation, store some output in the cloud, output a
@@ -88,9 +102,13 @@ job new" (see wh(1p)) with these exceptions:
 
 =over
 
+=item *
+
 B<revision=/path/to/repo> specifies a checked-out (and possibly
 modified) copy of the repository instead of a subversion revision
 number.
+
+=item *
 
 B<nodes> and B<photons> are not required.
 
