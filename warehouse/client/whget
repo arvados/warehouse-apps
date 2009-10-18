@@ -1,5 +1,52 @@
 #!/usr/bin/perl
 
+=head1 NAME
+
+whget - get a data set from the warehouse
+
+=head1 SYNOPSIS
+
+Fetch a file from a manifest:
+       whget [options] locator/[subdir/]filename localfile
+       whget [options] /name/[subdir/]filename localfile
+       whget [options] warehouse:///locator/[subdir/]filename localfile
+       whget [options] warehouse://warehousename/locator/[subdir/]filename localfile
+Fetch a directory:
+       whget [options] locator/[subdir/] localdir/
+       whget [options] /name/[subdir/] localdir/
+Fetch a directory tree:
+       whget -r [options] locator/[subdir/] localdir/
+       whget -r [options] /name/[subdir/] localdir/
+       whget -r [options] /locator/[subdir/] -
+       whget -r [options] /name/[subdir/] -
+Fetch a raw manifest:
+       whget [options] locator localdestfile
+       whget [options] /name localdestfile
+       whget [options] locator localdestdir/
+       whget [options] /name localdestdir/
+options:
+ -r    fetch subdir/*/*/files as well as subdir/files
+ -n    don't write to local filesystem, just fetch data from warehouse
+ -v    verbose: print md5sums of extracted files
+ -vv   more verbose: info messages
+ -vvv  more verbose: debug messages
+environment:
+ WAREHOUSE  name of default warehouse (default = first in config file)
+
+=head1 DESCRIPTION
+
+B<whget> retrieves one data set or a hierarchy of data sets.
+
+If the locator refers to a single data set, it is retrieved and stored.
+
+If the locator refers to a manifest and ends with B</> all data sets within the top level of the manifest are retrieved.  If the B<-r> is also given, all data sets at any level are retrieved to the local filesystem.
+
+A specific subdirectory within a manifest can be specified in the standard Unix subdirectory notation.
+
+Data sets can be output to standard-output instead of being stored in the file system by specifying B<-> as the output name.
+
+=cut
+
 use strict;
 
 use Warehouse;
