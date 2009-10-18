@@ -10,7 +10,8 @@ whput [options] localdir
 whput [options] localfile
 whput [options] -
 
-options:
+Options:
+
     --warehouse-controllers=host:port
     --mogilefs-trackers=host:port,host:port
     --name=/manifestname

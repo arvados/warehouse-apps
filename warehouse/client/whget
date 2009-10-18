@@ -7,30 +7,41 @@ whget - get a data set or collection from the warehouse
 =head1 SYNOPSIS
 
 Fetch a file from a manifest:
+
        whget [options] locator/[subdir/]filename localfile
        whget [options] /name/[subdir/]filename localfile
        whget [options] warehouse:///locator/[subdir/]filename localfile
        whget [options] warehouse://warehousename/locator/[subdir/]filename localfile
+
 Fetch a directory:
+
        whget [options] locator/[subdir/] localdir/
        whget [options] /name/[subdir/] localdir/
+
 Fetch a directory tree:
+
        whget -r [options] locator/[subdir/] localdir/
        whget -r [options] /name/[subdir/] localdir/
        whget -r [options] /locator/[subdir/] -
        whget -r [options] /name/[subdir/] -
+
 Fetch a raw manifest:
+
        whget [options] locator localdestfile
        whget [options] /name localdestfile
        whget [options] locator localdestdir/
        whget [options] /name localdestdir/
-options:
+
+Options:
+
  -r    fetch subdir/*/*/files as well as subdir/files
  -n    don't write to local filesystem, just fetch data from warehouse
  -v    verbose: print md5sums of extracted files
  -vv   more verbose: info messages
  -vvv  more verbose: debug messages
-environment:
+
+Environment:
+
  WAREHOUSE  name of default warehouse (default = first in config file)
 
 =head1 DESCRIPTION
