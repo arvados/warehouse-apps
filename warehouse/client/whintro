@@ -42,6 +42,67 @@ want them.
 
 =back
 
+=head2 STRUCTURE OF BATCH JOBS
+
+A batch job consists of a number of B<steps> which can be executed
+asynchronously.
+
+A single batch job program, or "mr-function", executes each B<step> of
+a given job.  The logic of a typical mr-function looks like this:
+
+=over
+
+If this is the first step: examine the input, divide it into a number
+of asynchronous tasks, instruct the jobmanager (via stderr) to queue
+these tasks, output nothing, and indicate successful completion.
+
+Otherwise, fetch our portion of the input from the cloud storage
+system, do some computation, store some output in the cloud, output a
+fragment of the output manifest, and indicate successful completion.
+
+=back
+
+When all job steps have completed, the output fragments are assembled
+into a single output manifest.
+
+If a job step fails, it is automatically re-attempted.  If the same
+step fails 3 times, any steps still running are allowed to complete,
+and the job is abandoned.
+
+=head2 WRITING BATCH JOBS
+
+Usually, it makes sense to test your mr-function locally on small data
+sets.  When you are satisfied that it works, commit it to the
+subversion repository and try running it on the cloud.
+
+Check out a working copy of the subversion repository.
+
+Write your mr-function in {repo}/mapreduce/mr-foo
+
+Test your function:
+
+ {repo}/warehouse/server/whjobmanager revision={repo} mrfunction=foo ....
+
+The arguments to whjobmanager(1p) are the same as the arguments to "wh
+job new" (see wh(1p)) with these exceptions:
+
+=over
+
+B<revision=/path/to/repo> specifies a checked-out (and possibly
+modified) copy of the repository instead of a subversion revision
+number.
+
+B<nodes> and B<photons> are not required.
+
+=back
+
+You will see the progress of the job in your terminal.  Press
+Control-C to create a checkpoint and stop the job.
+
+=head2 RUNNING BATCH JOBS
+
+See wh(1p) for details about submitting batch jobs.
+
 =head1 STORAGE
 
 The storage system is suitable for short-term and long-term storage
