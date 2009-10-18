@@ -95,7 +95,7 @@ Write your mr-function in {repo}/mapreduce/mr-foo
 
 Test your function:
 
- {repo}/warehouse/server/whjobmanager revision={repo} mrfunction=foo ....
+ whjobmanager revision={repo} mrfunction=foo ....
 
 The arguments to whjobmanager(1p) are the same as the arguments to "wh
 job new" (see wh(1p)) with these exceptions:
@@ -160,22 +160,26 @@ Use the wh(1p) program to name your valuable data.  For example:
 
 =head1 PROGRAMS
 
-B<wh> submits, controls, and inspects batch processing jobs and the
+wh(1p) submits, controls, and inspects batch processing jobs and the
 cloud's list of named data objects.
 
-B<whget> retrieves data from the cloud's storage system and stores it
+whget(1p) retrieves data from the cloud's storage system and stores it
 on the local filesystem (or stdout).  B<whless> is convenient for
 inspecting data in your terminal.
 
-B<whput> copies data from the local filesystem (or stdin) to the
+whput(1p) copies data from the local filesystem (or stdin) to the
 cloud's storage system.
 
-B<whence> figures out how a given data object was (or could be)
+whence(1p) figures out how a given data object was (or could be)
 computed, based on the history of batch jobs that have run on the
 cloud.
 
-B<whjobmanager> runs a mr-function on the local machine.  This is
+whjobmanager(1p) runs a mr-function on the local machine.  This is
 useful for writing and debugging mr-functions, and for running short
 jobs when the cloud is to busy to get a node allocation.
+
+=head1 SEE ALSO
+
+wh(1p), whget(1p), whput(1p), whless(1p), whjobmanager(1p)
 
 =cut
