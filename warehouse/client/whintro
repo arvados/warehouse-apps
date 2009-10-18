@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+exec ("perldoc", $0);
+exit 1;
+
+=head1 NAME
+
+whintro - Introduction to "warehouse" cloud computing facilities
+
+=head1 SYNOPSIS
+
+The warehouse provides facilities for parallel computation (see
+L</BATCH JOBS>) and data storage (see L</STORAGE>).  These are
+accessed using command-line utilities (see L</PROGRAMS>) or the Perl
+library (see Warehouse(3pm)).
+
+=head1 BATCH JOBS
+
+You can run programs on other nodes in the cloud by storing them in a
+subversion repository and submitting a job to the cloud controller.
+
+Batch jobs offer several advantages over running programs on your own
+local machine:
+
+=over
+
+Increase B<concurrency> by running tasks asynchronously, using many
+CPUs and network interfaces at once (especially beneficial for
+CPU-bound and I/O-bound tasks respectively).
+
+Track inputs, outputs, and settings so you can verify that the
+B<sequence of programs> you used to arrive at an output is really what
+you think it was.
+
+Ensure that your programs and workflows are B<repeatable> with
+different versions of your code, OS updates, etc.
+
+B<Interrupt and resume> long-running jobs consisting of many short
+steps.
+
+Maintain B<timing> statistics automatically, so they're there when you
+want them.
+
+=back
+
+=head1 STORAGE
+
+The storage system is suitable for short-term and long-term storage
+(see L</VALUABLE DATA>).  It is optimized for medium and large data
+sets (megabytes to terabytes).  Small data sets work too: performance
+won't be as good as a local RAID-1 filesystem, but convenience and
+durability still apply.
+
+The storage system arranges data into B<manifests> and B<data blocks>.
+
+A B<manifest> is analogous to a directory in a traditional filesystem.
+It contains subdirectories and filenames, and indicates where to find
+the data blocks which comprise the files.  It is stored in plain text.
+
+A B<data block> contains between 1 byte and 64 MiB of data.  Its MD5
+checksum is used as an identifier/locator.
+
+The storage system automatically distributes data blocks among the
+available disks.  It also stores multiple copies of each block, so a
+single disk or node failure does not cause any data to become
+unreachable.  It prevents users from overwriting one another's (and
+their own) data.
+
+=head1 VALUABLE DATA
+
+Valuable data blocks must be marked explicitly by registering a
+B<name> with the cloud controller; otherwise they will eventually be
+deleted to make room for new data.
+
+To indicate that a data block is valuable, you need to attach a
+B<name> to either the locator of the block itself, or the locator of a
+manifest which contains a reference to the block.
+
+Use the wh(1p) program to name your valuable data.  For example:
+
+ wh manifest name name=/sample/name/ newkey=ecd39d68e3db311b841dc4af4f4a59ed
+
+=head1 PROGRAMS
+
+B<wh> submits, controls, and inspects batch processing jobs and the
+cloud's list of named data objects.
+
+B<whget> retrieves data from the cloud's storage system and stores it
+on the local filesystem (or stdout).  B<whless> is convenient for
+inspecting data in your terminal.
+
+B<whput> copies data from the local filesystem (or stdin) to the
+cloud's storage system.
+
+B<whence> figures out how a given data object was (or could be)
+computed, based on the history of batch jobs that have run on the
+cloud.
+
+B<whjobmanager> runs a mr-function on the local machine.  This is
+useful for writing and debugging mr-functions, and for running short
+jobs when the cloud is to busy to get a node allocation.
+
+=cut

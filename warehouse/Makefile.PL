@@ -13,6 +13,7 @@ WriteMakefile
 		   'client/whcopy',
 		   'client/whence',
 		   'client/whget',
+		   'client/whintro',
 		   'client/whless',
 		   'client/whput',
 		   'client/whget.cgi',
