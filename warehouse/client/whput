@@ -1,5 +1,35 @@
 #!/usr/bin/perl
 
+=head1 NAME
+
+whput - store a file or directory into the warehouse
+
+=head1 SYNOPSIS
+
+whput [options] localdir
+whput [options] localfile
+whput [options] -
+
+options:
+    --warehouse-controllers=host:port
+    --mogilefs-trackers=host:port,host:port
+    --name=/manifestname
+    --in-manifest or --as-manifest
+    --as-stream
+    --use-filename=read-from-stdin.txt
+
+=head1 DESCRIPTION
+
+B<whput> allows storage of a single data set from a file, or a collection from a directory.  In the directory case, a manifest will be created to describe the directory structure.
+
+Normally the B<locator> of the data set or manifest is printed to standard-output.  This locator can then be used with [wiki:Doc/Man/Whget whget].  If I<--as-stream> is given, the output of the command will be in manifest format.  If I<--as-stream> is used with a collection, the manifest is not stored, only the constituent files.
+
+The data set or manifest can be attached to a global name with the I<--name> option.
+
+You can force a single file to be wrapped in a manifest (as if it was in a directory) by use of the I<--in-manifest> option.
+
+=cut
+
 use strict;
 
 use Warehouse;
