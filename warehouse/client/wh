@@ -10,10 +10,10 @@ wh - command line interface to cloud computing and storage facilities
 
 Working with batch jobs:
 
- wh job new ...              Submit a batch job (see SUBMITTING below)
+ wh job new ...              Submit a batch job (see SUBMITTING)
  wh job wait id=123          Wait for job to stop; print output locator
  wh job show id=123          Describe job (function, version, inputs)
- wh job show id=123 X Y Z    Describe job specified fields
+ wh job show id=123 X Y Z    Describe job specified fields (see INSPECTING)
  wh job freeze id=123        Save state of a running job, leave it running
  wh job freeze id=123 stop=1 Save state of a running job, then stop it
 
@@ -23,9 +23,12 @@ Working with named manifests:
  wh manifest list          List all named manifests
  wh manifest lookup name=X Show locator of manifest with name X
 
-Working with data:
+Working with data: see whget(1p), whput(1p), whless(1p).
 
- See whget(1p), whput(1p), whless(1p).
+Other tools:
+
+ wh block bucket hash={locator}  Compute probe order for locator
+ wh block bucket < ./locatorlist Compute probe order for many locators
 
 =head1 SUBMITTING
 
@@ -74,6 +77,57 @@ B<FOO=bar> options with uppercase names are passed through to the mr-function as
 
 =back
 
+=head1 INSPECTING
+
+ wh job show [searchfield=value] ... [displayfield] ...
+
+"searchfield" and "displayfield" can be: id, inputkey, revision,
+mrfunction, knobs, stepspernode, nodes, photons, steps_done,
+steps_running, steps_todo, starttime, starttime_s, finishtime,
+finishtime_s, frozentokey, thawedfromkey, metakey, outputkey, success.
+
+Additionally, "displayfield" can be "steps" as a shortcut for
+"steps_done steps_running steps_todo".
+
+If no displayfield is given, the default is "inputkey revision
+mrfunction stepspernode knobs".
+
+If a single displayfield is given, the output is just the value of the
+displayfield for each job.  Otherwise, each field/value pair is given
+as "field=value" with the value shell-quoted if needed:
+
+ $ wh job show id=40000 starttime
+ 2009-08-31 13:40:26
+ $ wh job show id=40000 starttime finishtime success
+ starttime="2009-08-31 13:40:26" finishtime="2009-08-31 13:55:46" success=1
+
+=head2 EXAMPLES
+
+Inspect a single job:
+
+ wh job show id=123
+
+Search for jobs with a particular input:
+
+ wh job show inputkey=ecd39d68e3db311b841dc4af4f4a59ed
+
+Search for jobs with a particular revision number, and display only
+their job IDs:
+
+ wh job show revision=2100 id
+
+Submit a job identical to job 123:
+
+ eval wh job new `wh job show id=123` photons=1 nodes=2
+
+Submit a job identical to job 123 but with a different revision:
+
+ eval wh job new `wh job show id=123` photons=1 nodes=2 revision=1234
+
+=head1 SEE ALSO
+
+whintro(1p), whget(1p), whput(1p), whless(1p)
+
 =cut
 
 eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
@@ -101,7 +155,7 @@ my $commands = {
 my $cmd = shift @ARGV;
 while (!$commands->{$cmd})
 {
-    die "Unrecognized command.  Try \"$0 help\".\n" if !@ARGV;
+    help() if !@ARGV;
     $cmd .= " ".(shift @ARGV);
 }
 
@@ -124,36 +178,8 @@ $commands->{$cmd}->();
 
 sub help
 {
-    print qq{
-wh help
-
-wh block bucket hash=HASH
-wh block bucket <list-of-hashes
-
-wh job list [id_min=ID] [id_max=ID]
-wh job show id=ID
-wh job show id=ID outputkey
-wh job show id=ID stepspernode mrfunction revision inputkey knobs ...
-
-wh job new nodes=N photons=N mrfunction=NAME revision=N inputkey=KEY \
-           BARKNOB=foo BAZKNOB=baz
-wh job new nodes=N photons=N thaw=ID
-wh job new nodes=N photons=N thawedfromkey=KEY
-
-wh job freeze id=ID [stop=1]
-
-wh job wait id=ID
-
-wh manifest list [name=NAME] [key=KEY]
-wh manifest lookup [name=NAME]
-wh manifest name name=NAME [oldkey=KEY] newkey=KEY
-wh manifest name name=NAME oldkey=KEY
-
-wh keep key=KEY [nnodes=N]
-
-wh snap
-
-};
+    use Pod::Usage;
+    pod2usage(-exitval => 1);
 }
 
 sub block_bucket
