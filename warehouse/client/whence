@@ -1,5 +1,105 @@
 #!/usr/bin/perl
 
+=head1 NAME
+
+whence - Discover how data sets were computed on the cloud
+
+=head1 SYNOPSIS
+
+ whence [options] jobid[@warehousename]
+ whence [options] locator[,locator,...][@warehousename]
+
+=head1 DESCRIPTION
+
+whence(1p) tells you how a given data set was produced, or how it
+could be recomputed, based on the history of jobs that have run on the
+cloud.  It also provides a list of "source data" locators.
+
+The premise is that the specified data set can be recomputed by
+starting with the displayed source data and re-running the displayed
+sequence jobs.
+
+=head1 OPERATION
+
+If a data locator is provided, whence(1p) starts by finding a job that
+produced that locator as output.  If a job number is given, the
+specified job will be the first one displayed.
+
+When a job is displayed, its input locator -- along with any locators
+appearing in its knob values -- is added to the set of "source data"
+locators.
+
+If a "source data" locator was produced as the output of a job on the
+cloud, whence(1p) displays the job and removes the locator from the
+"source data" set.
+
+When none of the remaining "source data" locators can be found in the
+outputs of any jobs, whence(1p) outputs the remaining "source data"
+locators and stops.
+
+=head1 LIMITATIONS
+
+In many cases, the output of whence(1p) corresponds to an entire
+workflow and the "source data" locators really are the inputs to the
+workflow, but this isn't always the case.  For example, if a
+mr-function always outputs a YES or NO output, and a YES answer is
+used as an input to a job you're interested in, whence(1p) is likely
+to come up with a way to compute a YES that has nothing to do with the
+workflow that you're interested in, and include lots of irrelevant
+source data as a result.
+
+=head1 OPTIONS
+
+=over
+
+=item --skip-thawed
+
+Don't follow freeze/thaw cycles.  By default, when encountering a job
+that was started by resuming from a saved state, whence(1p) will also
+display the earlier job whose state was saved.  With this option,
+these earlier portions of the job will be omitted from the output.
+The information required to reproduce the workflow -- inputs, outputs,
+and job configuration -- will be complete either way.
+
+=item --node-seconds
+
+Show total number of node-seconds allocated to each job (number of
+nodes allocated * duration of job)
+
+=item --slots
+
+Show total number of slots (maximum concurrent job steps) allocated in
+each job.  The maximum number of slots that were in simultaneous use
+during the job might be less than this.
+
+=item --slot-seconds
+
+Show number of slot seconds allocated in each job. This is equal to
+CPU seconds, if stepspernode was not specified.
+
+=item --failure-seconds
+
+Show how many slot-seconds were spent executing tasks which ultimately
+failed.
+
+=item --success-seconds
+
+Show how many slot-seconds were spent executing tasks which ultimately
+succeeded.
+
+=item --idle-seconds
+
+Show how many slot-seconds were spent idle (e.g., waiting for the last
+jobs in a level to finish, subsequent job steps not yet queued).
+
+=back
+
+=head1 SEE ALSO
+
+whintro(1p), wh(1p)
+
+=cut
+
 use strict;
 use Warehouse;
 use Warehouse::Stream;
@@ -13,17 +113,8 @@ while ($ARGV[0] =~ /^--(\S+)(?:=(.*))?/)
 
 if (@ARGV != 1)
 {
-    die <<EOF;
-usage: whence [options] {key|jobid}[\@warehouse]
-options:
-       --skip-thawed     don\'t follow freeze/thaw cycles
-       --node-seconds    show total #nodes * seconds allocated to each job
-       --slots           show number of slots (maximum concurrent job steps)
-       --slot-seconds    show number of slots * job duration
-       --failure-seconds show total slot seconds for failed job steps
-       --success-seconds show total slot seconds for successful job steps
-       --idle-seconds    show total slot seconds not accounted for by job steps
-EOF
+    use Pod::Usage;
+    pod2usage(-exitval => 1);
 }
 
 my %opts;
