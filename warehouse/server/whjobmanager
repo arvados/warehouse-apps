@@ -1,12 +1,53 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-# mrjobmanager: initiate and supervise all map and reduce tasks for one job.
-#
-# 1. Find lowest reduce task level for this job
-# 2. Run all reduce tasks with this lowest level
-#    (this may cause more tasks to be queued)
-# 3. Repeat from #1 until no tasks remain.
+=head1 NAME
+
+whjobmanager: Execute job steps, save snapshots as requested, collate output.
+
+=head1 SYNOPSIS
+
+Obtain job details from database, run tasks on compute nodes
+(typically invoked by scheduler on cloud controller):
+
+ whjobmanager jobid
+
+Obtain job details from command line, run tasks on local machine
+(typically invoked by application or developer on VM):
+
+ whjobmanager revision=PATH mrfunction=FUNC inputkey=LOCATOR \
+              [stepspernode=N] [SOMEKNOB=value] ...
+
+=head1 RUNNING JOBS LOCALLY
+
+whjobmanager(1p)'s log messages appear on stderr, and are saved in the
+warehouse at each checkpoint and when the job finishes.
+
+If the job succeeds, the job's output locator is printed on stdout.
+
+If a job step outputs anything to stderr, it appears in
+whjobmanager(1p)'s log when the step finishes.
+
+While the job is running, the following signals are accepted:
+
+=over
+
+=item control-C, SIGINT, SIGQUIT
+
+Save a checkpoint, terminate any job steps that are running, and stop.
+
+=item SIGALRM
+
+Save a checkpoint and continue.
+
+=back
+
+=head1 SEE ALSO
+
+whintro(1p), wh(1p)
+
+=cut
+
 
 use strict;
 use DBI;
