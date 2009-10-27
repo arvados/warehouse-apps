@@ -21,11 +21,47 @@ die "No REMOTE_BASE provided" if $ENV{KNOB_REMOTE_BASE} !~ /:\/\//;
 $ENV{KNOB_REMOTE_BASE_PUBLIC} ||= $ENV{KNOB_REMOTE_BASE};
 
 
-# TODO: Convert profile to trait-o-matic phenotype/profile if
-# PHENOTYPE_LOCATOR not provided
+my $phenotype_locator;
+if ($ENV{KNOB_PROFILE})
+{
+  # Convert profile to trait-o-matic phenotype/profile
+  my $profile = $ENV{KNOB_PROFILE};
+  if (exists $ENV{KNOB_PROFILE_SUBDIR})
+  {
+    $profile .= $ENV{KNOB_PROFILE_SUBDIR};
+  }
+  $profile = `whget $profile -`;
+  die sprintf ("whget exit value %d signal %d", $?>>8, $?&127) if $?;
+  $profile =~ s/^( *)- /$1/gm;
+  use YAML;
+  use YAML::Loader;
+  my $loader = YAML::Loader->new;
+  my $ynative = $loader->load($profile);
 
-my $phenotype_locator = $ENV{KNOB_PHENOTYPE_LOCATOR};
+  my $jnative = {
+    "sex" => $ynative->{records}->{traits}->{sex}->{value},
+    "ancestry" => [ethnicity2ancestry ($ynative->{records}->{ethnicity}->{race}->{value})],
+  };
+  use JSON;
+  my $json = new JSON;
+  eval { $json->allow_blessed; }; # new version of JSON
+  local $JSON::ConvBlessed = 1; # old version
+  $phenotype = eval { $json->encode ($jnative) } || $json->objToJson ($jnative);
 
+  use Warehouse::Stream;
+  my $s = new Warehouse::Stream (whc => $whc);
+  $s->clear;
+  $s->name (".");
+  $s->write_start ("profile.json");
+  $s->write_data (\$phenotype);
+  $s->write_finish;
+  $phenotype_locator = $whc->store_block ($s->as_string) or die $whc->errstr;
+  $phenotype_locator = "warehouse:///$phenotype_locator/profile.json";
+}
+else
+{
+  $phenotype_locator = $ENV{KNOB_PHENOTYPE_LOCATOR};
+}
 
 my $genotype_locator = "warehouse:///" . $ENV{KNOB_GENOTYPE} . $ENV{KNOB_GENOTYPE_SUBDIR};
 
@@ -203,4 +239,27 @@ sub fetch_results
   my $ret = <STDIN>;
   return undef if !close STDIN;
   return $ret;
+}
+
+sub ethnicity2ancestry
+{
+  my $ethnicity = shift;
+  my $ancestry = {};
+  my @map = ( "white" => "eur",
+	      "african" => "afn",
+	      "african" => "afs",
+	      "asia" => "asc",
+	      "asia" => "ase",
+	      "asia" => "asw",
+	      "america" => "ami",
+	      "ocean" => "oci",
+      );
+  while (my ($e, $a) = splice @map, 0, 2)
+  {
+    # recognize vague terms (regexps) from map
+    $ancestry->{$a} = 1 if $ethnicity =~ /$e/;
+    # add the more specific three-letter codes too if they appear
+    $ancestry->{$a} = 1 if $ethnicity =~ /\b$a\b/;
+  }
+  return sort keys %$ancestry;
 }
