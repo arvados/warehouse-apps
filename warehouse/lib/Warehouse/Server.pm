@@ -10,6 +10,8 @@ use Digest::MD5;
 use DBI;
 use IO::Handle;
 
+my $MINIMIZE_CALLBACKS = 1;
+
 
 =head1 NAME
 
@@ -136,20 +138,32 @@ Listens for connections, and handles requests from clients.
 =cut
 
 
-my $kill = 0;
-
 sub run
 {
     my $self = shift;
-    local $SIG{INT} = sub { $Warehouse::Server::kill = 1; };
-    local $SIG{TERM} = sub { $Warehouse::Server::kill = 1; };
+    local $SIG{CHLD} = 'IGNORE';
+    local $SIG{PIPE} = 'IGNORE';
     local $| = 1;
 
     my $c;
-    while (!$kill && ($c = $self->{daemon}->accept))
+    while (($c = $self->{daemon}->accept))
     {
+	my $pid = fork();
+	die "fork failed" if !defined $pid;
+	if ($pid)
+	{
+	    # Let my child proc use the database handle I opened
+	    $self->{dbh}->{InactiveDestroy} = 1;
+
+	    # Get a new one now to pass to the next child
+	    $self->_reconnect;
+
+	    # Wait for the next connection
+	    next;
+	}
+
 	my $r;
-	while (!$kill && ($r = $c->get_request))
+	while (($r = $c->get_request))
 	{
 	    print(scalar (localtime) .
 		  " " . $c->peerhost() .
@@ -158,6 +172,9 @@ sub run
 		  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
 		  "\n");
 
+	    # My database handle might have been created some time ago
+	    # by my parent proc.  If the database server has restarted
+	    # since then, this will rescue my connection.
 	    $self->_reconnect if !$self->{dbh}->ping;
 
 	    if ($r->method eq "GET" and $r->url->path eq "/list")
@@ -598,6 +615,7 @@ sub run
 	    }
 	}
 	$c->close;
+	exit 0;
     }
 }
 
@@ -655,18 +673,26 @@ sub _callback_job_list
     }
     elsif (my $job = $self->{sth}->fetchrow_hashref)
     {
-	
-	my $data = join ("\n",
-			 map {
-			     my $v = $job->{$_};
-			     $v =~ s/\\/\\\\/g;
-			     $v =~ s/\n/\\n/g;
-			     $_ = "inputkey" if $_ eq "input0";
-			     $_ = "outputkey" if $_ eq "output";
-			     $_."=".$v;
-			 } keys %$job)
-	    . "\n\n";
+	my @data;
+	do {
+	    while (my ($k, $v) = each %$job)
+	    {
+		$v =~ s/\\/\\\\/go;
+		$v =~ s/\n/\\n/go;
+		$k = "inputkey" if $k eq "input0";
+		$k = "outputkey" if $k eq "output";
+		push @data, $k."=".$v."\n";
+	    }
+	    push @data, "\n";
+	} while ($MINIMIZE_CALLBACKS &&
+		 ($job = $self->{sth}->fetchrow_hashref));
+	my $data = join ("", @data);
 	$self->{md5_ctx}->add ($data);
+	if ($MINIMIZE_CALLBACKS)
+	{
+	    $self->{sth_finished} = 1;
+	    $data .= $self->{md5_ctx}->hexdigest . "\n";
+	}
 	return $data;
     }
     else
