@@ -684,11 +684,12 @@ sub _callback_job_list
 		push @data, $k."=".$v."\n";
 	    }
 	    push @data, "\n";
-	} while ($MINIMIZE_CALLBACKS &&
+	} while (@data < 1000 &&
+		 $MINIMIZE_CALLBACKS &&
 		 ($job = $self->{sth}->fetchrow_hashref));
 	my $data = join ("", @data);
 	$self->{md5_ctx}->add ($data);
-	if ($MINIMIZE_CALLBACKS)
+	if (!$job)
 	{
 	    $self->{sth_finished} = 1;
 	    $data .= $self->{md5_ctx}->hexdigest . "\n";
