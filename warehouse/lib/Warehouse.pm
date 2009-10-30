@@ -635,9 +635,15 @@ sub write_finish
 	$self->{output_buffer} = "";
     }
     $self->_finish_async_writes (0) or return undef;
+    my @hashes = @{$self->{hashes_written}};
+    if (!@hashes)
+    {
+      # still nothing written, must be because nothing was ever in the buffer
+      @hashes = qw(d41d8cd98f00b204e9800998ecf8427e+0);
+    }
     if (wantarray)
     {
-      return @{$self->{hashes_written}};
+      return @hashes;
     }
     else
     {
@@ -647,7 +653,7 @@ sub write_finish
 		   map {
 		     /^(-\d+ )?([0-9a-f]{32})/;
 		     $2;
-		   } @{$self->{hashes_written}});
+		   } @hashes);
     }
 }
 
