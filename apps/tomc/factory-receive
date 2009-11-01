@@ -48,11 +48,11 @@ foreach my $hash (sort keys %hash_is)
 	    sysopen F, "$workdir/$hash.nomanifest", O_WRONLY|O_CREAT|O_EXCL;
 	    close F;
 	}
-	if ($chunk =~ m{^(\@\S+\n[A-Z]+\n\+\S*\n\S+\n){4}}s)
+	if ($chunk =~ m{^(\@\S+\n[A-Za-z]+\n\+\S*\n\S+\n){4}}s)
 	{
-	    if ($chunk !~ m{^(\@\S+\n[A-Z]+\n\+\S*\n[\0-I]+\n){40}}s
+	    if ($chunk !~ m{^(\@\S+\n[A-Za-z]+\n\+\S*\n[\0-I]+\n){40}}s
 		&&
-		$chunk !~ m{^(\@\S+\n[A-Z]+\n\+\S*\n[\0-I]+\n)+$}s)
+		$chunk !~ m{^(\@\S+\n[A-Za-z]+\n\+\S*\n[\0-I]+\n)+$}s)
 	    {
 		print "$hash is solexa fastq reads\n";
 		sysopen F, "$workdir/$hash.issolexa", O_WRONLY|O_CREAT|O_EXCL;
