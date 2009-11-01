@@ -984,8 +984,8 @@ sub maq_pipeline
     if ($me->{cns2x} && $me->{cns2x}->{outputkey})
     {
 	my @userknobs;
-	push @userknobs, "SNPFILTER_ARGS=-q ".$pipeline->{input}->{minconsensusquality}
-	    if $pipeline->{input}->{minconsensusquality};
+	push @userknobs, "SNPFILTER_ARGS=-q $1"
+	    if $pipeline->{input}->{minconsensusquality} =~ /^(\d+)$/;
 	$me->{snpfilter} = findjob
 	    ( { mrfunction => "maq-snpfilter",
 		revision => [ 2346, ],
@@ -1045,8 +1045,8 @@ sub maq_pipeline
 	    if $pipeline->{input}->{minstarts};
 	push @userknobs, "SNPCALL_MIN_STARTS=2"
 	    if !length ($pipeline->{input}->{minstarts});
-	push @userknobs, "MINCONSENSUSQUALITY=".$pipeline->{input}->{minconsensusquality}
-	    if $pipeline->{input}->{minconsensusquality};
+	push @userknobs, "MINCONSENSUSQUALITY=$1"
+	    if $pipeline->{input}->{minconsensusquality} =~ /^(\d+)$/;
 
 	$me->{snpdetail} = findjob
 	    ( { mrfunction => "filefilter",
