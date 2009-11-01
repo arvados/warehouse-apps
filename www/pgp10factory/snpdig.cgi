@@ -88,6 +88,18 @@ while (@snplists)
 		    push @calls, [ $1, $2, $$dataref ];
 		    next;
 		}
+		elsif ($$dataref =~ /^(\S+) \t [^\t]* \t [^\t]* \t (\d+)
+					\t (\d+) \t .* alleles\ ([A-Z\/]+) \b/x
+		       && $2 == $3)
+		{
+		    push @calls, [$1, $2, "$1 $2 . $4" ];
+		    if ($$dataref =~ /ref_allele ([ACGTN])\b/i)
+		    {
+			my $refbase = $1;
+			$calls[-1]->[2] =~ s/ \. / $refbase /;
+		    }
+		    next;
+		}
 		die "$0 $hash $subdir/$file line $line noparse $$dataref\n";
 	    }
 	}
@@ -261,6 +273,7 @@ sub fasta2bin
 {
     my $x = shift;
     $x =~ tr/a-z/A-Z/;
+    $x =~ s/[^A-Z]//g;
     $x =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
     $x = hex($x);
     while ($x & ~0xf)
