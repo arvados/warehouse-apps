@@ -1703,6 +1703,11 @@ sub _sign
     eval "use GnuPG::Interface";
     return $self->_fakesign ($text, "no GnuPG::Interface") if $@;
 
+    local $SIG{PIPE} = "IGNORE"; # this might prevent GnuPG::Interface from crashing
+
+    printf STDERR "gpg: sign %s\n", Digest::MD5::md5_hex($text)
+	if $ENV{DEBUG_GPG};
+
     my $gnupg = GnuPG::Interface->new();
 
     $gnupg->options->hash_init( armor    => 1,
@@ -1745,7 +1750,6 @@ sub _sign
     }
 
     return $signed_text;
-
 }
 
 sub _fakesign
@@ -2396,6 +2400,8 @@ sub _encrypt_block
 	return \$enc;
     }
 
+    local $SIG{PIPE} = "IGNORE"; # this might prevent GnuPG::Interface from crashing
+
     printf STDERR "gpg: encrypt %s\n", Digest::MD5::md5_hex($$dataref)
 	if $ENV{DEBUG_GPG};
 
@@ -2473,6 +2479,8 @@ sub _decrypt_block
     my ($self, $dataref) = @_;
 
     return $dataref if $self->{config}->{nodecrypt};
+
+    local $SIG{PIPE} = "IGNORE"; # this might prevent GnuPG::Interface from crashing
 
     printf STDERR "gpg: decrypt %s\n", Digest::MD5::md5_hex($$dataref)
 	if $ENV{DEBUG_GPG};
