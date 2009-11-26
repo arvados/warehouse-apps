@@ -113,6 +113,7 @@ sub write_file
     }
     my $use_filename = ($opt{"use-filename"} || (split("/", $filename))[-1]);
     die "Stored filename must not end with /" if $use_filename =~ m:/$:;
+    $use_filename =~ s:^/+::;
     my $use_subdir = ".";
     if ($opt{"use-subdir"})
     {
