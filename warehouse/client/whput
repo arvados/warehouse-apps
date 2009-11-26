@@ -111,10 +111,27 @@ sub write_file
     {
 	open F, "<", $filename or die "Can't open $filename: $!";
     }
+    my $use_filename = ($opt{"use-filename"} || (split("/", $filename))[-1]);
+    die "Stored filename must not end with /" if $use_filename =~ m:/$:;
+    my $use_subdir = ".";
+    if ($opt{"use-subdir"})
+    {
+	$use_subdir = $opt{"use-subdir"};
+    }
+    elsif ($use_filename =~ s:(.*)/(.*):$2:)
+    {
+	$use_subdir = $1;
+    }
+    $use_subdir =~ s:^/+::;
+    $use_subdir = "./$use_subdir" if $use_subdir !~ m:^\.(/.*)?$:;
+    while ($use_subdir =~ s:/\.\./:/:) { }
+    $use_subdir =~ s://+:/:g;
+    $use_subdir =~ s:/$::;
+
     my $s = new Warehouse::Stream (whc => $whc);
-    $s->name (".");
+    $s->name ($use_subdir);
     $s->clear;
-    $s->write_start ($opt{"use-filename"} || (split("/", $filename))[-1]);
+    $s->write_start ($use_filename);
     my $buf;
     my $ok;
     while ($ok = read F, $buf, 2**26)
@@ -264,6 +281,7 @@ options:
     --in-manifest or --as-manifest
     --as-stream
     --use-filename=read-from-stdin.txt
+    --use-subdir=./subdir/in/manifest
 
 };
 }
