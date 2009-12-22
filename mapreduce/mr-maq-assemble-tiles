@@ -76,7 +76,7 @@ if ($ENV{MR_LEVEL} == 1)
       while (my $dataref = $stream->read_until ($pos + $size)) {
 	$buf .= $$dataref;
       }
-      my $nrec;
+      my $nrec = 0;
       my $maq_in = new MAQ::map(\$buf, "r", 'noheader');
       while (my %rec = $maq_in->read) {
 	$nrec++;
