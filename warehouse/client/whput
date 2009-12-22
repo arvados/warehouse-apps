@@ -135,7 +135,7 @@ sub write_file
     $s->write_start ($use_filename);
     my $buf;
     my $ok;
-    while ($ok = read F, $buf, 2**26)
+    while ($ok = sysread F, $buf, 2**23)
     {
 	$s->write_data (\$buf) or die "Warehouse::Stream::write_data failed: ".$s->errstr;
     }

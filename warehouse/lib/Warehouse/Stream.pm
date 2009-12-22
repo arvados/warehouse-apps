@@ -188,7 +188,8 @@ sub clear
   delete $self->{write_filename};
   $self->{myhashes} = [];	# hashes of completed/written blocks
   $self->{myfiles} = [];	# pos:size:name of write_finished files
-  $self->{write_buf} = "";	# data yet to be written to warehouse
+  my $data = "";
+  $self->{write_buf} = \$data;	# data yet to be written to warehouse
   $self->{write_pos} = 0;	# total stream bytes = pos at end of write_buf
 }
 
@@ -249,7 +250,7 @@ sub write_data
   my $dataref = ref $data ? $data : \$data;
 
   $self->{write_pos} += length $$dataref;
-  $self->{write_buf} .= $$dataref;
+  ${$self->{write_buf}} .= $$dataref;
   $self->_write_flush;
 }
 
@@ -259,9 +260,9 @@ sub _write_flush
 {
   my $self = shift;
   my $flushall = shift;
-  while (length ($self->{write_buf}))
+  while (length (${$self->{write_buf}}))
   {
-    my $writesize = length $self->{write_buf};
+    my $writesize = length ${$self->{write_buf}};
     if ($writesize >= $Warehouse::blocksize)
     {
       $writesize = $Warehouse::blocksize;
@@ -270,6 +271,11 @@ sub _write_flush
     {
       return 1;
     }
+
+    my $leftover = substr(${$self->{write_buf}}, $writesize);
+    my $data_ref = $self->{write_buf};
+    $self->{write_buf} = \$leftover;
+    substr($$data_ref, $writesize, length($data)-$writesize, "");
 
     if (!$self->_finish_async_writes ($ENV{ASYNC_WRITE} - 1))
     {
@@ -301,8 +307,7 @@ sub _write_flush
 	my $hash;
 	for (1..4)
 	{
-	  $hash = $self->{whc}->store_block (substr ($self->{write_buf},
-						     0, $writesize));
+	  $hash = $self->{whc}->store_block($data_ref);
 	  last if $hash;
 	}
 	if ($hash)
@@ -321,8 +326,7 @@ sub _write_flush
       my $hash;
       for (1..4)
       {
-	$hash = $self->{whc}->store_block (substr ($self->{write_buf},
-						   0, $writesize));
+	$hash = $self->{whc}->store_block ($data_ref);
 	last if $hash;
 	sleep 1;
       }
@@ -339,7 +343,6 @@ sub _write_flush
 
       push @{$self->{myhashes}}, $hash;
     }
-    substr $self->{write_buf}, 0, $writesize, "";
   }
 
   return $self->_finish_async_writes (0) if ($flushall);

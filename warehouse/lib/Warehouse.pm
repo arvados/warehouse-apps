@@ -1035,7 +1035,7 @@ sub store_in_keep
 	my $url = "http://".$keep_host_port."/".$md5;
 	my $req = HTTP::Request->new (PUT => $url);
 	$req->header ('Content-Length' => length $signedreq);
-	$req->content ($signedreq);
+	$req->content_ref (\$signedreq);
 
 	if ($ENV{DEBUG_KEEP})
 	{
