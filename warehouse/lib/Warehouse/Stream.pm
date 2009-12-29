@@ -275,7 +275,7 @@ sub _write_flush
     my $leftover = substr(${$self->{write_buf}}, $writesize);
     my $data_ref = $self->{write_buf};
     $self->{write_buf} = \$leftover;
-    substr($$data_ref, $writesize, length($data)-$writesize, "");
+    substr($$data_ref, $writesize, length($$data_ref)-$writesize, "");
 
     if (!$self->_finish_async_writes ($ENV{ASYNC_WRITE} - 1))
     {
