@@ -2572,6 +2572,11 @@ sub _unsafe_decrypt_block
 	return 1;
     }
 
+    if ($status_output eq "" && $error_output eq "") {
+      # No status, no error; assume (!) input has been passed through unchanged (another way GnuPG::Interface sometimes reacts to non-encrypted input)
+      return 1;
+    }
+
     if ($status_output !~ /DECRYPTION_OKAY/) {
       # Something else went wrong...
       die "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
