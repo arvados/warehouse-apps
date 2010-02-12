@@ -21,6 +21,16 @@ if (!@ARGV)
 }
 my $TheConfigFile = shift @ARGV;
 
+my $ServerKey = `gpg --export --armor`;
+if ($ServerKey =~ /BEGIN PGP PUBLIC KEY BLOCK/) {
+    my $ThePublicKeyFile = ($TheConfigFile =~ m:(.*/):)[0] . "server_key.txt";
+    if (sysopen TMP, "$ThePublicKeyFile.tmp", O_WRONLY|O_CREAT|O_EXCL) {
+	print TMP $ServerKey;
+	close TMP;
+	rename "$ThePublicKeyFile.tmp", $ThePublicKeyFile;
+    }
+}
+
 my $whc = new Warehouse;
 
 $whc->{ua}->timeout(3);
