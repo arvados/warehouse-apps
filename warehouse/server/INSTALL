@@ -41,6 +41,11 @@ Test and install the Perl API, server, and sample client programs:
  make install
  )
 
+Create a GPG key (DSA and Elgamal) with no passphrase for
+root@controller.
+
+ sudo gpg --gen-key
+
 Create supervised service:
 
  (
