@@ -46,6 +46,7 @@ root@controller.
 
  sudo -i
  gpg --gen-key
+ (echo; echo always-trust) >>~/.gnupg/gpg.conf
 
 Create supervised service:
 
