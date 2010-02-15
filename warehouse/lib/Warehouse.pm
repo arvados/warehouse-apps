@@ -2231,7 +2231,7 @@ sub _cryptsetup
     my $self = shift;
     $self->{config}->{encrypt} ||= [];
     $ENV{ENCRYPT_TO} ||= $ENV{ENCRYPT_ALL};
-    if ($ENV{ENCRYPT_TO} =~ /[^\s,]\@/)
+    if ($ENV{ENCRYPT_TO} =~ /[^\s,]/)
     {
 	$self->{config}->{encrypt} = [ split (/\s*,\s*/, $ENV{ENCRYPT_ALL}) ];
     }
