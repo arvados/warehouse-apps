@@ -15,7 +15,7 @@ $ENV{PATH} = "$ENV{MR_REVISION_INSTALLDIR}/bin"
     . ":$ENV{MR_REVISION_SRCDIR}/mapreduce"
     . ":$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce"
     . ":$ENV{PATH}";
-$ENV{PERLLIB} .= "$ENV{MR_REVISION_SRCDIR}/warehouse/lib:$ENV{MR_REVISION_INSTALLDIR}/src/warehouse/lib:$ENV{MR_REVISION_SRCDIR}/mapreduce:$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce";
+$ENV{PERLLIB} = "$ENV{MR_REVISION_SRCDIR}/warehouse/lib:$ENV{MR_REVISION_INSTALLDIR}/src/warehouse/lib:$ENV{MR_REVISION_SRCDIR}/mapreduce:$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce:$ENV{PERLLIB}";
 
 $ENV{TMPDIR} ||= "/tmp";
 $ENV{MR_JOB_TMP} = "$ENV{TMPDIR}/mrcompute/work";
@@ -37,6 +37,20 @@ $ENV{NOCACHE} ||= $ENV{KNOB_NOCACHE};
 $ENV{NOCACHE_READ} ||= $ENV{KNOB_NOCACHE_READ};
 $ENV{NOCACHE_WRITE} ||= $ENV{KNOB_NOCACHE_WRITE};
 
+$ENV{HOME} = $ENV{MR_JOBSTEP_TMP};
+if (length $ENV{GPG_KEYS}) {
+    warn "GPG_KEYS => ".length($ENV{"GPG_KEYS"})." bytes\n" if $ENV{"DEBUG_GPG"};
+    mkdir $ENV{HOME}."/.gnupg", 0700;
+    `gpgsetup`;
+    delete $ENV{GPG_KEYS};
+    if ($ENV{ENCRYPT_TO} !~ /[^\s,]/) {
+	die "Fatal: GPG_KEYS provided, but gpgsetup failed.\n";
+    }
+    warn "ENCRYPT_TO => ".$ENV{"ENCRYPT_TO"}."\n" if $ENV{"DEBUG_GPG"};
+}
+
+
 open STDOUT, ">/dev/null";
+
 exec "mr-$ENV{MR_FUNCTION}";
 die "mr-$ENV{MR_FUNCTION}: $!";

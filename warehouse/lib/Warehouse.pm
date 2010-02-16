@@ -357,6 +357,49 @@ sub get_config
 
 
 
+=head2 set_config
+
+ $whc->set_config ("encrypt_to", "a\@b.c.d,e\@f.g.h"); # specify recipients
+ $whc->set_config ("encrypt_to", undef);       # default setting (env vars)
+ $whc->set_config ("encrypt_to", 0);                              # disable
+
+ $whc->set_config ("decrypt", 1);           # enable transparent decryption
+ $whc->set_config ("decrypt", 0);          # disable transparent decryption
+
+=cut
+
+
+sub set_config
+{
+    my $self = shift;
+    my $configvar = shift;
+    my $newvalue = shift;
+    if ($configvar eq "encrypt_to") {
+	if (!defined $newvalue) {
+	    delete $self->{config}->{nodecrypt};
+	    $self->_cryptsetup ();
+	}
+	elsif ($newvalue eq 0) {
+	    local $ENV{NODECRYPT} = 1;
+	    local $ENV{ENCRYPT_ALL} = undef;
+	    local $ENV{ENCRYPT_TO} = undef;
+	    $self->_cryptsetup ();
+	}
+	else {
+	    local $ENV{NODECRYPT} = undef;
+	    local $ENV{ENCRYPT_ALL} = undef;
+	    local $ENV{ENCRYPT_TO} = $newvalue;
+	    delete $self->{config}->{nodecrypt};
+	    $self->_cryptsetup ();
+	}
+    }
+    elsif ($configvar eq "decrypt") {
+	$self->{config}->{nodecrypt} = !$newvalue;
+    }
+}
+
+
+
 =head2 store_block
 
  my $hash = $whc->store_block ($data)
@@ -940,8 +983,12 @@ sub store_in_keep
     {
 	$md5 = Digest::MD5::md5_hex ($$dataref);
 	@hints = length($$dataref);
+
+	warn "store_in_keep > config->encrypt\n" if $ENV{DEBUG_GPG} >= 2;
 	if (@ { $self->{config}->{encrypt} } && (!exists $arg{noencrypt} || ($arg{noencrypt} != 1)))
 	{
+	    warn "store_in_keep > config->encrypt >\n" if $ENV{DEBUG_GPG} >= 2;
+
 	    my ($enchash, $encdataref)
 		= $self->_cryptmap_fetchable ($dataref, "$md5+$hints[0]");
 	    if ($enchash)
@@ -2231,18 +2278,26 @@ sub _cryptsetup
     my $self = shift;
     $self->{config}->{encrypt} ||= [];
     $ENV{ENCRYPT_TO} ||= $ENV{ENCRYPT_ALL};
+
+    warn "ENCRYPT_TO => $ENV{ENCRYPT_TO}\n" if $ENV{"DEBUG_GPG"};
+
     if ($ENV{ENCRYPT_TO} =~ /[^\s,]/)
     {
-	$self->{config}->{encrypt} = [ split (/\s*,\s*/, $ENV{ENCRYPT_ALL}) ];
+	$self->{config}->{encrypt} = [ split (/\s*,\s*/, $ENV{ENCRYPT_TO}) ];
     }
     elsif ($ENV{NODECRYPT})
     {
 	$self->{config}->{nodecrypt} = 1;
 	return;
     }
-    $self->{config}->{cryptmap_name_prefix} ||= "/gpg/".Digest::MD5::md5_hex (join (",", sort @{$self->{config}->{encrypt}}))."/";
+    $self->{config}->{_cryptmap_name_prefix} =
+	$self->{config}->{cryptmap_name_prefix} ||
+	"/gpg/".Digest::MD5::md5_hex (join (",", sort @{$self->{config}->{encrypt}}))."/";
 
-    if (length ($ENV{HOME}) &&
+    if (length ($ENV{"GNUPGHOME"}) && -w $ENV{"GNUPGHOME"}) {
+	$self->{gpg_homedir} = $ENV{"GNUPGHOME"};
+    }
+    elsif (length ($ENV{HOME}) &&
 	(-w "$ENV{HOME}/.gnupg"
 	 || (-w "$ENV{HOME}" &&
 	     !-e "$ENV{HOME}/.gnupg")))
@@ -2254,6 +2309,8 @@ sub _cryptsetup
 	$self->{config}->{nodecrypt} = 1;
 	return;
     }
+
+    warn "GPG homedir = $self->{gpg_homedir}\n" if $ENV{DEBUG_GPG};
 
     eval "use GnuPG::Interface";
     return if $@;
@@ -2309,7 +2366,7 @@ sub _cryptmap_write
     my $plainhash = shift;
     my $enchash = shift;
     return undef if !@{$self->{config}->{encrypt}};
-    my $cryptmap_name = $self->{config}->{cryptmap_name_prefix}.$plainhash;
+    my $cryptmap_name = $self->{config}->{_cryptmap_name_prefix}.$plainhash;
     my $oldenchash = $self->fetch_manifest_key_by_name ($cryptmap_name);
 
     printf STDERR ("gpg: _cryptmap_write %s %s -> %s\n",
@@ -2351,7 +2408,7 @@ sub _cryptmap_fetchable
 	local $self->{name_warehouse_servers} =
 	    $self->{cryptmap_name_controllers};
 	$enchash = $self->fetch_manifest_key_by_name
-	    ($self->{config}->{cryptmap_name_prefix}.$hash)
+	    ($self->{config}->{_cryptmap_name_prefix}.$hash)
 	    or die "no cryptmap for $hash";
 
 	$enchash =~ s/\+G[^\+]*//g;
@@ -2497,6 +2554,13 @@ sub _decrypt_block
     local $/ = undef;
     my $decrypted = <D>;
     close D;
+
+    if ($ENV{"DEBUG_GPG"} && $decrypted eq "") {
+	warn "gpg: decrypt outbytes=0, returning input unchanged\n";
+    }
+    elsif ($ENV{"DEBUG_GPG"}) {
+	warn "gpg: decrypt inbytes=".length($$dataref)." outbytes=".length($decrypted)."\n";
+    }
     return $dataref if $decrypted eq "";
     return \$decrypted;
 }
@@ -2554,33 +2618,38 @@ sub _unsafe_decrypt_block
 
     waitpid $pid, 0;
 
+    if ($ENV{DEBUG_GPG} >= 2) {
+	warn "Status: <<<$status_output>>> Error: <<<$error_output>>>\n";
+    }
+
+    if ($status_output =~ /DECRYPTION_OKAY/) {
+	return 1;
+    }
+
     if ($status_output =~ /NODATA/) {
-	# This data is not encrypted. Return input unchanged.
-	print $$dataref;
+	# This data is not encrypted. Output nothing. Caller will use original data unchanged.
 	return 1;
     }
 
     if ($status_output !~ /\S/ &&
 	$error_output =~ /zlib inflate problem: incorrect header check/) {
-	# This data is probably (!) not encrypted. Return input unchanged.
-	print $$dataref;
+	# This data is probably (!) not encrypted. Output nothing.
 	return 1;
     }
 
     if ($status_output =~ /NO_SECKEY/) {
-	# Properly encrypted data, but we don't have the secret key. Return input unchanged.
-	print $$dataref;
+	# Properly encrypted data, but we don't have the secret key. Output nothing.
 	return 1;
     }
 
     if ($status_output eq "" && $error_output eq "") {
-      # No status, no error; assume (!) input has been passed through unchanged (another way GnuPG::Interface sometimes reacts to non-encrypted input)
-      return 1;
+	# No status, no error; assume (!) input has been passed through unchanged (another way GnuPG::Interface sometimes reacts to non-encrypted input)
+	return 1;
     }
 
     if ($status_output !~ /DECRYPTION_OKAY/) {
-      # Something else went wrong...
-      die "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
+	# Something else went wrong...
+	die "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
     }
 
     return 1;

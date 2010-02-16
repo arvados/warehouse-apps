@@ -76,6 +76,8 @@ $SIG{'USR2'} = sub
 
 
 my $whc = new Warehouse or die "failed to create Warehouse client";
+$whc->set_config ("encrypt_to", 0);
+$whc->set_config ("decrypt", 0);
 my $metastream = new Warehouse::Stream (whc => $whc);
 $metastream->clear;
 $metastream->name (".");
@@ -274,6 +276,67 @@ else
 		   attempts => 0,
 		 };
   push @jobstep_todo, 0;
+}
+
+
+
+mkdir ($ENV{"TMPDIR"}."/mrcompute");
+if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
+  # set up a fresh gnupg directory just for this process
+  # TODO: reap abandoned gnupg dirs
+  system ("rm", "-rf", $ENV{"TMPDIR"}."/mrcompute/.gnupg/$$");
+  mkdir ($ENV{"TMPDIR"}."/mrcompute/.gnupg", 0700);
+  mkdir ($ENV{"TMPDIR"}."/mrcompute/.gnupg/$$", 0700) || croak ("mkdir: $!");
+
+  my $newhomedir = $ENV{"TMPDIR"}."/mrcompute/.gnupg/$$";
+
+  open C, ">", $newhomedir."/gpg.conf";
+  print C "always-trust\n";
+  close C;
+
+  # import secret keys referenced in job spec
+  my $hashes = $1;
+  $hashes =~ s/\'/\'\\\'\'/g;
+  my $gpg_out = `whget '$hashes' - | gpg --homedir "$newhomedir" --import 2>&1`;
+  my %encrypt_to;
+  while ($gpg_out =~ /^gpg: key ([0-9A-F]{8}): /gm) {
+    my $keynum = $1;
+    while (`gpg --list-keys '$keynum'` =~ /^uid\s.*<(.+?)>/gm) {
+      $encrypt_to{$1} = 1;
+    }
+  }
+  if (!%encrypt_to) {
+    croak ("GPG_KEYS provided but failed to import keys:\n$gpg_out");
+  }
+
+  # tell mrjobsteps the decrypted secret key(s) and all public key(s) they might need
+  $ENV{"GPG_KEYS"} = `gpg --homedir "$newhomedir" --export-secret-keys --armor; gpg --export --armor`;
+
+  # import all secret keys from my real home dir
+  `gpg --export-secret-keys | gpg --homedir "$newhomedir" --import 2>&1`;
+
+  # use the new gnupg dir from now on
+  $ENV{"GNUPGHOME"} = $newhomedir;
+
+  # if I have a secret key for root@{host} or {user}@{host}, add that
+  # as a recipient too so I'll be able to read frozentokeys etc. later
+  my %allkeys;
+  while (`gpg --list-secret-keys` =~ /^uid\s.*?<(.+?)>/gm) {
+    $allkeys{$1} = 1;
+  }
+  my $hostname = `hostname`;
+  chomp ($hostname);
+  foreach my $id ("root\@".$hostname, $ENV{"USER"}."\@".$hostname) {
+    if (exists $allkeys{$id}) {
+      $encrypt_to{$id} = 1;
+      last;
+    }
+  }
+
+  # tell the client library (and child procs and jobsteps) to encrypt using these keys
+  $ENV{"ENCRYPT_TO"} = join (",", sort keys %encrypt_to);
+  Log (undef, "encrypt_to ('".$ENV{"ENCRYPT_TO"}."')");
+  $whc->set_config ("encrypt_to", $ENV{"ENCRYPT_TO"});
 }
 
 
@@ -951,6 +1014,12 @@ sub fhbits
 
 sub Log				# ($jobstep_id, $logmessage)
 {
+  if ($_[1] =~ /\n/) {
+    for my $line (split (/\n/, $_[1])) {
+      Log ($_[0], $line);
+    }
+    return;
+  }
   my $fh = select STDERR; $|=1; select $fh;
   my $message = sprintf ("%s %d %s %s\n", $job_id, $$, @_);
   print STDERR $message;
