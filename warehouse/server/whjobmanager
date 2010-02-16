@@ -302,7 +302,7 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
   my %encrypt_to;
   while ($gpg_out =~ /^gpg: key ([0-9A-F]{8}): /gm) {
     my $keynum = $1;
-    while (`gpg --list-keys '$keynum'` =~ /^uid\s.*<(.+?)>/gm) {
+    while (`gpg --homedir "$newhomedir" --list-keys "$keynum"` =~ /^uid\s.*<(.+?)>/gm) {
       $encrypt_to{$1} = 1;
     }
   }
