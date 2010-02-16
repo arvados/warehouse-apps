@@ -285,6 +285,7 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
   # set up a fresh gnupg directory just for this process
   # TODO: reap abandoned gnupg dirs
   system ("rm", "-rf", $ENV{"TMPDIR"}."/mrcompute/.gnupg/$$");
+  mkdir ($ENV{"TMPDIR"}."/mrcompute");
   mkdir ($ENV{"TMPDIR"}."/mrcompute/.gnupg", 0700);
   mkdir ($ENV{"TMPDIR"}."/mrcompute/.gnupg/$$", 0700) || croak ("mkdir: $!");
 
