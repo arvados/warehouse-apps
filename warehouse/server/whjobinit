@@ -12,6 +12,11 @@ do '/etc/warehouse/warehouse-server.conf';
 my $max_njobs = 48;		# max "big job" concurrency
 
 
+my $cwd = `pwd`;
+chomp ($cwd);
+$ENV{HOME} = $cwd;
+
+
 
 my $dbh = DBI->connect (@$Warehouse::Server::DatabaseDSN);
 die $DBI::errstr if !$dbh;

@@ -44,9 +44,8 @@ Test and install the Perl API, server, and sample client programs:
 Create a GPG key (DSA and Elgamal) with no passphrase for
 root@controller.
 
- sudo -i
- gpg --gen-key
- (echo; echo always-trust) >>~/.gnupg/gpg.conf
+ sudo -H gpg --gen-key
+ (echo; echo always-trust) | sudo tee -a ~root/.gnupg/gpg.conf
 
 Create supervised service:
 
@@ -71,7 +70,22 @@ Create supervised service:
  (echo '#!/bin/sh'; echo 'exec warehouse-watchdog 2>&1') \
    | sudo bash -c "cat >$d/run"
  sudo chmod +x $d/run $d/log/run
+
+ d=/var/service/whjobinit
+ sudo mkdir -p $d/log/main
+ sudo chmod +t $d
+ (echo '#!/bin/sh'; echo 'exec svlogd -tt main') \
+   | sudo bash -c "cat >$d/log/run"
+ (echo '#!/bin/sh'; echo 'exec sudo -u www-data whjobinit 2>&1') \
+   | sudo bash -c "cat >$d/run"
+ sudo chmod +x $d/run $d/log/run
  )
+
+Give mrjobmanager a copy of the GPG secret key:
+
+ sudo mkdir -m 0700 /var/service/whjobinit/.gnupg
+ sudo chown www-data:www-data /var/service/whjobinit/.gnupg
+ sudo -H gpg --export-secret-keys | HOME=/var/service/whjobinit sudo -u www-data gpg --import
 
 Set up configurl handler in nginx:
 
