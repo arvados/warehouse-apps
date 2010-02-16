@@ -95,6 +95,7 @@ if ($have_database)
 
   $dbh = DBI->connect(@$Warehouse::Server::DatabaseDSN);
   die $DBI::errstr if !$dbh;
+  $dbh->{InactiveDestroy} = 1;
 
   $sth = $dbh->prepare ("select * from mrjob where id=?");
   $sth->execute ($job_id) or die $dbh->errstr;
@@ -473,11 +474,11 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     open(STDOUT,">&writer");
     open(STDERR,">&writer");
 
-    $dbh->{InactiveDestroy} = 1 if $dbh;
     undef $dbh;
     undef $sth;
 
 
+    delete $ENV{"GNUPGHOME"};
     $ENV{"MR_ID"} = $id;
     $ENV{"MR_JOB_ID"} = $job_id;
     $ENV{"MR_INPUT"} = $Jobstep->{input};
@@ -1040,7 +1041,10 @@ sub reconnect_database
   for (1..16)
   {
     $dbh = DBI->connect(@$Warehouse::Server::DatabaseDSN);
-    return if $dbh;
+    if ($dbh) {
+      $dbh->{InactiveDestroy} = 1;
+      return;
+    }
     warn ($DBI::errstr);
     sleep $_;
   }
