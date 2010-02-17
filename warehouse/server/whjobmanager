@@ -319,7 +319,7 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
     # read private data)
 
     my %did_not_sign;
-    my $seckeys = `gpg --homedir "$newhomedir" --list-secret-keys --fingerprint`;
+    my $seckeys = `gpg --homedir "$newhomedir" --list-secret-keys --with-fingerprint`;
     while ($seckeys =~ /Key fingerprint.*?([0-9A-F][0-9A-F ]+[0-9A-F])/mgi) {
       $did_not_sign{$1} = 1;
     }
@@ -327,7 +327,7 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
     open SREQ, ">", $srfile;
     print SREQ $$Job{"signedrequest"};
     close SREQ;
-    my $gpg_v = `gpg --homedir "$newhomedir" --verify "$srfile" 2>&1 && echo ok`;
+    my $gpg_v = `gpg --homedir "$newhomedir" --verify "$srfile" --with-fingerprint 2>&1 && echo ok`;
     unlink $srfile;
     if ($gpg_v =~ /\nok\n$/s) {
       while ($gpg_v =~ /Good signature.*? key fingerprint: (\S[^\n]+)/sgi) {
