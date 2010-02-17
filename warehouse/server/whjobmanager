@@ -337,7 +337,7 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
     if (%did_not_sign) {
       croak (join ("\n",
 		   "Some secret keys provided did not sign this job request:",
-		   keys %did_not_sign));
+		   keys %did_not_sign) . "\n");
     }
   }
 
