@@ -1773,8 +1773,14 @@ sub _sign
                                        stdout => $output,
                                        stderr => $error,
                                        status => $status );
+    
+    my @command_args;
+    if (exists $ENV{"SIGN_AS"}) {
+	push @command_args, "--local-user", $ENV{"SIGN_AS"};
+    }
 
-    my $pid = $gnupg->clearsign( handles => $handles );
+    my $pid = $gnupg->clearsign( handles => $handles,
+				 command_args => \@command_args );
 
     print $input $text;
     close $input;
