@@ -311,6 +311,36 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
     croak ("GPG_KEYS provided but failed to import keys:\n$gpg_out");
   }
 
+  if ($have_database) {
+
+    # make sure the job request was signed by all of the secret keys
+    # contained in GPG_KEYS (otherwise, any VM can just copy the
+    # GPG_KEYS hash from an existing mr-job and submit new jobs that can
+    # read private data)
+
+    my %did_not_sign;
+    my $seckeys = `gpg --homedir "$newhomedir" --list-secret-keys --fingerprint`;
+    while ($seckeys =~ /Key fingerprint.*?([0-9A-F][0-9A-F ]+[0-9A-F])/mgi) {
+      $did_not_sign{$1} = 1;
+    }
+    my $srfile = "$newhomedir/signedrequest";
+    open SREQ, ">", $srfile;
+    print SREQ $$Job{"signedrequest"};
+    close SREQ;
+    my $gpg_v = `gpg --homedir "$newhomedir" --verify "$srfile" 2>&1 && echo ok`;
+    unlink $srfile;
+    if ($gpg_v =~ /\nok\n$/s) {
+      while ($gpg_v =~ /Good signature.*? key fingerprint: (\S[^\n]+)/sgi) {
+	delete $did_not_sign{$1};
+      }
+    }
+    if (%did_not_sign) {
+      croak (join ("\n",
+		   "Some secret keys provided did not sign this job request:",
+		   keys %did_not_sign));
+    }
+  }
+
   # tell mrjobsteps the decrypted secret key(s) and all public key(s) they might need
   $ENV{"GPG_KEYS"} = `gpg --homedir "$newhomedir" --export-secret-keys --armor; gpg --export --armor`;
 

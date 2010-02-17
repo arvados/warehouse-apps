@@ -26,7 +26,7 @@ Create /etc/warehouse/warehouse-server.conf to suit:
 
 Create database tables:
 
- su -u www-data -- sh -c 'cd server && perl setup.pl'
+ sudo -c 'cd server && perl warehoused-initialize-tables.pl'
 
 Create /etc/warehouse/warehouse-client.conf to suit -- see
 ../client/INSTALL for details.

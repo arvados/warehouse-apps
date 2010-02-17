@@ -244,6 +244,9 @@ alter table mrjob add stepspernode int after nodes
 	   qq{
 alter table mrjob add index(output)
   },
+	   qq{
+alter table mrjob add signedrequest text after id
+  },
 	   )
   {
     my $sth = $dbh->prepare ($_);

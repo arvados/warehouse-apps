@@ -443,8 +443,8 @@ sub run
 		my $ok = $self->{dbh}->do
 		    ("insert into $mrdb.mrjob
 		      (jobmanager_id, mrfunction, revision, nodes, stepspernode,
-		       input0, knobs, thawedfromkey, submittime)
-		      values (?, ?, ?, ?, ?, ?, ?, ?, now())",
+		       input0, knobs, thawedfromkey, signedrequest, submittime)
+		      values (?, ?, ?, ?, ?, ?, ?, ?, ?, now())",
 		     undef,
 		     -1,
 		     $jobspec{mrfunction},
@@ -453,7 +453,8 @@ sub run
 		     $jobspec{stepspernode},
 		     $jobspec{inputkey},
 		     $jobspec{knobs},
-		     $jobspec{thawedfromkey});
+		     $jobspec{thawedfromkey},
+		     $signedmessage);
 		my $jobid = $self->{dbh}->last_insert_id (undef, undef, undef, undef)
 		    if $ok;
 		$ok = $self->{dbh}->do
