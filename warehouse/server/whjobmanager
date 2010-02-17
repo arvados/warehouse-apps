@@ -327,10 +327,10 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
     open SREQ, ">", $srfile;
     print SREQ $$Job{"signedrequest"};
     close SREQ;
-    my $gpg_v = `gpg --homedir "$newhomedir" --verify "$srfile" --with-fingerprint 2>&1 && echo ok`;
+    my $gpg_v = `gpg --homedir "$newhomedir" --verify --with-fingerprint "$srfile" 2>&1 && echo ok`;
     unlink $srfile;
     if ($gpg_v =~ /\nok\n$/s) {
-      while ($gpg_v =~ /Good signature.*? key fingerprint: (\S[^\n]+)/sgi) {
+      while ($gpg_v =~ /Good signature.*? key fingerprint: (\S[^\n]+\S)/sgi) {
 	delete $did_not_sign{$1};
       }
     }
