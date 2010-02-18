@@ -65,7 +65,7 @@ while (!$main::DRAIN || $main::children > 0)
 	       set jobmanager_id=-1, success=0, finishtime=now()
 	       where jobmanager_id is null
 	       and submittime<date_add(now(),interval -1 day)");
-    $sth = $dbh->prepare ("select id, nodes, revision from mrjob
+    $sth = $dbh->prepare ("select id, nodes, revision, knobs from mrjob
                            where jobmanager_id is null
                            and submittime>date_add(now(),interval -1 day)");
     $sth->execute or die $dbh->errstr;
@@ -73,7 +73,7 @@ while (!$main::DRAIN || $main::children > 0)
 
   if (!$main::DRAIN && @row)
   {
-    my ($job_id, $job_nodes, $job_revision) = @row;
+    my ($job_id, $job_nodes, $job_revision, $knobs) = @row;
 
     next if exists $job_proc{$job_id};
 
@@ -115,8 +115,12 @@ while (!$main::DRAIN || $main::children > 0)
       }
       if ($have_slurm)
       {
-	debuglog ("salloc --immediate --exclusive --no-kill --job-name=mr$job_id @nodes_arg whjobmanager $job_id");
-	exec ("salloc", "--immediate", "--exclusive", "--no-kill", "--job-name=mr$job_id", @nodes_arg, "whjobmanager", $job_id);
+	my @salloc = ("salloc", "--immediate", "--exclusive", "--no-kill", "--job-name=mr$job_id", @nodes_arg, "whjobmanager", $job_id);
+	if ($knobs =~ /^GPG_KEYS=/m) {
+	  splice @salloc, 1, 0, "--partition=crypto";
+	}
+	debuglog (join (" ", @salloc));
+	exec (@salloc);
       }
       else
       {

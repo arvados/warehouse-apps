@@ -519,6 +519,8 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MR_INPUTKEY"} = $Job->{inputkey};
     $ENV{"MR_OUTPUTKEY"} = "mrjobstep/$job_id/$level/$id";
     $ENV{"MR_SLOT"} = $childslotname;
+    $ENV{"MR_JOB_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work";
+    $ENV{"MR_JOBSTEP_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work/".$childslotname;
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
@@ -548,8 +550,13 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	  ."  ) "
 	  .") ";
     }
-    $execargs[-1] .=
-	"&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
+    if (exists $ENV{GPG_KEYS}) {
+      $execargs[-1] .=
+	  "&& rm -rf '$ENV{MR_JOBSTEP_TMP}' && exec $ENV{MR_REVISION_SRCDIR}/mapreduce/ecryptfs-wrapper -d '$ENV{MR_JOBSTEP_TMP}' -p $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
+    } else {
+      $execargs[-1] .=
+	  "&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
+    }
     srun (\@srunargs, \@execargs);
     exit (1);
   }
