@@ -67,8 +67,9 @@ if ($ENV{MR_LEVEL} == 1)
   my ($subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 2);
   my @files = split(/,/, $filenames);
 
+  atomic_whget_tar("$bwa_manifest_key/bwa.tgz", $bwa_path);
+  die "$bwa_path/bwa not found" unless -x "$bwa_path/bwa";
   atomic_whget_dir($reference_manifest_key, $reffile);
-  atomic_whget_tar($bwa_manifest_key, $bwa_path);
 
   foreach my $filename (@files) {
     my $readfile = "$tmp/${filename}";
@@ -110,19 +111,19 @@ sub atomic_whget {
 sub atomic_whget_tar {
   my ($source, $target) = @_;
 
+  system "rm -rf '$target'";
   if (open (L, "+>>", "$target.lock") &&
-      flock (L, LOCK_EX) &&
-      !-e ($target))
+      flock (L, LOCK_EX) )
   {
-    if (0 != system "whget '$source' '$target.tar.tmp'")
+    if (0 != system "whget '$source' '$target.tgz.tmp'")
     {
-      system "rm -rf '$target.tar.tmp'";
+      system "rm -rf '$target.tgz.tmp'";
       close L;
       die "whget exited $?";
     }
-    rename "$target.tar.tmp", "$target.tar" or die "rename $target.tar.tmp failed";
+    rename "$target.tgz.tmp", "$target.tgz" or die "rename $target.tgz.tmp failed";
     mkdir "$target" or die "mkdir $target failed";
-    system "tar -C $target -xzf $target.tar";
+    system("tar -C $target -xzf $target.tgz") == 0 or die "tar -xz $target.tgz failed";
   }
   close L;
   die "Failed to whget $source -> $target" if !-e $target;
@@ -131,9 +132,9 @@ sub atomic_whget_tar {
 sub atomic_whget_dir {
   my ($source, $target) = @_;
 
+  system "rm -rf '$target'";
   if (open (L, "+>>", "$target.lock") &&
-      flock (L, LOCK_EX) &&
-      !-e ($target))
+      flock (L, LOCK_EX))
   {
     if (0 != system "whget -r '$source'/ '$target.tmp/'")
     {
