@@ -1,0 +1,79 @@
+#!/usr/bin/perl -w
+use strict qw( vars );
+use Getopt::Long;
+
+# ecryptfs-wrapper
+#
+# Ward Vandewege, 2010-02-17
+
+my $NAME = $0;
+$NAME =~ s/^\.\///;
+
+&main();
+
+sub usage_information {
+  my $retval;
+  $retval .= "\n$NAME takes these arguments:\n";
+  $retval .= " $NAME -d <directory> -p <program> [-a <arguments>]\n\n";
+  $retval .= "  <directory>     the mount point for the encrypted directory. Must not exist.\n";
+  $retval .= "  <program>       the program to run after mounting the encrypted directory\n";
+  $retval .= "  <arguments>     optional arguments for the program to run after mounting the encrypted directory\n\n";
+  return $retval;
+}
+
+sub run {
+	my $msg = shift;
+	open my $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
+#  open STDOUT, '>', "/dev/null" or die "Can't redirect STDOUT: $!";
+	system (@_);
+	open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
+	
+	if ($? != 0) {
+		print STDERR "\n$msg: exit code $?\n\n";
+		exit(10);
+	};
+}
+
+
+sub main {
+  # First read the parameter(s)
+  # note: you could use -s or --server to specify them
+  my $directory = '';
+  my $program = '';
+  my $arguments = '';
+
+  GetOptions ("directory=s" => \$directory, "program=s" => \$program, "arguments=s" => \$arguments);
+
+	if (($directory eq '') || ($program eq '')) {
+		print STDERR "\nERROR: You have not supplied all required parameters.\n";
+ 		print &usage_information();
+		exit(1);
+	}
+
+  if (-e $directory) {
+		print STDERR "\nERROR: directory '$directory' exists.\n";
+		print &usage_information();
+		exit(2);
+  }
+
+	mkdir($directory) || do {
+		print STDERR "\nERROR: unable to create '$directory': $!\n\n";
+		exit(3);
+	};
+
+	my $PASS = join "", map { unpack "H*", chr(rand(256)) } 1..32;
+	my $SALT = join "", map { unpack "H*", chr(rand(256)) } 1..16;
+	&run("ERROR: unable to run 'keyctl clear \@u'",('sudo', 'keyctl', 'clear', '@u'));
+
+	&run("ERROR: unable to mount '$directory'",('sudo', '/bin/mount', '-t', 'ecryptfs', "$directory", "$directory", '-o', "key=passphrase:passwd=$PASS:salt=$SALT,ecryptfs_cipher=aes,ecryptfs_key_bytes=16,ecryptfs_passthrough=n,no_sig_cache"));
+
+	system($program,split(/ /,$arguments));
+
+	&run("ERROR: unable to umount '$directory'",('sudo','/bin/umount', "$directory"));
+
+	rmdir($directory) || do {
+		print STDERR "\nERROR: unable to remove '$directory': $!\n\n";
+		exit(4);
+	};
+}
+
