@@ -552,7 +552,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     }
     if (exists $ENV{GPG_KEYS}) {
       $execargs[-1] .=
-	  "&& rm -rf '$ENV{MR_JOBSTEP_TMP}' && exec $ENV{MR_REVISION_SRCDIR}/mapreduce/ecryptfs-wrapper -d '$ENV{MR_JOBSTEP_TMP}' -p $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
+	  "&& mkdir -p '$ENV{MR_JOBSTEP_TMP}' && rm -rf '$ENV{MR_JOBSTEP_TMP}' && exec $ENV{MR_REVISION_SRCDIR}/mapreduce/ecryptfs-wrapper -d '$ENV{MR_JOBSTEP_TMP}' -p $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
     } else {
       $execargs[-1] .=
 	  "&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
