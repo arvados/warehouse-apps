@@ -30,7 +30,7 @@ my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  system("/usr/bin/printenv");
+  system("/usr/bin/printenv 1>&2");
   # queue a level 1 jobstep for each node
 
   my $num_inputs = 0;
