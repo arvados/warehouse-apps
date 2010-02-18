@@ -17,6 +17,7 @@ use Fcntl ':flock';
 my $tmp = $ENV{MR_JOB_TMP};
 
 my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} or die;
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
@@ -30,15 +31,12 @@ my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  system("/usr/bin/printenv 1>&2");
-  # queue a level 1 jobstep for each node
-
   my $num_inputs = 0;
   my $ref = new Warehouse::Manifest (whc => $whc,
 				     key => $input_manifest_key);
   $num_inputs++ while (my $s = $ref->subdir_next);
 
-  my $inputs_per_node = $num_inputs / $ENV{NNODES};
+  my $inputs_per_node = $num_inputs / ($num_nodes + $num_inputs - 1);
   $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
   while (my $s = $ref->subdir_next)
   {
