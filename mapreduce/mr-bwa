@@ -1,0 +1,151 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:run BWA against reference
+###MR_INPUT:manifest
+###MR_KNOBS:BWA
+###MR_KNOBS:REFERENCE
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+
+
+my $tmp = $ENV{MR_JOB_TMP};
+
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+my $input_manifest_key = $ENV{MR_INPUT0} or die;
+my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
+my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
+my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
+$max_mismatches = 0.04 unless defined $max_mismatches;
+my $reffile = "$tmp/ref";
+
+my $bwa_path="$tmp/bwa";
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  system("/usr/bin/printenv");
+  # queue a level 1 jobstep for each node
+
+  my $num_inputs = 0;
+  my $ref = new Warehouse::Manifest (whc => $whc,
+				     key => $input_manifest_key);
+  $num_inputs++ while (my $s = $ref->subdir_next);
+
+  my $inputs_per_node = $num_inputs / $ENV{NNODES};
+  $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
+  while (my $s = $ref->subdir_next)
+  {
+    my $subdir = $s->name;
+    $subdir =~ s/^\.\///;
+    my @files;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      next if $filename !~ /(.*)_1.(bfq|fq|fastq|fq.gz|fastq.gz)$/;
+      push @files, $filename;
+      if (scalar(@files) >= $inputs_per_node) {
+	my $filenames = join(',', @files);
+	print STDERR "+++mrjobstep 1 $subdir $filenames+++\n";
+	@files = ();
+      }
+    }
+    if (@files) {
+	my $filenames = join(',', @files);
+	print STDERR "+++mrjobstep 1 $subdir $filenames+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 2);
+  my @files = split(/,/, $filenames);
+
+  atomic_whget_dir($reference_manifest_key, $reffile);
+  atomic_whget_tar($bwa_manifest_key, $bwa_path);
+
+  foreach my $filename (@files) {
+    my $readfile = "$tmp/${filename}";
+    atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile);
+
+    Safepipe::readfrom
+	("main::BWA",
+	 "$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile",
+	 "mrs-store './$subdir' '${filename}.sai'",
+	 "mrs-output",
+	)
+	or die "pipe failed: $!";
+    close BWA or die "Pipe failed: $!";
+    unlink $readfile;
+  }
+  exit 0;
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_tar {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tar.tmp'")
+    {
+      system "rm -rf '$target.tar.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tar.tmp", "$target.tar" or die "rename $target.tar.tmp failed";
+    mkdir "$target" or die "mkdir $target failed";
+    system "tar -C $target -xzf $target.tar";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_dir {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
