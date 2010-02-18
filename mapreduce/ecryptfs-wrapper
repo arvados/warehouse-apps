@@ -25,16 +25,16 @@ sub usage_information {
 }
 
 sub run {
-	my $msg = shift;
-	open my $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
+  my $msg = shift;
+  open my $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
   open STDOUT, '>', "/dev/null" or die "Can't redirect STDOUT: $!" if ($debug == 0);
-	system (@_);
-	open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
-	
-	if ($? != 0) {
-		print STDERR "\n$msg: exit code $?\n\n";
-		exit(10);
-	};
+  system (@_);
+  open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
+
+  if ($? != 0) {
+    print STDERR "\n$msg: exit code $?\n\n";
+    exit(10);
+  };
 }
 
 
@@ -47,36 +47,47 @@ sub main {
 
   GetOptions ("directory=s" => \$directory, "program=s" => \$program, "arguments=s" => \$arguments, "verbose" => \$debug);
 
-	if (($directory eq '') || ($program eq '')) {
-		print STDERR "\nERROR: You have not supplied all required parameters.\n";
- 		print &usage_information();
-		exit(1);
-	}
-
-  if (-e $directory) {
-		print STDERR "\nERROR: directory '$directory' exists.\n";
-		print &usage_information();
-		exit(2);
+  if (($directory eq '') || ($program eq '')) {
+    print STDERR "\nERROR: You have not supplied all required parameters.\n";
+    print &usage_information();
+    exit(1);
   }
 
-	mkdir($directory) || do {
-		print STDERR "\nERROR: unable to create '$directory': $!\n\n";
-		exit(3);
-	};
+  if (-e $directory) {
+    print STDERR "\nERROR: directory '$directory' exists.\n";
+    print &usage_information();
+    exit(2);
+  }
 
-	my $PASS = join "", map { unpack "H*", chr(rand(256)) } 1..32;
-	my $SALT = join "", map { unpack "H*", chr(rand(256)) } 1..16;
-	&run("ERROR: unable to run 'keyctl clear \@u'",('sudo', 'keyctl', 'clear', '@u'));
+  mkdir($directory) || do {
+    print STDERR "\nERROR: unable to create '$directory': $!\n\n";
+    exit(3);
+  };
 
-	&run("ERROR: unable to mount '$directory'",('sudo', '/bin/mount', '-t', 'ecryptfs', "$directory", "$directory", '-o', "key=passphrase:passwd=$PASS:salt=$SALT,ecryptfs_cipher=aes,ecryptfs_key_bytes=16,ecryptfs_passthrough=n,no_sig_cache"));
+  my $PASS = join "", map { unpack "H*", chr(rand(256)) } 1..32;
+  my $SALT = join "", map { unpack "H*", chr(rand(256)) } 1..16;
+  &run("ERROR: unable to run 'keyctl clear \@u'",('sudo', 'keyctl', 'clear', '@u'));
 
-	system($program,split(/ /,$arguments));
+  &run("ERROR: unable to mount '$directory'",('sudo', '/bin/mount', '-t', 'ecryptfs', "$directory", "$directory", '-o', "key=passphrase:passwd=$PASS:salt=$SALT,ecryptfs_cipher=aes,ecryptfs_key_bytes=16,ecryptfs_passthrough=n,no_sig_cache"));
 
-	&run("ERROR: unable to umount '$directory'",('sudo','/bin/umount', "$directory"));
+  my $exitcode;
+  if (0 == system($program,split(/ /,$arguments))) {
+    $exitcode = 0;
+  }
+  else {
+    warn "$0: $program exited with \$?=0x".sprintf("%x",$?)."\n";
+    if ($? == -1 || $? & 127) {
+      $exitcode = 1;
+    } else {
+      $exitcode = $? >> 8;
+    }
+  }
 
-	rmdir($directory) || do {
-		print STDERR "\nERROR: unable to remove '$directory': $!\n\n";
-		exit(4);
-	};
+  &run("ERROR: unable to umount '$directory'",('sudo','/bin/umount', "$directory"));
+
+  0 == system ("rm", "-rf", $directory)
+      or warn "$0: warning: failed to remove '$directory'\n";
+
+  exit ($exitcode);
 }
 
