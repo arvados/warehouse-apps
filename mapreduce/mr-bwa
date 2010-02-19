@@ -21,11 +21,13 @@ my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} or die;
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
+my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 0.04 unless defined $max_mismatches;
 my $reffile = "$tmp/ref";
 
 my $bwa_path="$tmp/bwa";
+my $sam_path="$tmp/sam";
 
 my $whc = new Warehouse;
 
@@ -68,17 +70,21 @@ if ($ENV{MR_LEVEL} == 1)
   my @files = split(/,/, $filenames);
 
   atomic_whget_tar("$bwa_manifest_key/bwa.tgz", $bwa_path);
+  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   die "$bwa_path/bwa not found" unless -x "$bwa_path/bwa";
   atomic_whget_dir($reference_manifest_key, $reffile);
 
   foreach my $filename (@files) {
     my $readfile = "$tmp/${filename}";
+    my $saifile = "$tmp/${filename}.sai";
     atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile);
+    system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile > $saifile") == 0 or die "bwa failed";
 
     Safepipe::readfrom
 	("main::BWA",
-	 "$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile",
-	 "mrs-store './$subdir' '${filename}.sai'",
+	 "$bwa_path/bwa samse '$reffile/chromi' $saifile $readfile",
+	 "$sam_path/samtools view -S -b -",
+	 "mrs-store './$subdir' '${filename}.bam'",
 	 "mrs-output",
 	)
 	or die "pipe failed: $!";
