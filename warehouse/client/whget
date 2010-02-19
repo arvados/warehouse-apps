@@ -196,6 +196,8 @@ while (0 < length $manifest)
 	 $wantfile eq "" &&
 	 substr($subdir_name, 0, 1 + length $wantsubdir) eq $wantsubdir."/"))
     {
+	my $currenthash;
+
 	my $localsubdir = substr ($subdir_name, length $wantsubdir);
 
 	print STDERR "consider: .$subdir_name as $localbase$localsubdir\n"
@@ -268,6 +270,8 @@ while (0 < length $manifest)
 		if ($pos > $streampos
 		    && $pos <= $streampos + length $data)
 		{
+		    print STDERR "skip ".($pos-$streampos)." bytes\n"
+			if $opt{v} >= 3;
 		    substr ($data, 0, $pos - $streampos) = "";
 		    $streampos = $pos;
 		}
@@ -293,12 +297,16 @@ while (0 < length $manifest)
 		    unless $opt{n};
 
 		my $ctx;
+		my $ctxbytes = 0;
 		$ctx = Digest::MD5->new
 		    if $opt{v};
+
 		while ($pos + $size > $streampos + length $data)
 		{
 		    $ctx->add ($data)
 			if $opt{v};
+		    $ctxbytes += length $data;
+
 		    print F $data
 			or die "Error writing to $localfile: $!"
 			unless $opt{n};
@@ -310,13 +318,20 @@ while (0 < length $manifest)
 
 		    print STDERR "fetch $hash[0]\n"
 			if $opt{v} >= 3;
-		    my $nexthash = shift @hash;
-		    $data = $whc->fetch_block ($nexthash)
-			or die "fetch_block($nexthash) failed";
+		    $currenthash = shift @hash;
+		    $data = $whc->fetch_block ($currenthash)
+			or die "fetch_block($currenthash) failed";
+		    if (($currenthash =~ /\+GS(\d+)/ ||
+			 $currenthash =~ /\+(\d+)/) &&
+			$1 != length $data) {
+			die "fetch $currenthash returned ".length($data)." bytes";
+		    }
 		}
 
+		$ctxbytes += $pos + $size - $streampos;
 		$ctx->add (substr ($data, 0, $pos + $size - $streampos))
 		    if $opt{v};
+
 		print F substr ($data, 0, $pos + $size - $streampos)
 		    or die "Error writing to $localfile: $!"
 		    unless $opt{n};
@@ -329,7 +344,7 @@ while (0 < length $manifest)
 
 		do {
 		    my $md5hex = $ctx->hexdigest;
-		    print STDERR "$md5hex  $localfile\n";
+		    print STDERR "$md5hex  $localfile $ctxbytes\n";
 		} if $opt{v};
 	    }
 	}
