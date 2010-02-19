@@ -2554,12 +2554,14 @@ sub _decrypt_block
     if ($child == 0)
     {
 	close STDIN;
-	$self->_unsafe_decrypt_block ($dataref);
-	exit 0;
+	if ($self->_unsafe_decrypt_block ($dataref)) {
+	    exit 0;
+	}
+	exit 1;
     }
     local $/ = undef;
     my $decrypted = <D>;
-    close D;
+    if (!close D) { $decrypted = ""; }
 
     if ($ENV{"DEBUG_GPG"} && $decrypted eq "") {
 	warn "gpg: decrypt outbytes=0, returning input unchanged\n";
@@ -2634,31 +2636,28 @@ sub _unsafe_decrypt_block
 
     if ($status_output =~ /NODATA/) {
 	# This data is not encrypted. Output nothing. Caller will use original data unchanged.
-	return 1;
+	return 0;
     }
 
     if ($status_output !~ /\S/ &&
 	$error_output =~ /zlib inflate problem: incorrect header check/) {
 	# This data is probably (!) not encrypted. Output nothing.
-	return 1;
+	return 0;
     }
 
     if ($status_output =~ /NO_SECKEY/) {
 	# Properly encrypted data, but we don't have the secret key. Output nothing.
-	return 1;
+	return 0;
     }
 
     if ($status_output eq "" && $error_output eq "") {
 	# No status, no error; assume (!) input has been passed through unchanged (another way GnuPG::Interface sometimes reacts to non-encrypted input)
-	return 1;
+	return 0;
     }
 
-    if ($status_output !~ /DECRYPTION_OKAY/) {
-	# Something else went wrong...
-	die "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
-    }
-
-    return 1;
+    # Something else went wrong...
+    warn "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
+    return 0;
 }
 
 sub _verify
