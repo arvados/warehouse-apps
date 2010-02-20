@@ -110,7 +110,10 @@ if ($ENV{MR_LEVEL} == 1)
     }
     system("bash -c 'set -o pipefail; $bowtie_cmd | $sam_path/samtools view -S -b - > $bamfile'") == 0
       or die "failed bowtie";
-    system("$sam_path/samtools sort -m 2000000000 $bamfile $readfile1") == 0
+    # Sort by read then by position to get deterministic output
+    system("$sam_path/samtools sort -n -m 3000000000 $bamfile $readfile1-byread") == 0
+      or die "failed sort";
+    system("$sam_path/samtools sort -m 3000000000 $readfile1-byread.bam $readfile1") == 0
       or die "failed sort";
 
     Safepipe::readfrom(
@@ -124,6 +127,7 @@ if ($ENV{MR_LEVEL} == 1)
     unlink $readfile2 if $readfile2;
     unlink $bamfile;
     unlink "$readfile1.bam";
+    unlink "$readfile1-byread.bam";
   }
   exit 0;
 }
