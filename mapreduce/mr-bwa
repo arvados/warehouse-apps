@@ -48,7 +48,10 @@ if ($ENV{MR_LEVEL} == 0)
     while (my ($pos, $size, $filename) = $s->file_next)
     {
       last if !defined $pos;
-      next if $filename !~ /(.*)_1.(bfq|fq|fastq|fq.gz|fastq.gz)$/;
+      next if $filename !~ /(.*)\.(bfq|fq|fastq|fq.gz|fastq.gz)$/;
+      # Assume _2 are reverse strand in pair-end-reads - next level does not need
+      # them passed in.
+      next if $1 =~ /_2$/;
       push @files, $filename;
       if (scalar(@files) >= $inputs_per_node) {
 	my $filenames = join(',', @files);
@@ -75,21 +78,48 @@ if ($ENV{MR_LEVEL} == 1)
   atomic_whget_dir($reference_manifest_key, $reffile);
 
   foreach my $filename (@files) {
-    my $readfile = "$tmp/${filename}";
-    my $saifile = "$tmp/${filename}.sai";
-    atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile);
-    system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile > $saifile") == 0 or die "bwa failed";
+    my $bwa_sam_cmd;
 
-    Safepipe::readfrom
-	("main::BWA",
-	 "$bwa_path/bwa samse '$reffile/chromi' $saifile $readfile",
-	 "$sam_path/samtools view -S -b -",
-	 "mrs-store './$subdir' '${filename}.bam'",
-	 "mrs-output",
-	)
-	or die "pipe failed: $!";
+    my $readfile1 = "$tmp/${filename}";
+    my $saifile1 = "$tmp/${filename}.sai";
+    my $readfile2;
+    my $saifile2;
+
+    if ($filename =~ /(.+)_1\.(.+)$/) {
+      # assume paired reads
+      warn "paired reads"; 
+      my $filename2 = "${1}_2.$2";
+      $readfile2 = "$tmp/${filename2}";
+      $saifile2 = "$tmp/${filename2}.sai";
+      atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile1);
+      atomic_whget("$input_manifest_key/$subdir/${filename2}", $readfile2);
+      system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile1 > $saifile1") == 0
+       	or die "bwa on $readfile1 failed";
+      system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile2 > $saifile2") == 0
+       	or die "bwa on $readfile2 failed";
+      $bwa_sam_cmd = "$bwa_path/bwa sampe '$reffile/chromi' $saifile1 $saifile2 $readfile1 $readfile2";
+    }
+    else {
+      warn "single-end reads"; 
+      atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile1);
+      system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile1 > $saifile1") == 0
+       	or die "bwa on $readfile1 failed";
+      $bwa_sam_cmd = "$bwa_path/bwa samse '$reffile/chromi' $saifile1 $readfile1";
+    }
+
+    Safepipe::readfrom(
+      "main::BWA",
+      $bwa_sam_cmd,
+      "$sam_path/samtools view -S -b -",
+      "mrs-store './$subdir' '${filename}.bam'",
+      "mrs-output",
+    )
+      or die "pipe failed: $!";
     close BWA or die "Pipe failed: $!";
-    unlink $readfile;
+    unlink $readfile1 if $readfile1;
+    unlink $readfile2 if $readfile2;
+    unlink $saifile1 if $saifile1;
+    unlink $saifile2 if $saifile2;
   }
   exit 0;
 }
