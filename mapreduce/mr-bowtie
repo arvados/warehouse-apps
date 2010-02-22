@@ -108,6 +108,7 @@ if ($ENV{MR_LEVEL} == 1)
       }
       $bowtie_cmd = "$bowtie_path/bowtie --sam --time --threads 4 $reffile/index -1 $readfile1";
     }
+
     system("bash -c 'set -o pipefail; $bowtie_cmd | $sam_path/samtools view -S -b - > $bamfile'") == 0
       or die "failed bowtie";
     # Sort by read then by position to get deterministic output
@@ -115,18 +116,27 @@ if ($ENV{MR_LEVEL} == 1)
       or die "failed sort";
     system("$sam_path/samtools sort -m 3000000000 $readfile1-byread.bam $readfile1") == 0
       or die "failed sort";
+    system("$sam_path/samtools index $readfile1.bam") == 0
+      or die "failed index";
 
-    Safepipe::readfrom(
-      "main::PIPELINE",
-      "mrs-store './$subdir' '${filename}.bam' < $readfile1.bam",
-      "mrs-output",
-    )
-      or die "pipe failed: $!";
-    close PIPELINE or die "Pipe failed: $!";
+    my @chrs = `$sam_path/samtools view -H $readfile1.bam | sed -n 's/\@SQ.*SN:\\(\\w*\\).*/\\1/ p'`;
+
+    foreach my $chr (@chrs) {
+      chomp $chr;
+      Safepipe::readfrom(
+	"main::PIPELINE",
+	"$sam_path/samtools view -b $readfile1.bam $chr",
+	"mrs-store '.' '$chr.bam'",
+	"mrs-output",
+      )
+	or die "pipe failed: $!";
+      close PIPELINE or die "Pipe failed: $!";
+    }
     unlink $readfile1;
     unlink $readfile2 if $readfile2;
     unlink $bamfile;
     unlink "$readfile1.bam";
+    unlink "$readfile1.bam.bai";
     unlink "$readfile1-byread.bam";
   }
   exit 0;
