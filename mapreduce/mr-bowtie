@@ -27,6 +27,9 @@ my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 0.04 unless defined $max_mismatches;
 my $reffile = "$tmp/ref";
 
+my $MAQ_bin_key = '225ad960b8c87dd2c2b4091194ea4461';
+my $MAQ_path="$tmp/maq";
+
 my $bowtie_path="$tmp/bowtie";
 my $sam_path="$tmp/sam";
 
@@ -78,6 +81,8 @@ if ($ENV{MR_LEVEL} == 1)
   atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   die "$bowtie_path/bowtie not found" unless -x "$bowtie_path/bowtie";
   atomic_whget_dir($reference_manifest_key, $reffile);
+  atomic_whget($MAQ_bin_key, $MAQ_path);
+  chmod 0755, $MAQ_path;
 
   foreach my $filename (@files) {
     my $bowtie_cmd;
@@ -98,6 +103,14 @@ if ($ENV{MR_LEVEL} == 1)
 	system("gunzip -f $readfile2") == 0 or die "gunzip $readfile2";
 	$readfile1 =~ s/.gz$//;
 	$readfile2 =~ s/.gz$//;
+      }
+      elsif ($readfile1 =~ /.bfq$/) {
+	system("$MAQ_path bfq2fastq $readfile1 $readfile1.fq") == 0 or die "maq bfq2fastq $readfile1";
+	unlink $readfile1;
+	system("$MAQ_path bfq2fastq $readfile2 $readfile2.fq") == 0 or die "maq bfq2fastq $readfile2";
+	unlink $readfile2;
+	$readfile1 .= ".fq";
+	$readfile2 .= ".fq";
       }
       $bowtie_cmd = "$bowtie_path/bowtie --sam --time --threads 4 $reffile/index -1 $readfile1 -2 $readfile2";
     }
