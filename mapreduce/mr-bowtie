@@ -127,17 +127,19 @@ if ($ENV{MR_LEVEL} == 1)
     my @chrs = `$sam_path/samtools view -H $readfile1.bam | sed -n 's/\@SQ.*SN:\\(\\w*\\).*/\\1/ p'`;
 
     emit_date("before output");
+    my $stream = "";
     foreach my $chr (@chrs) {
       chomp $chr;
       Safepipe::readfrom(
 	"main::PIPELINE",
 	"$sam_path/samtools view -b $readfile1.bam $chr",
-	"mrs-store './$filename' '$chr.bam'",
-	"mrs-output",
+	"mrs-store './$filename' '$chr.bam'"
       )
 	or die "pipe failed: $!";
+      $stream .= <PIPELINE>;
       close PIPELINE or die "Pipe failed: $!";
     }
+    print STDERR "+++mrout $stream+++\n";
     emit_date("after output");
     unlink $readfile1;
     unlink $readfile2 if $readfile2;
