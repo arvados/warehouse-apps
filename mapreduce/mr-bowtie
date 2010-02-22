@@ -40,9 +40,17 @@ if ($ENV{MR_LEVEL} == 0)
   my $num_inputs = 0;
   my $ref = new Warehouse::Manifest (whc => $whc,
 				     key => $input_manifest_key);
-  $num_inputs++ while (my $s = $ref->subdir_next);
+  while (my $s = $ref->subdir_next) {
+    while (my ($pos, $size, $filename) = $s->file_next) {
+      last if !defined $pos;
+      next if $filename !~ /(.*)\.(bfq|fq|fastq|fq.gz|fastq.gz)$/;
+      next if $1 =~ /_2$/;
+      $num_inputs++;
+    }
+  }
 
-  my $inputs_per_node = $num_inputs / ($num_nodes + $num_inputs - 1);
+  my $inputs_per_node = int($num_inputs / $num_nodes + 0.5);
+  warn "$inputs_per_node";
   $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
   while (my $s = $ref->subdir_next)
   {
@@ -128,12 +136,19 @@ if ($ENV{MR_LEVEL} == 1)
 
     system("bash -c 'set -o pipefail; $bowtie_cmd | $sam_path/samtools view -S -b - > $bamfile'") == 0
       or die "failed bowtie";
+    unlink $readfile1;
+    unlink $readfile2 if $readfile2;
+
     emit_date("before sort");
     # Sort by read then by position to get deterministic output
     system("$sam_path/samtools sort -n -m 3000000000 $bamfile $readfile1-byread") == 0
       or die "failed sort";
+    unlink $bamfile;
+
     system("$sam_path/samtools sort -m 3000000000 $readfile1-byread.bam $readfile1") == 0
       or die "failed sort";
+    unlink "$readfile1-byread.bam";
+
     system("$sam_path/samtools index $readfile1.bam") == 0
       or die "failed index";
 
@@ -154,12 +169,8 @@ if ($ENV{MR_LEVEL} == 1)
     }
     print STDERR "+++mrout $stream+++\n";
     emit_date("after output");
-    unlink $readfile1;
-    unlink $readfile2 if $readfile2;
-    unlink $bamfile;
     unlink "$readfile1.bam";
     unlink "$readfile1.bam.bai";
-    unlink "$readfile1-byread.bam";
   }
   exit 0;
 }
