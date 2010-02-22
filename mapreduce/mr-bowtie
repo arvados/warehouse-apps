@@ -12,6 +12,7 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use Safepipe;
 use Fcntl ':flock';
+use POSIX qw(strftime);
 
 
 my $tmp = $ENV{MR_JOB_TMP};
@@ -72,6 +73,7 @@ if ($ENV{MR_LEVEL} == 1)
   my ($subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 2);
   my @files = split(/,/, $filenames);
 
+  emit_date("start");
   atomic_whget_tar("$bowtie_manifest_key/bowtie.tgz", $bowtie_path);
   atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   die "$bowtie_path/bowtie not found" unless -x "$bowtie_path/bowtie";
@@ -86,7 +88,7 @@ if ($ENV{MR_LEVEL} == 1)
 
     if ($filename =~ /(.+)_1\.(.+)$/) {
       # assume paired reads
-      warn "paired reads"; 
+      warn "paired reads\n"; 
       my $filename2 = "${1}_2.$2";
       $readfile2 = "$tmp/${filename2}";
       atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile1);
@@ -109,8 +111,11 @@ if ($ENV{MR_LEVEL} == 1)
       $bowtie_cmd = "$bowtie_path/bowtie --sam --time --threads 4 $reffile/index -1 $readfile1";
     }
 
+    emit_date("before bowtie");
+
     system("bash -c 'set -o pipefail; $bowtie_cmd | $sam_path/samtools view -S -b - > $bamfile'") == 0
       or die "failed bowtie";
+    emit_date("before sort");
     # Sort by read then by position to get deterministic output
     system("$sam_path/samtools sort -n -m 3000000000 $bamfile $readfile1-byread") == 0
       or die "failed sort";
@@ -121,6 +126,7 @@ if ($ENV{MR_LEVEL} == 1)
 
     my @chrs = `$sam_path/samtools view -H $readfile1.bam | sed -n 's/\@SQ.*SN:\\(\\w*\\).*/\\1/ p'`;
 
+    emit_date("before output");
     foreach my $chr (@chrs) {
       chomp $chr;
       Safepipe::readfrom(
@@ -132,6 +138,7 @@ if ($ENV{MR_LEVEL} == 1)
 	or die "pipe failed: $!";
       close PIPELINE or die "Pipe failed: $!";
     }
+    emit_date("after output");
     unlink $readfile1;
     unlink $readfile2 if $readfile2;
     unlink $bamfile;
@@ -201,4 +208,10 @@ sub atomic_whget_dir {
   }
   close L;
   die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub emit_date {
+  my $who = shift;
+  my $now_string = strftime "%H:%M:%S", localtime;
+  warn "$who @ $now_string\n";
 }
