@@ -126,7 +126,7 @@ if ($ENV{MR_LEVEL} == 1)
       Safepipe::readfrom(
 	"main::PIPELINE",
 	"$sam_path/samtools view -b $readfile1.bam $chr",
-	"mrs-store '.' '$chr.bam'",
+	"mrs-store './$filename' '$chr.bam'",
 	"mrs-output",
       )
 	or die "pipe failed: $!";
