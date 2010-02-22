@@ -50,7 +50,6 @@ if ($ENV{MR_LEVEL} == 0)
   }
 
   my $inputs_per_node = int($num_inputs / $num_nodes + 0.5);
-  warn "$inputs_per_node";
   $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
   while (my $s = $ref->subdir_next)
   {
@@ -91,6 +90,8 @@ if ($ENV{MR_LEVEL} == 1)
   atomic_whget_dir($reference_manifest_key, $reffile);
   atomic_whget($MAQ_bin_key, $MAQ_path);
   chmod 0755, $MAQ_path;
+
+  my $stream = "";
 
   foreach my $filename (@files) {
     my $bowtie_cmd;
@@ -155,7 +156,6 @@ if ($ENV{MR_LEVEL} == 1)
     my @chrs = `$sam_path/samtools view -H $readfile1.bam | sed -n 's/\@SQ.*SN:\\(\\w*\\).*/\\1/ p'`;
 
     emit_date("before output");
-    my $stream = "";
     foreach my $chr (@chrs) {
       chomp $chr;
       Safepipe::readfrom(
@@ -167,11 +167,12 @@ if ($ENV{MR_LEVEL} == 1)
       $stream .= <PIPELINE>;
       close PIPELINE or die "Pipe failed: $!";
     }
-    print STDERR "+++mrout $stream+++\n";
     emit_date("after output");
     unlink "$readfile1.bam";
     unlink "$readfile1.bam.bai";
   }
+
+  print STDERR "+++mrout $stream+++\n";
   exit 0;
 }
 
