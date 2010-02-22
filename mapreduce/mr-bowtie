@@ -50,12 +50,16 @@ if ($ENV{MR_LEVEL} == 0)
   }
 
   my $inputs_per_node = int($num_inputs / $num_nodes + 0.5);
+
+  warn "inputs = $num_inputs, nodes = $num_nodes, inputs/node = $inputs_per_node\n";
+
+  my @files;
+  my $subdir;
   $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
   while (my $s = $ref->subdir_next)
   {
-    my $subdir = $s->name;
+    $subdir = $s->name;
     $subdir =~ s/^\.\///;
-    my @files;
     while (my ($pos, $size, $filename) = $s->file_next)
     {
       last if !defined $pos;
@@ -70,10 +74,10 @@ if ($ENV{MR_LEVEL} == 0)
 	@files = ();
       }
     }
-    if (@files) {
-	my $filenames = join(',', @files);
-	print STDERR "+++mrjobstep 1 $subdir $filenames+++\n";
-    }
+  }
+  if (@files) {
+    my $filenames = join(',', @files);
+    print STDERR "+++mrjobstep 1 $subdir $filenames+++\n";
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
   exit 0;
