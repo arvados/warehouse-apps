@@ -694,7 +694,7 @@ sub write_finish
       # block size hints)
       return join (",",
 		   map {
-		     /^(-\d+ )?([0-9a-f]{32})/;
+		     /^(-\d+ )?([0-9a-f]{32}\S+)/;
 		     $2;
 		   } @hashes);
     }

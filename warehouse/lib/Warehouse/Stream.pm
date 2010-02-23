@@ -163,7 +163,7 @@ sub as_key
 	if exists $self->{write_filename};
 
     return join (",",
-		 map { /^([0-9a-f]{32})/; $1; } @{$self->{myhashes}});
+		 map { /^([0-9a-f]{32}\S+)/; $1; } @{$self->{myhashes}});
   }
 
   die "as_key not supported unless write_* used";
