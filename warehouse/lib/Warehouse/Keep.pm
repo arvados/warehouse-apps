@@ -118,7 +118,7 @@ sub _init
       warn "$$ killed by $sig\n";
     };
 
-    $self->{ChildLifeTime} = 100;
+    $self->{ChildLifeTime} = 1;
 
     $Warehouse::Keep::TotalChildren = 32;
     print STDERR "Total children: " . $Warehouse::Keep::TotalChildren . "\n" if ($ENV{DEBUG});
@@ -159,7 +159,7 @@ sub NewChild
         $self->process($c);
     }
 
-    warn "child terminated after $i requests";
+    warn "child terminated after $i requests" if $i > 1;
     exit;
 }
 
