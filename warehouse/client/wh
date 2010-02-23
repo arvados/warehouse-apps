@@ -37,6 +37,13 @@ Example of a simple job submission, using only the minimum required options:
  wh job new photons=1 nodes=1 mrfunction=gzip \
             inputkey=ecd39d68e3db311b841dc4af4f4a59ed+252+K@templeton
 
+Example of a job submissions to thaw a frozen job:
+
+ wh job new photons=1 nodes=1 mrfunction=gzip \
+            thawedfromkey=ecd39d68e3db311b841dc4af4f4a59ed+252+K@templeton
+
+The thawedfromkey hash is the frozentokey of the stopped job.
+
 Required options:
 
 =over
