@@ -50,6 +50,8 @@ if ($ENV{MR_LEVEL} == 0)
   }
 
   my $inputs_per_node = int($num_inputs / $num_nodes + 0.5);
+  # Limit so that step size is not so large
+  $inputs_per_node = 4 if $inputs_per_node > 4;
 
   warn "inputs = $num_inputs, nodes = $num_nodes, inputs/node = $inputs_per_node\n";
 
