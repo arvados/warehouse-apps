@@ -428,7 +428,7 @@ sub store_block
     my $hash = "$md5+$size";
 
     my $alreadyhave;
-    $alreadyhave = $self->fetch_block_ref ($hash, 1, 1)
+    $alreadyhave = $self->fetch_block_ref ($hash, 1, 1, { nodecrypt => 1 })
 	if !$ENV{NOPLAIN};
     if ($alreadyhave && $$dataref eq $$alreadyhave)
     {
