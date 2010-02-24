@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+
+my ($manifest, $chr, $pos) = @ARGV;
+
+my $tmpdir = $ENV{"TMP"} || "/tmp";
+my $tmpfile = "$tmpdir/$$.bam";
+
+use Warehouse;
+my $whc = new Warehouse;
+my $mref = $whc->fetch_block_ref ($manifest);
+my $block1, $block2, $block2start;
+while ($$mref =~ /^\S+ (\S+( \S+)*) \d+:\d+:\Q$chr\E-(\d+)\.bam/gm) {
+  last if $3 > $pos + 100;
+  $block1 = $block2;
+  $block2 = $1;
+  $block2start = $3;
+}
+if (!defined $block2start) {
+  die "$0: $chr-$pos not found\n";
+}
+open T, ">", $tmpfile;
+for (split (" ", $block2)) {
+  my $bref = $whc->fetch_block_ref ($_);
+  print T $$bref;
+}
+close T;
+system ("samtools", "index", $tmpfile);
+open V, "-|", "samtools", "view", $tmpfile, "$chr:$pos-$pos";
+while (<V>) {
+  chomp;
+  my @F = split /\t/;
+  my ($r, $q) = splice (@F, 9, 2);
+  my $right = $pos - $F[3];
+  my $left = length($r) - $right;
+
+  $allr .= substr $r, $pos - $F[3], 1;
+  $allq .= substr $q, $pos - $F[3], 1;
+  substr $r, $pos - $F[3] + 1, 0, "\002";
+  substr $r, $pos - $F[3], 0, "\001";
+  substr $q, $pos - $F[3] + 1, 0, "\002";
+  substr $q, $pos - $F[3], 0, "\001";
+
+  my $out = sprintf ("%${left}s%s   %s%${right}s ", "", $r, $q, "") . join ("\t", @F) . "\n";
+
+  for ($out) { s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/\001/<B>/g; s/\002/<\/B>/g; }
+  print $out;
+}
+close V;
+unlink $tmpfile;
+unlink $tmpfile.".bai";
+for ($allr, $allq) { s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; }
+print "\n$allr\n$allq\n";
+
