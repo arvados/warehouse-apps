@@ -409,7 +409,7 @@ else
   if ($cleanpid == 0)
   {
     srun (["srun", "--nodelist=$nodelist", "-D", $ENV{TMPDIR}],
-	  [qw(rm -rf), "$ENV{TMPDIR}/mrcompute/work"]);
+	  ['bash', '-c', 'umount $TMPDIR/mrcompute/work/*; sleep 1; rm -rf $TMPDIR/mrcompute/work']);
     exit (1);
   }
   while (1)
