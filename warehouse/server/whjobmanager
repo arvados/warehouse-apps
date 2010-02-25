@@ -409,7 +409,7 @@ else
   if ($cleanpid == 0)
   {
     srun (["srun", "--nodelist=$nodelist", "-D", $ENV{TMPDIR}],
-	  ['bash', '-c', 'sudo /bin/umount $TMPDIR/mrcompute/work/*; sleep 1; rm -rf $TMPDIR/mrcompute/work']);
+	  ['bash', '-c', 'sudo /bin/umount $TMPDIR/mrcompute/work/* 2>/dev/null; sleep 1; rm -rf $TMPDIR/mrcompute/work']);
     exit (1);
   }
   while (1)
@@ -550,7 +550,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     }
     if (exists $ENV{GPG_KEYS}) {
       $execargs[-1] .=
-	  "&& mkdir -p '$ENV{MR_JOBSTEP_TMP}' && (sudo /bin/umount '$ENV{MR_JOBSTEP_TMP}' || true) && rm -rf '$ENV{MR_JOBSTEP_TMP}' && exec $ENV{MR_REVISION_SRCDIR}/mapreduce/ecryptfs-wrapper -d '$ENV{MR_JOBSTEP_TMP}' -p $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
+	  "&& mkdir -p '$ENV{MR_JOBSTEP_TMP}' && (sudo /bin/umount '$ENV{MR_JOBSTEP_TMP}' 2>/dev/null || true) && rm -rf '$ENV{MR_JOBSTEP_TMP}' && exec $ENV{MR_REVISION_SRCDIR}/mapreduce/ecryptfs-wrapper -d '$ENV{MR_JOBSTEP_TMP}' -p $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
     } else {
       $execargs[-1] .=
 	  "&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
