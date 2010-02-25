@@ -6,8 +6,8 @@ use Warehouse;
 
 =head1 NAME
 
-Warehouse::Manifest -- API for working with warehouse manifests, aka
-lists of subdirectories, files, and contents
+Warehouse::Manifest -- library for working with warehouse manifests
+(lists of subdirectories, files, and contents)
 
 =head1 VERSION
 

@@ -1745,7 +1745,7 @@ sub _sign
     my $self = shift;
     my $text = shift;
 
-    return $self->_fakesign ($text, "no GnuPG::Interface") if $ENV{NOSIGN};
+    return $self->_fakesign ($text, "caller set NOSIGN") if $ENV{NOSIGN};
 
     eval "use GnuPG::Interface";
     return $self->_fakesign ($text, "no GnuPG::Interface") if $@;
