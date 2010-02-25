@@ -85,6 +85,7 @@ sub main {
 
   &run("ERROR: unable to umount '$directory'",('sudo','/bin/umount', "$directory"));
 
+  sleep 1;
   0 == system ("rm", "-rf", $directory)
       or warn "$0: warning: failed to remove '$directory'\n";
 
