@@ -69,14 +69,12 @@ if ($ENV{MR_LEVEL} == 1)
   my ($chr, $stream) = split (/ /, $ENV{MR_INPUT}, 2);
   atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   my $s = new Warehouse::Stream (whc => $whc, subdir => $stream);
-#  my $readfile="$tmp/input.bam";
-#  my $outfile="$tmp/output.bam";
   my $dir ="$tmp/out";
   system "rm -rf $dir";
   mkdir $dir or die "mkdir $dir";
   chdir $dir or die "chdir $dir: $!";
-  my $filecount = 0;
 
+  my $streamname = $s->name;
   while (my ($pos, $size, $filename) = $s->file_next)
   {
     last if !defined $pos;
@@ -85,8 +83,10 @@ if ($ENV{MR_LEVEL} == 1)
     if ($splitter == 0) {
       # splitter
       $filename =~ s/\.bam$//;
+      $dir = "$dir/$streamname/$filename.$pos";
+      system ("mkdir -p $dir") == 0 or die "mkdir $dir: $?";
       open STDIN, "$sam_path/samtools view -h -|" or die "samtools view: $!";
-      open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view -buht $index_path - | $sam_path/samtools sort -m $memory_limit - $dir/$filename.$pos.$chr";
+      open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view -buht $index_path - | $sam_path/samtools sort -m $memory_limit - $dir/$chr";
       print scalar <>;
       while (<>) {
 	print if /^\@/ || /^[^\t]*\t[^\t]*\t\Q$chr\E\t/;
@@ -103,6 +103,7 @@ if ($ENV{MR_LEVEL} == 1)
     close STDOUT or die "splitter: error $! exit $?";
   }
   my $stream = `whput -r --as-stream .`;
+  die "whput exited $?" if $?;
   print STDERR "+++mrout $stream+++\n";
   exit 0;
 }
