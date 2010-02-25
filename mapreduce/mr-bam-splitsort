@@ -31,7 +31,7 @@ my $whc = new Warehouse;
 
 if (!$memory_limit) {
   if (`cat /proc/meminfo` =~ /MemTotal:\s*(\d+)/) {
-    $memory_limit = $1 / 5;
+    $memory_limit = int($1 * 1024 / 6);
   }
   else {
     $memory_limit = 500_000_000;
