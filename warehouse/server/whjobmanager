@@ -76,8 +76,6 @@ $SIG{'USR2'} = sub
 
 
 my $whc = new Warehouse or die "failed to create Warehouse client";
-$whc->set_config ("encrypt_to", 0);
-$whc->set_config ("decrypt", 0);
 my $metastream = new Warehouse::Stream (whc => $whc);
 $metastream->clear;
 $metastream->name (".");
