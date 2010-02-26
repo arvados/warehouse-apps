@@ -6,7 +6,8 @@ EOF
 
 # gpg --list-secret-keys | perl -ne 'print ",$1" if /<(.*?)>/' | sed 's/^,//'
 
-cat >>$HOME/.gnupg/gpg.conf <<EOF
+cat >>$GNUPGHOME/gpg.conf <<EOF
 
+compress-algo none
 always-trust
 EOF

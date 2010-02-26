@@ -37,10 +37,10 @@ $ENV{NOCACHE} ||= $ENV{KNOB_NOCACHE};
 $ENV{NOCACHE_READ} ||= $ENV{KNOB_NOCACHE_READ};
 $ENV{NOCACHE_WRITE} ||= $ENV{KNOB_NOCACHE_WRITE};
 
-$ENV{HOME} = $ENV{MR_JOBSTEP_TMP};
+$ENV{GNUPGHOME} = $ENV{MR_JOBSTEP_TMP}."/.gnupg";
 if (length $ENV{GPG_KEYS}) {
     warn "GPG_KEYS => ".length($ENV{"GPG_KEYS"})." bytes\n" if $ENV{"DEBUG_GPG"};
-    mkdir $ENV{HOME}."/.gnupg", 0700;
+    mkdir $ENV{GNUPGHOME}, 0700;
     `gpgsetup`;
     delete $ENV{GPG_KEYS};
     if ($ENV{ENCRYPT_TO} !~ /[^\s,]/) {
