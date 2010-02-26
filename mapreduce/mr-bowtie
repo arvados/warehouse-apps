@@ -22,8 +22,10 @@ my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} or die;
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $bowtie_manifest_key = $ENV{KNOB_BOWTIE} or die;
+my $bowtie_args = $ENV{KNOB_BOWTIE_ARGS};
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
+$bowtie_args = "" unless $bowtie_args;
 $max_mismatches = 0.04 unless defined $max_mismatches;
 my $reffile = "$tmp/ref";
 
@@ -127,7 +129,7 @@ if ($ENV{MR_LEVEL} == 1)
 	$readfile1 .= ".fq";
 	$readfile2 .= ".fq";
       }
-      $bowtie_cmd = "$bowtie_path/bowtie --sam --time --threads 4 $reffile/index -1 $readfile1 -2 $readfile2";
+      $bowtie_cmd = "$bowtie_path/bowtie $bowtie_args --sam --time --threads 4 $reffile/index -1 $readfile1 -2 $readfile2";
     }
     else {
       warn "single-end reads"; 
@@ -136,7 +138,7 @@ if ($ENV{MR_LEVEL} == 1)
 	system("gunzip $readfile1") == 0 or die "gunzip $readfile1";
 	$readfile1 =~ s/.gz$//;
       }
-      $bowtie_cmd = "$bowtie_path/bowtie --sam --time --threads 4 $reffile/index $readfile1";
+      $bowtie_cmd = "$bowtie_path/bowtie $bowtie_args --sam --time --threads 4 $reffile/index $readfile1";
     }
 
     emit_date("before bowtie");
