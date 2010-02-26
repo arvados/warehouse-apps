@@ -87,6 +87,7 @@ if ($ENV{MR_LEVEL} == 1)
 {
   my ($subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 2);
   $subdir =~ s/^\.//;
+  $subdir = "/" if $subdir eq "";
   my @files = split(/,/, $filenames);
 
   emit_date("start");
