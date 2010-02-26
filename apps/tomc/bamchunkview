@@ -1,13 +1,42 @@
 #!/usr/bin/perl
 
+my $colorspace = 0;
+while ($ARGV[0] =~ /^--(.*)/) {
+  if ($1 eq "") { last; }
+  if ($1 eq "colorspace") { $colorspace = 1; }
+  else { die "unrecognized flag: $ARGV[0]" }
+  shift @ARGV;
+}
+
 my ($manifest, $chr, $pos) = @ARGV;
 
 my $tmpdir = $ENV{"TMP"} || "/tmp";
 my $tmpfile = "$tmpdir/$$.bam";
 
 use Warehouse;
+use Digest::MD5;
+
 my $whc = new Warehouse;
-my $mref = $whc->fetch_block_ref ($manifest);
+my $mref;
+if ($manifest =~ /^[0-9a-f]{32}([\s,])*$/ && -e "$tmpdir/$manifest.gz") {
+  my $mdata = `zcat '$tmpdir/$manifest.gz'`;
+  if ($manifest eq Digest::MD5::md5_hex ($mdata)) {
+    $mref = \$mdata;
+  }
+}
+if (!$mref) {
+  $mref = $whc->fetch_block_ref ($manifest);
+  if (open M, ">", "$tmpdir/$manifest.$$") {
+    print M $$mref;
+    if (close M) {
+      if (0 == system ("gzip -9 '$tmpdir/$manifest.$$'")) {
+	rename "$tmpdir/$manifest.$$.gz", "$tmpdir/$manifest.gz";
+      }
+      unlink "$tmpdir/$manifest.$$.gz";
+    }
+    unlink "$tmpdir/$manifest.$$";
+  }
+}
 my $block1, $block2, $block2start;
 while ($$mref =~ /^\S+ (\S+( \S+)*) \d+:\d+:\Q$chr\E-(\d+)\.bam/gm) {
   last if $3 > $pos + 100;
@@ -26,10 +55,31 @@ for (split (" ", $block2)) {
 close T;
 system ("samtools", "index", $tmpfile);
 open V, "-|", "samtools", "view", $tmpfile, "$chr:$pos-$pos";
+my @alignments;
+my $maxreadlen = 0;
 while (<V>) {
   chomp;
+  push @alignments, $_;
+  my @F = split /\t/;
+  if ($maxreadlen < length $F[9]) {
+      $maxreadlen = length $F[9];
+  }
+}
+for (@alignments) {
   my @F = split /\t/;
   my ($r, $q) = splice (@F, 9, 2);
+  if ($colorspace) {
+    my $x = substr $r, 0, 1, "";
+    $r =~ tr/ACGTN/0123./;
+    $r = $x.$r;
+    if ($F[0] =~ /,\d+_-/) {
+      $r = reverse $r;
+      $q = reverse $q;
+      $F[3] += 2;		# XXX kludge to compensate for bug in gbm2sam
+    }
+  }
+  $r = sprintf ("%-${maxreadlen}s", $r);
+  $q = sprintf ("%-${maxreadlen}s", $q);
   my $right = $pos - $F[3];
   my $left = length($r) - $right;
 
