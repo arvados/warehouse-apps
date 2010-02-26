@@ -1,0 +1,211 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:split unsorted BAM files into sorted bins
+###MR_INPUT:manifest
+###MR_KNOBS:NORMAL
+###MR_KNOBS:TUMOR
+###MR_KNOBS:SAM
+###MR_KNOBS:CNV
+###MR_KNOBS:MEMORYLIMIT
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+use POSIX qw(strftime);
+
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+
+my $verbose = 1;
+my $input_manifest_key = $ENV{MR_INPUT0} or die;
+
+my $sam_manifest_key = $ENV{KNOB_SAM} or die;
+my $cnv_manifest_key = $ENV{KNOB_CNV} or die;
+
+
+my $normal_manifest_key = $ENV{KNOB_NORMAL} or die;
+my $tumor_manifest_key = $ENV{KNOB_TUMOR} or die;
+my $memory_limit = $ENV{KNOB_MEMORYLIMIT};
+
+my $sam_path="$tmp/sam";
+my $cnv_path="$tmp/cnv";
+
+my $whc = new Warehouse;
+
+if (!$memory_limit) {
+  if (`cat /proc/meminfo` =~ /MemTotal:\s*(\d+)/) {
+    $memory_limit = int($1 * 1024 / 6);
+  }
+  else {
+    $memory_limit = 500_000_000;
+  }
+}
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my $m = new Warehouse::Manifest (whc => $whc, key => $normal_manifest_key);
+  $m->rewind;
+  my $m_tumor = new Warehouse::Manifest (whc => $whc, key => $tumor_manifest_key);
+  $m_tumor->rewind;
+  while (my $s = $m->subdir_next) {
+    my $stream;
+    my $stream_tumor;
+    chomp ($stream = $s->as_string);
+    my $s_tumor = $m_tumor->subdir_next;
+    chomp ($stream_tumor = $s_tumor->as_string);
+    $stream =~ /([^:\s]*)$/;
+    my $stream1 = $1;
+    $stream_tumor =~ /([^:\s]*)$/;
+    my $stream2 = $1;
+    if ($stream1 eq $stream2) {
+        print STDERR "+++mrjobstep 1 $stream\n$stream_tumor+++\n";
+    } else {
+        die "mr-cnv-map: bam chunk mismatch: $stream1 ne $stream2";
+    }
+  }
+
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($normal, $tumor) = split (/\n/, $ENV{MR_INPUT}, 2);
+
+  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
+  atomic_whget_tar("$cnv_manifest_key/cnv.tgz", $cnv_path);
+
+  my $n = new Warehouse::Stream (whc => $whc, subdir => $normal);
+  my $t = new Warehouse::Stream (whc => $whc, subdir => $tumor);
+  my $dir ="$tmp/out";
+  system "rm -rf $dir";
+  mkdir $dir or die "mr-cnv-map: mkdir $dir";
+  chdir $dir or die "mr-cnv-map: chdir $dir: $!";
+
+  my $normalname = $n->name;
+  my $tumorname = $t->name;
+  while (my ($n_pos, $n_size, $n_filename) = $n->file_next)
+  {
+    last if !defined $n_pos;
+    my ($t_pos, $t_size, $t_filename) = $t->file_next;
+    die "mr-cnv-map: Filename mismatch: $n_filename ne $t_filename" if ($n_filename ne $t_filename);
+    $n_filename =~ s/\.bam$//;
+    $t_filename =~ s/\.bam$//;
+
+    # First write out the normal file
+    open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view - |/usr/bin/cut -f4 > $tmp/$n_filename.normal.seq";
+    # feeder
+    $n->seek ($n_pos);
+    while (my $dataref = $n->read_until ($n_pos+$n_size)) {
+      print $$dataref;
+    }
+    close STDOUT or die "mr-cnv-map: error $! exit $?";
+
+    # Then write out the tumor file
+    open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view - |/usr/bin/cut -f4 > $tmp/$t_filename.tumor.seq";
+
+    # feeder
+    $t->seek ($t_pos);
+    while (my $dataref = $t->read_until ($t_pos+$t_size)) {
+      print $$dataref;
+    }
+    close STDOUT or die "mr-cnv-map: error $! exit $?";
+
+    # Now call the CNV tools
+    chdir $tmp or die "mr-cnv-map: Could not chdir to $tmp";
+
+    0 == system("$cnv_path/pipeline/bootstrap_bin/bootstrap_bin $n_filename.tumor.seq $n_filename.normal.seq 1000 n out/$n_filename.bin") or die "mr-cnv-map: could not run $cnv_path/pipeline/bootstrap_bin/bootstrap_bin $n_filename.tumor.seq $n_filename.normal.seq 1000 n out/$n_filename.bin: $! (exit code: $?)";
+    0 == system("$cnv_path/pipeline/BIC-seq/a.out out/$n_filename.bin 2 >> out/$n_filename.bic") or die "mr-cnv-map: could not run $cnv_path/pipeline/BIC-seq/a.out out/$n_filename.bin 2 >> out/$n_filename.bic: $! (exit code: $?)";
+
+    open(TMP,">$cnv_path/R_runme");
+    print TMP "source(\"$cnv_path/pipeline/BIC-postprocessing.R\")\n";
+    print TMP "post_proc(\"out/$n_filename.bic\",\"out/$n_filename.R.bic\")\n";
+    close(TMP);
+
+    0 == system("/usr/bin/R -f $cnv_path/R_runme") or die "mr-cnv-map: could not run R: $!";
+  }
+
+  my $outfrag = `whput -r --as-stream $tmp/out`;
+  die "mr-cnv-map: whput exited $?" if $?;
+  print STDERR "+++mrout $outfrag+++\n";
+  exit 0;
+}
+
+sub whget {
+  my ($source, $target) = @_;
+
+  if (0 != system "whget '$source' '$target'")
+  {
+    die "mr-cnv-map: whget exited $?";
+  }
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "mr-cnv-map: whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "mr-cnv-map: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_tar {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) )
+  {
+    if (0 != system "whget '$source' '$target.tgz.tmp'")
+    {
+      system "rm -rf '$target.tgz.tmp'";
+      close L;
+      die "mr-cnv-map: whget exited $?";
+    }
+    rename "$target.tgz.tmp", "$target.tgz" or die "mr-cnv-map: rename $target.tgz.tmp failed";
+    mkdir "$target" or die "mr-cnv-map: mkdir $target failed";
+    system("tar -C $target -xzf $target.tgz") == 0 or die "mr-cnv-map: tar -xz $target.tgz failed";
+  }
+  close L;
+  die "mr-cnv-map: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_dir {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX))
+  {
+    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "mr-cnv-map: whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "mr-cnv-map: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub emit_date {
+  my $who = shift;
+  my $now_string = strftime "%H:%M:%S", localtime;
+  warn "$who @ $now_string\n";
+}
