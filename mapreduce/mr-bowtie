@@ -87,14 +87,13 @@ if ($ENV{MR_LEVEL} == 1)
 {
   my ($subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 2);
   $subdir =~ s/^\.//;
-  $subdir = "/" if $subdir eq "";
   my @files = split(/,/, $filenames);
 
   emit_date("start");
   atomic_whget_tar("$bowtie_manifest_key/bowtie.tgz", $bowtie_path);
   atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   die "$bowtie_path/bowtie not found" unless -x "$bowtie_path/bowtie";
-  #atomic_whget_dir($reference_manifest_key, $reffile);
+  atomic_whget_dir($reference_manifest_key, $reffile);
   atomic_whget($MAQ_bin_key, $MAQ_path);
   chmod 0755, $MAQ_path;
 
