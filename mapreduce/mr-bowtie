@@ -136,7 +136,7 @@ if ($ENV{MR_LEVEL} == 1)
 	system("gunzip $readfile1") == 0 or die "gunzip $readfile1";
 	$readfile1 =~ s/.gz$//;
       }
-      $bowtie_cmd = "$bowtie_path/bowtie --sam --time --threads 4 $reffile/index -1 $readfile1";
+      $bowtie_cmd = "$bowtie_path/bowtie --sam --time --threads 4 $reffile/index $readfile1";
     }
 
     emit_date("before bowtie");
