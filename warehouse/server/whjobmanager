@@ -246,8 +246,10 @@ $SIG{'QUIT'} = sub { $main::please_freeze = 1; };
 $SIG{'TERM'} = \&croak;
 $SIG{'TSTP'} = sub { $main::please_freeze = 1; };
 $SIG{'ALRM'} = sub { $main::please_info = 1; };
+$SIG{'CONT'} = sub { $main::please_continue = 1; };
 $main::please_freeze = 0;
 $main::please_info = 0;
+$main::please_continue = 0;
 my $jobsteps_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 grep { $ENV{$1} = $2 if /^(NOCACHE.*?)=(.*)/ } split ("\n", $$Job{knobs});
@@ -465,6 +467,8 @@ update_progress_stats();
 THISROUND:
 for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 {
+  $main::please_continue = 0;
+
   my $id = $jobstep_todo[$todo_ptr];
   my $Jobstep = $jobstep[$id];
   if ($Jobstep->{level} != $level)
@@ -629,6 +633,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 Log (undef, "wait for last ".(scalar keys %proc)." children to finish");
 while (%proc)
 {
+  goto THISROUND if $main::please_continue;
   $main::please_info = 0, freeze(), collate_output(), save_meta(1) if $main::please_info;
   readfrompipes ();
   if (!reapchildren())
