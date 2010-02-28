@@ -68,7 +68,7 @@ sub main {
   my $SALT = join "", map { unpack "H*", chr(rand(256)) } 1..16;
   &run("ERROR: unable to run 'keyctl clear \@u'",('sudo', 'keyctl', 'clear', '@u'));
 
-  &run("ERROR: unable to mount '$directory'",('sudo', '/bin/mount', '-t', 'ecryptfs', "$directory", "$directory", '-o', "key=passphrase:passwd=$PASS:salt=$SALT,ecryptfs_cipher=aes,ecryptfs_key_bytes=16,ecryptfs_passthrough=n,no_sig_cache"));
+  &run("ERROR: unable to mount '$directory'",('sudo', '/bin/mount', '-t', 'ecryptfs', "$directory", "$directory", '-o', "key=passphrase:passwd=$PASS:salt=$SALT,ecryptfs_cipher=aes,ecryptfs_key_bytes=16,ecryptfs_passthrough=n,no_sig_cache,verbosity=0"));
 
   my $exitcode;
   if (0 == system($program,split(/ /,$arguments))) {
