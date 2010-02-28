@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+
+print <<EOF
+\@HD	VN:1.0 SO:unsorted
+EOF
+    ;
+
+while (<>)
+{
+    chomp;
+    chomp ($cs = <>);
+    $cs =~ tr/0123456./ACGTNNNN/;
+    $quality = "I" x length($cs);
+    s/^>//;
+    my ($chr, $pos) = /,(\d+)_(-?\d+)/;
+    if ($chr eq "23") { $chr = "chrX"; }
+    elsif ($chr eq "24") { $chr = "chrY"; }
+    elsif ($chr eq "25") { $chr = "chrM"; }
+    else { $chr = "chr$chr"; }
+    $flags = 0;
+    if ($pos < 0) { $pos = 2 - length($cs) - $pos; $flags = 16; }
+    print (join ("\t",
+		 $_, $flags, $chr, $pos, 0, length($cs)."M", "*", 0, 0, $cs, $quality),
+	   "\n");
+}
