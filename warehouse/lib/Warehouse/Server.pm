@@ -409,7 +409,11 @@ sub run
 				knobs);
 		if ($jobspec{thawedfromkey})
 		{
+		    my $knobs = "";
+		    $knobs = "GPG_KEYS=yes"
+			if $jobspec{knobs} =~ /^GPG_KEYS=/m;
 		    for (@fields) { $jobspec{$_} = ""; };
+		    $jobspec{knobs} = $knobs;
 		    $jobspec{revision} = -1;
 		}
 		elsif ($jobspec{thaw})
