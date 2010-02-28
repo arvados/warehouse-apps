@@ -1072,8 +1072,9 @@ sub Log				# ($jobstep_id, $logmessage)
     return;
   }
   my $fh = select STDERR; $|=1; select $fh;
-  my $message = sprintf ("%s %d %s %s\n", $job_id, $$, @_);
+  my $message = sprintf ("%s %d %s %s", $job_id, $$, @_);
   $message =~ s{([^ -\176])}{"\\" . sprintf ("%03o", ord($1))}ge;
+  $message .= "\n";
   print STDERR $message;
 
   return if !$metastream;
