@@ -920,6 +920,15 @@ sub preprocess_stderr
 	push (@{ $jobstep[$job]->{stderr_jobsteps} }, $1);
 	"";
       }gse;
+
+  while ($jobstep[$job]->{stderr} =~ /^(.*?)\n/) {
+    my $line = $1;
+    if ($line =~ /\+\+\+mr/) {
+      last;
+    }
+    substr $jobstep[$job]->{stderr}, 0, 1+length($line), "";
+    Log ($job, "stderr $line");
+  }
 }
 
 
@@ -1064,6 +1073,7 @@ sub Log				# ($jobstep_id, $logmessage)
   }
   my $fh = select STDERR; $|=1; select $fh;
   my $message = sprintf ("%s %d %s %s\n", $job_id, $$, @_);
+  $message =~ s{([^ -\176])}{"\\" . sprintf ("%03o", ord($1))}ge;
   print STDERR $message;
 
   return if !$metastream;
