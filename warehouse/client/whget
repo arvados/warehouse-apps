@@ -61,6 +61,8 @@ Data sets can be output to standard-output instead of being stored in the file s
 use strict;
 
 use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
 use Digest::MD5;
 use HTTP::Request::Common;
 use LWP::UserAgent;
@@ -127,20 +129,20 @@ if (!defined $manifestkey)
 	or die "Could not get key for '$manifestname': ".$whc->errstr;
 }
 
-# $manifestkey is a comma-separated list of hashes of the blocks that
-# make up the manifest.
-
-my @manifesthash = split (",", $manifestkey);
-my $manifest = "";
-while (!length $manifest && @manifesthash)
-{
-    $manifest = $whc->fetch_block ($manifesthash[0]);
-    die "fetch_block($manifesthash[0]) failed" if !defined $manifest;
-    shift @manifesthash;
-}
-
 if ($justrawmanifest)
 {
+    # $manifestkey is a comma-separated list of hashes of the blocks that
+    # make up the manifest.
+
+    my @manifesthash = split (",", $manifestkey);
+    my $manifest = "";
+    while (!length $manifest && @manifesthash)
+    {
+	$manifest = $whc->fetch_block ($manifesthash[0]);
+	die "fetch_block($manifesthash[0]) failed" if !defined $manifest;
+	shift @manifesthash;
+    }
+
     if (-d $localbase)
     {
 	$localbase =~ s,/$,,;
@@ -182,15 +184,14 @@ if ($justrawmanifest)
 # $manifest is the current block; @manifesthash is a list of hashes of
 # subsequent blocks.
 
-while (0 < length $manifest)
-{
-    $manifest =~ s/^([^\n]*)\n//
-	or die "no newline at end of manifest";
-    my @subdir = split (" ", $1);
-    my $subdir_name = shift @subdir;
+print STDERR "want $wantsubdir\n" if $opt{v};
 
-    $subdir_name =~ s/^\.//
-	or die "subdir name '$subdir_name' does not start with period";
+my $m = new Warehouse::Manifest (whc => $whc, key => $manifestkey);
+$m->rewind;
+while (my $s = $m->subdir_next)
+{
+    my $subdir_name = $s->name;
+    $subdir_name =~ s{^\.}{};
     if ($subdir_name eq $wantsubdir ||
 	($opt{r} &&
 	 $wantfile eq "" &&
@@ -203,82 +204,13 @@ while (0 < length $manifest)
 	print STDERR "consider: .$subdir_name as $localbase$localsubdir\n"
 	    if $opt{v} >= 3;
 
-	my @hash;
-	while (@subdir)
+	while (my ($pos, $size, $name) = $s->file_next)
 	{
-	    if ($subdir[0] =~ /^-(\d+)$/)
-	    {
-		push @hash, splice @subdir, 0, 2;
-	    }
-	    elsif ($subdir[0] =~ /^[0-9a-f]{32}([-\+].*)?$/)
-	    {
-		push @hash, shift @subdir;
-	    }
-	    else
-	    {
-		last;
-	    }
-	}
+	    last if !defined $pos;
 
-	my $data = "";
-	my $streampos = 0;
-
-	foreach (@subdir)
-	{
-	    my ($pos, $size, $name) = split (":", $_, 3);
 	    if ($wantfile eq "" || $wantfile eq $name)
 	    {
-		print STDERR "want:  $pos $size $name\n"
-		    if $opt{v} >= 3;
-
-		# read data, or skip blocks, until we are at $streampos==$pos
-
-		my $sizehint;
-		while (@hash &&
-                       ($hash[0] =~ /^([0-9a-f]{32})?.*?\+GS()(\d+)/ ||
-                        $hash[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)/) &&
-		       $pos >= ($streampos
-				+ ($sizehint = ($2 eq '-'
-						? $Warehouse::blocksize - $3
-						: $3))
-				+ length $data))
-		{
-		    shift @hash if !defined $1;
-		    print STDERR "skip $hash[0]\n"
-			if $opt{v} >= 3;
-		    shift @hash;
-
-		    $streampos += length $data;
-		    $streampos += $sizehint;
-		    $data = "";
-		}
-		while ($pos > $streampos + length $data
-		       && @hash)
-		{
-		    # skip "blockshortness" token
-		    shift @hash if $hash[0] =~ /^-\d+$/;
-
-		    $streampos += length $data;
-		    print STDERR "fetch $hash[0]\n"
-			if $opt{v} >= 3;
-		    $data = $whc->fetch_block (shift @hash)
-			or die "fetch_block failed";
-
-		    # this loop should only run once if blockshortness
-		    # tokens are present
-		}
-		if ($pos > $streampos
-		    && $pos <= $streampos + length $data)
-		{
-		    print STDERR "skip ".($pos-$streampos)." bytes\n"
-			if $opt{v} >= 3;
-		    substr ($data, 0, $pos - $streampos) = "";
-		    $streampos = $pos;
-		}
-		if ($pos != $streampos)
-		{
-		    die "Internal error: sought $pos but at $streampos";
-		}
+		$s->seek ($pos);
 
 		# write bytes from $data, and fetch subsequent blocks,
 		# until $size bytes have been written
@@ -301,46 +233,19 @@ while (0 < length $manifest)
 		$ctx = Digest::MD5->new
 		    if $opt{v};
 
-		while ($pos + $size > $streampos + length $data)
+		while (my $dataref = $s->read_until ($pos + $size))
 		{
-		    $ctx->add ($data)
-			if $opt{v};
-		    $ctxbytes += length $data;
+		    $ctx->add ($$dataref) if $opt{v};
+		    $ctxbytes += length $$dataref;
 
-		    print F $data
+		    print F $$dataref
 			or die "Error writing to $localfile: $!"
 			unless $opt{n};
-
-		    $streampos += length $data;
-
-		    # skip "blockshortness" token
-		    shift @hash if $hash[0] =~ /^-\d+$/;
-
-		    print STDERR "fetch $hash[0]\n"
-			if $opt{v} >= 3;
-		    $currenthash = shift @hash;
-		    $data = $whc->fetch_block ($currenthash)
-			or die "fetch_block($currenthash) failed";
-		    if (($currenthash =~ /\+GS(\d+)/ ||
-			 $currenthash =~ /\+(\d+)/) &&
-			$1 != length $data) {
-			die "fetch $currenthash returned ".length($data)." bytes";
-		    }
 		}
 
-		$ctxbytes += $pos + $size - $streampos;
-		$ctx->add (substr ($data, 0, $pos + $size - $streampos))
-		    if $opt{v};
-
-		print F substr ($data, 0, $pos + $size - $streampos)
-		    or die "Error writing to $localfile: $!"
-		    unless $opt{n};
 		close F
 		    or die "Error writing to $localfile: $!"
 		    unless $opt{n};
-
-		substr ($data, 0, $pos + $size - $streampos) = "";
-		$streampos = $pos + $size;
 
 		do {
 		    my $md5hex = $ctx->hexdigest;
@@ -348,14 +253,6 @@ while (0 < length $manifest)
 		} if $opt{v};
 	    }
 	}
-    }
-
-    if (@manifesthash &&
-	$Warehouse::blocksize > 2 * length $manifest)
-    {
-	my $nextblock = $whc->fetch_block (shift @manifesthash)
-	    or die "fetch_block failed";
-	$manifest .= $nextblock;
     }
 }
 
