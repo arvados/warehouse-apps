@@ -34,7 +34,7 @@ sub run {
 
   if ($? != 0) {
     print STDERR "\n$msg: exit code $?\n\n";
-    exit(10);
+    exit($? >= 256 ? ($? >> 8) : 1);
   };
 }
 
@@ -84,9 +84,10 @@ sub main {
     }
   }
 
-  &run("ERROR: unable to umount '$directory'",('sudo','/bin/umount', "$directory"));
+  0 == system ("sudo", "/bin/umount", $directory)
+      or warn "$0: warning: failed to sudo /bin/umount '$directory'\n";
 
-  sleep 1;
+
   0 == system ("rm", "-rf", $directory)
       or warn "$0: warning: failed to remove '$directory'\n";
 
