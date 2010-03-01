@@ -14,7 +14,7 @@ use Safepipe;
 use Fcntl ':flock';
 
 
-my $tmp = $ENV{MR_JOB_TMP};
+my $tmp = $ENV{MR_JOBSTEP_TMP};
 
 my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
 my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} or die;

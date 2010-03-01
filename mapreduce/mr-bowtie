@@ -15,7 +15,7 @@ use Fcntl ':flock';
 use POSIX qw(strftime);
 
 
-my $tmp = $ENV{MR_JOB_TMP};
+my $tmp = $ENV{MR_JOBSTEP_TMP};
 
 my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
 my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} or die;
@@ -95,7 +95,7 @@ if ($ENV{MR_LEVEL} == 1)
   atomic_whget_tar("$bowtie_manifest_key/bowtie.tgz", $bowtie_path);
   atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   die "$bowtie_path/bowtie not found" unless -x "$bowtie_path/bowtie";
-  atomic_whget_dir($reference_manifest_key, $reffile);
+  #atomic_whget_dir($reference_manifest_key, $reffile);
   atomic_whget($MAQ_bin_key, $MAQ_path);
   chmod 0755, $MAQ_path;
 

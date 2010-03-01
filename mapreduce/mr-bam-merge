@@ -15,8 +15,9 @@ use Fcntl ':flock';
 use POSIX qw(strftime);
 
 
-my $tmp = $ENV{MR_JOB_TMP};
+my $tmp = $ENV{MR_JOBSTEP_TMP};
 
+my $merge_radix = 100;
 my $verbose = 1;
 my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
 my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} or die;
@@ -95,11 +96,36 @@ if ($ENV{MR_LEVEL} == 1)
         or die "slice sam view $chr:$start-$end";
       push @files, "$dir/m-$file.bam";
     }
-    my $files = join(" ", @files);
-    system("$sam_path/samtools merge $tmp/outfile.bam $files") == 0
-      or die "samtools merge $files";
-    my $store = `mrs-store '.' '$chr-$start.bam' < $tmp/outfile.bam`;
-    die "mrs-store" unless $? == 0;
+
+    my $level = 0;
+    while (scalar(@files) > 1) {
+      my @mfiles = @files;
+      @files = ();
+      my $count = 0;
+      while(@mfiles) {
+	my $len = $merge_radix;
+	$len = scalar(@mfiles) if ($len > scalar(@mfiles));
+	my @mfiles_slice = splice(@mfiles, 0, $len);
+	my $files = join(" ", @mfiles_slice);
+	my $outfile = "$dir/m$level-$count.bam";
+	if (scalar(@mfiles_slice) == 1) {
+	  warn("cp $files $outfile\n") if $verbose;
+	  system("cp $files $outfile") == 0
+	    or die "cp $files";
+	}
+	else {
+	  warn("$sam_path/samtools merge $outfile ...\n") if $verbose;
+	  system("$sam_path/samtools merge $outfile $files") == 0
+	    or die "samtools merge $files";
+	}
+	$count++;
+	push @files, $outfile;
+      }
+      $level++;
+    }
+
+    my $store = `mrs-store '.' '$chr-$start.bam' < $files[0]`;
+    die "mrs-store $files[0]" unless $? == 0;
     $stream .= $store;
   }
 
