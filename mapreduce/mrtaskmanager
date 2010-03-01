@@ -20,9 +20,18 @@ $ENV{PERLLIB} = "$ENV{MR_REVISION_SRCDIR}/warehouse/lib:$ENV{MR_REVISION_INSTALL
 $ENV{TMPDIR} ||= "/tmp";
 $ENV{MR_JOB_TMP} = "$ENV{TMPDIR}/mrcompute/work";
 $ENV{MR_JOBSTEP_TMP} = "$ENV{TMPDIR}/mrcompute/work/$ENV{MR_SLOT}";
-system "rm -rf '$ENV{MR_JOBSTEP_TMP}'";
-mkdir $ENV{MR_JOB_TMP};		# usually fails silently, needed for 1st step
-mkdir $ENV{MR_JOBSTEP_TMP};
+if (-d $ENV{MR_JOBSTEP_TMP}) {
+  opendir D, $ENV{MR_JOBSTEP_TMP} or die "opendir $ENV{MR_JOBSTEP_TMP}: $!";
+  while (my $f = readdir D) {
+    if ($f ne '.' && $f ne '..') {
+      system ("rm", "-rf", "$ENV{MR_JOBSTEP_TMP}/$f");
+    }
+  }
+  closedir D;
+} else {
+  -d $ENV{MR_JOB_TMP} or mkdir $ENV{MR_JOB_TMP} or -d $ENV{MR_JOB_TMP} or die "mkdir $ENV{MR_JOB_TMP}: $!";
+  mkdir $ENV{MR_JOBSTEP_TMP} or die "mkdir $ENV{MR_JOBSTEP_TMP}: $!";
+}
 
 $ENV{TMPDIR} = $ENV{MR_JOBSTEP_TMP};
 
