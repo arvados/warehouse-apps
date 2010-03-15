@@ -12,7 +12,9 @@ while ($ARGV[0] =~ /^--(.*)/) {
   shift @ARGV;
 }
 
-my ($manifest, $chr, $pos) = @ARGV;
+my ($manifest, $chr, $pos, $pos2) = @ARGV;
+
+$pos2 = $plain ? $pos + 50 : $pos if !defined $pos2;
 
 my $tmpdir = $ENV{"TMP"} || "/tmp";
 my $tmpfile = "$tmpdir/$$.bam";
@@ -51,9 +53,6 @@ while ($$mref =~ /^\S+ (\S+( \S+)*) \d+:\d+:\Q$chr\E-(\d+)\.bam/gm) {
 if (!defined $block2start) {
   die "$0: $chr-$pos not found\n";
 }
-my $pos2 = $pos;
-$pos2 += 50 if $plain;
-
 open T, ">", $tmpfile;
 for (split (" ", $block2)) {
   my $bref = $whc->fetch_block_ref ($_);
