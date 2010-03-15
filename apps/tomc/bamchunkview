@@ -1,9 +1,13 @@
 #!/usr/bin/perl
 
 my $colorspace = 0;
+my $plain = 0;
+my $html = 1;
 while ($ARGV[0] =~ /^--(.*)/) {
   if ($1 eq "") { last; }
   if ($1 eq "colorspace") { $colorspace = 1; }
+  if ($1 eq "plain") { $plain = 1; $html = 0; }
+  if ($1 eq "plain") { $plain = 0; $html = 1; }
   else { die "unrecognized flag: $ARGV[0]" }
   shift @ARGV;
 }
@@ -47,6 +51,9 @@ while ($$mref =~ /^\S+ (\S+( \S+)*) \d+:\d+:\Q$chr\E-(\d+)\.bam/gm) {
 if (!defined $block2start) {
   die "$0: $chr-$pos not found\n";
 }
+my $pos2 = $pos;
+$pos2 += 50 if $plain;
+
 open T, ">", $tmpfile;
 for (split (" ", $block2)) {
   my $bref = $whc->fetch_block_ref ($_);
@@ -54,7 +61,7 @@ for (split (" ", $block2)) {
 }
 close T;
 system ("samtools", "index", $tmpfile);
-open V, "-|", "samtools", "view", $tmpfile, "$chr:$pos-$pos";
+open V, "-|", "samtools", "view", $tmpfile, "$chr:$pos-$pos2";
 my @alignments;
 my $maxreadlen = 0;
 while (<V>) {
@@ -78,21 +85,40 @@ for (@alignments) {
       $F[3] += 2;		# XXX kludge to compensate for bug in gbm2sam
     }
   }
-  $r = sprintf ("%-${maxreadlen}s", $r);
-  $q = sprintf ("%-${maxreadlen}s", $q);
+  if (!$plain) {
+      $r = sprintf ("%-${maxreadlen}s", $r);
+      $q = sprintf ("%-${maxreadlen}s", $q);
+  }
   my $right = $pos - $F[3];
   my $left = length($r) - $right;
 
   $allr .= substr $r, $pos - $F[3], 1;
   $allq .= substr $q, $pos - $F[3], 1;
-  substr $r, $pos - $F[3] + 1, 0, "\002";
-  substr $r, $pos - $F[3], 0, "\001";
-  substr $q, $pos - $F[3] + 1, 0, "\002";
-  substr $q, $pos - $F[3], 0, "\001";
+  if ($html) {
+      substr $r, $pos - $F[3] + 1, 0, "\002";
+      substr $r, $pos - $F[3], 0, "\001";
+      substr $q, $pos - $F[3] + 1, 0, "\002";
+      substr $q, $pos - $F[3], 0, "\001";
+  }
 
-  my $out = sprintf ("%${left}s%s   %s%${right}s ", "", $r, $q, "") . join ("\t", @F) . "\n";
+  my $out;
+  if ($plain) {
+      $out = $r."\t".$q."\t";
+  } else {
+      $out = sprintf ("%${left}s%s   %s%${right}s ", "", $r, $q, "");
+  }
+  $out .= join ("\t", @F) . "\n";
 
-  for ($out) { s/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g; s/\001/<B>/g; s/\002/<\/B>/g; }
+  if ($html) {
+      for ($out) {
+	  s/&/&amp;/g;
+	  s/</&lt;/g;
+	  s/>/&gt;/g;
+	  s/\001/<B>/g;
+	  s/\002/<\/B>/g;
+      }
+  }
+
   print $out;
 }
 close V;
