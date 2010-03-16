@@ -1,0 +1,152 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:split unsorted BAM files into sorted bins
+###MR_INPUT:manifest
+###MR_KNOBS:SAM
+###MR_KNOBS:REFERENCE
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+use POSIX qw(strftime);
+
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+
+my $verbose = 1;
+my $input_manifest_key = $ENV{MR_INPUT0} or die;
+my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
+my $sam_manifest_key = $ENV{KNOB_SAM} or die;
+my $reffile = "$tmp/ref";
+
+my $sam_path="$tmp/sam";
+
+my $whc = new Warehouse;
+
+my $index_path = "$tmp/chrom.fa.fai";
+atomic_whget("$reference_manifest_key/chrom.fa.fai", $index_path);
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT});
+  $m->rewind;
+  while (my $s = $m->subdir_next) {
+    my $stream;
+    chomp ($stream = $s->as_string);
+    print STDERR "+++mrjobstep 1 $stream+++\n";
+  }
+
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($stream) = $ENV{MR_INPUT};
+  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
+  my $s = new Warehouse::Stream (whc => $whc, subdir => $stream);
+  my $dir ="$tmp/out";
+  system "rm -rf $dir";
+  mkdir $dir or die "mkdir $dir";
+  chdir $dir or die "chdir $dir: $!";
+
+  my $outpid = open STDOUT, "| mrs-output" or die "mrs-output: $! $?";
+
+  my $streamname = $s->name;
+  while (my ($pos, $size, $filename) = $s->file_next)
+  {
+    last if !defined $pos;
+    $filename =~ s/\.gz//;
+    $filename =~ s/$/.bam/;
+    $filename =~ s/[\'\"\s]//g;
+    open WHPUT, "| bash -c 'set -o pipefail; exec gzip -cdf | mrs-gbm2sam | $sam_path/samtools import $index_path - - | whput --as-stream --use-filename=\"$filename\" -'"
+	or die "no fork";
+    $s->seek ($pos);
+    while (my $dataref = $s->read_until ($pos+$size)) {
+      print WHPUT $$dataref;
+    }
+    close WHPUT or die "samtools import|whput: error $! exit $?";
+  }
+
+  close STDOUT or die "mrs-output: error $! exit $?";
+  exit 0;
+}
+
+sub whget {
+  my ($source, $target) = @_;
+
+  if (0 != system "whget '$source' '$target'")
+  {
+    die "whget exited $?";
+  }
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_tar {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) )
+  {
+    if (0 != system "whget '$source' '$target.tgz.tmp'")
+    {
+      system "rm -rf '$target.tgz.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tgz.tmp", "$target.tgz" or die "rename $target.tgz.tmp failed";
+    mkdir "$target" or die "mkdir $target failed";
+    system("tar -C $target -xzf $target.tgz") == 0 or die "tar -xz $target.tgz failed";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_dir {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX))
+  {
+    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub emit_date {
+  my $who = shift;
+  my $now_string = strftime "%H:%M:%S", localtime;
+  warn "$who @ $now_string\n";
+}
