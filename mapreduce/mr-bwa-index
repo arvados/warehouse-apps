@@ -1,0 +1,112 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:generate reference index
+###MR_INPUT:manifest
+###MR_KNOBS:BWA
+###MR_KNOBS:COLORSPACE
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+my $input_manifest_key = $ENV{MR_INPUT0} or die;
+my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
+my $want_colorspace = !!$ENV{KNOB_COLORSPACE};
+
+my $bwa_path="$tmp/bwa";
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  atomic_whget_tar("$bwa_manifest_key/bwa.tgz", $bwa_path);
+  die "$bwa_path/bwa not found" unless -x "$bwa_path/bwa";
+
+  my $colorspace_flag = $want_colorspace ? "-c" : "";
+
+  mkdir ("$tmp/out") or die "mkdir: $!";
+  chdir ("$tmp/out") or die "chdir: $!";
+  system ("bash -c 'set -o pipefail; whget -r $input_manifest_key/ - | gzip -cdf | $bwa_path/bwa index $colorspace_flag -a bwtsw -'")
+      == 0 or die "whget|bwa: error $! exit $?";
+  opendir D, "." or die "opendir: $!";
+  while (my $f = readdir D) {
+    my $newname = $f;
+    if ($newname =~ s/^-\./chromi\./) {
+      if ($want_colorspace) { $newname =~ s/\./\.cs\./; }
+      rename $f, $newname;
+    }
+  }
+  my $out = `whput -r --in-manifest .`;
+  die sprintf "whput: exit 0x%x", $? if $?;
+  print STDERR "+++mrout $out+++\n";
+  exit 0;
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_tar {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) )
+  {
+    if (0 != system "whget '$source' '$target.tgz.tmp'")
+    {
+      system "rm -rf '$target.tgz.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tgz.tmp", "$target.tgz" or die "rename $target.tgz.tmp failed";
+    mkdir "$target" or die "mkdir $target failed";
+    system("tar -C $target -xzf $target.tgz") == 0 or die "tar -xz $target.tgz failed";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_dir {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX))
+  {
+    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
