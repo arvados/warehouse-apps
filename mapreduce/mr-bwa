@@ -4,7 +4,9 @@
 ###MR_DESCRIPTION:run BWA against reference
 ###MR_INPUT:manifest
 ###MR_KNOBS:BWA
+###MR_KNOBS:SAM
 ###MR_KNOBS:REFERENCE
+###MR_KNOBS:MAX_MISMATCHES
 
 use strict; 
 use Warehouse;
@@ -33,14 +35,25 @@ my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  my $num_inputs = 0;
+  my $ref_basename;
   my $ref = new Warehouse::Manifest (whc => $whc,
-				     key => $input_manifest_key);
-  $num_inputs++ while (my $s = $ref->subdir_next);
+				     key => $reference_manifest_key);
+  while (my $s = $ref->subdir_next) {
+    while (my ($pos, $size, $filename) = $s->file_next) {
+      last if !defined $pos;
+      $ref_basename = $s->name()."/".$1 if $filename =~ /(.*)\.bwt$/;
+    }
+  }
+  $ref_basename =~ s{^\./}{};
+
+  my $num_inputs = 0;
+  my $in = new Warehouse::Manifest (whc => $whc,
+				    key => $input_manifest_key);
+  $num_inputs++ while (my $s = $in->subdir_next);
 
   my $inputs_per_node = $num_inputs / ($num_nodes + $num_inputs - 1);
-  $ref = new Warehouse::Manifest (whc => $whc, key => $input_manifest_key);
-  while (my $s = $ref->subdir_next)
+  $in->rewind;
+  while (my $s = $in->subdir_next)
   {
     my $subdir = $s->name;
     $subdir =~ s/^\.\///;
@@ -55,13 +68,13 @@ if ($ENV{MR_LEVEL} == 0)
       push @files, $filename;
       if (scalar(@files) >= $inputs_per_node) {
 	my $filenames = join(',', @files);
-	print STDERR "+++mrjobstep 1 $subdir $filenames+++\n";
+	print STDERR "+++mrjobstep 1 $ref_basename $subdir $filenames+++\n";
 	@files = ();
       }
     }
     if (@files) {
 	my $filenames = join(',', @files);
-	print STDERR "+++mrjobstep 1 $subdir $filenames+++\n";
+	print STDERR "+++mrjobstep 1 $ref_basename $subdir $filenames+++\n";
     }
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
@@ -69,7 +82,7 @@ if ($ENV{MR_LEVEL} == 0)
 }
 if ($ENV{MR_LEVEL} == 1)
 {
-  my ($subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 2);
+  my ($ref_basename, $subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 3);
   my @files = split(/,/, $filenames);
 
   atomic_whget_tar("$bwa_manifest_key/bwa.tgz", $bwa_path);
@@ -85,6 +98,12 @@ if ($ENV{MR_LEVEL} == 1)
     my $readfile2;
     my $saifile2;
 
+    my $is_colorspace = $filename =~ /\.cs(fasta)?\./i;
+    my $ref_is_colorspace = $ref_basename =~ /\.cs(fasta)?\./i;
+    die "reads are colorspace but reference is not" if $is_colorspace && !$ref_is_colorspace;
+    die "reads are not colorspace but reference is" if !$is_colorspace && $ref_is_colorspace;
+    my $aln_flags = $is_colorspace ? "-c" : "";
+
     if ($filename =~ /(.+)_1\.(.+)$/) {
       # assume paired reads
       warn "paired reads"; 
@@ -93,18 +112,18 @@ if ($ENV{MR_LEVEL} == 1)
       $saifile2 = "$tmp/${filename2}.sai";
       atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile1);
       atomic_whget("$input_manifest_key/$subdir/${filename2}", $readfile2);
-      system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile1 > $saifile1") == 0
+      system("$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
        	or die "bwa on $readfile1 failed";
-      system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile2 > $saifile2") == 0
+      system("$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile2 > $saifile2") == 0
        	or die "bwa on $readfile2 failed";
-      $bwa_sam_cmd = "$bwa_path/bwa sampe '$reffile/chromi' $saifile1 $saifile2 $readfile1 $readfile2";
+      $bwa_sam_cmd = "$bwa_path/bwa sampe '$reffile/$ref_basename' $saifile1 $saifile2 $readfile1 $readfile2";
     }
     else {
       warn "single-end reads"; 
       atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile1);
-      system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/chromi' $readfile1 > $saifile1") == 0
+      system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
        	or die "bwa on $readfile1 failed";
-      $bwa_sam_cmd = "$bwa_path/bwa samse '$reffile/chromi' $saifile1 $readfile1";
+      $bwa_sam_cmd = "$bwa_path/bwa samse '$reffile/$ref_basename' $saifile1 $readfile1";
     }
 
     Safepipe::readfrom(
