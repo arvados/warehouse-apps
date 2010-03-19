@@ -124,7 +124,7 @@ if ($ENV{MR_LEVEL} == 1)
     else {
       warn "single-end reads"; 
       atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
-      system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
+      system("$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
        	or die "bwa on $readfile1 failed";
       $bwa_sam_cmd = "$bwa_path/bwa samse '$reffile/$ref_basename' $saifile1 $readfile1";
     }
