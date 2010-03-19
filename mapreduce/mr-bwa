@@ -101,8 +101,8 @@ if ($ENV{MR_LEVEL} == 1)
     my $readfile2;
     my $saifile2;
 
-    my $is_colorspace = $filename =~ /\.cs(fasta)?\./i;
-    my $ref_is_colorspace = $ref_basename =~ /\.cs(fasta)?\./i;
+    my $is_colorspace = "$filename." =~ /\.cs(fast[aq])?\./i;
+    my $ref_is_colorspace = "$ref_basename." =~ /\.cs(fasta)?\./i;
     die "reads are colorspace but reference is not" if $is_colorspace && !$ref_is_colorspace;
     die "reads are not colorspace but reference is" if !$is_colorspace && $ref_is_colorspace;
     my $aln_flags = $is_colorspace ? "-c" : "";
