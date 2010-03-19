@@ -85,6 +85,9 @@ if ($ENV{MR_LEVEL} == 1)
   my ($ref_basename, $subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 3);
   my @files = split(/,/, $filenames);
 
+  if ($subdir eq ".") { $subdir = ""; }
+  else { $subdir = "/$subdir"; }
+
   atomic_whget_tar("$bwa_manifest_key/bwa.tgz", $bwa_path);
   atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   die "$bwa_path/bwa not found" unless -x "$bwa_path/bwa";
@@ -110,8 +113,8 @@ if ($ENV{MR_LEVEL} == 1)
       my $filename2 = "${1}_2.$2";
       $readfile2 = "$tmp/${filename2}";
       $saifile2 = "$tmp/${filename2}.sai";
-      atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile1);
-      atomic_whget("$input_manifest_key/$subdir/${filename2}", $readfile2);
+      atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
+      atomic_whget("$input_manifest_key$subdir/${filename2}", $readfile2);
       system("$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
        	or die "bwa on $readfile1 failed";
       system("$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile2 > $saifile2") == 0
@@ -120,7 +123,7 @@ if ($ENV{MR_LEVEL} == 1)
     }
     else {
       warn "single-end reads"; 
-      atomic_whget("$input_manifest_key/$subdir/${filename}", $readfile1);
+      atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
       system("$bwa_path/bwa aln -t 4 -n $max_mismatches '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
        	or die "bwa on $readfile1 failed";
       $bwa_sam_cmd = "$bwa_path/bwa samse '$reffile/$ref_basename' $saifile1 $readfile1";
@@ -130,7 +133,7 @@ if ($ENV{MR_LEVEL} == 1)
       "main::BWA",
       $bwa_sam_cmd,
       "$sam_path/samtools view -S -b -",
-      "mrs-store './$subdir' '${filename}.bam'",
+      "mrs-store '.$subdir' '${filename}.bam'",
       "mrs-output",
     )
       or die "pipe failed: $!";
