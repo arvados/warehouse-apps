@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+use colorspace;
+
 print <<EOF
 \@HD	VN:1.0 SO:unsorted
 EOF
@@ -17,9 +19,22 @@ while (<>)
     elsif ($chr eq "24") { $chr = "chrY"; }
     elsif ($chr eq "25") { $chr = "chrM"; }
     else { $chr = "chr$chr"; }
+
+    next if $cs =~ /[^ACGT0123]/i;
+    $bp = cs2a ($cs);
+
     $flags = 0;
-    if ($pos < 0) { $pos = 4 - length($cs) - $pos; $flags = 16; }
+    if ($pos < 0) {
+	$bp = reverse $bp;
+	$bp =~ tr/ACGTacgt/TGCATGCA/;
+	$pos = 3 - length($cs) - $pos;
+	$flags = 16;
+    }
+    else {
+	++$pos;
+    }
+
     print (join ("\t",
-		 $_, $flags, $chr, $pos, 0, length($cs)."M", "*", 0, 0, $cs, $quality),
+		 $_, $flags, $chr, $pos, 0, length($bp)."M", "*", 0, 0, $bp, $quality),
 	   "\n");
 }
