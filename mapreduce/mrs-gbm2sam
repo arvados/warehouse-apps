@@ -12,7 +12,6 @@ while (<>)
     chomp;
     chomp ($cs = <>);
     $cs =~ tr/0123456./ACGTNNNN/;
-    $quality = "I" x length($cs);
     s/^>//;
     my ($chr, $pos) = /,(\d+)_(-?\d+)/;
     if ($chr eq "23") { $chr = "chrX"; }
@@ -33,6 +32,8 @@ while (<>)
     else {
 	++$pos;
     }
+
+    $quality = "I" x length($bp);
 
     print (join ("\t",
 		 $_, $flags, $chr, $pos, 0, length($bp)."M", "*", 0, 0, $bp, $quality),
