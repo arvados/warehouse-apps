@@ -2630,6 +2630,13 @@ sub _unsafe_decrypt_block
 	warn "Status: <<<$status_output>>> Error: <<<$error_output>>>\n";
     }
 
+    if ($status_output =~ /\b(ERROR|NODATA)\b/) {
+	# Argh! on unencrypted data, GnuPG can say "NODATA", then
+	# "DECRYPTION_OKAY", then "END_DECRYPTION", then "ERROR
+	# proc_pkt.plaintext 89_BAD_DATA"
+	return 0;
+    }
+
     if ($status_output =~ /DECRYPTION_OKAY/) {
 	return 1;
     }
