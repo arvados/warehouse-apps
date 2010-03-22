@@ -16,6 +16,8 @@ my ($manifest, $chr, $pos, $pos2) = @ARGV;
 
 $pos2 = $plain ? $pos + 50 : $pos if !defined $pos2;
 
+my $kludge_import = $manifest =~ /^(fe10668d15accee7fb7ae117508cc6cd|ce1a32f4beb87fc12af86a714e6d27d1|870e1aa7c1d342e1264c6ec9e48fa296|bce80173177ed83048759e507d50d983)/;
+
 my $tmpdir = $ENV{"TMP"} || "/tmp";
 my $tmpfile = "$tmpdir/$$.bam";
 
@@ -74,7 +76,7 @@ while (<V>) {
 for (@alignments) {
   my @F = split /\t/;
   my ($r, $q) = splice (@F, 9, 2);
-  if ($colorspace) {
+  if ($colorspace && $kludge_import) {
     my $x = substr $r, 0, 1, "";
     $r =~ tr/ACGTN/0123./;
     $r = $x.$r;
@@ -83,6 +85,9 @@ for (@alignments) {
       $q = reverse $q;
       $F[3] += 2;		# XXX kludge to compensate for bug in gbm2sam
     }
+  }
+  elsif ($colorspace) {
+    $r =~ tr/ACGTN/0123./;
   }
   if (!$plain) {
       $r = sprintf ("%-${maxreadlen}s", $r);
