@@ -632,6 +632,11 @@ sub read_until
     my $nexthash = shift @{$self->{nexthashes}};
     my $dataref = $self->{whc}->fetch_block_ref ($nexthash)
 	or die "fetch_block_ref($nexthash) failed";
+    if ($nexthash =~ /\+GS(\d+)/ || $nexthash =~ /\+(\d+)/) {
+      if ($1 != length $$dataref) {
+	warn "Warning: fetch($nexthash) returned ".length($$dataref)." bytes";
+      }
+    }
     $self->{buf} .= $$dataref;
 
     $dpos = undef;
