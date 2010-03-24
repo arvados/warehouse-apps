@@ -222,11 +222,19 @@ while (my $s = $m->subdir_next)
 		make_parent_dirs ($localfile)
 		    unless $opt{n};
 
+		unless ($opt{n}) {
+		    if ($opt{z} && $name =~ /\.gz/) {
+			$localfile =~ s/\.gz$//;
+			open F, "|gzip -cdf ".($localfile eq "-" ? "" : ">$localfile")
+			    or die "Can't open $localfile for writing: $!"
+		    }
+		    else {
+			open F, ">$localfile"
+			    or die "Can't open $localfile for writing: $!"
+		    }
+		}
 		print STDERR "write to: $localfile\n"
 		    if $opt{v} >= 3;
-		open F, ">$localfile"
-		    or die "Can't open $localfile for writing: $!"
-		    unless $opt{n};
 
 		my $ctx;
 		my $ctxbytes = 0;
