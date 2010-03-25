@@ -137,9 +137,6 @@ whintro(1p), whget(1p), whput(1p), whless(1p)
 
 =cut
 
-eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
 use strict;
 
 use Warehouse;
