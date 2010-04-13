@@ -3,10 +3,7 @@
 
 ###MR_DESCRIPTION:run postprocessing on bic-seq output
 ###MR_INPUT:manifest
-###MR_KNOBS:NORMAL
-###MR_KNOBS:TUMOR
 ###MR_KNOBS:CNV
-###MR_KNOBS:MEMORYLIMIT
 
 use strict; 
 use Warehouse;
@@ -29,13 +26,13 @@ my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
 $m->rewind;
 
 atomic_whget_tar("$cnv_manifest_key/cnv.tgz", $cnv_path);
-atomic_whget_dir($ENV{MR_INPUT0}, $tmp);
+atomic_whget_dir($ENV{MR_INPUT0}, "$tmp/in");
 
 my $outdir ="$tmp/out";
 system "rm -rf $outdir";
 mkdir $outdir or die "mr-cnv-postproc: mkdir $outdir";
 
-chdir $tmp or die "mr-cnv-postproc: Could not chdir to $tmp";
+chdir "$tmp/in" or die "mr-cnv-postproc: Could not chdir to $tmp/in";
 
 # write the R program to call BIC-postprocessing
 
@@ -44,7 +41,7 @@ print TMP <<EOF;
 source("$cnv_path/pipeline/BIC-postprocessing.R")
 chromosome_names = paste("chr",c(c(1:22),"X"),sep="")
 bic_files_list = paste(chromosome_names,".bic",sep="")
-post_proc_new(bic_files_list,chromosome_names,"out/out.R.bic")
+post_proc_new(bic_files_list,chromosome_names,"$tmp/out/out.R.bic")
 EOF
 ;
 close(TMP);
