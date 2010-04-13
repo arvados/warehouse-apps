@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:run CNV pipeline on bam chunks
+###MR_DESCRIPTION:merge bic-seq output chunks
 ###MR_INPUT:manifest
 ###MR_KNOBS:NORMAL
 ###MR_KNOBS:TUMOR
@@ -73,21 +73,6 @@ for my $chr (keys %chr) {
   # run BIC-seq to merge the chunks
 
   0 == system("$cnv_path/pipeline/BIC-seq/a.out $chr.bic 2 >out/$chr.bic") or die "mr-cnv-bicseq-merge: could not run $cnv_path/pipeline/BIC-seq/a.out $chr.bic 2 >out/$chr.bic: $! (exit code: $?)";
-
-  # write the R program to call BIC-postprocessing (assume keys %chr
-  # is (1..22,X))
-
-  open(TMP,">$cnv_path/R_runme");
-  print TMP <<EOF;
-source("$cnv_path/pipeline/BIC-postprocessing.R")
-chromosome_names = paste("chr",c(c(1:22),"X"),sep="")
-bic_files_list = paste(chromosome_names,".bic",sep="")
-post_proc_new(bic_files_list,chromosome_names,"out/out.R.bic")
-EOF
-;
-  close(TMP);
-
-  0 == system("R -f $cnv_path/R_runme") or die "mr-cnv-bicseq-merge: could not run R: $!";
 }
 
 my $outfrag = `whput -r --as-stream $tmp/out`;
