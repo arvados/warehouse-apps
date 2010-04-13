@@ -30,30 +30,38 @@ $m->rewind;
 
 atomic_whget_tar("$cnv_manifest_key/cnv.tgz", $cnv_path);
 
-my %chr;
-while (my $s = $m->subdir_next) {
-  while (my ($pos, $size, $filename) = $s->file_next) {
-    last if !defined $pos;
-    if ($filename =~ /^(chr\w+)-/) {
-      my $chr = $1;
-      if (!exists $chr{$chr}) {
-	$chr{$chr} = 1;
+if ($ENV{MR_LEVEL} == 0)
+{
+  my %chr;
+  while (my $s = $m->subdir_next) {
+    while (my ($pos, $size, $filename) = $s->file_next) {
+      last if !defined $pos;
+      if ($filename =~ /^(chr\w+)-/) {
+	my $chr = $1;
+	if (!exists $chr{$chr}) {
+	  $chr{$chr} = 1;
+	  print STDERR "+++mrjobstep 1 $chr+++\n";
+	}
       }
     }
   }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit (0);
 }
 
-my $outdir ="$tmp/out";
-system "rm -rf $outdir";
-mkdir $outdir or die "mr-cnv-bicseq-merge: mkdir $outdir";
+else
+{
+  my $chr = $ENV{MR_INPUT};
 
-chdir $tmp or die "mr-cnv-bicseq-merge: Could not chdir to $tmp";
+  my $outdir ="$tmp/out";
+  system "rm -rf $outdir";
+  mkdir $outdir or die "mr-cnv-bicseq-merge: mkdir $outdir";
 
-for my $chr (keys %chr) {
+  chdir $tmp or die "mr-cnv-bicseq-merge: Could not chdir to $tmp";
 
   # Concatenate all of the bic files for this chr
 
-  open BIC, ">", "$tmp/$chr.bic";
+  open BIC, "|egrep '^[0-9]' >$tmp/$chr.bic";
   $m->rewind;
   while (my $s = $m->subdir_next) {
     while (my ($pos, $size, $filename) = $s->file_next) {
@@ -73,12 +81,12 @@ for my $chr (keys %chr) {
   # run BIC-seq to merge the chunks
 
   0 == system("$cnv_path/pipeline/BIC-seq/a.out $chr.bic 2 >out/$chr.bic") or die "mr-cnv-bicseq-merge: could not run $cnv_path/pipeline/BIC-seq/a.out $chr.bic 2 >out/$chr.bic: $! (exit code: $?)";
-}
 
-my $outfrag = `whput -r --as-stream $tmp/out`;
-die "mr-cnv-bicseq-merge: whput exited $?" if $?;
-print STDERR "+++mrout $outfrag+++\n";
-exit 0;
+  my $outfrag = `whput -r --as-stream $tmp/out`;
+  die "mr-cnv-bicseq-merge: whput exited $?" if $?;
+  print STDERR "+++mrout $outfrag+++\n";
+  exit 0;
+}
 
 
 sub whget {
