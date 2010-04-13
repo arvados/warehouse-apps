@@ -1,0 +1,134 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:run postprocessing on bic-seq output
+###MR_INPUT:manifest
+###MR_KNOBS:NORMAL
+###MR_KNOBS:TUMOR
+###MR_KNOBS:CNV
+###MR_KNOBS:MEMORYLIMIT
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+use POSIX qw(strftime);
+
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+
+my $verbose = 1;
+
+my $cnv_manifest_key = $ENV{KNOB_CNV} or die;
+my $cnv_path="$tmp/cnv";
+
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
+$m->rewind;
+
+atomic_whget_tar("$cnv_manifest_key/cnv.tgz", $cnv_path);
+atomic_whget_dir($ENV{MR_INPUT0}, $tmp);
+
+my $outdir ="$tmp/out";
+system "rm -rf $outdir";
+mkdir $outdir or die "mr-cnv-postproc: mkdir $outdir";
+
+chdir $tmp or die "mr-cnv-postproc: Could not chdir to $tmp";
+
+# write the R program to call BIC-postprocessing
+
+open(TMP,">$cnv_path/R_runme");
+print TMP <<EOF;
+source("$cnv_path/pipeline/BIC-postprocessing.R")
+chromosome_names = paste("chr",c(c(1:22),"X"),sep="")
+bic_files_list = paste(chromosome_names,".bic",sep="")
+post_proc_new(bic_files_list,chromosome_names,"out/out.R.bic")
+EOF
+;
+close(TMP);
+
+0 == system("R -f $cnv_path/R_runme") or die "mr-cnv-postproc: could not run R: $!";
+
+my $outfrag = `whput -r --as-stream $tmp/out`;
+die "mr-cnv-postproc: whput exited $?" if $?;
+print STDERR "+++mrout $outfrag+++\n";
+exit 0;
+
+
+sub whget {
+  my ($source, $target) = @_;
+
+  if (0 != system "whget '$source' '$target'")
+  {
+    die "mr-cnv-postproc: whget exited $?";
+  }
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "mr-cnv-postproc: whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "mr-cnv-postproc: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_tar {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) )
+  {
+    if (0 != system "whget '$source' '$target.tgz.tmp'")
+    {
+      system "rm -rf '$target.tgz.tmp'";
+      close L;
+      die "mr-cnv-postproc: whget exited $?";
+    }
+    rename "$target.tgz.tmp", "$target.tgz" or die "mr-cnv-postproc: rename $target.tgz.tmp failed";
+    mkdir "$target" or die "mr-cnv-postproc: mkdir $target failed";
+    system("tar -C $target -xzf $target.tgz") == 0 or die "mr-cnv-postproc: tar -xz $target.tgz failed";
+  }
+  close L;
+  die "mr-cnv-postproc: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_dir {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX))
+  {
+    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "mr-cnv-postproc: whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "mr-cnv-postproc: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub emit_date {
+  my $who = shift;
+  my $now_string = strftime "%H:%M:%S", localtime;
+  warn "$who @ $now_string\n";
+}
