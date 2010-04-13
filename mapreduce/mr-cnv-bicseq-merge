@@ -25,7 +25,7 @@ my $cnv_manifest_key = $ENV{KNOB_CNV} or die;
 my $cnv_path="$tmp/cnv";
 
 my $whc = new Warehouse;
-my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{INPUT0});
+my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
 $m->rewind;
 
 atomic_whget_tar("$cnv_manifest_key/cnv.tgz", $cnv_path);
