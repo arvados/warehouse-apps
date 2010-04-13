@@ -3,10 +3,7 @@
 
 ###MR_DESCRIPTION:merge bic-seq output chunks
 ###MR_INPUT:manifest
-###MR_KNOBS:NORMAL
-###MR_KNOBS:TUMOR
 ###MR_KNOBS:CNV
-###MR_KNOBS:MEMORYLIMIT
 
 use strict; 
 use Warehouse;

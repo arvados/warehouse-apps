@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:split unsorted BAM files into sorted bins
+###MR_DESCRIPTION:run CNV pipeline on bam chunks
 ###MR_INPUT:manifest
 ###MR_KNOBS:NORMAL
 ###MR_KNOBS:TUMOR

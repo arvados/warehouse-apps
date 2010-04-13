@@ -7,7 +7,6 @@
 ###MR_KNOBS:TUMOR
 ###MR_KNOBS:SAM
 ###MR_KNOBS:CNV
-###MR_KNOBS:MEMORYLIMIT
 
 use strict; 
 use Warehouse;
@@ -29,21 +28,11 @@ my $cnv_manifest_key = $ENV{KNOB_CNV} or die;
 
 my $normal_manifest_key = $ENV{KNOB_NORMAL} or die;
 my $tumor_manifest_key = $ENV{KNOB_TUMOR} or die;
-my $memory_limit = $ENV{KNOB_MEMORYLIMIT};
 
 my $sam_path="$tmp/sam";
 my $cnv_path="$tmp/cnv";
 
 my $whc = new Warehouse;
-
-if (!$memory_limit) {
-  if (`cat /proc/meminfo` =~ /MemTotal:\s*(\d+)/) {
-    $memory_limit = int($1 * 1024 / 6);
-  }
-  else {
-    $memory_limit = 500_000_000;
-  }
-}
 
 if ($ENV{MR_LEVEL} == 0)
 {
