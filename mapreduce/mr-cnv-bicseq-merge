@@ -72,7 +72,9 @@ else
     }
   }
 
-  close BIC or die "mr-cnv-bicseq-merge: BIC write failed: error $! exit $?";
+  close BIC
+      or $? == 256		# egrep exits 1 == no matches == fine
+      or die "mr-cnv-bicseq-merge: BIC write failed: error $! exit $?";
 
 
   # run BIC-seq to merge the chunks
