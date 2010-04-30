@@ -18,16 +18,40 @@ Options:
     --in-manifest or --as-manifest
     --as-stream
     --use-filename=read-from-stdin.txt
+    --progress
+    --batch-progress
 
 =head1 DESCRIPTION
 
 B<whput> allows storage of a single data set from a file, or a collection from a directory.  In the directory case, a manifest will be created to describe the directory structure.
 
-Normally the B<locator> of the data set or manifest is printed to standard-output.  This locator can then be used with [wiki:Doc/Man/Whget whget].  If I<--as-stream> is given, the output of the command will be in manifest format.  If I<--as-stream> is used with a collection, the manifest is not stored, only the constituent files.
+Normally the B<locator> of the data set or manifest is printed to standard output.  This locator can then be used with whget(1p).
 
-The data set or manifest can be attached to a global name with the I<--name> option.
+=head1 OPTIONS
 
-You can force a single file to be wrapped in a manifest (as if it was in a directory) by use of the I<--in-manifest> option.
+=over
+
+=item --name=I<string>
+
+Attach the resulting manifest hash to a global name.
+
+=item --as-stream
+
+Output a manifest to standard output (instead of storing a manifest in the warehouse, in the directory case).
+
+=item --in-manifest
+
+Wrap a single file in a manifest (as if it was in a directory).
+
+=item --progress
+
+Display progress indicator on stderr (suitable for tty).
+
+=item --batch-progress
+
+Display progress indicator on stderr (suitable for scripts).
+
+=back
 
 =cut
 
@@ -39,24 +63,24 @@ use Digest::MD5;
 use HTTP::Request::Common;
 use LWP::UserAgent;
 
-my %opt;
 while ($ARGV[0] =~ /^-(?:-(\S+?)(=(.*))?|([^-]+))$/)
 {
-    if ($4) { map { $opt{$_}++ } split ("", $4); }
-    else { $opt{$1} = defined ($2) ? $3 : 1; }
+    if ($4) { map { $main::opt{$_}++ } split ("", $4); }
+    else { $main::opt{$1} = defined ($2) ? $3 : 1; }
     shift @ARGV;
 }
-print STDERR map { "opt{$_} = $opt{$_}\n" } keys %opt
-    if $opt{v} >= 3;
+print STDERR map { "opt{$_} = $main::opt{$_}\n" } keys %main::opt
+    if $main::opt{v} >= 3;
 
 my $localbase = shift @ARGV or usage();
 @ARGV == 0 or usage();
 
-my $whc = new Warehouse ("warehouse_servers" => $opt{"warehouse-controllers"},
-			 "mogilefs_trackers" => $opt{"mogilefs-trackers"},
-			 "debug_mogilefs_paths" => ($opt{v} >= 3),
+my $whc = new Warehouse ("warehouse_servers" => $main::opt{"warehouse-controllers"},
+			 "mogilefs_trackers" => $main::opt{"mogilefs-trackers"},
+			 "debug_mogilefs_paths" => ($main::opt{v} >= 3),
 			 );
 my $manifest = "";
+$main::data_bytes_written = 0;
 
 my $manifest_key;
 if ($localbase eq "-" || -f $localbase)
@@ -67,7 +91,7 @@ else
 {
     traverse ($localbase, "", ".", \$manifest);
 
-    if ($opt{"as-stream"})
+    if ($main::opt{"as-stream"})
     {
 	print $manifest;
     }
@@ -81,17 +105,17 @@ else
     }
 }
 
-if (my $manifestname = $opt{"name"})
+if (my $manifestname = $main::opt{"name"})
 {
     if (defined $manifest_key)
     {
-	print STDERR "storing: $manifestname => $manifest_key\n" if $opt{"verbose"};
+	print STDERR "storing: $manifestname => $manifest_key\n" if $main::opt{"verbose"};
 
 	my $oldkey = $whc->fetch_manifest_key_by_name ($manifestname);
 	$whc->store_manifest_by_name ($manifest_key, $oldkey, $manifestname);
 
 	my $checkkey = $whc->fetch_manifest_key_by_name ($manifestname);
-	print STDERR "$manifestname => $checkkey\n" if $opt{"verbose"};
+	print STDERR "$manifestname => $checkkey\n" if $main::opt{"verbose"};
     }
     else
     {
@@ -111,13 +135,13 @@ sub write_file
     {
 	open F, "<", $filename or die "Can't open $filename: $!";
     }
-    my $use_filename = ($opt{"use-filename"} || (split("/", $filename))[-1]);
+    my $use_filename = ($main::opt{"use-filename"} || (split("/", $filename))[-1]);
     die "Stored filename must not end with /" if $use_filename =~ m:/$:;
     $use_filename =~ s:^/+::;
     my $use_subdir = ".";
-    if ($opt{"use-subdir"})
+    if ($main::opt{"use-subdir"})
     {
-	$use_subdir = $opt{"use-subdir"};
+	$use_subdir = $main::opt{"use-subdir"};
     }
     elsif ($use_filename =~ s:(.*)/(.*):$2:)
     {
@@ -138,11 +162,13 @@ sub write_file
     while ($ok = sysread F, $buf, 2**23)
     {
 	$s->write_data (\$buf) or die "Warehouse::Stream::write_data failed: ".$s->errstr;
+	$main::data_bytes_written += length $buf;
+	display_progress();
     }
     die "Error reading $filename: $!" if !defined $ok;
     close F;
     $s->write_finish;
-    if ($opt{"in-manifest"} || $opt{"as-manifest"})
+    if ($main::opt{"in-manifest"} || $main::opt{"as-manifest"})
     {
 	$whc->write_start;
 	$whc->write_data ($s->as_string);
@@ -150,7 +176,7 @@ sub write_file
 	print "$k\n";
 	return $k;
     }
-    elsif ($opt{"as-stream"})
+    elsif ($main::opt{"as-stream"})
     {
 	print $s->as_string;
 	return undef;
@@ -190,7 +216,7 @@ sub traverse
 	    push @subdir, $file;
 	    next;
 	}
-	printf STDERR ("storing %s\n", "$localdir/$file") if $opt{v} >= 3;
+	printf STDERR ("storing %s\n", "$localdir/$file") if $main::opt{v} >= 3;
 	my $filesize = send_file ($whc, "$localdir/$file");
 	push @file_positions, "${streampos}:${filesize}:${file}";
 	$streampos += $filesize;
@@ -210,10 +236,10 @@ sub traverse
 	printf STDERR ("$remotedir: stored %d files in %d blocks\n",
 		       scalar @file_positions,
 		       scalar @stream_hashes)
-	    if $opt{v} >= 1;
+	    if $main::opt{v} >= 1;
 
 	printf STDERR $whc->iostats 
-	    if $opt{v} >= 2;
+	    if $main::opt{v} >= 2;
     }
 
     foreach my $subdir (@subdir)
@@ -259,6 +285,8 @@ sub send_file
     while ($bytes = read FILE, $buf, 1048576) {
 	$whc->write_data ($buf) or die "Warehouse::write_data failed";
 	$totalsize += $bytes;
+	$main::data_bytes_written += $bytes;
+	display_progress();
     }
     if (!defined $bytes)
     {
@@ -266,6 +294,15 @@ sub send_file
     }
     close FILE or die "Read error: $file: $!";
     return $totalsize;
+}
+
+sub display_progress
+{
+    if ($main::last_display_progress < int(time)) {
+	printf STDERR "\r%d bytes written", $main::data_bytes_written if $main::opt{"progress"};
+	printf STDERR "%d bytes written\n", $main::data_bytes_written if $main::opt{"batch-progress"};
+	$main::last_display_progress = int(time);
+    }
 }
 
 sub usage
