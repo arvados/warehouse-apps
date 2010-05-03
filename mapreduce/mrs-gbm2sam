@@ -21,7 +21,7 @@ while (<>)
     chomp ($cs = <>);
 
     $cs =~ tr/0123456./ACGTNNNN/;
-    next if $cs =~ /[^ACGT0123]/i;
+    next if $cs =~ /[^NACGT0123]/i;
     $bp = cs2a ($cs);
 
     s/^>//;
