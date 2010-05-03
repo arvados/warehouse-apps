@@ -33,11 +33,41 @@ atomic_whget("$reference_manifest_key/chrom.fa.fai", $index_path);
 if ($ENV{MR_LEVEL} == 0)
 {
   my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT});
+
+  # catalog the quality files
+  my %qual;			# qual{base_name} == stream_text
   $m->rewind;
   while (my $s = $m->subdir_next) {
     my $stream;
     chomp ($stream = $s->as_string);
-    print STDERR "+++mrjobstep 1 $stream+++\n";
+    $stream =~ s/ \d+:\d+:.*//;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      next if $filename !~ /^(.*?)(_QV)?\.qual(\.gz)?$/i;
+      $qual{$s->name . "/" . $1} = "$stream $pos:$size:$filename\n";
+    }
+  }
+
+  $m->rewind;
+  while (my $s = $m->subdir_next) {
+    my $stream;
+    chomp ($stream = $s->as_string);
+    $stream =~ s/ \d+:\d+:.*//;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      next if $filename !~ /^(.*)\.(cs)?fasta(\.gz)?$/i;
+
+      # maybe we have quality data in a separate stream...
+      my $basename = $s->name . "/" . $1;
+      my $quality_stream = "";
+      if (exists $qual{$basename}) {
+	$quality_stream = $qual{$basename};
+      }
+
+      print STDERR "+++mrjobstep 1 $stream $pos:$size:$filename\n\n$quality_stream+++\n";
+    }
   }
 
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
@@ -45,13 +75,37 @@ if ($ENV{MR_LEVEL} == 0)
 }
 if ($ENV{MR_LEVEL} == 1)
 {
-  my ($stream) = $ENV{MR_INPUT};
-  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
-  my $s = new Warehouse::Stream (whc => $whc, subdir => $stream);
+  my ($stream, $qstream) = split ("\n\n", $ENV{MR_INPUT});
+
   my $dir ="$tmp/out";
   system "rm -rf $dir";
   mkdir $dir or die "mkdir $dir";
   chdir $dir or die "chdir $dir: $!";
+
+  my $qchild = 0;
+  my $fifo = "";
+  if (length $qstream) {
+    $fifo = "qfifo";
+    system ("rm -f $fifo");
+    system ("mkfifo $fifo") == 0 or die "mkfifo: $!";
+    defined ($qchild = fork) or die "no fork";
+    if ($qchild == 0) {
+      open FIFO, "|-", "gzip -cdf > $fifo" or die "open: $!";
+      my $s = new Warehouse::Stream (whc => $whc, subdir => $qstream);
+      while (my ($pos, $size, $filename) = $s->file_next) {
+	last if !defined $filename;
+	$s->seek ($pos);
+	while (my $dataref = $s->read_until ($pos+$size)) {
+	  print FIFO $$dataref;
+	}
+      }
+      close FIFO or die "close $fifo: $!";
+      exit 0;
+    }
+  }
+
+  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
+  my $s = new Warehouse::Stream (whc => $whc, subdir => $stream);
 
   my $outpid = open STDOUT, "| mrs-output" or die "mrs-output: $! $?";
 
@@ -62,13 +116,19 @@ if ($ENV{MR_LEVEL} == 1)
     $filename =~ s/\.gz//;
     $filename =~ s/$/.bam/;
     $filename =~ s/[\'\"\s]//g;
-    open WHPUT, "| bash -c 'set -o pipefail; exec gzip -cdf | mrs-gbm2sam | $sam_path/samtools import $index_path - - | whput --as-stream --use-filename=\"$filename\" -'"
+
+    open WHPUT, "| bash -c 'set -o pipefail; exec gzip -cdf | mrs-gbm2sam - $fifo | $sam_path/samtools import $index_path - - | whput --as-stream --use-filename=\"$filename\" -'"
 	or die "no fork";
     $s->seek ($pos);
     while (my $dataref = $s->read_until ($pos+$size)) {
       print WHPUT $$dataref;
     }
     close WHPUT or die "samtools import|whput: error $! exit $?";
+  }
+
+  if ($qchild) {
+    waitpid $qchild, 0;
+    die ("quality stream child $qchild exited ".sprintf("%x",$?)) if $? != 0;
   }
 
   close STDOUT or die "mrs-output: error $! exit $?";

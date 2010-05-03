@@ -7,35 +7,69 @@ print <<EOF
 EOF
     ;
 
+my $Q = 0;
+if (@ARGV == 2) {
+    my $quality_filename = pop @ARGV;
+    open Q, "<", $quality_filename or die "open $quality_filename: $! " . `pwd`;
+    $Q = 1;
+}
+
 while (<>)
 {
+    next if /^\#/;
     chomp;
     chomp ($cs = <>);
-    $cs =~ tr/0123456./ACGTNNNN/;
-    s/^>//;
-    my ($chr, $pos) = /,(\d+)_(-?\d+)/;
-    if ($chr eq "23") { $chr = "chrX"; }
-    elsif ($chr eq "24") { $chr = "chrY"; }
-    elsif ($chr eq "25") { $chr = "chrM"; }
-    else { $chr = "chr$chr"; }
 
+    $cs =~ tr/0123456./ACGTNNNN/;
     next if $cs =~ /[^ACGT0123]/i;
     $bp = cs2a ($cs);
 
-    $flags = 0;
-    if ($pos < 0) {
-	$bp = reverse $bp;
-	$bp =~ tr/ACGTacgt/TGCATGCA/;
-	$pos = 3 - length($cs) - $pos;
-	$flags = 16;
+    s/^>//;
+    my ($rname, $pos) = /,(\d+)_(-?\d+)/;
+    if (defined ($rname)) {
+	if ($rname eq "23") { $rname = "chrX"; }
+	elsif ($rname eq "24") { $rname = "chrY"; }
+	elsif ($rname eq "25") { $rname = "chrM"; }
+	else { $rname = "chr$rname"; }
+
+	$flags = 0;
+	if ($pos < 0) {
+	    $bp = reverse $bp;
+	    $bp =~ tr/ACGTacgt/TGCATGCA/;
+	    $pos = 3 - length($cs) - $pos;
+	    $flags = 16;
+	}
+	else {
+	    ++$pos;
+	}
+
+	$mapq = 0;
+	$cigar = length($bp)."M";
     }
     else {
-	++$pos;
+	$flags = 4;		# unmapped
+	$rname = "*";
+	$pos = 0;
+	$mapq = 0;
+	$cigar = "*";
     }
 
-    $quality = "I" x length($bp);
+    if ($Q) {
+	my $q = <Q>;
+	while ($q =~ /^\#/) { $q = <Q>; }
+	chomp ($q);
+	$q =~ s/^>//;
+	if ($q ne $_ && $q ne "") {
+	    die "IDs do not match: read id {$_} != quality id {$_}";
+	}
+	$q = <Q>;
+	chomp ($q);
+	$quality = join ("", map { chr(33+$_) } split / /, $q);
+    } else {
+	$quality = "I" x length($bp);
+    }
 
     print (join ("\t",
-		 $_, $flags, $chr, $pos, 0, length($bp)."M", "*", 0, 0, $bp, $quality),
+		 $_, $flags, $rname, $pos, $mapq, $cigar, "*", 0, 0, $bp, $quality),
 	   "\n");
 }
