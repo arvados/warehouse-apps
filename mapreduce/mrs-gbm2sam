@@ -60,7 +60,7 @@ while (<>)
 	chomp ($q);
 	$q =~ s/^>//;
 	if ($q ne $_ && $q ne "") {
-	    die "IDs do not match: read id {$_} != quality id {$_}";
+	    die "IDs do not match: read id {$_} != quality id {$q}";
 	}
 	$q = <Q>;
 	chomp ($q);
