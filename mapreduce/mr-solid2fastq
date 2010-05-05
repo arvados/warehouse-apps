@@ -3,8 +3,6 @@
 
 ###MR_DESCRIPTION:split unsorted BAM files into sorted bins
 ###MR_INPUT:manifest
-###MR_KNOBS:SAM
-###MR_KNOBS:REFERENCE
 
 use strict; 
 use Warehouse;
@@ -19,8 +17,6 @@ my $tmp = $ENV{MR_JOBSTEP_TMP};
 
 my $verbose = 1;
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
-my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
-my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $reffile = "$tmp/ref";
 
 my $sam_path="$tmp/sam";
