@@ -99,7 +99,6 @@ if ($ENV{MR_LEVEL} == 1)
     }
   }
 
-  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   my $s = new Warehouse::Stream (whc => $whc, subdir => $stream);
 
   my $outpid = open STDOUT, "| mrs-output" or die "mrs-output: $! $?";
