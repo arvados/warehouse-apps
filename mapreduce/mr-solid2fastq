@@ -24,7 +24,6 @@ my $sam_path="$tmp/sam";
 my $whc = new Warehouse;
 
 my $index_path = "$tmp/chrom.fa.fai";
-atomic_whget("$reference_manifest_key/chrom.fa.fai", $index_path);
 
 if ($ENV{MR_LEVEL} == 0)
 {
