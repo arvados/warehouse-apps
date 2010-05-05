@@ -1,0 +1,7 @@
+#!/usr/bin/perl
+
+while (<>)
+{
+    my @F = split;
+    print "\@$F[0]\n$F[9]\n+\n$F[10]\n";
+}
