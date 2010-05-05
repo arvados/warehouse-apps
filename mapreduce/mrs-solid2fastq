@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+
+use colorspace;
+
+my $Q = 0;
+if (@ARGV == 2) {
+    my $quality_filename = pop @ARGV;
+    open Q, "<", $quality_filename or die "open $quality_filename: $! " . `pwd`;
+    $Q = 1;
+}
+
+while (<>)
+{
+    next if /^\#/;
+    chomp;
+    chomp ($cs = <>);
+
+    $cs =~ tr/0123456./ACGTNNNN/;
+    next if $cs =~ /[^NACGT0123]/i;
+    $bp = cs2a ($cs);
+
+    s/^>//;
+
+    if ($Q) {
+	my $q = <Q>;
+	while ($q =~ /^\#/) { $q = <Q>; }
+	chomp ($q);
+	$q =~ s/^>//;
+	if ($q ne $_ && $q ne "") {
+	    die "IDs do not match: read id {$_} != quality id {$q}";
+	}
+	$q = <Q>;
+	chomp ($q);
+	$quality = join ("", map { chr(33+$_) } split / /, $q);
+    } else {
+	$quality = "I" x length($bp);
+    }
+
+    print "\@$_\n$bp\n+\n$quality\n";
+}
