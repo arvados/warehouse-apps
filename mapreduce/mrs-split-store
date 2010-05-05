@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my %opt;
+while ($ARGV[0] =~ /^-/)
+{
+  local $_ = shift @ARGV;
+  if (/^--([^=]+)(=(.*))?$/)
+  {
+    $opt{$1} = $3;
+  }
+  elsif (/^-([^-=]+)$/)
+  {
+    foreach (split ("", $1))
+    {
+      $opt{$_} = 1;
+    }
+  }
+}
+
+die "usage: mrs-store [options] subdir filename_pattern\n"
+    if @ARGV != 2;
+
+my $subdir = shift @ARGV;
+my $filename_pattern = shift @ARGV;
+
+my $whc = new Warehouse;
+my $stream = new Warehouse::Stream (whc => $whc);
+$stream->clear;
+$stream->name ($subdir);
+$stream->write_start (make_filename ($filename_pattern, 0));
+my $lines_out = 0;
+my $chunks_out = 0;
+while (defined ($_ = <STDIN>))
+{
+  $stream->write_data (\$_);
+  ++$lines_out;
+  if ($lines_out == $opt{"lines"}) {
+    $lines_out = 0;
+    ++$chunks_out;
+    $stream->write_finish;
+    $stream->write_start (make_filename ($filename_pattern, $chunks_out));
+  }
+}
+$stream->write_finish;
+print STDERR ("mrs-store: ".$stream->as_string."\n")
+    if $opt{"debug"} || $ENV{"KNOB_DEBUG"};
+print $stream->as_string;
+
+sub make_filename
+{
+  my $name = shift;
+  my $n = sprintf "%04d", shift;
+  $name =~ s/{}/$n/ || $name =~ s/$/$n/;
+  return $name;
+}
