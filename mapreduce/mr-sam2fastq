@@ -78,7 +78,7 @@ if ($ENV{MR_LEVEL} == 1)
     my $store_cmd;
     if ($chunksize > 0) {
       my $chunklines = 4 * $chunksize;
-      $store_cmd = "mrs-split-store -l $chunklines - \"$filename.{}.fastq\"";
+      $store_cmd = "mrs-split-store --lines=$chunklines - \"$filename.{}.fastq\"";
     } else {
       $filename =~ s/$/.fastq.gz/;
       $store_cmd = "gzip -9n | whput --as-stream --use-filename=\"$filename\" -";

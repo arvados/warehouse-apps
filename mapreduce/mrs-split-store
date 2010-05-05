@@ -23,7 +23,7 @@ while ($ARGV[0] =~ /^-/)
   }
 }
 
-die "usage: mrs-store [options] subdir filename_pattern\n"
+die "usage: mrs-split-store [options] subdir filename_pattern\n"
     if @ARGV != 2;
 
 my $subdir = shift @ARGV;
@@ -48,7 +48,7 @@ while (defined ($_ = <STDIN>))
   }
 }
 $stream->write_finish;
-print STDERR ("mrs-store: ".$stream->as_string."\n")
+print STDERR ("mrs-split-store: ".$stream->as_string."\n")
     if $opt{"debug"} || $ENV{"KNOB_DEBUG"};
 print $stream->as_string;
 
