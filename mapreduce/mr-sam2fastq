@@ -22,7 +22,8 @@ my $verbose = 1;
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
-my $chunksize = $ENV{KNOB_CHUNKSIZE} or $chunksize = 1_000_000;
+my $chunksize = $ENV{KNOB_CHUNKSIZE};
+$chunksize = 1_000_000 if !defined $chunksize;
 my $reffile = "$tmp/ref";
 
 my $sam_path="$tmp/sam";
