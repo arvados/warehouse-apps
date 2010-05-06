@@ -1,0 +1,215 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:run BWA against reference
+###MR_INPUT:manifest
+###MR_KNOBS:BWA
+###MR_KNOBS:SAM
+###MR_KNOBS:REFERENCE1
+###MR_KNOBS:REFERENCE2
+###MR_KNOBS:MAX_MISMATCHES
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+
+my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
+my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} || 1;
+my $input_manifest_key = $ENV{MR_INPUT0} or die;
+my $ref1_manifest_key = $ENV{KNOB_REFERENCE1} or die;
+my $ref2_manifest_key = $ENV{KNOB_REFERENCE2} or die;
+my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
+my $sam_manifest_key = $ENV{KNOB_SAM} or die;
+my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
+$max_mismatches = 2 unless defined $max_mismatches;
+my $reffile1 = "$tmp/ref1";
+my $reffile2 = "$tmp/ref2";
+
+my $bwa_path="$tmp/bwa";
+my $sam_path="$tmp/sam";
+my $out_path="$tmp/out";
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my $ref1_basename;
+  my $ref1 = new Warehouse::Manifest (whc => $whc,
+				      key => $ref1_manifest_key);
+  while (my $s = $ref1->subdir_next) {
+    while (my ($pos, $size, $filename) = $s->file_next) {
+      last if !defined $pos;
+      $ref1_basename = $s->name()."/".$1 if $filename =~ /(.*)\.bwt$/;
+    }
+  }
+  $ref1_basename =~ s{^\./}{};
+
+  my $ref2_basename;
+  my $ref2 = new Warehouse::Manifest (whc => $whc,
+				      key => $ref2_manifest_key);
+  while (my $s = $ref2->subdir_next) {
+    while (my ($pos, $size, $filename) = $s->file_next) {
+      last if !defined $pos;
+      $ref2_basename = $s->name()."/".$1 if $filename =~ /(.*)\.bwt$/;
+    }
+  }
+  $ref2_basename =~ s{^\./}{};
+
+  if (("$ref1_basename." =~ /\.cs(fasta)?\./i) != ("$ref2_basename." =~ /\.cs(fasta)?\./i)) {
+    die "error: is_colorspace(ref1) != is_colorspace(ref2)";
+  }
+
+  my $num_inputs = 0;
+  my $in = new Warehouse::Manifest (whc => $whc,
+				    key => $input_manifest_key);
+  $num_inputs++ while (my $s = $in->subdir_next);
+
+  my $inputs_per_node = 1; # $num_inputs / ($num_nodes + $num_inputs - 1);
+  $in->rewind;
+  while (my $s = $in->subdir_next)
+  {
+    my $subdir = $s->name;
+    $subdir =~ s/^\.\///;
+    my @files;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      next if $filename !~ /(.*)\.(bfq|fq|fastq|fq.gz|fastq.gz)$/;
+      # Assume _2 are reverse strand in pair-end-reads - next level does not need
+      # them passed in.
+      next if $1 =~ /_2$/;
+      push @files, $filename;
+      if (scalar(@files) >= $inputs_per_node) {
+	my $filenames = join(',', @files);
+	print STDERR "+++mrjobstep 1 $ref1_basename $ref2_basename $subdir $filenames+++\n";
+	@files = ();
+      }
+    }
+    if (@files) {
+	my $filenames = join(',', @files);
+	print STDERR "+++mrjobstep 1 $ref1_basename $ref2_basename $subdir $filenames+++\n";
+    }
+  }
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($ref1_basename, $ref2_basename, $subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 4);
+  my @files = split(/,/, $filenames);
+
+  if ($subdir eq ".") { $subdir = ""; }
+  else { $subdir = "/$subdir"; }
+
+  atomic_whget_tar("$bwa_manifest_key/bwa.tgz", $bwa_path);
+  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
+  die "$bwa_path/bwa not found" unless -x "$bwa_path/bwa";
+  atomic_whget_dir($ref1_manifest_key, $reffile1);
+  atomic_whget_dir($ref2_manifest_key, $reffile2);
+
+  foreach my $filename (@files) {
+    my $bwa_sam_cmd;
+
+    $filename =~ s{.*/}{};
+
+    my $readfile1 = "$tmp/${filename}";
+    my $saifile1 = "$tmp/${filename}.comb.sai";
+    my $saifile2 = "$tmp/${filename}.comp.sai";
+
+    my $is_colorspace = "$filename." =~ /\.cs(fast[aq])?\./i;
+    my $ref_is_colorspace = "$ref1_basename." =~ /\.cs(fasta)?\./i;
+    die "reads are colorspace but reference is not" if $is_colorspace && !$ref_is_colorspace;
+    die "reads are not colorspace but reference is" if !$is_colorspace && $ref_is_colorspace;
+    my $aln_flags = $is_colorspace ? "-c" : "";
+
+    if ($filename =~ /(.+)_1\.(.+)$/) {
+      die "paired-end reads not supported";
+    }
+
+    atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
+
+    system("bash", "-c", qq{
+set -o pipefail
+set -e
+set -x
+$bwa_path/bwa aln -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basename' '$readfile1' > '$saifile1'
+$bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
+$bwa_path/bwa aln -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' > '$saifile2'
+$bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1' '$reffile2/$ref2_basename' '$saifile2' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
+whput -r --as-stream '$out_path' | mrs-output
+}) == 0
+	or die "script failed: error $! exit 0x".sprintf ("%x", $?);
+
+    unlink $readfile1 if $readfile1;
+    unlink $saifile1 if $saifile1;
+    unlink $saifile2 if $saifile2;
+  }
+  exit 0;
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_tar {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) )
+  {
+    if (0 != system "whget '$source' '$target.tgz.tmp'")
+    {
+      system "rm -rf '$target.tgz.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tgz.tmp", "$target.tgz" or die "rename $target.tgz.tmp failed";
+    mkdir "$target" or die "mkdir $target failed";
+    system("tar -C $target -xzf $target.tgz") == 0 or die "tar -xz $target.tgz failed";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_dir {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX))
+  {
+    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
