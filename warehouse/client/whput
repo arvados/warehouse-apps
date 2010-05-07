@@ -20,6 +20,7 @@ Options:
     --use-filename=read-from-stdin.txt
     --progress
     --batch-progress
+    --progress-interval=n_seconds
 
 =head1 DESCRIPTION
 
@@ -71,6 +72,8 @@ while ($ARGV[0] =~ /^-(?:-(\S+?)(=(.*))?|([^-]+))$/)
 }
 print STDERR map { "opt{$_} = $main::opt{$_}\n" } keys %main::opt
     if $main::opt{v} >= 3;
+$main::opt{"progress-interval"} = 1 if $main::opt{"progress-interval"} < 1;
+
 
 my $localbase = shift @ARGV or usage();
 @ARGV == 0 or usage();
@@ -101,6 +104,7 @@ else
 	$whc->write_data ($manifest) or die "Failed to write manifest: ".$whc->errstr;
 	$manifest_key = $whc->write_finish or die "Failed to write manifest: ".$whc->errstr;
 
+	display_progress(1);
 	print "$manifest_key\n";
     }
 }
@@ -168,6 +172,7 @@ sub write_file
     die "Error reading $filename: $!" if !defined $ok;
     close F;
     $s->write_finish;
+    display_progress(1);
     if ($main::opt{"in-manifest"} || $main::opt{"as-manifest"})
     {
 	$whc->write_start;
@@ -298,10 +303,11 @@ sub send_file
 
 sub display_progress
 {
-    if ($main::last_display_progress < int(time)) {
+    if (@_ || $main::last_display_progress <= int(time) - $main::opt{"progress-interval"}) {
 	printf STDERR "\r%d bytes written", $main::data_bytes_written if $main::opt{"progress"};
 	printf STDERR "%d bytes written\n", $main::data_bytes_written if $main::opt{"batch-progress"};
 	$main::last_display_progress = int(time);
+	print STDERR "\n" if @_ && $main::opt{"progress"};
     }
 }
 
