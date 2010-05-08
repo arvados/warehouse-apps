@@ -35,6 +35,10 @@ my $bwa_path="$tmp/bwa";
 my $sam_path="$tmp/sam";
 my $out_path="$tmp/out";
 
+system ("mkdir -p '$out_path'") == 0
+    or mkdir ($out_path)
+    or die "mkdir $out_path: $!";
+
 my $whc = new Warehouse;
 
 if ($ENV{MR_LEVEL} == 0)
