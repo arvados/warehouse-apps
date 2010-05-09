@@ -342,7 +342,7 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
   }
 
   # tell mrjobsteps the decrypted secret key(s) and all public key(s) they might need
-  $ENV{"GPG_KEYS"} = `gpg --homedir "$newhomedir" --export-secret-keys --armor; gpg --export --armor`;
+  $ENV{"GPG_KEYS"} = `(gpg --homedir "$newhomedir" --export-secret-keys --armor; gpg --export --armor) | gzip -9n`;
 
   # import all secret keys from my real home dir
   `gpg --export-secret-keys | gpg --homedir "$newhomedir" --import 2>&1`;
@@ -534,15 +534,13 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
       qw(-n1 -c1 -N1 -D), $ENV{TMPDIR},
       "--job-name=$job_id.$id.$$",
 	);
-    my @execargs = (
-      "sh",
-      "-c",
-      "mkdir -p $ENV{TMPDIR}/mrcompute/revision "
-      ."&& cd $ENV{TMPDIR}/mrcompute "
-		    );
+    my @execargs = qw(sh);
+    my $script =
+	"mkdir -p $ENV{TMPDIR}/mrcompute/revision "
+	."&& cd $ENV{TMPDIR}/mrcompute ";
     if (!$skip_install)
     {
-      $execargs[-1] .=
+      $script .=
 	  "&& "
 	  ."( "
 	  ."  [ -e '$ENV{MR_REVISION_INSTALLDIR}/.tested' ] "
@@ -553,13 +551,13 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	  .") ";
     }
     if (exists $ENV{GPG_KEYS}) {
-      $execargs[-1] .=
+      $script .=
 	  "&& mkdir -p '$ENV{MR_JOBSTEP_TMP}' && (sudo /bin/umount '$ENV{MR_JOBSTEP_TMP}' 2>/dev/null || true) && rm -rf '$ENV{MR_JOBSTEP_TMP}' && exec $ENV{MR_REVISION_SRCDIR}/mapreduce/ecryptfs-wrapper -d '$ENV{MR_JOBSTEP_TMP}' -p $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
     } else {
-      $execargs[-1] .=
+      $script .=
 	  "&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
     }
-    srun (\@srunargs, \@execargs);
+    srun (\@srunargs, \@execargs, undef, $script);
     exit (1);
   }
   close("writer");
@@ -1323,6 +1321,7 @@ sub srun
   my $srunargs = shift;
   my $execargs = shift;
   my $opts = shift || {};
+  my $stdin = shift;
   my $args = $have_slurm ? [@$srunargs, @$execargs] : $execargs;
   print STDERR (join (" ",
 		      map { / / ? "'$_'" : $_ }
@@ -1330,8 +1329,18 @@ sub srun
 		"\n")
       if $ENV{MR_DEBUG};
 
+  if (defined $stdin) {
+    my $child = open STDIN, "-|";
+    defined $child or die "no fork: $!";
+    if ($child == 0) {
+      print $stdin or die $!;
+      close STDOUT or die $!;
+      exit 0;
+    }
+  }
+
   return system (@$args) if $opts->{fork};
 
   exec @$args;
-  die "exec failed: $!";
+  die "exec failed: $!: @$args";
 }
