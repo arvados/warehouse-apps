@@ -50,7 +50,7 @@ $ENV{GNUPGHOME} = $ENV{MR_JOBSTEP_TMP}."/.gnupg";
 if (length $ENV{GPG_KEYS}) {
     warn "GPG_KEYS => ".length($ENV{"GPG_KEYS"})." bytes\n" if $ENV{"DEBUG_GPG"};
     mkdir $ENV{GNUPGHOME}, 0700;
-    `gpgsetup`;
+    system ("gpgsetup") == 0 or die "gpgsetup: error $! exit $?";
     delete $ENV{GPG_KEYS};
     if ($ENV{ENCRYPT_TO} !~ /[^\s,]/) {
 	die "Fatal: GPG_KEYS provided, but gpgsetup failed.\n";
