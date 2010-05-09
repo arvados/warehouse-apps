@@ -40,23 +40,30 @@ $stream->name ($subdir);
 $stream->write_start (make_filename ($filename_pattern, 0));
 my $lines_out = 0;
 my $chunks_out = 0;
+my $files_out = 0;
 while (defined ($_ = <STDIN>))
 {
-  if ($opt{"z"}) { print Z $_ or die "gzip: $!" }
-  else { $stream->write_data (\$_); }
-  ++$lines_out;
   if ($lines_out == $opt{"lines"}) {
     $lines_out = 0;
     ++$chunks_out;
     do { flush_z ($stream); open_z (); } if $opt{"z"};
     $stream->write_finish;
+    if ($files_out == $opt{"filesperstream"}) {
+      $files_out = 0;
+      print $stream->as_string;
+      $stream = new Warehouse::Stream (whc => $whc);
+      $stream->clear;
+      $stream->name ($subdir);
+    }
     $stream->write_start (make_filename ($filename_pattern, $chunks_out));
+    ++$files_out;
   }
+  if ($opt{"z"}) { print Z $_ or die "gzip: $!" }
+  else { $stream->write_data (\$_); }
+  ++$lines_out;
 }
 flush_z ($stream) if $opt{"z"};
 $stream->write_finish;
-print STDERR ("mrs-split-store: ".$stream->as_string."\n")
-    if $opt{"debug"} || $ENV{"KNOB_DEBUG"};
 print $stream->as_string;
 
 sub make_filename
