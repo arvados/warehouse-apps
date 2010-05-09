@@ -29,6 +29,10 @@ die "usage: mrs-split-store [options] subdir filename_pattern\n"
 my $subdir = shift @ARGV;
 my $filename_pattern = shift @ARGV;
 
+if ($opt{"z"}) {
+  open_z();
+}
+
 my $whc = new Warehouse;
 my $stream = new Warehouse::Stream (whc => $whc);
 $stream->clear;
@@ -38,15 +42,18 @@ my $lines_out = 0;
 my $chunks_out = 0;
 while (defined ($_ = <STDIN>))
 {
-  $stream->write_data (\$_);
+  if ($opt{"z"}) { print Z $_ or die "gzip: $!" }
+  else { $stream->write_data (\$_); }
   ++$lines_out;
   if ($lines_out == $opt{"lines"}) {
     $lines_out = 0;
     ++$chunks_out;
+    do { flush_z ($stream); open_z (); } if $opt{"z"};
     $stream->write_finish;
     $stream->write_start (make_filename ($filename_pattern, $chunks_out));
   }
 }
+flush_z ($stream) if $opt{"z"};
 $stream->write_finish;
 print STDERR ("mrs-split-store: ".$stream->as_string."\n")
     if $opt{"debug"} || $ENV{"KNOB_DEBUG"};
@@ -58,4 +65,25 @@ sub make_filename
   my $n = sprintf "%04d", shift;
   $name =~ s/{}/$n/ || $name =~ s/$/$n/;
   return $name;
+}
+
+sub open_z
+{
+  open Z, "|-", "gzip -n > '".$ENV{MR_JOBSTEP_TMP}."/.mrs-split-store.$$.gz'"
+      or die "gzip: error $! exit $?";
+}
+
+sub flush_z
+{
+  my $stream = shift;
+  close Z or die "gzip: $!";
+  open Z, "<", $ENV{MR_JOBSTEP_TMP}."/.mrs-split-store.$$.gz" or die "open: $!";
+  my $buf;
+  my $ok;
+  while ($ok = read Z, $buf, 2**24) {
+    $stream->write_data (\$buf);
+  }
+  defined $ok or die "read: $!";
+  close Z or die "close: $!";
+  unlink $ENV{MR_JOBSTEP_TMP}."/.mrs-split-store.$$.gz" or die "unlink: $!";
 }
