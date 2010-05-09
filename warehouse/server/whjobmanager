@@ -1344,5 +1344,6 @@ sub srun
   return system (@$args) if $opts->{fork};
 
   exec @$args;
+  warn "ENV size is ".length(join(" ",%ENV));
   die "exec failed: $!: @$args";
 }
