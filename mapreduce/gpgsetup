@@ -1,6 +1,6 @@
 #!/bin/sh
 
-gpg --import --quiet --batch <<EOF >&2
+gzip -cdf <<EOF | gpg --import --quiet --batch >&2
 $GPG_KEYS
 EOF
 
