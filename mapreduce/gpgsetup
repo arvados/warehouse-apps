@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-perl -e 'print $ENV{"GPG_KEYS"}' | gzip -cdf | gpg --import --quiet --batch >&2
+perl -e 'print $ENV{"GPG_KEYS"}' | gpg --import --quiet --batch >&2
 
 # gpg --list-secret-keys | perl -ne 'print ",$1" if /<(.*?)>/' | sed 's/^,//'
 

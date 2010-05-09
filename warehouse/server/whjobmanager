@@ -341,8 +341,11 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
     }
   }
 
+  my $hostname = `hostname`;
+  chomp ($hostname);
+
   # tell mrjobsteps the decrypted secret key(s) and all public key(s) they might need
-  $ENV{"GPG_KEYS"} = `(gpg --homedir "$newhomedir" --export-secret-keys --armor; gpg --export --armor) | gzip -9n`;
+  $ENV{"GPG_KEYS"} = `gpg --homedir "$newhomedir" --export-secret-keys --armor; gpg --homedir "$newhomedir" --export --armor; gpg --export --armor root\@$hostname`;
 
   # import all secret keys from my real home dir
   `gpg --export-secret-keys | gpg --homedir "$newhomedir" --import 2>&1`;
@@ -356,8 +359,6 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
   while (`gpg --list-secret-keys` =~ /^uid\s.*?<(.+?)>/gm) {
     $allkeys{$1} = 1;
   }
-  my $hostname = `hostname`;
-  chomp ($hostname);
   foreach my $id ("root\@".$hostname, $ENV{"USER"}."\@".$hostname) {
     if (exists $allkeys{$id}) {
       $encrypt_to{$id} = 1;
