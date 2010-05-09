@@ -1,8 +1,9 @@
 #!/bin/sh
 
-gzip -cdf <<EOF | gpg --import --quiet --batch >&2
-$GPG_KEYS
-EOF
+set -e
+set -o pipefail
+
+perl -e 'print $ENV{"GPG_KEYS"}' | gzip -cdf | gpg --import --quiet --batch >&2
 
 # gpg --list-secret-keys | perl -ne 'print ",$1" if /<(.*?)>/' | sed 's/^,//'
 
