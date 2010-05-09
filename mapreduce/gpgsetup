@@ -5,6 +5,11 @@ set -o pipefail
 
 perl -e 'print $ENV{"GPG_KEYS"}' | gpg --import --quiet --batch >&2
 
+if [ ! -z "$GPG_PUBLIC_KEYS" ]
+then
+  whget "$GPG_PUBLIC_KEYS" | gpg --import --quiet --batch >&2
+fi
+
 # gpg --list-secret-keys | perl -ne 'print ",$1" if /<(.*?)>/' | sed 's/^,//'
 
 cat >>$GNUPGHOME/gpg.conf <<EOF
