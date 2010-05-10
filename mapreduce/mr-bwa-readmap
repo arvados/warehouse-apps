@@ -28,8 +28,8 @@ my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 2 unless defined $max_mismatches;
-my $reffile1 = "$tmp/ref1";
-my $reffile2 = "$tmp/ref2";
+my $reffile1 = "$ENV{MR_JOB_TMP}/ref1";
+my $reffile2 = "$ENV{MR_JOB_TMP}/ref2";
 
 my $bwa_path="$tmp/bwa";
 my $sam_path="$tmp/sam";
@@ -201,15 +201,16 @@ sub atomic_whget_tar {
 sub atomic_whget_dir {
   my ($source, $target) = @_;
 
-  system "rm -rf '$target'";
   if (open (L, "+>>", "$target.lock") &&
       flock (L, LOCK_EX))
   {
+    return if -d $target;
+
     if (0 != system "whget -r '$source'/ '$target.tmp/'")
     {
       system "rm -rf '$target.tmp'";
       close L;
-      die "whget exited $?";
+      die "whget exited 0x".sprintf("%x",$?);
     }
     rename "$target.tmp", $target;
     system "rm -rf '$target.tmp'";
