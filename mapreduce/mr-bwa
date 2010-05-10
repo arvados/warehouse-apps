@@ -19,14 +19,14 @@ use Fcntl ':flock';
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 
 my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
-my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} or die;
+my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} || 1;
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 0.04 unless defined $max_mismatches;
-my $reffile = "$tmp/ref";
+my $reffile = "$ENV{MR_JOB_TMP}/ref";
 
 my $bwa_path="$tmp/bwa";
 my $sam_path="$tmp/sam";
@@ -190,15 +190,16 @@ sub atomic_whget_tar {
 sub atomic_whget_dir {
   my ($source, $target) = @_;
 
-  system "rm -rf '$target'";
   if (open (L, "+>>", "$target.lock") &&
       flock (L, LOCK_EX))
   {
+    return if -d $target;
+
     if (0 != system "whget -r '$source'/ '$target.tmp/'")
     {
       system "rm -rf '$target.tmp'";
       close L;
-      die "whget exited $?";
+      die "whget exited 0x".sprintf("%x",$?);
     }
     rename "$target.tmp", $target;
     system "rm -rf '$target.tmp'";
