@@ -58,7 +58,7 @@ if ($ENV{MR_LEVEL} == 0)
     }
   }
 
-  my $inputs_per_step = $num_inputs / (8 * $num_nodes + $num_inputs - 1);
+  my $inputs_per_step = int (1 + $num_inputs / $num_nodes / 8);
   print STDERR "num_nodes = $num_nodes\n";
   print STDERR "num_inputs = $num_inputs\n";
   print STDERR "inputs_per_step = $inputs_per_step\n";
