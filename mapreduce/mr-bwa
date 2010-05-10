@@ -49,9 +49,14 @@ if ($ENV{MR_LEVEL} == 0)
   my $num_inputs = 0;
   my $in = new Warehouse::Manifest (whc => $whc,
 				    key => $input_manifest_key);
-  $num_inputs++ while (my $s = $in->subdir_next);
+  while (my $s = $in->subdir_next) {
+    while (my ($pos, $size, $filename) = $s->file_next) {
+      last if !defined $pos;
+      $num_inputs++;
+    }
+  }
 
-  my $inputs_per_node = $num_inputs / ($num_nodes + $num_inputs - 1);
+  my $inputs_per_step = $num_inputs / (8 * $num_nodes + $num_inputs - 1);
   $in->rewind;
   while (my $s = $in->subdir_next)
   {
@@ -66,7 +71,7 @@ if ($ENV{MR_LEVEL} == 0)
       # them passed in.
       next if $1 =~ /_2$/;
       push @files, $filename;
-      if (scalar(@files) >= $inputs_per_node) {
+      if (scalar(@files) >= $inputs_per_step) {
 	my $filenames = join(',', @files);
 	print STDERR "+++mrjobstep 1 $ref_basename $subdir $filenames+++\n";
 	@files = ();
