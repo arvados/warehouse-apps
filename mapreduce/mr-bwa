@@ -95,6 +95,8 @@ if ($ENV{MR_LEVEL} == 1)
   my ($ref_basename, $subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 3);
   my @files = split(/,/, $filenames);
 
+  my $output = "";
+
   if ($subdir eq ".") { $subdir = ""; }
   else { $subdir = "/$subdir"; }
 
@@ -144,15 +146,21 @@ if ($ENV{MR_LEVEL} == 1)
       $bwa_sam_cmd,
       "$sam_path/samtools view -S -b -",
       "mrs-store '.$subdir' '${filename}.bam'",
-      "mrs-output",
     )
       or die "pipe failed: $!";
+    do {
+      local $/ = undef;
+      my $outfrag = <BWA>;
+      $output .= $outfrag;
+      print STDERR $outfrag;
+    };
     close BWA or die "Pipe failed: $!";
     unlink $readfile1 if $readfile1;
     unlink $readfile2 if $readfile2;
     unlink $saifile1 if $saifile1;
     unlink $saifile2 if $saifile2;
   }
+  print STDERR "+++mrout $output+++";
   exit 0;
 }
 
