@@ -160,7 +160,7 @@ if ($ENV{MR_LEVEL} == 1)
     unlink $saifile1 if $saifile1;
     unlink $saifile2 if $saifile2;
   }
-  print STDERR "+++mrout $output+++";
+  print STDERR "+++mrout $output+++\n";
   exit 0;
 }
 
