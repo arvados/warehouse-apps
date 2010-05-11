@@ -428,10 +428,12 @@ sub store_block
     my $hash = "$md5+$size";
 
     my $alreadyhave;
-    $alreadyhave = $self->fetch_block_ref ($hash, 1, 1, { nodecrypt => 1 })
+    my $existinghash;
+    ($alreadyhave, $existinghash) = $self->fetch_block_ref ($hash, 1, 1, { nodecrypt => 1, maxprobe => 4 })
 	if !$ENV{NOPLAIN};
     if ($alreadyhave && $$dataref eq $$alreadyhave)
     {
+	return $existinghash if defined $existinghash;
 	return $hash;
     }
     if (my $alreadyhavehash = $self->_cryptmap_fetchable ($dataref, $md5))
@@ -786,8 +788,8 @@ sub fetch_block_ref
 
     if ($hash =~ /\+K/ || $ENV{NOCACHE_READ} || $ENV{NOCACHE})
     {
-	my $dataref = $self->fetch_from_keep
-	    ($hash, { nodecrypt => $options->{nodecrypt} });
+	my ($dataref, $existinghash) = $self->fetch_from_keep
+	    ($hash, { nodecrypt => $options->{nodecrypt}, maxprobe => $options->{maxprobe} });
 	if (!$dataref && !$options->{nodecrypt} && $hash !~ /\+G/)
 	{
 	    # Perhaps an encrypted copy exists even though the plain
@@ -797,11 +799,15 @@ sub fetch_block_ref
 		= $self->_cryptmap_fetchable (undef, $hash);
 	    if ($enchash && $decdataref)
 	    {
+		return ($decdataref, $enchash) if wantarray;
 		return $decdataref;
 	    }
 	    $tried_cryptmap = 1;
 	}
-	return $dataref if $dataref || $ENV{NOCACHE_READ} || $ENV{NOCACHE};
+	if ($dataref || $ENV{NOCACHE_READ} || $ENV{NOCACHE}) {
+	    return ($dataref, $existinghash) if wantarray && defined $existinghash;
+	    return $dataref;
+	}
 	$tried_keep = 1;
     }
 
@@ -887,10 +893,11 @@ sub fetch_block_ref
 	$self->{stats_read_blocks} ++;
     }
 
+    my $existinghash;
     if (!defined $dataref && !$tried_keep)
     {
 	# didn't try Keep earlier, and other methods failed, so try it now
-	$dataref = $self->fetch_from_keep ($hash, { nodecrypt => 1 });
+	($dataref, $existinghash) = $self->fetch_from_keep ($hash, { nodecrypt => 1, maxprobe => $options->{maxprobe} });
 	if ($dataref && ($options->{offset} || exists $options->{length}))
 	{
 	    if (!exists $options->{nodecrypt})
@@ -915,6 +922,7 @@ sub fetch_block_ref
 	    = $self->_cryptmap_fetchable (undef, $hash);
 	if ($enchash && $decdataref)
 	{
+	    return ($decdataref, $enchash) if wantarray;
 	    return $decdataref;
 	}
     }
@@ -934,7 +942,10 @@ sub fetch_block_ref
     }
 
     return undef if !$dataref;
-    return $dataref if $options->{nodecrypt};
+    if ($options->{nodecrypt}) {
+	return ($dataref, $existinghash) if wantarray && defined $existinghash;
+	return $dataref;
+    }
     return $self->_decrypt_block ($dataref);
 }
 
@@ -995,6 +1006,7 @@ sub store_in_keep
 	    {
 		($md5, @hints) = split (/\+/, $enchash);
 		$dataref = $encdataref;
+		goto ok;
 	    }
 	    else
 	    {
@@ -1120,6 +1132,7 @@ sub store_in_keep
     {
 	return undef;
     }
+ok:
     my $hash = $md5;
     $hash .= "+$keepreportedsize" if defined $keepreportedsize;
     foreach (@hints)
@@ -1179,6 +1192,7 @@ sub fetch_from_keep
 		if vec($kbits, $_, 1);
 	}
     }
+    splice @bucket, $opts->{maxprobe} if $opts->{maxprobe};
     my $successes = 0;
     foreach my $keep_id (@bucket)
     {
@@ -1205,8 +1219,11 @@ sub fetch_from_keep
 		++$successes;
 		$data = $ { $self->_decrypt_block (\$data) }
 		    unless $opts->{nodecrypt};
-		return \$data if !$opts->{nnodes};
-		return \$data if $successes == $opts->{nnodes};
+		if (!$opts->{nnodes} || $successes == $opts->{nnodes}) {
+		    return \$data if !wantarray;
+		    $md5 .= "+K\@" . $warehouses->[$kwhid]->{name};
+		    return (\$data, $md5);
+		}
 	    }
 	    else
 	    {
@@ -2422,9 +2439,13 @@ sub _cryptmap_fetchable
 	my ($plainmd5) = $hash =~ /^([0-9a-f]+)/;
 	$enchash .= "+GM$plainmd5";
 
-	$encdataref = $self->fetch_block_ref
-	    ($enchash, { verify => 1, nowarn => 1, nodecrypt => 1 })
+	my $fetchedhash;
+	($encdataref, $fetchedhash) = $self->fetch_block_ref
+	    ($enchash, { verify => 1, nowarn => 1, nodecrypt => 1 });
+	$encdataref
 	    or die "fetch $enchash fail";
+	$enchash .= $& if $fetchedhash && $fetchedhash =~ /\+K\@([^\+]+)/;
+
 	if ($dataref && $$encdataref eq $$dataref)
 	{
 	    die "encrypted eq orig";
