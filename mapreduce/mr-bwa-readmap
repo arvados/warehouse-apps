@@ -142,9 +142,9 @@ if ($ENV{MR_LEVEL} == 1)
 set -o pipefail
 set -e
 set -x
-$bwa_path/bwa aln -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basename' '$readfile1' > '$saifile1'
+$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basename' '$readfile1' > '$saifile1'
 $bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
-$bwa_path/bwa aln -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' > '$saifile2'
+$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' > '$saifile2'
 $bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1' '$reffile2/$ref2_basename' '$saifile2' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
 whput -r --as-stream '$out_path' | mrs-output
 }) == 0
