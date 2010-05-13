@@ -56,7 +56,7 @@ print X "$tot_comp\n";
 print X ($_, "\t", $count_comp{$_}, "\n") foreach sort keys %count_comp;
 close X or die "comp.count: $!";
 
-my $output = `whput -r $out`;
+my $output = `whput -r --as-stream $out`;
 die "whput exited $?" if $?;
 
 print STDERR "+++mrout $output+++\n";
