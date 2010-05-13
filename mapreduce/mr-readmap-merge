@@ -49,6 +49,12 @@ open X, ">", "$out/comb.count" or die "comb.count: $!";
 print X ($_, "\t", $count_comb{$_}, "\n") foreach sort keys %count_comb;
 close X or die "comb.count: $!";
 
-open X, ">", "$out/comb.count" or die "comp.count: $!";
+open X, ">", "$out/comp.count" or die "comp.count: $!";
 print X ($_, "\t", $count_comp{$_}, "\n") foreach sort keys %count_comp;
 close X or die "comp.count: $!";
+
+my $output = `whput -r $out`;
+die "whput exited $?" if $?;
+
+print STDERR "+++mrout $output+++\n";
+exit 0;
