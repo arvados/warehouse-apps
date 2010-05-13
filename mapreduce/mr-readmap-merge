@@ -15,16 +15,16 @@ mkdir $out;
 my $whc = new Warehouse;
 my $in = new Warehouse::Manifest (whc => $whc,
 				  key => $ENV{MR_INPUT});
-my %count_comp, %count_comb;
+my %count_comp, %count_comb, $tot_comp, $tot_comb;
 while (my $s = $in->subdir_next)
 {
   while (my ($pos, $size, $filename) = $s->file_next)
   {
     last if !defined $pos;
 
-    my $hash;
-    if ($filename =~ /\.comb\b/) { $hash = \%count_comb; }
-    elsif ($filename =~ /\.comp\b/) { $hash = \%count_comp; }
+    my $hash, $tot;
+    if ($filename =~ /\.comb\b/) { $hash = \%count_comb; $tot = \$tot_comb; }
+    elsif ($filename =~ /\.comp\b/) { $hash = \%count_comp; $tot = \$tot_comp; }
     else { next; }
 
     print STDERR "$filename\n" if $ENV{MR_DEBUG} || $ENV{DEBUG};
@@ -37,7 +37,7 @@ while (my $s = $in->subdir_next)
     anyuncompress \$zbuf => \$buf;
     my $linenumber = 1;
     while ($buf =~ /(.*)/gm) {
-      next if $linenumber++ == 1;
+      $$tot += $1, next if $linenumber++ == 1;
       my ($key, $count) = split ("\t", $1);
       $$hash{$key} = 0 if !exists $$hash{$key};
       $$hash{$key} += $count;
@@ -46,10 +46,12 @@ while (my $s = $in->subdir_next)
 }
 
 open X, ">", "$out/comb.count" or die "comb.count: $!";
+print X $$tot_comb."\n";
 print X ($_, "\t", $count_comb{$_}, "\n") foreach sort keys %count_comb;
 close X or die "comb.count: $!";
 
 open X, ">", "$out/comp.count" or die "comp.count: $!";
+print X $$tot_comp."\n";
 print X ($_, "\t", $count_comp{$_}, "\n") foreach sort keys %count_comp;
 close X or die "comp.count: $!";
 
