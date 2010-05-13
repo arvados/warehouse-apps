@@ -27,7 +27,7 @@ while (my $s = $in->subdir_next)
     elsif ($filename =~ /\.comp\b/) { $hash = \%count_comp; $tot = \$tot_comp; }
     else { next; }
 
-    print STDERR "$filename\n" if $ENV{MR_DEBUG} || $ENV{DEBUG};
+    print STDERR "$tot_comb $tot_comp $filename\n" if $ENV{MR_DEBUG} || $ENV{DEBUG};
     my $zbuf = "";
     $s->seek ($pos);
     while (my $dataref = $s->read_until ($pos+$size)) {
@@ -37,7 +37,7 @@ while (my $s = $in->subdir_next)
     anyuncompress \$zbuf => \$buf;
     my $linenumber = 1;
     while ($buf =~ /(.*)/gm) {
-      $$tot += $1, next if $linenumber++ == 1;
+      if ($linenumber++ == 1) { $$tot += $1; next; } 
       my ($key, $count) = split ("\t", $1);
       $$hash{$key} = 0 if !exists $$hash{$key};
       $$hash{$key} += $count;
