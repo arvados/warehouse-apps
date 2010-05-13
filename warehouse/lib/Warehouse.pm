@@ -2500,6 +2500,7 @@ sub _encrypt_block
     $gnupg->options->hash_init( armor    => 0,
                                 homedir => $self->{gpg_homedir},
 				meta_interactive => 0,
+				always_trust => 1,
 				);
 
     $child = open PLAIN, "-|";
