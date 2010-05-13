@@ -39,6 +39,7 @@ while (my $s = $in->subdir_next)
     while ($buf =~ /(.*)/gm) {
       if ($linenumber++ == 1) { $$tot += $1; next; } 
       my ($key, $count) = split ("\t", $1);
+      next if !$count;
       $$hash{$key} = 0 if !exists $$hash{$key};
       $$hash{$key} += $count;
     }
@@ -46,12 +47,12 @@ while (my $s = $in->subdir_next)
 }
 
 open X, ">", "$out/comb.count" or die "comb.count: $!";
-print X $$tot_comb."\n";
+print X "$tot_comb\n";
 print X ($_, "\t", $count_comb{$_}, "\n") foreach sort keys %count_comb;
 close X or die "comb.count: $!";
 
 open X, ">", "$out/comp.count" or die "comp.count: $!";
-print X $$tot_comp."\n";
+print X "$tot_comp\n";
 print X ($_, "\t", $count_comp{$_}, "\n") foreach sort keys %count_comp;
 close X or die "comp.count: $!";
 
