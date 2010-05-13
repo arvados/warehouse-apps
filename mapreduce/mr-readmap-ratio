@@ -1,0 +1,27 @@
+#!/bin/bash
+
+###MR_DESCRIPTION:add counts from bwa-readmap steps
+###MR_INPUT:manifest
+
+set -e
+set -o pipefail
+set -x
+
+tmp="$MR_JOBSTEP_TMP"
+cd "$tmp"
+
+out="$tmp/out"
+mkdir -p "$out"
+
+whget -r "$KNOB_TUMOR/" tumor/
+whget -r "$KNOB_NORMAL/" normal/
+whget "$KNOB_R_SCRIPT" script.r
+whget "$KNOB_REPEATS" repeats.txt
+
+mrs-readmap-join repeats.txt tumor/comb.count normal/comb.count >comb.count
+mrs-readmap-join repeats.txt tumor/comp.count normal/comp.count >comp.count
+
+R --vanilla < script.r
+
+mv comb.ratio comp.ratio out/
+whput -r --as-stream out/ | mrs-output

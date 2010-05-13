@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+
+my %annot;
+open REPEATS, "<", shift or die;
+while (<REPEATS>)
+{
+    chomp;
+    my ($key, $value) = split "\t";
+    $annot{$key}->{$value} = 1;
+}
+$annot{$_} = join ("|", keys %{$annot{$_}}) foreach keys %annot;
+
+my %tumor;
+open TUMOR, "<", shift or die;
+my ($tumor_tot) = <TUMOR> =~ /(\d+)/;
+while (<TUMOR>) {
+    $tumor{$1} = $2 if /^(.+?)\t(.*)/;
+}
+
+my %normal;
+open NORMAL, "<", shift or die;
+my ($normal_tot) = <NORMAL> =~ /(\d+)/;
+while (<NORMAL>) {
+    $normal{$1} = $2 if /^(.+?)\t(.*)/;
+}
+
+print "$tumor_tot\t$normal_tot\n";
+printf ("%s\t%s\t%d\t%d\n",
+	exists $annot{$_} ? $annot{$_} : "NA",
+	$_,
+	$tumor{$_},
+	$normal{$_}) foreach keys %tumor;
