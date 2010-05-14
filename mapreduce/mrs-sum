@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+
+my $ignored = 0;
+
+while (<>)
+{
+    next if /^\#/;
+    chomp;
+    if (/^(.*?)=(\d+)$/ ||
+	/^()(\d+)$/) {
+	$out{$1} += $2;
+    } else {
+	warn "Ignored input line: $_" if ++$ignored == 1;
+    }
+}
+
+warn "Ignored $ignored inputs.\n" if $ignored > 1;
+
+if (%out == 1 && exists $out{""}) { print values %out; print "\n"; }
+else { print map { "$_=$out{$_}\n" } sort keys %out; }
