@@ -71,6 +71,22 @@ if ($ENV{MR_LEVEL} == 0)
     die "error: is_colorspace(ref1) != is_colorspace(ref2)";
   }
 
+  if (defined $readlength) {
+    if ($readlength =~ /^[-da-f]{32}/) {
+      my $x = `whget $readlength`;
+      if ($x =~ /^\d+$/) {
+	$readlength = $x;
+      } else {
+	$readlength = `whget -r $readlength/`;
+      }
+    }
+    if ($readlength !~ /^\d+$/ || $readlength == 0) {
+      die "Invalid readlength specified: $readlength\n";
+    }
+  } else {
+    $readlength = "";
+  }
+
   my $num_inputs = 0;
   my $in = new Warehouse::Manifest (whc => $whc,
 				    key => $input_manifest_key);
@@ -93,13 +109,13 @@ if ($ENV{MR_LEVEL} == 0)
       push @files, $filename;
       if (scalar(@files) >= $inputs_per_node) {
 	my $filenames = join(',', @files);
-	print STDERR "+++mrjobstep 1 $ref1_basename $ref2_basename $subdir $filenames+++\n";
+	print STDERR "+++mrjobstep 1 $readlength $ref1_basename $ref2_basename $subdir $filenames+++\n";
 	@files = ();
       }
     }
     if (@files) {
 	my $filenames = join(',', @files);
-	print STDERR "+++mrjobstep 1 $ref1_basename $ref2_basename $subdir $filenames+++\n";
+	print STDERR "+++mrjobstep 1 $readlength $ref1_basename $ref2_basename $subdir $filenames+++\n";
     }
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
@@ -107,7 +123,7 @@ if ($ENV{MR_LEVEL} == 0)
 }
 if ($ENV{MR_LEVEL} == 1)
 {
-  my ($ref1_basename, $ref2_basename, $subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 4);
+  my ($readlength, $ref1_basename, $ref2_basename, $subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 4);
   my @files = split(/,/, $filenames);
 
   if ($subdir eq ".") { $subdir = ""; }
@@ -126,7 +142,7 @@ if ($ENV{MR_LEVEL} == 1)
 
     $filename =~ s{.*/}{};
 
-    if (defined $readlength && $readlength =~ /^\d+$/ && $readlength > 0) {
+    if ($readlength) {
       my $orig_filename = $filename;
       if ($filename =~ s/\.gz$//) {
 	system ("set -o pipefail; gzip -cdf < '$orig_filename' | mrs-fastq-trim '$readlength' > $filename") == 0 or die "gzip|trim exited $?";
