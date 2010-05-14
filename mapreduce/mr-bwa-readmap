@@ -80,6 +80,7 @@ if ($ENV{MR_LEVEL} == 0)
 	$readlength = `whget -r $readlength/`;
       }
     }
+    chomp ($readlength);
     if ($readlength !~ /^\d+$/ || $readlength == 0) {
       die "Invalid readlength specified: $readlength\n";
     }
@@ -142,23 +143,6 @@ if ($ENV{MR_LEVEL} == 1)
 
     $filename =~ s{.*/}{};
 
-    if ($readlength) {
-      warn "trimming reads to $readlength bp\n";
-      my $orig_filename = $filename;
-      if ($filename =~ s/\.gz$//) {
-	system ("bash -c 'set -o pipefail; gzip -cdf < \"$tmp/$orig_filename\" | mrs-fastq-trim \"$readlength\" > \"$tmp/$filename\"'") == 0 or die "gzip|trim exited $?";
-	unlink $orig_filename;
-      } else {
-	system ("perl -S -i~ mrs-fastq-trim '$readlength' '$tmp/$filename'") == 0 or die "trim exited $?";
-	unlink "$tmp/${filename}~";
-      }
-      if (-s "$tmp/$filename" == 0) {
-	warn "$orig_filename: no reads passed readlength filter\n";
-	unlink $filename;
-	next;
-      }
-    }
-
     my $readfile1 = "$tmp/${filename}";
     my $saifile1 = "$tmp/${filename}.comb.sai";
     my $saifile2 = "$tmp/${filename}.comp.sai";
@@ -174,6 +158,21 @@ if ($ENV{MR_LEVEL} == 1)
     }
 
     atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
+
+    if ($readlength) {
+      warn "trimming reads to $readlength bp\n";
+      my $orig_filename = $readfile1;
+      if ($readfile1 =~ s/\.gz$//) {
+	system ("gunzip", $orig_filename) == 0 or die "gunzip exited $?";
+      }
+      system ("perl -S -i~ mrs-fastq-trim '$readlength' '$readfile1'") == 0 or die "trim exited $?";
+      unlink $readfile1."~";
+      if (-s $readfile1 == 0) {
+	warn "$filename: no reads passed readlength filter\n";
+	unlink $readfile1, $orig_filename;
+	next;
+      }
+    }
 
     system("bash", "-c", qq{
 set -o pipefail
