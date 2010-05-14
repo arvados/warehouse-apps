@@ -72,7 +72,7 @@ if ($ENV{MR_LEVEL} == 0)
   }
 
   if (defined $readlength) {
-    if ($readlength =~ /^[-da-f]{32}/) {
+    if ($readlength =~ /^[\da-f]{32}/) {
       my $x = `whget $readlength`;
       if ($x =~ /^\d+$/) {
 	$readlength = $x;
