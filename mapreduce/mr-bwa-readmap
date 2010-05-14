@@ -8,6 +8,7 @@
 ###MR_KNOBS:REFERENCE1
 ###MR_KNOBS:REFERENCE2
 ###MR_KNOBS:MAX_MISMATCHES
+###MR_KNOBS:READLENGTH
 
 use strict; 
 use Warehouse;
@@ -28,6 +29,7 @@ my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 2 unless defined $max_mismatches;
+my $readlength = $ENV{KNOB_READLENGTH};
 my $reffile1 = "$ENV{MR_JOB_TMP}/ref1";
 my $reffile2 = "$ENV{MR_JOB_TMP}/ref2";
 
@@ -117,10 +119,28 @@ if ($ENV{MR_LEVEL} == 1)
   atomic_whget_dir($ref1_manifest_key, $reffile1);
   atomic_whget_dir($ref2_manifest_key, $reffile2);
 
+  open STDOUT, "|-", "mrs-output" or die "mrs-output: $!";
+
   foreach my $filename (@files) {
     my $bwa_sam_cmd;
 
     $filename =~ s{.*/}{};
+
+    if (defined $readlength && $readlength =~ /^\d+$/ && $readlength > 0) {
+      my $orig_filename = $filename;
+      if ($filename =~ s/\.gz$//) {
+	system ("set -o pipefail; gzip -cdf < '$orig_filename' | mrs-fastq-trim '$readlength' > $filename") == 0 or die "gzip|trim exited $?";
+	unlink $orig_filename;
+      } else {
+	system ("perl -S -i~ mrs-fastq-trim '$readlength' '$filename'") == 0 or die "trim exited $?";
+	unlink $filename."~";
+      }
+      if (-s $filename == 0) {
+	warn "$orig_filename: no reads passed readlength filter\n";
+	unlink $filename;
+	next;
+      }
+    }
 
     my $readfile1 = "$tmp/${filename}";
     my $saifile1 = "$tmp/${filename}.comb.sai";
@@ -146,7 +166,7 @@ $bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basenam
 $bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
 $bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' > '$saifile2'
 $bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1' '$reffile2/$ref2_basename' '$saifile2' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
-whput -r --as-stream '$out_path' | mrs-output
+whput -r --as-stream '$out_path'
 }) == 0
 	or die "script failed: error $! exit 0x".sprintf ("%x", $?);
 
@@ -154,6 +174,7 @@ whput -r --as-stream '$out_path' | mrs-output
     unlink $saifile1 if $saifile1;
     unlink $saifile2 if $saifile2;
   }
+  close STDOUT or die "close output pipe: $!";
   exit 0;
 }
 

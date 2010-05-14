@@ -1,0 +1,16 @@
+#!/usr/bin/perl -n
+
+BEGIN {
+    $main::targetlength = shift or die "usage: $0 targetlength";
+}
+
+next if /^\#/;
+die "input format error" unless /^\@/;
+my $bphead = $_;
+my $bpdata = <>;
+my $qhead = <>;
+my $qdata = <>;
+if ($bpdata =~ s/^(.{$targetlength})(.*)/$1/ &&
+    $qdata =~ s/^(.{$targetlength})(.*)/$1/) {
+    print ($bphead, $bpdata, $qhead, $qdata);
+}
