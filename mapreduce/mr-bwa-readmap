@@ -146,7 +146,7 @@ if ($ENV{MR_LEVEL} == 1)
       warn "trimming reads to $readlength bp\n";
       my $orig_filename = $filename;
       if ($filename =~ s/\.gz$//) {
-	system ("set -o pipefail; gzip -cdf < '$tmp/$orig_filename' | mrs-fastq-trim '$readlength' > '$tmp/$filename'") == 0 or die "gzip|trim exited $?";
+	system ("bash -c 'set -o pipefail; gzip -cdf < \"$tmp/$orig_filename\" | mrs-fastq-trim \"$readlength\" > \"$tmp/$filename\"'") == 0 or die "gzip|trim exited $?";
 	unlink $orig_filename;
       } else {
 	system ("perl -S -i~ mrs-fastq-trim '$readlength' '$tmp/$filename'") == 0 or die "trim exited $?";
