@@ -985,6 +985,7 @@ sub collate_output
 {
   Log (undef, "collate");
   $whc->write_start (1);
+  my $key;
   for (@jobstep)
   {
     next if !exists $_->{output} || $_->{exitcode} != 0;
@@ -993,6 +994,11 @@ sub collate_output
     {
       $output_in_keep ||= $output =~ / [0-9a-f]{32}\S*\+K/;
       $whc->write_data ($output);
+    }
+    elsif (@jobstep == 1)
+    {
+      $key = $output;
+      $whc->write_finish;
     }
     elsif (defined (my $outblock = $whc->fetch_block ($output)))
     {
@@ -1006,7 +1012,7 @@ sub collate_output
       $success = 0;
     }
   }
-  my $key = $whc->write_finish;
+  $key = $whc->write_finish if !defined $key;
   if ($key)
   {
     Log (undef, "outputkey $key");
