@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+my ($pairsuffix) = $ENV{LAST_FILENAME} =~ /(_[12])\.(fastq|fq)\b/;
+
+while (<>)
+{
+    next if /^\#/;
+    my $data = <>;
+    if (/^\@/) {
+	chomp ($data);
+	++$out{"count_".length($data)."bp".$pairsuffix};
+    }
+}
+
+print map { "$_=$out{$_}\n" } sort keys %out;
