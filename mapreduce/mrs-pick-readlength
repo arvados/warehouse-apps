@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+
+my %stat;
+while (<>)
+{
+    $stat{$1} += $2 if /^(.*?)=(\d+)/;
+}
+
+my %readcount;
+foreach (keys %stat)
+{
+    next unless /^count_(\d+)bp(_1)?$/;
+    my $count = $stat{$_};
+
+    my $check;
+    if ($2 && ($check = $stat{"count_${1}bp_2"}) != $count) {
+	warn "$_ count ($count) does not match *_2 count ($check), ignoring";
+	next;
+    }
+
+    my $readlength = $2 ? $1 * 2 : $1;
+
+    $readcount{$readlength} = $count;
+}
+
+my $maxbasecount = 0;
+my $bestlength;
+for my $length (keys %readcount)
+{
+    my $reads_not_shorter = 0;
+    foreach (keys %readcount) {
+	if ($_ >= $length) {
+	    $reads_not_shorter += $readcount{$_};
+	}
+    }
+    my $basecount = $length * $reads_not_shorter;
+    if ($basecount > $maxbasecount) {
+	$maxbasecount = $basecount;
+	$bestlength = $length;
+    }
+}
+
+die if !defined $bestlength;
+print "$bestlength\n";
