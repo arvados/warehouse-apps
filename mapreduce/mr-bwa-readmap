@@ -123,7 +123,7 @@ if ($ENV{MR_LEVEL} == 0)
 }
 if ($ENV{MR_LEVEL} == 1)
 {
-  my ($readlength, $ref1_basename, $ref2_basename, $subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 4);
+  my ($readlength, $ref1_basename, $ref2_basename, $subdir, $filenames) = split (/ /, $ENV{MR_INPUT}, 5);
   my @files = split(/,/, $filenames);
 
   if ($subdir eq ".") { $subdir = ""; }
@@ -143,15 +143,16 @@ if ($ENV{MR_LEVEL} == 1)
     $filename =~ s{.*/}{};
 
     if ($readlength) {
+      warn "trimming reads to $readlength bp\n";
       my $orig_filename = $filename;
       if ($filename =~ s/\.gz$//) {
-	system ("set -o pipefail; gzip -cdf < '$orig_filename' | mrs-fastq-trim '$readlength' > $filename") == 0 or die "gzip|trim exited $?";
+	system ("set -o pipefail; gzip -cdf < '$tmp/$orig_filename' | mrs-fastq-trim '$readlength' > '$tmp/$filename'") == 0 or die "gzip|trim exited $?";
 	unlink $orig_filename;
       } else {
-	system ("perl -S -i~ mrs-fastq-trim '$readlength' '$filename'") == 0 or die "trim exited $?";
-	unlink $filename."~";
+	system ("perl -S -i~ mrs-fastq-trim '$readlength' '$tmp/$filename'") == 0 or die "trim exited $?";
+	unlink "$tmp/${filename}~";
       }
-      if (-s $filename == 0) {
+      if (-s "$tmp/$filename" == 0) {
 	warn "$orig_filename: no reads passed readlength filter\n";
 	unlink $filename;
 	next;
