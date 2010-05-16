@@ -16,6 +16,9 @@ use Fcntl ':flock';
 use POSIX qw(strftime);
 
 
+$ENV{ASYNC_WRITE} = 4;
+
+
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 
 my $verbose = 1;
