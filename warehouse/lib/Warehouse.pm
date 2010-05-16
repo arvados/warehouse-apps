@@ -2473,16 +2473,19 @@ sub _encrypt_block
 
     my ($self, $dataref) = @_;
 
-    my $child;
-    $child = open ENC, "-|";
-    die "Pipe failed: $!" if !defined $child;
+    pipe READER0, WRITER0 or die "Pipe failed: $!";
+    my $child = fork;
+    defined $child or die "Fork failed: $!";
     if ($child > 0)
     {
+	close WRITER0;
 	local $/ = undef;
-	my $enc = <ENC>;
-	close ENC or die "Encrypt child failed: exit $?";
+	my $enc = <READER0>;
+	close READER0 or die "Close: $!";
+	waitpid $child, 0;
 	return \$enc;
     }
+    close READER0;
 
     local $SIG{PIPE} = "IGNORE"; # this might prevent GnuPG::Interface from crashing
 
@@ -2502,29 +2505,31 @@ sub _encrypt_block
 				always_trust => 1,
 				);
 
-    $child = open PLAIN, "-|";
-    die "Pipe failed: $!" if !defined $child;
+    pipe READER, WRITER or die "Pipe failed: $!";
+    my $child = fork;
+    defined $child or die "Fork failed: $!";
     if ($child == 0)
     {
-	close STDIN;
-	print $$dataref;
-	close STDOUT;
+	close READER;
+	print WRITER $$dataref;
+	close WRITER;
 	exit 0;
     }
+    close WRITER;
 
-    my ( $input, $output, $error, $status ) =
+    my ( $error, $status ) =
        ( IO::Handle->new(),
          IO::Handle->new(),
-         IO::Handle->new(),
-         IO::Handle->new(),
        );
-    $input->fdopen (fileno(PLAIN),"r") or die;
+    open STDIN, "<&READER" or die "dup READER: $!";
+    open STDOUT, ">&WRITER0" or die "dup WRITER0: $!";
 
-    my $handles = GnuPG::Handles->new( stdin  => $input,
-                                       stdout => $output,
+    my $handles = GnuPG::Handles->new( stdin  => fileno(STDIN),
+                                       stdout => fileno(STDOUT),
                                        stderr => $error,
                                        status => $status );
     $handles->options ('stdin', { direct => 1 } );
+    $handles->options ('stdout', { direct => 1 } );
 
     foreach my $key (@{$self->{config}->{encrypt}}) {
       $gnupg->options->push_recipients( $key );
@@ -2533,15 +2538,13 @@ sub _encrypt_block
     my $pid = $gnupg->encrypt( handles => $handles );
 
     local $/ = undef;
-    my $encrypted = <$output>;
     my $error_output = <$error>;
     my $status_output = <$status>;
 
-    close $output;
     close $error;
     close $status;
-    close $input;
 
+    waitpid $child, 0;
     waitpid $pid, 0;
 
     if ($error_output ne '') {
@@ -2550,7 +2553,6 @@ sub _encrypt_block
 
     printf STDERR "gpg: encrypt -> %s\n", Digest::MD5::md5_hex($encrypted)
 	if $ENV{DEBUG_GPG};
-    print $encrypted;
     exit 0;
 }
 
