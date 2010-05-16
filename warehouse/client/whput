@@ -304,11 +304,36 @@ sub send_file
 sub display_progress
 {
     if (@_ || $main::last_display_progress <= int(time) - $main::opt{"progress-interval"}) {
-	printf STDERR "\r%d bytes written", $main::data_bytes_written if $main::opt{"progress"};
+	printf STDERR "\r%s bytes written %s", addcommas($main::data_bytes_written), estimate_speed() if $main::opt{"progress"};
 	printf STDERR "%d bytes written\n", $main::data_bytes_written if $main::opt{"batch-progress"};
 	$main::last_display_progress = int(time);
 	print STDERR "\n" if @_ && $main::opt{"progress"};
     }
+}
+
+sub addcommas
+{
+    local $_ = shift;
+    1 while s/(.*\d)(\d\d\d)/$1,$2/;
+    $_;
+}
+
+sub estimate_speed
+{
+    push @main::speed_estimate_time, time;
+    push @main::speed_estimate_bytes, $main::data_bytes_written;
+    if (@main::speed_estimate_time > 60) {
+	shift @main::speed_estimate_time;
+	shift @main::speed_estimate_bytes;
+    }
+    if (@main::speed_estimate_time > 1) {
+	my $bytes = $main::speed_estimate_bytes[-1] - $main::speed_estimate_bytes[0];
+	my $seconds = $main::speed_estimate_time[-1] - $main::speed_estimate_time[0];
+	if ($seconds > 0) {
+	    return sprintf "%10.3f MB/s", $bytes/$seconds/1000000;
+	}
+    }
+    "";
 }
 
 sub usage
