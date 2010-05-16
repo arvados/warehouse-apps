@@ -301,8 +301,6 @@ sub _write_flush
       else
       {
 	close $r;
-	close STDOUT;
-	close STDIN;
 	select $w;
 	my $hash;
 	for (1..4)

@@ -622,8 +622,6 @@ sub write_data
 	    else
 	    {
 		close $r;
-		close STDOUT;
-		close STDIN;
 		my $hash = $self->store_block (substr ($self->{output_buffer},
 						       0, $blocksize),
 					       $self->{write_class});
@@ -2432,7 +2430,7 @@ sub _cryptmap_fetchable
 	    $self->{cryptmap_name_controllers};
 	$enchash = $self->fetch_manifest_key_by_name
 	    ($self->{config}->{_cryptmap_name_prefix}.$hash)
-	    or die "no cryptmap for $hash";
+	    or die "cryptmap: no cryptmap for $hash";
 
 	$enchash =~ s/\+G[^\+]*//g;
 	$enchash .= "+GS".length($$dataref) if $dataref;
@@ -2443,20 +2441,21 @@ sub _cryptmap_fetchable
 	($encdataref, $fetchedhash) = $self->fetch_block_ref
 	    ($enchash, { verify => 1, nowarn => 1, nodecrypt => 1 });
 	$encdataref
-	    or die "fetch $enchash fail";
+	    or die "cryptmap: fetch $enchash fail";
 	$enchash .= $& if $fetchedhash && $fetchedhash =~ /\+K\@([^\+]+)/;
 
 	if ($dataref && $$encdataref eq $$dataref)
 	{
-	    die "encrypted eq orig";
+	    die "cryptmap: encrypted eq orig";
 	}
 	$decdataref = $self->_decrypt_block ($encdataref)
-	    or die "decrypt $enchash fail";
+	    or die "cryptmap: decrypt $enchash fail";
 	if ($dataref && $$decdataref ne $$dataref)
 	{
-	    die "decrypted $enchash ne orig $hash";
+	    die "cryptmap: decrypted $enchash ne orig $hash";
 	}
     };
+    die $@ if $@ && $@ !~ /^cryptmap: /;
     $enchash = undef if $@;
 
     printf STDERR "gpg: _cryptmap_fetchable %s %s (%s)\n", $hash, $enchash, $@
@@ -2602,32 +2601,31 @@ sub _unsafe_decrypt_block
     eval "use GnuPG::Interface";
     die "_decrypt_block() GnuPG::Interface not found" if $@;
 
-    my $child = open ENC, "-|";
+    pipe READER, WRITER or die "Pipe failed: $!";
+    my $child = fork;
     die "Pipe failed: $!" if !defined $child;
     if ($child == 0)
     {
-	close STDIN;
-	print $$dataref;
+	close READER;
+	print WRITER $$dataref;
 	exit 0;
     }
+    close WRITER;
 
     my $gnupg = GnuPG::Interface->new();
     $gnupg->options->hash_init( armor    => 1,
                                 homedir => $self->{gpg_homedir},
 				meta_interactive => 0,
 				);
-    my ( $input, $output, $error, $status, $passphrase ) =
+    my ( $error, $status, $passphrase ) =
        ( IO::Handle->new(),
-         IO::Handle->new(),
-         IO::Handle->new(),
          IO::Handle->new(),
 	 IO::Handle->new(),
        );
-    $input->fdopen(fileno(ENC),"r");
-    $output->fdopen(fileno(STDOUT),"w");
 
-    my $handles = GnuPG::Handles->new( stdin      => $input,
-                                       stdout     => $output,
+    open STDIN, "<&READER" or die "dup READER: $!";
+    my $handles = GnuPG::Handles->new( stdin      => fileno(STDIN),
+                                       stdout     => fileno(STDOUT),
                                        stderr     => $error,
                                        status     => $status,
 				       passphrase => $passphrase,
@@ -2646,6 +2644,7 @@ sub _unsafe_decrypt_block
     close $error;
     close $status;
 
+    waitpid $child, 0;
     waitpid $pid, 0;
 
     if ($ENV{DEBUG_GPG} >= 2) {
