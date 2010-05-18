@@ -2544,8 +2544,9 @@ sub _encrypt_block
     close $error;
     close $status;
 
-    waitpid $child, 0;
     waitpid $pid, 0;
+    kill 1, $child;		# no use for it anyway now
+    waitpid $child, 0;
 
     if ($error_output ne '') {
       die "_encrypt_block() error encrypting:\nError output: $error_output\nStatus output: $status_output\n";
@@ -2646,8 +2647,9 @@ sub _unsafe_decrypt_block
     close $error;
     close $status;
 
-    waitpid $child, 0;
     waitpid $pid, 0;
+    kill 1, $child;		# no use for it anyway now
+    waitpid $child, 0;
 
     if ($ENV{DEBUG_GPG} >= 2) {
 	warn "Status: <<<$status_output>>> Error: <<<$error_output>>>\n";
