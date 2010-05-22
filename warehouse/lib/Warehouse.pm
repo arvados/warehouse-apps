@@ -447,9 +447,11 @@ sub store_block
 	die "Encrypted data is the same as original data"
 	    if $$dataref eq $$enc;
 
-	my $dec = $self->_decrypt_block ($enc);
-	die "Encrypted data but was not able to decrypt it"
-	    if $$dec ne $$dataref;
+	if (!$ENV{NO_DECRYPT_VERIFY}) {
+	    my $dec = $self->_decrypt_block ($enc);
+	    die "Encrypted data but was not able to decrypt it"
+		if $$dec ne $$dataref;
+	}
 
 	my $md5_enc = Digest::MD5::md5_hex ($$enc);
 	my $hash_enc = sprintf ("%s+%d+GS%d+GM%s",
@@ -2444,15 +2446,22 @@ sub _cryptmap_fetchable
 	    or die "cryptmap: fetch $enchash fail";
 	$enchash .= $& if $fetchedhash && $fetchedhash =~ /\+K\@([^\+]+)/;
 
-	if ($dataref && $$encdataref eq $$dataref)
+	if ($dataref
+	    ? ($$encdataref eq $$dataref)
+	    : (0 == $self->cmp_hash ($enchash, $hash)))
 	{
 	    die "cryptmap: encrypted eq orig";
 	}
-	$decdataref = $self->_decrypt_block ($encdataref)
-	    or die "cryptmap: decrypt $enchash fail";
-	if ($dataref && $$decdataref ne $$dataref)
-	{
-	    die "cryptmap: decrypted $enchash ne orig $hash";
+	if (!$ENV{NO_DECRYPT_VERIFY}) {
+	    $decdataref = $self->_decrypt_block ($encdataref)
+		or die "cryptmap: decrypt $enchash fail";
+	    if ($dataref
+		? ($$decdataref ne $$dataref)
+		: (0 != $self->cmp_hash (Digest::MD5::md5_hex ($$decdataref),
+					 $hash)))
+	    {
+		die "cryptmap: decrypted $enchash ne orig $hash";
+	    }
 	}
     };
     die $@ if $@ && $@ !~ /^cryptmap: /;
@@ -2750,6 +2759,17 @@ sub _verify
     warn "gpg: status: $status_output\n";
     return (0,'');
   }
+}
+
+
+sub cmp_hash
+{
+    my $self = shift;
+    my $a = shift;
+    my $b = shift;
+    $a =~ s/\+.*//;
+    $b =~ s/\+.*//;
+    return $a cmp $b;
 }
 
 
