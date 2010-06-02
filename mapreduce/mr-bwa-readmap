@@ -29,6 +29,8 @@ my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 2 unless defined $max_mismatches;
+my $seed_edit_distance = $ENV{KNOB_SEED_EDIT_DISTANCE};
+my $seed_length = $ENV{KNOB_SEED_LENGTH};
 my $readlength = $ENV{KNOB_READLENGTH};
 my $reffile1 = "$ENV{MR_JOB_TMP}/ref1";
 my $reffile2 = "$ENV{MR_JOB_TMP}/ref2";
@@ -152,6 +154,9 @@ if ($ENV{MR_LEVEL} == 1)
     die "reads are colorspace but reference is not" if $is_colorspace && !$ref_is_colorspace;
     die "reads are not colorspace but reference is" if !$is_colorspace && $ref_is_colorspace;
     my $aln_flags = $is_colorspace ? "-c" : "";
+
+    if (defined $seed_length) { $aln_flags .= " -l $seed_length"; }
+    if (defined $seed_edit_distance) { $aln_flags .= " -k $seed_edit_distance"; }
 
     if ($filename =~ /(.+)_1\.(.+)$/) {
       die "paired-end reads not supported";
