@@ -5,9 +5,12 @@
 use strict;
 
 eval {
-    # limit to 4GB virtual memory if libbsd-resource-perl is installed
+    # limit virtual memory to real mem size if libbsd-resource-perl is installed
     use BSD::Resource;
-    setrlimit(RLIMIT_AS, 2**32, 2**32);
+    my $slots = $ENV{MR_NODE_SLOTS} || 1;
+    my ($memtotal) = `cat /proc/meminfo` =~ /MemTotal:\s*(\d+)/;
+    $memtotal = 2**23 if $memtotal < 2**18; # assume 8GB if meminfo seems wrong
+    setrlimit(RLIMIT_AS, int(($memtotal<<10)/$slots), int(($memtotal<<10)/$slots));
 };
 
 $ENV{PATH} = "$ENV{MR_REVISION_INSTALLDIR}/bin"
