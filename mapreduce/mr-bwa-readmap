@@ -183,10 +183,17 @@ if ($ENV{MR_LEVEL} == 1)
 set -o pipefail
 set -e
 set -x
-$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basename' '$readfile1' > '$saifile1'
-$bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
-$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' > '$saifile2'
-$bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1' '$reffile2/$ref2_basename' '$saifile2' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
+$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basename' '$readfile1' | gzip > '$saifile1.gz'
+rm -f '$saifile1.fifo' || true
+mkfifo '$saifile1.fifo'
+gunzip < '$saifile1.gz' > '$saifile1.fifo' &
+$bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
+$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' > '$saifile2.gz'
+rm -f '$saifile1.fifo' '$saifile2.fifo' || true
+mkfifo '$saifile1.fifo' '$saifile2.fifo'
+gunzip < '$saifile1.gz' > '$saifile1.fifo' &
+gunzip < '$saifile2.gz' > '$saifile2.fifo' &
+$bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
 whput -r --as-stream '$out_path'
 }) == 0
 	or die "script failed: error $! exit 0x".sprintf ("%x", $?);
