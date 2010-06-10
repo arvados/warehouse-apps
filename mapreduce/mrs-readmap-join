@@ -8,7 +8,7 @@ while (<REPEATS>)
     my ($key, $value) = split "\t";
     $annot{$key}->{$value} = 1;
 }
-$annot{$_} = join ("|", keys %{$annot{$_}}) foreach keys %annot;
+$annot{$_} = join ("|", keys %{$annot{$_}}) foreach sort keys %annot;
 
 my %tumor;
 open TUMOR, "<", shift or die;
@@ -29,4 +29,4 @@ printf ("%s\t%s\t%d\t%d\n",
 	exists $annot{$_} ? $annot{$_} : "NA",
 	$_,
 	$tumor{$_},
-	$normal{$_}) foreach keys %tumor;
+	$normal{$_}) foreach sort keys %tumor;
