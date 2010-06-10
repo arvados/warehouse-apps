@@ -39,7 +39,7 @@ while (my $s = $in->subdir_next)
     while ($buf =~ /(.*)/gm) {
       if ($linenumber++ == 1) { $$tot += $1; next; } 
       my ($key, $count) = split ("\t", $1);
-      next if !$count;
+      next if !defined $count;
       $$hash{$key} = 0 if !exists $$hash{$key};
       $$hash{$key} += $count;
     }
