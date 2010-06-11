@@ -122,6 +122,14 @@ sub write
 
 
 
+=head2 rewind
+
+    $manifest->rewind;
+
+Read from the top of the manifest in the next subdir_next() call.
+
+=cut
+
 sub rewind
 {
   my $self = shift;
@@ -129,6 +137,17 @@ sub rewind
 }
 
 
+
+=head2 subdir_next
+
+    while (my $stream = $manifest->subdir_next) {
+	# ...
+    }
+
+Return a Warehouse::Stream(3pm) object representing the next line of
+the manifest.
+
+=cut
 
 sub subdir_next
 {
