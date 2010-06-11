@@ -995,10 +995,10 @@ sub store_in_keep
 	$md5 = Digest::MD5::md5_hex ($$dataref);
 	@hints = length($$dataref);
 
-	warn "store_in_keep > config->encrypt\n" if $ENV{DEBUG_GPG} >= 2;
+	warn "$$ store_in_keep > config->encrypt\n" if $ENV{DEBUG_GPG} >= 2;
 	if (@ { $self->{config}->{encrypt} } && (!exists $arg{noencrypt} || ($arg{noencrypt} != 1)))
 	{
-	    warn "store_in_keep > config->encrypt >\n" if $ENV{DEBUG_GPG} >= 2;
+	    warn "$$ store_in_keep > config->encrypt >\n" if $ENV{DEBUG_GPG} >= 2;
 
 	    my ($enchash, $encdataref)
 		= $self->_cryptmap_fetchable ($dataref, "$md5+$hints[0]");
@@ -1769,7 +1769,7 @@ sub _sign
 
     local $SIG{PIPE} = "IGNORE"; # this might prevent GnuPG::Interface from crashing
 
-    printf STDERR "gpg: sign %s\n", Digest::MD5::md5_hex($text)
+    printf STDERR "$$ gpg: sign %s\n", Digest::MD5::md5_hex($text)
 	if $ENV{DEBUG_GPG};
 
     my $gnupg = GnuPG::Interface->new();
@@ -2302,7 +2302,7 @@ sub _cryptsetup
     $self->{config}->{encrypt} ||= [];
     $ENV{ENCRYPT_TO} ||= $ENV{ENCRYPT_ALL};
 
-    warn "ENCRYPT_TO => $ENV{ENCRYPT_TO}\n" if $ENV{"DEBUG_GPG"};
+    warn "$$ ENCRYPT_TO => $ENV{ENCRYPT_TO}\n" if $ENV{"DEBUG_GPG"};
 
     if ($ENV{ENCRYPT_TO} =~ /[^\s,]/)
     {
@@ -2333,7 +2333,7 @@ sub _cryptsetup
 	return;
     }
 
-    warn "GPG homedir = $self->{gpg_homedir}\n" if $ENV{DEBUG_GPG};
+    warn "$$ gpg homedir = $self->{gpg_homedir}\n" if $ENV{DEBUG_GPG};
 
     eval "use GnuPG::Interface";
     return if $@;
@@ -2392,7 +2392,7 @@ sub _cryptmap_write
     my $cryptmap_name = $self->{config}->{_cryptmap_name_prefix}.$plainhash;
     my $oldenchash = $self->fetch_manifest_key_by_name ($cryptmap_name);
 
-    printf STDERR ("gpg: _cryptmap_write %s %s -> %s\n",
+    printf STDERR ("$$ gpg: _cryptmap_write %s %s -> %s\n",
 		   $cryptmap_name,
 		   $oldenchash,
 		   $enchash,
@@ -2467,7 +2467,7 @@ sub _cryptmap_fetchable
     die $@ if $@ && $@ !~ /^cryptmap: /;
     $enchash = undef if $@;
 
-    printf STDERR "gpg: _cryptmap_fetchable %s %s (%s)\n", $hash, $enchash, $@
+    printf STDERR "$$ gpg: _cryptmap_fetchable %s %s (%s)\n", $hash, $enchash, $@
 	if $ENV{DEBUG_GPG};
 
     return ($enchash, $encdataref, $decdataref) if wantarray;
@@ -2498,7 +2498,7 @@ sub _encrypt_block
 
     local $SIG{PIPE} = "IGNORE"; # this might prevent GnuPG::Interface from crashing
 
-    printf STDERR "gpg: encrypt %s\n", Digest::MD5::md5_hex($$dataref)
+    printf STDERR "$$ gpg: encrypt %s\n", Digest::MD5::md5_hex($$dataref)
 	if $ENV{DEBUG_GPG};
 
     eval "use GnuPG::Interface";
@@ -2561,7 +2561,7 @@ sub _encrypt_block
       die "_encrypt_block() error encrypting:\nError output: $error_output\nStatus output: $status_output\n";
     }
 
-    printf STDERR "gpg: encrypt -> %s\n", Digest::MD5::md5_hex($encrypted)
+    printf STDERR "$$ gpg: encrypt -> %s\n", Digest::MD5::md5_hex($encrypted)
 	if $ENV{DEBUG_GPG};
     exit 0;
 }
@@ -2579,7 +2579,7 @@ sub _decrypt_block
 
     local $SIG{PIPE} = "IGNORE"; # this might prevent GnuPG::Interface from crashing
 
-    printf STDERR "gpg: decrypt %s\n", Digest::MD5::md5_hex($$dataref)
+    printf STDERR "$$ gpg: decrypt %s\n", Digest::MD5::md5_hex($$dataref)
 	if $ENV{DEBUG_GPG};
 
     my $child = open D, "-|";
@@ -2597,10 +2597,10 @@ sub _decrypt_block
     if (!close D) { $decrypted = ""; }
 
     if ($ENV{"DEBUG_GPG"} && $decrypted eq "") {
-	warn "gpg: decrypt outbytes=0, returning input unchanged\n";
+	warn "$$ gpg: decrypt outbytes=0, returning input unchanged\n";
     }
     elsif ($ENV{"DEBUG_GPG"}) {
-	warn "gpg: decrypt inbytes=".length($$dataref)." outbytes=".length($decrypted)."\n";
+	warn "$$ gpg: decrypt inbytes=".length($$dataref)." outbytes=".length($decrypted)."\n";
     }
     return $dataref if $decrypted eq "";
     return \$decrypted;
@@ -2661,7 +2661,7 @@ sub _unsafe_decrypt_block
     waitpid $child, 0;
 
     if ($ENV{DEBUG_GPG} >= 2) {
-	warn "Status: <<<$status_output>>> Error: <<<$error_output>>>\n";
+	warn "$$ Status: <<<$status_output>>> Error: <<<$error_output>>>\n";
     }
 
     if ($status_output =~ /\b(ERROR|NODATA)\b/) {
@@ -2703,7 +2703,7 @@ sub _unsafe_decrypt_block
 
 sub _verify
 {
-  warn "gpg: _verify\n" if $ENV{DEBUG_GPG};
+  warn "$$ gpg: _verify\n" if $ENV{DEBUG_GPG};
 
   my $self = shift;
   my $text = shift;
@@ -2744,7 +2744,7 @@ sub _verify
   close $status;
 
   waitpid $pid, 0;
-  warn "status_output is $status_output\n" if $ENV{DEBUG_GPG};
+  warn "$$ status_output is $status_output\n" if $ENV{DEBUG_GPG};
 
   if (($status_output =~ /VALIDSIG/) && ($status_output =~ /GOODSIG/)) {
     warn "gpg: good signature, keyid=$keyid\n" if $ENV{DEBUG_GPG};
