@@ -22,7 +22,6 @@ $ENV{ASYNC_WRITE} = 4;
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 
 my $verbose = 1;
-my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE};
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $chunksize = $ENV{KNOB_CHUNKSIZE};
@@ -41,7 +40,8 @@ if (defined $reference_manifest_key) {
 
 if ($ENV{MR_LEVEL} == 0)
 {
-  my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT});
+  my ($manifest_name, $want_path) = split ("/", $ENV{MR_INPUT}, 2);
+  my $m = new Warehouse::Manifest (whc => $whc, key => $manifest_name);
   $m->rewind;
   my $stream_index = -1;
   while (my $s = $m->subdir_next) {
@@ -50,6 +50,11 @@ if ($ENV{MR_LEVEL} == 0)
     while (my ($pos, $size, $filename) = $s->file_next)
     {
       last if !defined $pos;
+      if (defined $want_path) {
+	my $pathname = $s->name . "/" . $filename;
+	$pathname =~ s/^\.\///;
+	next if $want_path ne $pathname;
+      }
       next if $filename !~ /^(.*)\.[bs]am$/;
 
       print STDERR "+++mrjobstep 1 $stream_index $pos:$size:$filename+++\n";
