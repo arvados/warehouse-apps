@@ -2526,17 +2526,13 @@ sub _encrypt_block
     }
     close WRITER;
 
-    my ( $error, $status ) =
-       ( IO::Handle->new(),
-         IO::Handle->new(),
-       );
+    my $error = IO::Handle->new();
     open STDIN, "<&READER" or die "dup READER: $!";
     open STDOUT, ">&WRITER0" or die "dup WRITER0: $!";
 
     my $handles = GnuPG::Handles->new( stdin  => fileno(STDIN),
                                        stdout => fileno(STDOUT),
-                                       stderr => $error,
-                                       status => $status );
+                                       stderr => $error );
     $handles->options ('stdin', { direct => 1 } );
     $handles->options ('stdout', { direct => 1 } );
 
@@ -2548,17 +2544,15 @@ sub _encrypt_block
 
     local $/ = undef;
     my $error_output = <$error>;
-    my $status_output = <$status>;
 
     close $error;
-    close $status;
 
     waitpid $pid, 0;
     kill 1, $child;		# no use for it anyway now
     waitpid $child, 0;
 
     if ($error_output ne '') {
-      die "_encrypt_block() error encrypting:\nError output: $error_output\nStatus output: $status_output\n";
+      die "_encrypt_block() error encrypting:\nError output: $error_output\n";
     }
 
     printf STDERR "$$ gpg: encrypt -> %s\n", Digest::MD5::md5_hex($encrypted)
