@@ -1,7 +1,48 @@
 #!/usr/bin/perl
 
+my %out_1;
+my %out_2;
+
+my $pair_select = 0 + $ENV{PAIR_SELECT};
+
 while (<>)
 {
     my @F = split;
-    print "\@$F[0]\n$F[9]\n+\n$F[10]\n";
+    my $out = "\@$F[0]\n$F[9]\n+\n$F[10]\n";
+    if ($F[1] & 1) {
+	next if $pair_select == 0;
+	if ($F[1] & 0x40) {	# first in pair
+	    if (exists $out_2{$F[0]}) {
+		print $out if $pair_select == 1;
+		print $out_2{$F[0]} if $pair_select == 2;
+		delete $out_2{$F[0]};
+	    } else {
+		$out_1{$F[0]} = $out;
+	    }
+	} elsif ($F[1] & 0x80) { # second in pair
+	    if (exists $out_1{$F[0]}) {
+		print $out_1{$F[0]} if $pair_select == 1;
+		print $out if $pair_select == 2;
+		delete $out_1{$F[0]};
+	    } else {
+		$out_2{$F[0]} = $out;
+	    }
+	} else {		# part of an unordered pair
+	    if (exists $out_1{$F[0]}) {
+		print $out_1{$F[0]} if $pair_select == 1;
+		print $out if $pair_select == 2;
+		delete $out_1{$F[0]};
+	    } else {
+		$out_1{$F[0]} = $out;
+	    }
+	}
+    } else {
+	print $out if $pair_select == 0;
+    }
+}
+
+if (%out_1 + %out_2) {
+    warn sprintf ("giving up on %d _1 orphans and %d _2 orphans",
+		  scalar (keys %out_1),
+		  scalar (keys %out_2));
 }
