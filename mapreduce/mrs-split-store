@@ -6,6 +6,9 @@ use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
 
+$ENV{MR_JOBSTEP_TMP} ||= $ENV{TMP};
+$ENV{MR_JOBSTEP_TMP} ||= "/tmp";
+
 my %opt;
 while ($ARGV[0] =~ /^-/)
 {
@@ -41,9 +44,10 @@ $stream->write_start (make_filename ($filename_pattern, 0));
 my $lines_out = 0;
 my $chunks_out = 0;
 my $files_out = 0;
+my $empty = 1;
 while (defined ($_ = <STDIN>))
 {
-  if ($lines_out == $opt{"lines"}) {
+  if ($lines_out == $opt{"lines"} && $opt{"lines"} != 0) {
     $lines_out = 0;
     ++$chunks_out;
     do { flush_z ($stream); open_z (); } if $opt{"z"};
@@ -51,20 +55,29 @@ while (defined ($_ = <STDIN>))
     if ($files_out == $opt{"filesperstream"}) {
       $files_out = 0;
       print $stream->as_string;
+      print STDERR $stream->as_string;
+
       $stream = new Warehouse::Stream (whc => $whc);
       $stream->clear;
       $stream->name ($subdir);
     }
-    $stream->write_start (make_filename ($filename_pattern, $chunks_out));
+    $empty = 1;
     ++$files_out;
+  }
+  if ($empty) {
+    $empty = 0;
+    $stream->write_start (make_filename ($filename_pattern, $chunks_out));
   }
   if ($opt{"z"}) { print Z $_ or die "gzip: $!" }
   else { $stream->write_data (\$_); }
   ++$lines_out;
 }
-flush_z ($stream) if $opt{"z"};
-$stream->write_finish;
-print $stream->as_string;
+if (!$empty) {
+  flush_z ($stream) if $opt{"z"};
+  $stream->write_finish;
+  print $stream->as_string;
+  print STDERR $stream->as_string;
+}
 
 sub make_filename
 {
