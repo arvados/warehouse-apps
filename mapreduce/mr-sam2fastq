@@ -57,7 +57,9 @@ if ($ENV{MR_LEVEL} == 0)
       }
       next if $filename !~ /^(.*)\.[bs]am$/;
 
-      print STDERR "+++mrjobstep 1 $stream_index $pos:$size:$filename+++\n";
+      print STDERR "+++mrjobstep 1 $stream_index 0 $pos:$size:$filename+++\n";
+      print STDERR "+++mrjobstep 1 $stream_index 1 $pos:$size:$filename+++\n";
+      print STDERR "+++mrjobstep 1 $stream_index 2 $pos:$size:$filename+++\n";
     }
   }
 
@@ -66,8 +68,13 @@ if ($ENV{MR_LEVEL} == 0)
 }
 if ($ENV{MR_LEVEL} == 1)
 {
-  my ($want_stream_index, $file_list) = split (" ", $ENV{MR_INPUT}, 2);
+  my ($want_stream_index, $pair_select, $file_list) = split (" ", $ENV{MR_INPUT}, 3);
   my $stream;
+
+  $ENV{PAIR_SELECT} = $pair_select;
+  my $pairsuffix = "";
+  $pairsuffix = "_1" if $pair_select == 1;
+  $pairsuffix = "_2" if $pair_select == 2;
 
   my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
   $m->rewind;
@@ -102,7 +109,7 @@ if ($ENV{MR_LEVEL} == 1)
     my $store_cmd;
     if ($chunksize > 0) {
       my $chunklines = 4 * $chunksize;
-      $store_cmd = "mrs-split-store -z --lines=$chunklines --filesperstream=10 . \"$filename.{}.fastq.gz\"";
+      $store_cmd = "mrs-split-store -z --lines=$chunklines --filesperstream=10 . \"$filename.{}$pairsuffix.fastq.gz\"";
     } else {
       $filename =~ s/$/.fastq.gz/;
       $store_cmd = "gzip -9n | whput --as-stream --use-filename=\"$filename\" -";
