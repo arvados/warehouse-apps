@@ -131,6 +131,7 @@ my $max_ncpus;
 map { $max_ncpus = $1 if /^STEPSPERNODE=(.*)/ } split ("\n", $$Job{knobs});
 $max_ncpus = $1 if $$Job{nodes} =~ /\&(\d+)/;
 $max_ncpus = $$Job{stepspernode} if $$Job{stepspernode};
+my $maxstepspernode;
 
 
 
@@ -152,6 +153,7 @@ foreach (@sinfo)
 {
   my ($ncpus, $slurm_nodelist) = split;
   $ncpus = $max_ncpus if defined ($max_ncpus) && $ncpus > $max_ncpus && $max_ncpus > 0;
+  $maxstepspernode = $ncpus if !defined $maxstepspernode || $maxstepspernode < $ncpus;
 
   my @nodelist;
   while ($slurm_nodelist =~ s/^([^\[,]+?(\[.*?\])?)(,|$)//)
@@ -525,6 +527,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MR_SLOT"} = $childslotname;
     $ENV{"MR_JOB_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work";
     $ENV{"MR_JOBSTEP_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work/".$childslotname;
+    $ENV{"MR_NODE_SLOTS"} = $maxstepspernode;
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
