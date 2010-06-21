@@ -57,9 +57,13 @@ if ($ENV{MR_LEVEL} == 0)
       }
       next if $filename !~ /^(.*)\.[bs]am$/;
 
-      print STDERR "+++mrjobstep 1 $stream_index 0 $pos:$size:$filename+++\n";
-      print STDERR "+++mrjobstep 1 $stream_index 1 $pos:$size:$filename+++\n";
-      print STDERR "+++mrjobstep 1 $stream_index 2 $pos:$size:$filename+++\n";
+      if ($ENV{KNOB_COLLATE_PAIRS}) {
+	print STDERR "+++mrjobstep 1 $stream_index 0 $pos:$size:$filename+++\n";
+	print STDERR "+++mrjobstep 1 $stream_index 1 $pos:$size:$filename+++\n";
+	print STDERR "+++mrjobstep 1 $stream_index 2 $pos:$size:$filename+++\n";
+      } else {
+	print STDERR "+++mrjobstep 1 $stream_index  $pos:$size:$filename+++\n";
+      }
     }
   }
 
