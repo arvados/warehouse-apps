@@ -62,7 +62,7 @@ if ($ENV{MR_LEVEL} == 0)
 	print STDERR "+++mrjobstep 1 $stream_index 1 $pos:$size:$filename+++\n";
 	print STDERR "+++mrjobstep 1 $stream_index 2 $pos:$size:$filename+++\n";
       } else {
-	print STDERR "+++mrjobstep 1 $stream_index  $pos:$size:$filename+++\n";
+	print STDERR "+++mrjobstep 1 $stream_index * $pos:$size:$filename+++\n";
       }
     }
   }

@@ -9,7 +9,7 @@ while (<>)
 {
     my @F = split;
     my $out = "\@$F[0]\n$F[9]\n+\n$F[10]\n";
-    if (length ($ENV{PAIR_SELECT}) &&
+    if ($ENV{PAIR_SELECT} ne '*' &&
 	($F[1] & 1)) {
 	next if $pair_select == 0;
 	if ($F[1] & 0x40) {	# first in pair
