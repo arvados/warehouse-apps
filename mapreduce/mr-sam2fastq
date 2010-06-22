@@ -50,7 +50,7 @@ if ($ENV{MR_LEVEL} == 0)
     while (my ($pos, $size, $filename) = $s->file_next)
     {
       last if !defined $pos;
-      if (defined $want_path) {
+      if (length $want_path) {
 	my $pathname = $s->name . "/" . $filename;
 	$pathname =~ s/^\.\///;
 	next if $want_path ne $pathname;
