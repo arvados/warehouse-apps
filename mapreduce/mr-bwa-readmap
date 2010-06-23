@@ -187,13 +187,21 @@ $bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basenam
 rm -f '$saifile1.fifo' || true
 mkfifo '$saifile1.fifo'
 gunzip < '$saifile1.gz' > '$saifile1.fifo' &
+job1=`jobs -p %+`
 $bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
-$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' > '$saifile2.gz'
+wait $job1
+
+$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' | gzip > '$saifile2.gz'
 rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 mkfifo '$saifile1.fifo' '$saifile2.fifo'
 gunzip < '$saifile1.gz' > '$saifile1.fifo' &
+job1=`jobs -p %+`
 gunzip < '$saifile2.gz' > '$saifile2.fifo' &
+job2=`jobs -p %+`
 $bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
+wait $job1
+wait $job2
+
 whput -r --as-stream '$out_path'
 }) == 0
 	or die "script failed: error $! exit 0x".sprintf ("%x", $?);
