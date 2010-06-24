@@ -8,7 +8,22 @@ my $pair_select = 0 + $ENV{PAIR_SELECT};
 while (<>)
 {
     my @F = split;
-    my $out = "\@$F[0]\n$F[9]\n+\n$F[10]\n";
+    my $out;
+    if ($ENV{KNOB_COLORSPACE}) {
+	my ($csread, $csqual);
+	for (@F[10..$#F]) {
+	    if (/CS:Z:(.*)/) { $csread = $1; }
+	    elsif (/CQ:Z:(.*)/) { $csqual = $1; }
+	    last if defined $csread && defined $csqual;
+	}
+	next if !defined $csread || !defined $csqual;
+	$csread =~ tr/0123/ACGT/;
+	$csread =~ s/[^ACGT]/N/g;
+	$csread =~ s/^.//;
+	$out = "\@$F[0]\n$csread\n+\n$csqual\n";
+    } else {
+	$out = "\@$F[0]\n$F[9]\n+\n$F[10]\n";
+    }
     if ($ENV{PAIR_SELECT} ne '*' &&
 	($F[1] & 1)) {
 	next if $pair_select == 0;

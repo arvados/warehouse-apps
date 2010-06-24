@@ -108,12 +108,13 @@ if ($ENV{MR_LEVEL} == 1)
     last if !defined $pos;
     $filename =~ s/\.([bs])am$//;
     my $samtools_view_s_flag = $1 eq "s" ? "-S" : "";
+    my $cs_suffix = $ENV{KNOB_COLORSPACE} ? ".cs" : "";
     $filename =~ s/[\'\"\s]//g;
 
     my $store_cmd;
     if ($chunksize > 0) {
       my $chunklines = 4 * $chunksize;
-      $store_cmd = "mrs-split-store -z --lines=$chunklines --filesperstream=10 . \"$filename.{}$pairsuffix.fastq.gz\"";
+      $store_cmd = "mrs-split-store -z --lines=$chunklines --filesperstream=10 . \"$filename.{}$pairsuffix$cs_suffix.fastq.gz\"";
     } else {
       $filename =~ s/$/.fastq.gz/;
       $store_cmd = "gzip -9n | whput --as-stream --use-filename=\"$filename\" -";
