@@ -64,10 +64,10 @@ while (!$main::DRAIN || $main::children > 0)
     $dbh->do ("update mrjob
 	       set jobmanager_id=-1, success=0, finishtime=now()
 	       where jobmanager_id is null
-	       and submittime<date_add(now(),interval -1 day)");
+	       and submittime<date_add(now(),interval -7 day)");
     $sth = $dbh->prepare ("select id, nodes, revision, knobs from mrjob
                            where jobmanager_id is null
-                           and submittime>date_add(now(),interval -1 day)");
+                           and submittime>date_add(now(),interval -7 day)");
     $sth->execute or die $dbh->errstr;
   }
 
