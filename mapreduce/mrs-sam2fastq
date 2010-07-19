@@ -20,9 +20,9 @@ while (<>)
 	$csread =~ tr/0123/ACGT/;
 	$csread =~ s/[^ACGT]/N/g;
 	$csread =~ s/^.//;
-	$out = "\@$F[0]\n$csread\n+\n$csqual\n";
+	$out = "\@F=$F[1]:$F[0]\n$csread\n+\n$csqual\n";
     } else {
-	$out = "\@$F[0]\n$F[9]\n+\n$F[10]\n";
+	$out = "\@F=$F[1]:$F[0]\n$F[9]\n+\n$F[10]\n";
     }
     if ($ENV{PAIR_SELECT} ne '*' &&
 	($F[1] & 1)) {
