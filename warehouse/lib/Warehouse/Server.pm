@@ -180,10 +180,20 @@ sub run
 	    if ($r->method eq "GET" and $r->url->path eq "/list")
 	    {
 		my $resp = HTTP::Response->new (200, "OK", []);
+		my $where = "";
+		my @bindvars;
+		for (split (/;/, $r->url->query))
+		{
+		    if (/^search=(.*)/s) 
+		    {
+			$where = "where name regexp ?";
+			push @bindvars, CGI->unescape($1);
+		    }
+		}
 		$resp->{sth} = $self->{dbh}->prepare
-		    ("select mkey, name, keyid from manifests order by name")
+		    ("select mkey, name, keyid from manifests $where order by name")
 		    or die DBI->errstr;
-		$resp->{sth}->execute()
+		$resp->{sth}->execute(@bindvars)
 		    or die DBI->errstr;
 		$resp->{md5_ctx} = Digest::MD5->new;
 		$resp->{sth_finished} = 0;

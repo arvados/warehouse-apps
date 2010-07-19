@@ -1514,8 +1514,14 @@ sub fetch_manifest_key_by_name
 sub list_manifests
 {
   my $self = shift;
+  my %what = @_;
 
-  my $url = "http://".$self->{name_warehouse_servers}."/list";
+  my $url = "http://".$self->{name_warehouse_servers}."/list?";
+  while (@_)
+  {
+      $url .= ";".CGI->escape(shift);
+      $url .= "=".CGI->escape(shift);
+  }
   my $req = HTTP::Request->new (GET => $url);
   my $r = $self->{ua}->request ($req);
 

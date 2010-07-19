@@ -395,7 +395,7 @@ sub keep
 
 sub manifest_list
 {
-    foreach my $keyname ($whc->list_manifests)
+    foreach my $keyname ($whc->list_manifests (%opt))
     {
 	my ($key, $name, $keyid) = @$keyname;
 	if ((!defined $opt{key} || $key eq $opt{key})
