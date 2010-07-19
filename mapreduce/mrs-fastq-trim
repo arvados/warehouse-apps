@@ -10,6 +10,13 @@ my $bphead = $_;
 my $bpdata = <>;
 my $qhead = <>;
 my $qdata = <>;
+if ($bphead =~ m/^\@F=(\d+)/ && $1 & 0x10) {
+    # if the read has been reversed in previous processing,
+    # trim off the leftmost bases/transitions instead of rightmost
+    for ($bpdata, $qdata) {
+	s/(.*)(.{$targetlength})/$2/;
+    }
+}
 if ($bpdata =~ s/^(.{$targetlength})(.*)/$1/ &&
     $qdata =~ s/^(.{$targetlength})(.*)/$1/) {
     print ($bphead, $bpdata, $qhead, $qdata);
