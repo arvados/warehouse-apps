@@ -29,6 +29,7 @@ $chunksize = 1_000_000 if !defined $chunksize;
 my $reffile = "$tmp/ref";
 
 my $sam_path="$tmp/sam";
+atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
 
 my $whc = new Warehouse;
 
@@ -57,12 +58,41 @@ if ($ENV{MR_LEVEL} == 0)
       }
       next if $filename !~ /^(.*)\.[bs]am$/;
 
-      if ($ENV{KNOB_COLLATE_PAIRS}) {
-	print STDERR "+++mrjobstep 1 $stream_index 0 $pos:$size:$filename+++\n";
-	print STDERR "+++mrjobstep 1 $stream_index 1 $pos:$size:$filename+++\n";
-	print STDERR "+++mrjobstep 1 $stream_index 2 $pos:$size:$filename+++\n";
-      } else {
-	print STDERR "+++mrjobstep 1 $stream_index * $pos:$size:$filename+++\n";
+      $s->seek ($pos);
+      my $want = $size > 1000000 ? 1000000 : $size;
+      my $samheader = "";
+      while (my $dataref = $s->read_until ($pos + $want)) {
+	$samheader .= $$dataref;
+      }
+      my $child = open H, "-|";
+      die "no fork" if !defined $child;
+      if ($child == 0) {
+	my $viewflag = $filename =~ /\.sam$/i ? "-S" : "";
+	open STDOUT, "|$sam_path/samtools view -H $viewflag -";
+	print STDOUT $samheader;
+	exit;
+      }
+      my %rg;
+      while (<H>) {
+	next unless /^\@RG\t/;
+	my ($rg) = /\tID:(\S+)/;
+	next if ++$rg{$rg} > 1;
+	if ($ENV{KNOB_COLLATE_PAIRS}) {
+	  print STDERR "+++mrjobstep 1 $rg $stream_index 0 $pos:$size:$filename+++\n";
+	  print STDERR "+++mrjobstep 1 $rg $stream_index 1 $pos:$size:$filename+++\n";
+	  print STDERR "+++mrjobstep 1 $rg $stream_index 2 $pos:$size:$filename+++\n";
+	} else {
+	  print STDERR "+++mrjobstep 1 $rg $stream_index * $pos:$size:$filename+++\n";
+	}
+      }
+      if (!%rg) {
+	if ($ENV{KNOB_COLLATE_PAIRS}) {
+	  print STDERR "+++mrjobstep 1  $stream_index 0 $pos:$size:$filename+++\n";
+	  print STDERR "+++mrjobstep 1  $stream_index 1 $pos:$size:$filename+++\n";
+	  print STDERR "+++mrjobstep 1  $stream_index 2 $pos:$size:$filename+++\n";
+	} else {
+	  print STDERR "+++mrjobstep 1  $stream_index * $pos:$size:$filename+++\n";
+	}
       }
     }
   }
@@ -72,13 +102,15 @@ if ($ENV{MR_LEVEL} == 0)
 }
 if ($ENV{MR_LEVEL} == 1)
 {
-  my ($want_stream_index, $pair_select, $file_list) = split (" ", $ENV{MR_INPUT}, 3);
+  my ($rg, $want_stream_index, $pair_select, $file_list) = split (" ", $ENV{MR_INPUT}, 4);
   my $stream;
 
   $ENV{PAIR_SELECT} = $pair_select;
   my $pairsuffix = "";
   $pairsuffix = "_1" if $pair_select == 1;
   $pairsuffix = "_2" if $pair_select == 2;
+
+  my $rgsuffix = $rg eq "" ? "" : ".rg$rg";
 
   my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
   $m->rewind;
@@ -97,7 +129,6 @@ if ($ENV{MR_LEVEL} == 1)
   mkdir $dir or die "mkdir $dir";
   chdir $dir or die "chdir $dir: $!";
 
-  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   my $s = new Warehouse::Stream (whc => $whc, subdir => $stream);
 
   my $outpid = open STDOUT, "| mrs-output" or die "mrs-output: $! $?";
@@ -114,13 +145,13 @@ if ($ENV{MR_LEVEL} == 1)
     my $store_cmd;
     if ($chunksize > 0) {
       my $chunklines = 4 * $chunksize;
-      $store_cmd = "mrs-split-store -z --lines=$chunklines --filesperstream=10 . \"$filename.{}$pairsuffix$cs_suffix.fastq.gz\"";
+      $store_cmd = "mrs-split-store -z --lines=$chunklines --filesperstream=10 . \"$filename.{}$rgsuffix$pairsuffix$cs_suffix.fastq.gz\"";
     } else {
-      $filename =~ s/$/.fastq.gz/;
-      $store_cmd = "gzip -9n | whput --as-stream --use-filename=\"$filename\" -";
+      $store_cmd = "gzip -9n | whput --as-stream --use-filename=\"$filename$rgsuffix$pairsuffix$cs_suffix.fastq.gz\" -";
     }
     my $index_args = defined ($index_path) ? "-t $index_path" : "";
-    open WHPUT, "| bash -c 'set -o pipefail; exec $sam_path/samtools view $samtools_view_s_flag $index_args - | mrs-sam2fastq | $store_cmd'"
+    my $rg_args = $rg eq "" ? "" : "-r \"$rg\"";
+    open WHPUT, "| bash -c 'set -o pipefail; exec $sam_path/samtools view $samtools_view_s_flag $rg_args $index_args - | mrs-sam2fastq | $store_cmd'"
 	or die "no fork";
     $s->seek ($pos);
     while (my $dataref = $s->read_until ($pos+$size)) {
