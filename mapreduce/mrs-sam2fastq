@@ -22,6 +22,13 @@ while (<>)
 	$csread =~ s/^.//;
 	$out = "\@$F[0]\n$csread\n+\n$csqual\n";
     } else {
+	if ($F[1] & 0x10) {
+	    $F[9] =~ tr:ACGTacgt:TGCAtgca:;
+	    die if $F[9] =~ m:[^NACGT]:i;
+	    $F[9] = reverse $F[9];
+	    $F[10] = reverse $F[10];
+	    $F[1] = $F[1] & ~0x10;
+	}
 	$out = "\@F=$F[1]:$F[0]\n$F[9]\n+\n$F[10]\n";
     }
     if ($ENV{PAIR_SELECT} ne '*' &&
