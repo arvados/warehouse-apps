@@ -159,8 +159,8 @@ if ($ENV{MR_LEVEL} == 2)
       mkdir ("$refdir.tmp"))
   {
     $reference_manifest_dir =~ s:^([^/]):/$1:;
-    $reference_manifest_dir =~ s:([^/])$:$1/:;
-    if (0 != system "whget -r '$reference_manifest_key$reference_manifest_dir' '$refdir.tmp/'")
+    $reference_manifest_dir =~ s:/$::;
+    if (0 != system "whget -r '$reference_manifest_key$reference_manifest_dir/' '$refdir.tmp/'")
     {
       system "rm -rf '$refdir.tmp'";
       close L;
