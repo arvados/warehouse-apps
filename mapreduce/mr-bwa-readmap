@@ -106,9 +106,7 @@ if ($ENV{MR_LEVEL} == 0)
     {
       last if !defined $pos;
       next if $filename !~ /(.*)\.(bfq|fq|fastq|fq.gz|fastq.gz)$/;
-      # Assume _2 are reverse strand in pair-end-reads - next level does not need
-      # them passed in.
-      next if $1 =~ /_2$/;
+
       push @files, $filename;
       if (scalar(@files) >= $inputs_per_node) {
 	my $filenames = join(',', @files);
@@ -158,8 +156,8 @@ if ($ENV{MR_LEVEL} == 1)
     if (defined $seed_length) { $aln_flags .= " -l $seed_length"; }
     if (defined $seed_edit_distance) { $aln_flags .= " -k $seed_edit_distance"; }
 
-    if ($filename =~ /(.+)_1\.(.+)$/) {
-      die "paired-end reads not supported";
+    if ($filename =~ /(.+)_[12]\.(.+)$/) {
+      warn "paired-end reads are being processed as single-end reads";
     }
 
     atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
