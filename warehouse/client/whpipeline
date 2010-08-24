@@ -4,13 +4,13 @@ use strict;
 
 =head1 NAME
 
-runpipeline
+whpipeline
 
 =head1 SYNOPSIS
 
-  runpipeline [options] [param=value [...]] pipeline-spec.json
+  whpipeline [options] [param=value [...]] pipeline-spec.json
 
-  PIPELINE_param=value [...] runpipeline [options] pipeline-spec.json
+  PIPELINE_param=value [...] whpipeline [options] pipeline-spec.json
 
 Execute the specified pipeline and report results.
 
