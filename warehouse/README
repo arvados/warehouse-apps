@@ -21,16 +21,16 @@ perldoc command.
 
 You can also look for information at:
 
-    http://polony.freelogy.org/wiki/Warehouse_API
+    https://trac.scalablecomputingexperts.com/wiki/Doc/Man/Whintro
 
     http://factories.freelogy.org/pod/Warehouse.html
 
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2007 Harvard University
+Copyright (C) 2007-2010 The President and Fellows of Harvard College
 
-Authors: Tom Clegg, Alexander Wait Zaranek
+Authors: Tom Clegg, Alexander Wait Zaranek, Ward Vandewege
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
