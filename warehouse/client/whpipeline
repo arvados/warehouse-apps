@@ -8,18 +8,29 @@ whpipeline
 
 =head1 SYNOPSIS
 
-  whpipeline [options] [param=value [...]] pipeline-spec.json
+  whpipeline [options] [param=value ...] pipeline-spec.json
 
-  PIPELINE_param=value [...] whpipeline [options] pipeline-spec.json
+  PIPELINE_param=value whpipeline [options] pipeline-spec.json
 
 Execute the specified pipeline and report results.
 
-Read pipeline specification from pipeline-spec.json.  Apply parameters
-given on command line or PIPELINE_* environment variables.  Find
-existing jobs that match the pipeline step specifications, or start
-new ones if none are found.  Wait for the jobs to finish.  Print
-periodic status messages in JSON format (same as input file, augmented
-with status/output for each step where applicable).
+=head1 DESCRIPTION
+
+whpipeline is analogous to make(1).  It determines the sequence of
+warehouse jobs needed to compute a result, submits jobs to the
+warehouse controller, monitors their progress, provides status
+notifications via text files, HTTP, and tty output.
+
+The general form of the pipeline is described in a JSON document
+(analogous to a Makefile).  Specific parameters and inputs are
+provided on the command line.
+
+Before submitting a new job, whpipeline checks for an equivalent job
+which is already queued, running, or finished.  This makes it easy to
+reuse existing results.  It also means whpipeline can be interrupted
+and restarted without losing track of intermediate results and
+partially completed jobs.  For regression tests, this behavior can be
+overridden with the --no-reuse option.
 
 =head1 OPTIONS
 
@@ -44,7 +55,8 @@ with status/output for each step where applicable).
 
   --callback-timeout 10
 
-		Timeout callback (seconds)
+		Timeout (in seconds) when attempting to POST to
+		callback URL
 
   --callback-type application/x-www-form-urlencoded
 
@@ -81,6 +93,41 @@ with status/output for each step where applicable).
                 display, and include it as the value for the "label"
                 key of each pipeline in the JSON data passed to
                 callback handlers
+
+=head1 PIPELINE PARAMETERS
+
+A pipeline specification typically refers to some user-provided
+parameters like input data and configuration settings.  Values for
+these parameters can be given on the command line or in PIPELINE_*
+environment variables.
+
+For example, if some pipeline steps refer to a REFERENCE parameter:
+
+ ...
+ "params": [
+  {"name": "REFERENCE", "value": null},
+ ...
+
+The value for REFERENCE can be provided on the command line:
+
+ whpipeline ... REFERENCE=acbd18db4cc2f85cedef654fccc4a4d8 ...
+
+Or in an environment variable:
+
+ PIPELINE_REFERENCE=acbd18db4cc2f85cedef654fccc4a4d8 whpipeline ...
+
+If step #0 and step #1 each have a parameter called REFERENCE, and you
+want them to have different values, you can specify a different value
+for each step like this:
+
+ whpipeline ... \
+   0/REFERENCE=acbd18db4cc2f85cedef654fccc4a4d8 \
+   1/REFERENCE=37b51d194a7513e45b56f6524f2d51f2 \
+   ...
+
+=head1 SEE ALSO
+
+whintro(1p), wh(1p)
 
 =cut
 
