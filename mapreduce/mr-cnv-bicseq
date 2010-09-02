@@ -167,7 +167,6 @@ sub atomic_whget {
 sub atomic_whget_tar {
   my ($source, $target) = @_;
 
-  system "rm -rf '$target'";
   if (open (L, "+>>", "$target.lock") &&
       flock (L, LOCK_EX) )
   {
@@ -188,7 +187,6 @@ sub atomic_whget_tar {
 sub atomic_whget_dir {
   my ($source, $target) = @_;
 
-  system "rm -rf '$target'";
   if (open (L, "+>>", "$target.lock") &&
       flock (L, LOCK_EX))
   {
