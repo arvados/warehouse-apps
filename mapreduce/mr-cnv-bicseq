@@ -7,6 +7,11 @@
 ###MR_KNOBS:TUMOR
 ###MR_KNOBS:SAM
 ###MR_KNOBS:CNV
+###MR_KNOBS:BIN_SIZE=100
+###MR_KNOBS:BIN_QUANTILE=0.95
+###MR_KNOBS:BIN_WINDOWSIZE=200
+###MR_KNOBS:BIN_REPORT_OUTLIER
+###MR_KNOBS:MULTIPLICITY=5.0
 
 use strict; 
 use Warehouse;
@@ -106,11 +111,17 @@ if ($ENV{MR_LEVEL} == 1)
     # Now call the CNV tools
     chdir $tmp or die "mr-cnv-bicseq: Could not chdir to $tmp";
 
-    my $bin_cmd = "$cnv_path/cnv/binning_rm_singular/BRS $n_filename.tumor.seq $n_filename.normal.seq 1000 n out/$n_filename.bin";
+    my $bin_cmd = "$cnv_path/cnv/binning_rm_singular/BRS $n_filename.tumor.seq $n_filename.normal.seq";
+    $bin_cmd .= " -b $ENV{KNOB_BIN_SIZE}" if $ENV{KNOB_BIN_SIZE};
+    $bin_cmd .= " -q $ENV{KNOB_BIN_QUANTILE}" if $ENV{KNOB_BIN_QUANTILE};
+    $bin_cmd .= " -w $ENV{KNOB_BIN_WINDOWSIZE}" if $ENV{KNOB_BIN_WINDOWSIZE};
+    $bin_cmd .= " --multiplicity $ENV{KNOB_BIN_MULTIPLICITY}" if $ENV{KNOB_BIN_MULTIPLICITY};
+    $bin_cmd .= " -R out/$n_filename.outlier" if $ENV{KNOB_BIN_REPORT_OUTLIER};
+    $bin_cmd .= " -o out/$n_filename.bin";
     0 == system($bin_cmd)
 	or die "mr-cnv-bicseq: could not run $bin_cmd: $! (exit code: $?)";
 
-    my $bicseq_cmd = "$cnv_path/cnv/BIC-seq/a.out out/$n_filename.bin 2 >> out/$n_filename.bic";
+    my $bicseq_cmd = "$cnv_path/cnv/BIC-seq/a.out out/$n_filename.bin $ENV{KNOB_BICSEQ_LAMBDA} >> out/$n_filename.bic";
     0 == system($bicseq_cmd)
 	or die "mr-cnv-bicseq: could not run $bicseq_cmd: $! (exit code: $?)";
 
