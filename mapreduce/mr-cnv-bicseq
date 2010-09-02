@@ -168,7 +168,8 @@ sub atomic_whget_tar {
   my ($source, $target) = @_;
 
   if (open (L, "+>>", "$target.lock") &&
-      flock (L, LOCK_EX) )
+      flock (L, LOCK_EX) &&
+      !-e ($target))
   {
     if (0 != system "whget '$source' '$target.tgz.tmp'")
     {
@@ -188,7 +189,8 @@ sub atomic_whget_dir {
   my ($source, $target) = @_;
 
   if (open (L, "+>>", "$target.lock") &&
-      flock (L, LOCK_EX))
+      flock (L, LOCK_EX) &&
+      !-e ($target))
   {
     if (0 != system "whget -r '$source'/ '$target.tmp/'")
     {
