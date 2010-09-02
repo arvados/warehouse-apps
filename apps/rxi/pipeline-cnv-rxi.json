@@ -1,0 +1,62 @@
+{
+ "id": 1,
+   "steps":
+     [
+     {"name": "gbm2bam", "function": "gbm2bam", "params":
+        [{"name": "INPUT", "data_locator": null},
+	 {"name": "SAM", "value": null},
+	 {"name": "REFERENCE", "value": null}],
+	 "max_nodes": 4,
+	 "min_revision": 3078},
+     {"name": "gbm2bam", "function": "gbm2bam", "params":
+        [{"name": "INPUT", "data_locator": null},
+	 {"name": "SAM", "value": null},
+	 {"name": "REFERENCE", "value": null}],
+	 "max_nodes": 4,
+	 "min_revision": 3078},
+     {"name": "splitsort", "function": "bam-splitsort", "params":
+        [{"name": "INPUT", "from_step": 0},
+	 {"name": "SAM", "value": null},
+	 {"name": "REFERENCE", "value": null}],
+	 "max_nodes": 4,
+	 "min_revision": 3042},
+     {"name": "splitsort", "function": "bam-splitsort", "params":
+        [{"name": "INPUT", "from_step": 1},
+	 {"name": "SAM", "value": null},
+	 {"name": "REFERENCE", "value": null}],
+	 "max_nodes": 4,
+	 "min_revision": 3042},
+     {"name": "merge", "function": "bam-merge", "params":
+        [{"name": "INPUT", "from_step": 2},
+	 {"name": "SAM", "value": null},
+	 {"name": "REFERENCE", "value": null}],
+	 "max_nodes": 4,
+	 "max_steps_per_node": 1,
+	 "min_revision": 3042 },
+     {"name": "merge", "function": "bam-merge", "params":
+        [{"name": "INPUT", "from_step": 3},
+	 {"name": "SAM", "value": null},
+	 {"name": "REFERENCE", "value": null}],
+	 "max_nodes": 4,
+	 "max_steps_per_node": 1,
+	 "min_revision": 3042 },
+     {"name": "cnv-bicseq", "function": "cnv-bicseq", "params":
+        [{"name": "INPUT", "value": "d41d8cd98f00b204e9800998ecf8427e"},
+	 {"name": "NORMAL", "from_step": 4},
+	 {"name": "TUMOR", "from_step": 5},
+	 {"name": "SAM", "value": null},
+	 {"name": "CNV", "value": null}],
+	 "max_nodes": 4,
+	 "min_revision": 3087},
+     {"name": "cnv-bicseq-merge", "function": "cnv-bicseq-merge", "params":
+        [{"name": "INPUT", "from_step": 6},
+	 {"name": "CNV", "value": null}],
+	 "max_nodes": 4,
+	 "min_revision": 3091},
+     {"name": "cnv-postproc", "function": "cnv-postproc", "params":
+        [{"name": "INPUT", "from_step": 7},
+	 {"name": "CNV", "value": null}],
+	 "max_nodes": 1,
+	 "min_revision": 3091}
+ ]
+}
