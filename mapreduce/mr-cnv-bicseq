@@ -106,8 +106,14 @@ if ($ENV{MR_LEVEL} == 1)
     # Now call the CNV tools
     chdir $tmp or die "mr-cnv-bicseq: Could not chdir to $tmp";
 
-    0 == system("$cnv_path/pipeline/bootstrap_bin/bootstrap_bin $n_filename.tumor.seq $n_filename.normal.seq 1000 n out/$n_filename.bin") or die "mr-cnv-bicseq: could not run $cnv_path/pipeline/bootstrap_bin/bootstrap_bin $n_filename.tumor.seq $n_filename.normal.seq 1000 n out/$n_filename.bin: $! (exit code: $?)";
-    0 == system("$cnv_path/pipeline/BIC-seq/a.out out/$n_filename.bin 2 >> out/$n_filename.bic") or die "mr-cnv-bicseq: could not run $cnv_path/pipeline/BIC-seq/a.out out/$n_filename.bin 2 >> out/$n_filename.bic: $! (exit code: $?)";
+    my $bin_cmd = "$cnv_path/cnv/binning_rm_singular/BRS $n_filename.tumor.seq $n_filename.normal.seq 1000 n out/$n_filename.bin";
+    0 == system($bin_cmd)
+	or die "mr-cnv-bicseq: could not run $bin_cmd: $! (exit code: $?)";
+
+    my $bicseq_cmd = "$cnv_path/cnv/BIC-seq/a.out out/$n_filename.bin 2 >> out/$n_filename.bic";
+    0 == system($bicseq_cmd)
+	or die "mr-cnv-bicseq: could not run $bicseq_cmd: $! (exit code: $?)";
+
     unlink ("out/$n_filename.bin");
   }
 
