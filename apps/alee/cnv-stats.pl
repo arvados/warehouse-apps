@@ -32,12 +32,18 @@ for (@argv) {
     bless $pipeline, "Warehouse::Pipeline";
 
     # trimmed read length
-    my $readlength = $pipeline->find(name => "bwa-readmap");
-    if ($readlength =~ /.{32}/) {
-	$readlength = $main::whc->fetch_block_ref ($readlength);
-	$readlength = $$readlength;
+    my $readlength = "";
+    for my $readmapjob ($pipeline->find(name => "bwa-readmap")) {
+	if ($readmapjob->paramvalue("READLENGTH")) {
+	    $readlength = $readmapjob->paramvalue("READLENGTH");
+	    if ($readlength =~ /.{32}/) {
+		$readlength = $main::whc->fetch_block_ref ($readlength);
+		$readlength = $$readlength;
+	    }
+	    $readlength =~ s/[\r\n]*$//;
+	    last;
+	}
     }
-    $readlength =~ s/[\r\n]*$//;
 
     # read length distribution (before trimming)
     my @fq_stat_sum = $pipeline->find(name => "fq-stat-sum");
