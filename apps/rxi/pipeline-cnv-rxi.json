@@ -56,7 +56,8 @@
 	 "min_revision": 3196},
      {"name": "cnv-bicseq-merge", "function": "cnv-bicseq-merge", "params":
         [{"name": "INPUT", "from_step": 6},
-	 {"name": "CNV", "value": null}],
+	 {"name": "CNV", "value": null,
+	 {"name": "BICSEQ_LAMBDA", "value": 1}}],
 	 "max_nodes": 4,
 	 "min_revision": 3091},
      {"name": "cnv-postproc", "function": "cnv-postproc", "params":
