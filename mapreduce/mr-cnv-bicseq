@@ -118,7 +118,7 @@ if ($ENV{MR_LEVEL} == 1)
     $bin_cmd .= " -w $ENV{KNOB_BIN_WINDOWSIZE}" if $ENV{KNOB_BIN_WINDOWSIZE};
     $bin_cmd .= " --multiplicity $ENV{KNOB_BIN_MULTIPLICITY}" if $ENV{KNOB_BIN_MULTIPLICITY};
     $bin_cmd .= " -R out/$n_filename.outlier" if $ENV{KNOB_BIN_REPORT_OUTLIER};
-    $bin_cmd .= " -o out/$n_filename.bin";
+    $bin_cmd .= " > out/$n_filename.bin";
     0 == system($bin_cmd)
 	or die "mr-cnv-bicseq: could not run $bin_cmd: $! (exit code: $?)";
 
