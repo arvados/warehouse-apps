@@ -356,7 +356,19 @@ sub do_step
     for my $param (@{$step->{"params"}})
     {
 	my $value;
-	if (exists $param->{"from_step"} || exists $param->{"from_step_name"})
+	my $paramtype;
+	map { $paramtype = $_ if exists $param->{$_} } qw(value hash data_locator);
+	$value = $supplied_param->{$stepno."/".$param->{"name"}};
+	$value = $supplied_param->{$param->{"name"}} if !defined $value && $param->{"name"} ne "INPUT";
+	$value = $param->{$paramtype} if !defined $value && defined $paramtype;
+
+	if (defined $value)
+	{
+	    $paramtype = "value" if !defined $paramtype;
+	    $param->{$paramtype} = $value;
+	}
+	elsif (exists $param->{"from_step"} ||
+	       exists $param->{"from_step_name"})
 	{
 	    my $from_pipe = $pipe;
 	    if (exists $param->{"from_pipeline_id"})
@@ -439,46 +451,23 @@ sub do_step
 		}
 	    }
 	}
+	elsif ($param->{"optional"})
+	{
+	    ;
+	}
+	elsif (!defined $paramtype)
+	{
+	    push @{$step->{"errors"}},
+	    "Unsupported parameter type for \"" . $param->{"name"} . "\"";
+	    next;
+	}
 	else
 	{
-	    if (exists $param->{"value"})
-	    {
-		$value = $param->{"value"};
-		$value = $supplied_param->{$stepno."/".$param->{"name"}} if !defined $value;
-		$value = $supplied_param->{$param->{"name"}} if !defined $value;
-		$param->{"value"} = $value;
-	    }
-	    elsif (exists $param->{"hash"})
-	    {
-		warn "\"hash\" param type is deprecated.\n" if $debugflag;
-		$value = $param->{"hash"};
-		$value = $supplied_param->{$stepno."/".$param->{"name"}} if !defined $value;
-		$value = $supplied_param->{$param->{"name"}} if !defined $value;
-		$param->{"hash"} = $value;
-	    }
-	    elsif (exists $param->{"data_locator"})
-	    {
-		$value = $param->{"data_locator"};
-		$value = $supplied_param->{$stepno."/".$param->{"name"}} if !defined $value;
-		$value = $supplied_param->{$param->{"name"}} if !defined $value;
-		$param->{"data_locator"} = $value;
-	    }
-	    else
-	    {
-		push @{$step->{"errors"}},
-		"Unsupported parameter type for \"" . $param->{"name"} . "\"";
-		next;
-	    }
-	    if (!defined $value)
-	    {
-		if ($param->{"optional"}) {
-		    next;
-		}
-		push @{$step->{"errors"}},
+	    push @{$step->{"errors"}},
 		"Missing value for \"".$param->{"name"}."\" param";
-		$mrparam = undef;
-	    }
+	    $mrparam = undef;
 	}
+
 	if (defined $value && $value ne "" && !length $value)
 	{
 	    die "JSON->perl mapping problem -- setting JSON::UnMapping failed?"
