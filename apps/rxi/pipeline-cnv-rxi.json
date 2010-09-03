@@ -51,7 +51,7 @@
 	 {"name": "BIN_WINDOWSIZE", "value": null, "optional": 1},
 	 {"name": "BIN_REPORT_OUTLIER", "value": null, "optional": 1},
 	 {"name": "BIN_MULTIPLICITY", "value": null, "optional": 1},
-	 {"name": "BICSEQ_LAMBDA", "value": null, "optional": 1}],
+	 {"name": "BICSEQ_LAMBDA", "value": 1}],
 	 "max_nodes": 4,
 	 "min_revision": 3196},
      {"name": "cnv-bicseq-merge", "function": "cnv-bicseq-merge", "params":
