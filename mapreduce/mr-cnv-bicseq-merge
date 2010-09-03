@@ -4,6 +4,7 @@
 ###MR_DESCRIPTION:merge bic-seq output chunks
 ###MR_INPUT:manifest
 ###MR_KNOBS:CNV
+###MR_KNOBS:BICSEQ_LAMBDA=1
 
 use strict; 
 use Warehouse;
@@ -19,7 +20,7 @@ my $tmp = $ENV{MR_JOBSTEP_TMP};
 my $verbose = 1;
 
 my $cnv_manifest_key = $ENV{KNOB_CNV} or die;
-my $cnv_path="$tmp/cnv";
+my $cnv_path="$ENV{MR_JOB_TMP}/cnv";
 
 my $whc = new Warehouse;
 my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
@@ -79,7 +80,8 @@ else
 
   # run BIC-seq to merge the chunks
 
-  0 == system("$cnv_path/pipeline/BIC-seq/a.out $chr.bic 2 >out/$chr.bic") or die "mr-cnv-bicseq-merge: could not run $cnv_path/pipeline/BIC-seq/a.out $chr.bic 2 >out/$chr.bic: $! (exit code: $?)";
+  my $bicseq_cmd = "$cnv_path/cnv/BIC-seq/a.out $chr.bic $ENV{KNOB_BICSEQ_LAMBDA} >out/$chr.bic";
+  0 == system($bicseq_cmd) or die "mr-cnv-bicseq-merge: could not run $bicseq_cmd: $! (exit code: $?)";
 
   my $outfrag = `whput -r --as-stream $tmp/out`;
   die "mr-cnv-bicseq-merge: whput exited $?" if $?;
@@ -120,9 +122,9 @@ sub atomic_whget {
 sub atomic_whget_tar {
   my ($source, $target) = @_;
 
-  system "rm -rf '$target'";
   if (open (L, "+>>", "$target.lock") &&
-      flock (L, LOCK_EX) )
+      flock (L, LOCK_EX) &&
+      !-e ($target))
   {
     if (0 != system "whget '$source' '$target.tgz.tmp'")
     {
@@ -141,9 +143,9 @@ sub atomic_whget_tar {
 sub atomic_whget_dir {
   my ($source, $target) = @_;
 
-  system "rm -rf '$target'";
   if (open (L, "+>>", "$target.lock") &&
-      flock (L, LOCK_EX))
+      flock (L, LOCK_EX) &&
+      !-e ($target))
   {
     if (0 != system "whget -r '$source'/ '$target.tmp/'")
     {
