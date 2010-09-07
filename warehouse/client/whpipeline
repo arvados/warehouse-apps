@@ -339,7 +339,8 @@ sub do_step
     # If this step is already deemed to be complete or failed, there
     # is no point in reinspecting
 
-    return undef if $step->{"failed"} || $step->{"complete"};
+    return undef if (($step->{"failed"} || $step->{"complete"}) &&
+		     $step->{"warehousejob"}->{"metakey"});
 
     delete $step->{"errors"};
     delete $step->{"warnings"};
@@ -575,6 +576,16 @@ KNOW_JOB_ID:
     $step->{"warehousejob"}->{"starttime"} = $step_job->{"starttime"};
     printf STDERR ("Using job %d for step %d\n",
 		   $step->{"warehousejob"}->{"id"}, $stepno) if $debugflag;
+
+    if (($step_job->{"success"} || $step_job->{"finishtime"}) &&
+	!$step_job->{"metakey"} &&
+	$step_job->{"finishtime_s"} < (scalar(time) - 600)) {
+	# If no metakey appears within 10 minutes of job ending, use
+	# "-" as a placeholder to make sure we don't keep waiting for
+	# it to appear
+	$step->{"warehousejob"}->{"metakey"} = "-";
+    }
+
     if ($step_job->{"success"})
     {
 	$step->{"warehousejob"}->{"elapsed"} = $step_job->{"finishtime_s"} - $step_job->{"starttime_s"};
