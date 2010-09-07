@@ -12,7 +12,7 @@ use IO::Handle;
 use Warehouse::Stream;
 use CGI;
 use Time::HiRes;
-use HTTP::GHTTP;
+use Warehouse::HTTP;
 
 
 $memcached_max_data = 1000000;
@@ -1201,7 +1201,7 @@ sub fetch_from_keep
 	my $keep_host_port = $keeps->[$keep_id];
 	my $url = "http://".$keep_host_port."/".$md5;
 	warn "Keep GET $url\n" if $ENV{DEBUG_KEEP} >= 2;
-	my $r = HTTP::GHTTP->new();
+	my $r = Warehouse::HTTP->new();
 	$r->set_uri($url);
 	$r->process_request();
 	my ($status_number, $status_phrase) = $r->get_status();
