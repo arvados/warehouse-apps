@@ -46,6 +46,7 @@
 	 {"name": "TUMOR", "from_step": 5},
 	 {"name": "SAM", "value": null},
 	 {"name": "CNV", "value": null},
+	 {"name": "READLENGTH", "value": null, "optional": 1},
 	 {"name": "BIN_SIZE", "value": null, "optional": 1},
 	 {"name": "BIN_QUANTILE", "value": null, "optional": 1},
 	 {"name": "BIN_WINDOWSIZE", "value": null, "optional": 1},

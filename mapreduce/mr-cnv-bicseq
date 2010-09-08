@@ -13,6 +13,7 @@
 ###MR_KNOBS:BIN_REPORT_OUTLIER
 ###MR_KNOBS:BIN_MULTIPLICITY=5.0
 ###MR_KNOBS:BICSEQ_LAMBDA=1
+###MR_KNOBS:READLENGTH=35
 
 use strict; 
 use Warehouse;
@@ -90,8 +91,13 @@ if ($ENV{MR_LEVEL} == 1)
     $n_filename =~ s/\.bam$//;
     $t_filename =~ s/\.bam$//;
 
+    my $readlength_filter = "";
+    if ($ENV{KNOB_READLENGTH} =~ /^\d+$/) {
+      $readlength_filter = "| perl -ne '\@F=split /\\t/; print if $ENV{KNOB_READLENGTH} == length \$F[9]'";
+    }
+
     # First write out the normal file
-    open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view - |/usr/bin/cut -f4 > $tmp/$n_filename.normal.seq";
+    open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view - $readlength_filter | cut -f4 > $tmp/$n_filename.normal.seq";
     # feeder
     $n->seek ($n_pos);
     while (my $dataref = $n->read_until ($n_pos+$n_size)) {
@@ -100,7 +106,7 @@ if ($ENV{MR_LEVEL} == 1)
     close STDOUT or die "mr-cnv-bicseq: error $! exit $?";
 
     # Then write out the tumor file
-    open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view - |/usr/bin/cut -f4 > $tmp/$t_filename.tumor.seq";
+    open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view - $readlength_filter | cut -f4 > $tmp/$t_filename.tumor.seq";
 
     # feeder
     $t->seek ($t_pos);
