@@ -116,18 +116,6 @@ sub update
 	my $static = Data::Dumper->Dump([$x], ["x"]);
 	eval $static;
 
-	# Mark dead slurm nodes as down in Keep as well
-	for my $deadnode (@deadnode)
-	{
-	    for my $keep_host_port (@$keeps)
-	    {
-		if ($keep_host_port =~ /^([^:]*)/ && $1 eq $deadnode)
-		{
-		    $x->{keeps_status}->{$keep_host_port} = "down " . scalar time;
-		}
-	    }
-	}
-
 	Data::Dumper->Dump([$x], ["warehouse_config"]);
     };
 
