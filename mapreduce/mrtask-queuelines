@@ -25,10 +25,13 @@ if ($key !~ /^[0-9a-f]{32}(\+\S*)*(,[0-9a-f]{32}(\+\S*)*)*$/)
 my $manifest = new Warehouse::Manifest (whc => $whc,
 					key => $key);
 $manifest->rewind;
+my $line_number = 1;
 while (my $stream = $manifest->subdir_next)
 {
   my $line = $stream->as_string;
+  $line = "#".$line_number if length $line >= 4096;
   print STDERR "+++mrjobstep $nextlevel $line+++\n";
+  ++$line_number;
 }
 
 print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";

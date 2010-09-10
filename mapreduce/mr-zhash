@@ -41,8 +41,22 @@ elsif ($ENV{MR_LEVEL} == 1)
 	# Default to md5
 	$function = 'md5' if (!$function_ok);
 
-  my $instream = new Warehouse::Stream (whc => $whc,
-					subdir => $ENV{MR_INPUT});
+  my $instream;
+  if ($ENV{MR_INPUT} =~ /^\#(\d+)$/) {
+    my $line_number = $1;
+    my $manifest = new Warehouse::Manifest (whc => $whc,
+					    key => $ENV{MR_INPUT0});
+    $manifest->rewind;
+    while ($instream = $manifest->subdir_next)
+    {
+      last if --$line_number == 0;
+    }
+    die "no such input line: $ENV{MR_INPUT}" if !defined $instream;
+  }
+  else {
+    $instream = new Warehouse::Stream (whc => $whc,
+				       subdir => $ENV{MR_INPUT});
+  }
   my $outstream = new Warehouse::Stream (whc => $whc);
   $outstream->name ($instream->name);
   $outstream->clear;

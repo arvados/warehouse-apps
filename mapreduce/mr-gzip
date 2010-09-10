@@ -26,8 +26,24 @@ elsif ($ENV{MR_LEVEL} == 1)
   my $whc = new Warehouse
       (memcached_size_threshold => $ENV{KNOB_MEMCACHED_SIZE});
 
-  my $instream = new Warehouse::Stream (whc => $whc,
-					subdir => $line);
+  my $instream;
+  if ($line =~ /^\#(\d+)$/) {
+    my $line_number = $1;
+    my $manifest = new Warehouse::Manifest (whc => $whc,
+					    key => $ENV{MR_INPUT0});
+    $manifest->rewind;
+    while ($instream = $manifest->subdir_next)
+    {
+      last if --$line_number == 0;
+    }
+    die "no such input line: $line" if !defined $instream;
+    $line = $instream->as_string;
+  }
+  else {
+    $instream = new Warehouse::Stream (whc => $whc,
+				       subdir => $line);
+  }
+
   my $already_gzipped = 1;
   $instream->rewind;
   while (my ($pos, $size, $filename) = $instream->file_next)
