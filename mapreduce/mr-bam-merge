@@ -5,6 +5,7 @@
 ###MR_INPUT:manifest
 ###MR_KNOBS:SAM
 ###MR_KNOBS:REFERENCE
+###MR_KNOBS:BAM_SLICE_SIZE=50000
 
 use strict; 
 use Warehouse;
@@ -28,6 +29,8 @@ my $slice_size = 500_000;
 my $size_per_task = 50_000_000;
 my $slices_per_task = $size_per_task / $slice_size;
 my $reffile = "$tmp/ref";
+
+$slice_size = 0 + $ENV{KNOB_BAM_SLICE_SIZE} if defined $ENV{KNOB_BAM_SLICE_SIZE};
 
 my $sam_path="$tmp/sam";
 
