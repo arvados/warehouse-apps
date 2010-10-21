@@ -66,7 +66,9 @@ if ($ENV{MR_LEVEL} == 1)
 
   my $all_start = $start_slice * $slice_size;
   my $all_end = ($start_slice + $slices_per_task) * $slice_size - 1;
-  warn "$chr:$all_start-$all_end\n" if $verbose;
+  my $range = "$chr:$all_start-$all_end";
+  $range = "$chr" if $start_slice == 0 && $slice_size > 299_999_999;
+  warn "$range\n" if $verbose;
 
   while (my $s = $ref->subdir_next)
   {
@@ -79,11 +81,11 @@ if ($ENV{MR_LEVEL} == 1)
       warn "$subdir\n" if $verbose;
       whget("$input_manifest_key/$subdir/${filename}", $readfile);
       system("$sam_path/samtools index $readfile") == 0
-        or die "sam index $readfile";
-      system("$sam_path/samtools view -b -h $readfile $chr:$all_start-$all_end > $dir/$filecount.bam") == 0
-        or die "sam view $chr:$all_start-$all_end";
+        or die "died at $sam_path/samtools index $readfile";
+      system("$sam_path/samtools view -b -h $readfile $range > $dir/$filecount.bam") == 0
+        or die "died at $sam_path/samtools view -b -h $readfile $range";
       system("$sam_path/samtools index $dir/$filecount.bam") == 0
-        or die "sam index $filecount.bam";
+        or die "died at $sam_path/samtools index $dir/$filecount.bam";
       $filecount++;
     }
   }
@@ -92,11 +94,13 @@ if ($ENV{MR_LEVEL} == 1)
   for (my $slice = $start_slice ; $slice < $start_slice + $slices_per_task ; $slice++) {
     my $start = $slice * $slice_size;
     my $end = ($slice + 1) * $slice_size - 1;
-    warn "$chr:$start-$end\n" if $verbose;
+    my $range = "$chr:$start-$end";
+    $range = "$chr" if $slice == 0 && $slice_size > 299_999_999;
+    warn "$range\n" if $verbose;
     my @files;
     for (my $file = 0 ; $file < $filecount ; $file++) {
-      system("$sam_path/samtools view -b -h $dir/$file.bam $chr:$start-$end > $dir/m-$file.bam") == 0
-        or die "slice sam view $chr:$start-$end";
+      system("$sam_path/samtools view -b -h $dir/$file.bam $range > $dir/m-$file.bam") == 0
+        or die "died at slice samtools view -b -h $dir/$file.bam $range";
       push @files, "$dir/m-$file.bam";
     }
 
