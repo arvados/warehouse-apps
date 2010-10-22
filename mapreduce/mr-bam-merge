@@ -27,6 +27,7 @@ my $reference_manifest_key = $ENV{KNOB_REFERENCE} or die;
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $slice_size = 500_000;
 $slice_size = 0 + $ENV{KNOB_BAM_SLICE_SIZE} if defined $ENV{KNOB_BAM_SLICE_SIZE};
+$slice_size = 500_000_000 if $slice_size == 0;
 my $size_per_task = 50_000_000;
 $size_per_task = $slice_size if $size_per_task < $slice_size;
 my $slices_per_task = $size_per_task / $slice_size;
