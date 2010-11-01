@@ -135,7 +135,7 @@ if ($ENV{MR_LEVEL} == 1)
     0 == system($bicseq_cmd)
 	or die "mr-cnv-bicseq: could not run $bicseq_cmd: $! (exit code: $?)";
 
-    unlink ("out/$n_filename.bin");
+    # unlink ("out/$n_filename.bin");
   }
 
   my $outfrag = `whput -r --as-stream $tmp/out`;
