@@ -64,7 +64,7 @@ else
   while (my $s = $m->subdir_next) {
     while (my ($pos, $size, $filename) = $s->file_next) {
       last if !defined $pos;
-      next if $filename !~ /^\Q$chr-\E/;
+      next if $filename !~ /^\Q$chr\E-.*\.bic$/;
 
       $s->seek ($pos);
       while (my $dataref = $s->read_until ($pos+$size)) {
