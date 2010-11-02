@@ -135,7 +135,8 @@ if ($ENV{MR_LEVEL} == 1)
     0 == system($bicseq_cmd)
 	or die "mr-cnv-bicseq: could not run $bicseq_cmd: $! (exit code: $?)";
 
-    # unlink ("out/$n_filename.bin");
+    system ("gzip -9 out/$n_filename.bin") == 0
+	or die "gzip: $! (exit code: $?)";
   }
 
   my $outfrag = `whput -r --as-stream $tmp/out`;
