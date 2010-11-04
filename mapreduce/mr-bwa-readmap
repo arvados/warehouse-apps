@@ -24,7 +24,7 @@ my $src = "$ENV{MR_REVISION_INSTALLDIR}/src";
 my $num_nodes = $ENV{SLURM_JOB_NUM_NODES} || 1;
 my $input_manifest_key = $ENV{MR_INPUT0} or die;
 my $ref1_manifest_key = $ENV{KNOB_REFERENCE1} or die;
-my $ref2_manifest_key = $ENV{KNOB_REFERENCE2} or die;
+my $ref2_manifest_key = $ENV{KNOB_REFERENCE2};
 my $bwa_manifest_key = $ENV{KNOB_BWA} or die;
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
@@ -58,19 +58,21 @@ if ($ENV{MR_LEVEL} == 0)
   }
   $ref1_basename =~ s{^\./}{};
 
-  my $ref2_basename;
-  my $ref2 = new Warehouse::Manifest (whc => $whc,
-				      key => $ref2_manifest_key);
-  while (my $s = $ref2->subdir_next) {
-    while (my ($pos, $size, $filename) = $s->file_next) {
-      last if !defined $pos;
-      $ref2_basename = $s->name()."/".$1 if $filename =~ /(.*)\.bwt$/;
+  my $ref2_basename = "";
+  if ($ref2_manifest_key) {
+    my $ref2 = new Warehouse::Manifest (whc => $whc,
+					key => $ref2_manifest_key);
+    while (my $s = $ref2->subdir_next) {
+      while (my ($pos, $size, $filename) = $s->file_next) {
+	last if !defined $pos;
+	$ref2_basename = $s->name()."/".$1 if $filename =~ /(.*)\.bwt$/;
+      }
     }
-  }
-  $ref2_basename =~ s{^\./}{};
+    $ref2_basename =~ s{^\./}{};
 
-  if (("$ref1_basename." =~ /\.cs(fasta)?\./i) != ("$ref2_basename." =~ /\.cs(fasta)?\./i)) {
-    die "error: is_colorspace(ref1) != is_colorspace(ref2)";
+    if (("$ref1_basename." =~ /\.cs(fasta)?\./i) != ("$ref2_basename." =~ /\.cs(fasta)?\./i)) {
+      die "error: is_colorspace(ref1) != is_colorspace(ref2)";
+    }
   }
 
   if (defined $readlength) {
@@ -134,7 +136,9 @@ if ($ENV{MR_LEVEL} == 1)
   atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
   die "$bwa_path/bwa not found" unless -x "$bwa_path/bwa";
   atomic_whget_dir($ref1_manifest_key, $reffile1);
-  atomic_whget_dir($ref2_manifest_key, $reffile2);
+  if ($ref2_manifest_key) {
+    atomic_whget_dir($ref2_manifest_key, $reffile2);
+  }
 
   open STDOUT, "|-", "mrs-output" or die "mrs-output: $!";
 
@@ -177,7 +181,7 @@ if ($ENV{MR_LEVEL} == 1)
       }
     }
 
-    system("bash", "-c", qq{
+    my $script = qq{
 set -o pipefail
 set -e
 set -x
@@ -189,6 +193,10 @@ job1=`jobs -p %+`
 $bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
 wait \$job1
 
+};
+
+    if ($ref2_manifest_key) {
+      $script .= qq{
 $bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' | gzip > '$saifile2.gz'
 rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 mkfifo '$saifile1.fifo' '$saifile2.fifo'
@@ -201,7 +209,10 @@ wait \$job1
 wait \$job2
 
 whput -r --as-stream '$out_path'
-}) == 0
+};
+    }
+
+    system("bash", "-c", $script) == 0
 	or die "script failed: error $! exit 0x".sprintf ("%x", $?);
 
     unlink $readfile1 if $readfile1;
