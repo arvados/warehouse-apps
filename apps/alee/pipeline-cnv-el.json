@@ -8,14 +8,14 @@
 	 {"name": "COLLATE_PAIRS", "value": null, "optional": 1},
 	 {"name": "INPUT", "data_locator": null}],
 	 "max_nodes": 5,
-	 "min_revision": 3120},
+	 "min_revision": 3179},
      {"name": "sam2fastq", "function": "sam2fastq", "params":
         [{"name": "SAM", "value": null},
 	 {"name": "COLORSPACE", "value": null, "optional": 1},
 	 {"name": "COLLATE_PAIRS", "value": null, "optional": 1},
 	 {"name": "INPUT", "data_locator": null}],
 	 "max_nodes": 5,
-	 "min_revision": 3120},
+	 "min_revision": 3179},
      {"name": "fq-stats", "function": "filefilter", "params":
         [{"name": "INPUT", "from_step": 0},
 	 {"name": "COMMAND", "value": "mrs-fastq-stats"},
