@@ -1,0 +1,217 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:run BRS on bam chunks
+###MR_INPUT:manifest
+###MR_KNOBS:NORMAL
+###MR_KNOBS:TUMOR
+###MR_KNOBS:SAM
+###MR_KNOBS:CNV
+###MR_KNOBS:BIN_SIZE=100
+###MR_KNOBS:BIN_QUANTILE=0.95
+###MR_KNOBS:BIN_WINDOWSIZE=200
+###MR_KNOBS:BIN_REPORT_OUTLIER
+###MR_KNOBS:BIN_MULTIPLICITY=5.0
+###MR_KNOBS:READLENGTH=35
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+use POSIX qw(strftime);
+
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+
+my $verbose = 1;
+my $input_manifest_key = $ENV{MR_INPUT0} or die;
+
+my $sam_manifest_key = $ENV{KNOB_SAM} or die;
+my $cnv_manifest_key = $ENV{KNOB_CNV} or die;
+
+
+my $normal_manifest_key = $ENV{KNOB_NORMAL} or die;
+my $tumor_manifest_key = $ENV{KNOB_TUMOR} or die;
+
+my $sam_path="$tmp/sam";
+my $cnv_path="$tmp/cnv";
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my $m = new Warehouse::Manifest (whc => $whc, key => $normal_manifest_key);
+  $m->rewind;
+  my $m_tumor = new Warehouse::Manifest (whc => $whc, key => $tumor_manifest_key);
+  $m_tumor->rewind;
+  while (my $s = $m->subdir_next) {
+    my $stream;
+    my $stream_tumor;
+    chomp ($stream = $s->as_string);
+    my $s_tumor = $m_tumor->subdir_next;
+    chomp ($stream_tumor = $s_tumor->as_string);
+    $stream =~ /([^:\s]*)$/;
+    my $stream1 = $1;
+    $stream_tumor =~ /([^:\s]*)$/;
+    my $stream2 = $1;
+    if ($stream1 eq $stream2) {
+        print STDERR "+++mrjobstep 1 $stream\n$stream_tumor+++\n";
+    } else {
+        die "mr-cnv-brs: bam chunk mismatch: $stream1 ne $stream2";
+    }
+  }
+
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($normal, $tumor) = split (/\n/, $ENV{MR_INPUT}, 2);
+
+  atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
+  atomic_whget_tar("$cnv_manifest_key/cnv.tgz", $cnv_path);
+
+  my $n = new Warehouse::Stream (whc => $whc, subdir => $normal);
+  my $t = new Warehouse::Stream (whc => $whc, subdir => $tumor);
+  my $dir ="$tmp/out";
+  system "rm -rf $dir";
+  mkdir $dir or die "mr-cnv-brs: mkdir $dir";
+  chdir $dir or die "mr-cnv-brs: chdir $dir: $!";
+
+  my $normalname = $n->name;
+  my $tumorname = $t->name;
+  while (my ($n_pos, $n_size, $n_filename) = $n->file_next)
+  {
+    last if !defined $n_pos;
+    my ($t_pos, $t_size, $t_filename) = $t->file_next;
+    die "mr-cnv-brs: Filename mismatch: $n_filename ne $t_filename" if ($n_filename ne $t_filename);
+    $n_filename =~ s/\.bam$//;
+    $t_filename =~ s/\.bam$//;
+
+    my $readlength_filter = "";
+    if ($ENV{KNOB_READLENGTH} =~ /^\d+$/) {
+      $readlength_filter = "| perl -ne '\@F=split /\\t/; print if $ENV{KNOB_READLENGTH} == length \$F[9]'";
+    }
+
+    # First write out the normal file
+    open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view - $readlength_filter | cut -f4 > $tmp/$n_filename.normal.seq";
+    # feeder
+    $n->seek ($n_pos);
+    while (my $dataref = $n->read_until ($n_pos+$n_size)) {
+      print $$dataref;
+    }
+    close STDOUT or die "mr-cnv-brs: error $! exit $?";
+
+    # Then write out the tumor file
+    open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view - $readlength_filter | cut -f4 > $tmp/$t_filename.tumor.seq";
+
+    # feeder
+    $t->seek ($t_pos);
+    while (my $dataref = $t->read_until ($t_pos+$t_size)) {
+      print $$dataref;
+    }
+    close STDOUT or die "mr-cnv-brs: error $! exit $?";
+
+    # Now call the CNV tools
+    chdir $tmp or die "mr-cnv-brs: Could not chdir to $tmp";
+
+    open X, ">", "out/$n_filename.bin";
+    close X;
+
+    my $bin_cmd = "$cnv_path/cnv/binning_rm_singular/BRS $n_filename.tumor.seq $n_filename.normal.seq";
+    $bin_cmd .= " -b $ENV{KNOB_BIN_SIZE}" if $ENV{KNOB_BIN_SIZE};
+    $bin_cmd .= " -q $ENV{KNOB_BIN_QUANTILE}" if $ENV{KNOB_BIN_QUANTILE};
+    $bin_cmd .= " -w $ENV{KNOB_BIN_WINDOWSIZE}" if $ENV{KNOB_BIN_WINDOWSIZE};
+    $bin_cmd .= " --multiplicity $ENV{KNOB_BIN_MULTIPLICITY}" if $ENV{KNOB_BIN_MULTIPLICITY};
+    $bin_cmd .= " -R out/$n_filename.outlier" if $ENV{KNOB_BIN_REPORT_OUTLIER};
+    $bin_cmd .= " -o out/$n_filename.bin";
+    0 == system($bin_cmd)
+	or die "mr-cnv-brs: could not run $bin_cmd: $! (exit code: $?)";
+
+    system ("gzip -9 out/$n_filename.bin") == 0
+	or die "gzip: $! (exit code: $?)";
+  }
+
+  my $outfrag = `whput -r --as-stream $tmp/out`;
+  die "mr-cnv-brs: whput exited $?" if $?;
+  print STDERR "+++mrout $outfrag+++\n";
+  exit 0;
+}
+
+sub whget {
+  my ($source, $target) = @_;
+
+  if (0 != system "whget '$source' '$target'")
+  {
+    die "mr-cnv-brs: whget exited $?";
+  }
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "mr-cnv-brs: whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "mr-cnv-brs: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_tar {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tgz.tmp'")
+    {
+      system "rm -rf '$target.tgz.tmp'";
+      close L;
+      die "mr-cnv-brs: whget exited $?";
+    }
+    rename "$target.tgz.tmp", "$target.tgz" or die "mr-cnv-brs: rename $target.tgz.tmp failed";
+    mkdir "$target" or die "mr-cnv-brs: mkdir $target failed";
+    system("tar -C $target -xzf $target.tgz") == 0 or die "mr-cnv-brs: tar -xz $target.tgz failed";
+  }
+  close L;
+  die "mr-cnv-brs: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_dir {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "mr-cnv-brs: whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "mr-cnv-brs: Failed to whget $source -> $target" if !-e $target;
+}
+
+sub emit_date {
+  my $who = shift;
+  my $now_string = strftime "%H:%M:%S", localtime;
+  warn "$who @ $now_string\n";
+}
