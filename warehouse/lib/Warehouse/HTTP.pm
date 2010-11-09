@@ -35,7 +35,6 @@ sub new
 sub _init
 {
     my $self = shift;
-    $self->{lw2} = new LW2;
     return $self;
 }
 
@@ -48,7 +47,12 @@ sub set_uri
 sub process_request
 {
     my $self = shift;
-    ($self->{code}, $self->{data}) = $self->{lw2}->get_page($self->{uri});
+    $self->{request} = LW2::http_new_request();
+    $self->{response} = LW2::http_new_response();
+    LW2::uri_split ($self->{uri}, $self->{request});
+    LW2::http_do_request ($self->{request}, $self->{response});
+    ($self->{code}, $self->{data}) = ($self->{response}->{whisker}->{code},
+				      $self->{response}->{whisker}->{data});
 }
 
 sub get_status
@@ -60,6 +64,7 @@ sub get_status
 
 sub get_body
 {
+    my $self = shift;
     return $self->{data};
 }
 
