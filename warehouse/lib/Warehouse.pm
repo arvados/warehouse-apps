@@ -2488,6 +2488,8 @@ sub _encrypt_block
 
     my ($self, $dataref) = @_;
 
+    local $^F = 999;
+
     pipe READER0, WRITER0 or die "Pipe failed: $!";
     my $child = fork;
     defined $child or die "Fork failed: $!";
@@ -2498,6 +2500,10 @@ sub _encrypt_block
 	my $enc = <READER0>;
 	close READER0 or die "Close: $!";
 	waitpid $child, 0;
+	printf STDERR ("$$ gpg: encrypt -> %s (%d bytes)\n",
+		       Digest::MD5::md5_hex($enc),
+		       length($enc))
+	    if $ENV{DEBUG_GPG};
 	return \$enc;
     }
     close READER0;
@@ -2507,18 +2513,8 @@ sub _encrypt_block
     printf STDERR "$$ gpg: encrypt %s\n", Digest::MD5::md5_hex($$dataref)
 	if $ENV{DEBUG_GPG};
 
-    eval "use GnuPG::Interface";
-    die "_encrypt_block() GnuPG::Interface not found" if $@;
     die "_encrypt_block() public key id(s) not set for encryption"
 	if !@{$self->{config}->{encrypt}};
-
-    my $gnupg = GnuPG::Interface->new();
-
-    $gnupg->options->hash_init( armor    => 0,
-                                homedir => $self->{gpg_homedir},
-				meta_interactive => 0,
-				always_trust => 1,
-				);
 
     pipe READER, WRITER or die "Pipe failed: $!";
     my $child = fork;
@@ -2532,26 +2528,38 @@ sub _encrypt_block
     }
     close WRITER;
 
-    my $error = IO::Handle->new();
-    open STDIN, "<&READER" or die "dup READER: $!";
-    open STDOUT, ">&WRITER0" or die "dup WRITER0: $!";
+    my @recipients = map { ("--recipient", $_) } (@{$self->{config}->{encrypt}});
 
-    my $handles = GnuPG::Handles->new( stdin  => fileno(STDIN),
-                                       stdout => fileno(STDOUT),
-                                       stderr => $error );
-    $handles->options ('stdin', { direct => 1 } );
-    $handles->options ('stdout', { direct => 1 } );
-
-    foreach my $key (@{$self->{config}->{encrypt}}) {
-      $gnupg->options->push_recipients( $key );
+    local $^F = 999;
+    pipe STATUSR, STATUSW or die "Pipe failed: $!";
+    pipe ERRORR, ERRORW or die "Pipe failed: $!";
+    open STDOUT, ">&WRITER0";
+    open STDIN, "<&READER";
+    my $rchild = fork();
+    die "no fork" if !defined $rchild;
+    if ($rchild == 0) {
+	close STATUSR;
+	close ERRORR;
+	select STDOUT; $|=1;
+	exec ("gpg",
+	      "--status-fd", fileno(STATUSW),
+	      "--logger-fd", fileno(ERRORW),
+	      "--homedir", $self->{gpg_homedir},
+	      "--trust-model", "always",
+	      @recipients,
+	      "--batch",
+	      "-e",
+	    );
+	exit 1;
     }
-
-    my $pid = $gnupg->encrypt( handles => $handles );
+    close STDOUT;
+    close ERRORW;
+    close STATUSW;
 
     local $/ = undef;
-    my $error_output = <$error>;
+    my $error_output = <ERRORR>;
 
-    close $error;
+    close ERRORR;
 
     waitpid $pid, 0;
     kill 1, $child;		# no use for it anyway now
@@ -2561,8 +2569,6 @@ sub _encrypt_block
       die "_encrypt_block() error encrypting:\nError output: $error_output\n";
     }
 
-    printf STDERR "$$ gpg: encrypt -> %s\n", Digest::MD5::md5_hex($encrypted)
-	if $ENV{DEBUG_GPG};
     exit 0;
 }
 
@@ -2593,7 +2599,12 @@ sub _decrypt_block
 	exit 1;
     }
     local $/ = undef;
-    my $decrypted = <D>;
+    my $decrypted = "";
+    my $inbytes;
+    do {
+	$inbytes = sysread D, $decrypted, 2**26, length($decrypted);
+    } while ($inbytes > 0);
+    if (!defined $inbytes) { $decrypted = ""; }
     if (!close D) { $decrypted = ""; }
 
     if ($ENV{"DEBUG_GPG"} && $decrypted eq "") {
@@ -2610,55 +2621,59 @@ sub _unsafe_decrypt_block
 {
     my ($self, $dataref) = @_;
 
-    eval "use GnuPG::Interface";
-    die "_decrypt_block() GnuPG::Interface not found" if $@;
-
-    pipe READER, WRITER or die "Pipe failed: $!";
-    my $child = fork;
-    die "Pipe failed: $!" if !defined $child;
-    if ($child == 0)
+    pipe STDIN, WRITER or die "Pipe failed: $!";
+    my $wchild = fork;
+    die "Pipe failed: $!" if !defined $wchild;
+    if ($wchild == 0)
     {
-	close READER;
+	close STDOUT;
+	close STDIN;
+	select WRITER; $|=1;
 	print WRITER $$dataref;
+	close WRITER;
 	exit 0;
     }
     close WRITER;
 
-    my $gnupg = GnuPG::Interface->new();
-    $gnupg->options->hash_init( armor    => 1,
-                                homedir => $self->{gpg_homedir},
-				meta_interactive => 0,
-				);
-    my ( $error, $status, $passphrase ) =
-       ( IO::Handle->new(),
-         IO::Handle->new(),
-	 IO::Handle->new(),
-       );
+    local $^F = 999;
+    pipe STATUSR, STATUSW or die "Pipe failed: $!";
+    pipe ERRORR, ERRORW or die "Pipe failed: $!";
+    pipe PASSR, PASSW or die "Pipe failed: $!";
+    my $rchild = fork();
+    die "no fork" if !defined $rchild;
+    if ($rchild == 0) {
+	close STATUSR;
+	close ERRORR;
+	close PASSW;
+	select STDOUT; $|=1;
+	exec ("gpg",
+	      "--status-fd", fileno(STATUSW),
+	      "--logger-fd", fileno(ERRORW),
+	      "--passphrase-fd", fileno(PASSR),
+	      "--homedir", $self->{gpg_homedir},
+	      "--batch",
+	      "--armor",
+	      "-d",
+	    );
+	exit 1;
+    }
+    close STDOUT;
+    close PASSR;
+    close ERRORW;
+    close STATUSW;
 
-    open STDIN, "<&READER" or die "dup READER: $!";
-    my $handles = GnuPG::Handles->new( stdin      => fileno(STDIN),
-                                       stdout     => fileno(STDOUT),
-                                       stderr     => $error,
-                                       status     => $status,
-				       passphrase => $passphrase,
-				       );
-    $handles->options ( 'stdout', { "direct" => 1 } );
-    $handles->options ( 'stdin', { "direct" => 1 } );
-
-    my $pid = $gnupg->decrypt( handles => $handles );
-
-    close $passphrase;
+    close PASSW;
 
     local $/ = undef;
-    my $error_output = <$error>;
-    my $status_output = <$status>;
+    my $status_output = <STATUSR>;
+    my $error_output = <ERRORR>;
 
-    close $error;
-    close $status;
+    close ERRORR;
+    close STATUSR;
 
-    waitpid $pid, 0;
-    kill 1, $child;		# no use for it anyway now
-    waitpid $child, 0;
+    waitpid $rchild, 0;
+    kill 1, $wchild;		# no use for it anyway now
+    waitpid $wchild, 0;
 
     if ($ENV{DEBUG_GPG} >= 2) {
 	warn "$$ Status: <<<$status_output>>> Error: <<<$error_output>>>\n";
