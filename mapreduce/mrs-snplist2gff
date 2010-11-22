@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+$, = "\t";
+$\ = "\n";
+
+while (<>)
+{
+    chomp;
+    my ($chr, $pos, $refbp, $seqbp, $extra) = split (/\t/, $_, 5);
+    next unless $chr =~ /^chr(\d+|X|Y|M)$/ && $pos =~ /^\d+$/;
+    $seqbp =~ s/[^A-Z]//;
+    my @seqbp = split ("", $seqbp);
+    if (@seqbp == 2 && $seqbp[0] eq $seqbp[1]) { pop @seqbp; }
+    next if @seqbp eq 1 && $seqbp[0] eq $refbp;
+    my $comments = "alleles ".join("/", @seqbp);
+    $comments .= "; ref_allele ".$refbp
+	if $refbp =~ /^[ACGT]$/i;
+    if ($extra =~ /\b(rs\d+)/) {
+	$comments .= "; dbsnp: $1";
+    }
+    print ($chr, ".", "SNP", $pos, $pos, ".", "+", ".", $comments);
+}
