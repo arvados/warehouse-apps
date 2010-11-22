@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
+use Fcntl qw/ :seek /;
 
 my %chr_regions;
 
@@ -9,8 +10,15 @@ die "no SNPREFERENCE specified" unless $ENV{KNOB_SNPREFERENCE};
 open R, "-|", "bash -c 'set -o pipefail; whget -r \"$ENV{KNOB_SNPREFERENCE}\" - | gzip -cdf | sort -k5'"
     or die "whget: $!";
 
-open STDIN, "-|", "sort -k2"
-    or die "sort input: $!";
+$ENV{TMPDIR} ||= $ENV{MR_JOBSTEP_TMP};
+$ENV{TMPDIR} ||= "/tmp";
+my $tmpfile = "$ENV{TMPDIR}/in$$";
+my $sort_cmd = $ENV{LAST_INFILENAME} =~ /brlmm/ ? "sort -k1" : "sort -k2";
+open TMP, "|-",  "$sort_cmd > '$tmpfile'" or die "$sort_cmd > $tmpfile: $!";
+while (<STDIN>) { s/^AFFX-/SNP_A-/; print TMP $_ }
+close TMP;
+open STDIN, "<", $tmpfile or die "$tmpfile: $!";
+unlink $tmpfile;
 
 open STDOUT, "|-", "sort"
     or die "sort output: $!";
@@ -20,24 +28,19 @@ my $notfound = 0;
 my $r = getnextr() or die "no reference data";
 while (<STDIN>)
 {
-    next unless /^\d/ || /^AFFX-/;
+    next unless /^\d/ || /^SNP_A-/;
     s/\r?\n$//;
     s/Mapping Analysis$//;	# concatenated files with no newline at end
 
     my (@in) = split (/\t/);
-    my ($sid, $AB) = ($in[0] =~ s/^AFFX-/SNP_A-/) ? @in[0,1] : @in[1,9];
+    my ($sid, $AB) = ($in[0] =~ /^SNP_A-/) ? @in[0,1] : @in[1,9];
 
     my $cmp;
-    while (($cmp = $r->[4] cmp $sid) < 0)
+    while ($r && ($cmp = $r->[4] cmp $sid) < 0)
     {
-	if (!($r = getnextr()))
-	{
-	    while (<STDIN>) { }
-	    last;
-	}
+	$r = getnextr();
     }
-    $r or last;
-    if ($cmp == 0)
+    if ($r && $cmp == 0)
     {
 	my ($a, $b) = split ('', $r->[3]);
 	$AB =~ s/(A)|B/$1 ? $a : $b/ge;
