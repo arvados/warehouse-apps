@@ -2,17 +2,25 @@
 
 use strict;
 use Getopt::Long;
+use FileHandle;
+use File::Temp qw/ :seekable /;
+use File::Spec;
+use Fcntl qw/ :seek /;
 
 my $usage;
 do { local $/ = undef; $usage = <__DATA__>; };
 
+my $debug_enable = 0;
 my $snpdig_enable = 1;
 my $snpdig_base = "http://genomerator-dev.freelogy.org/pgp10factory/snpdig.cgi/";
 
 if ($ARGV[0] =~ /^-/) {
-    GetOptions ("snpdig!" => \$snpdig_enable,
+    GetOptions ("debug" => \$debug_enable,
+		"snpdig!" => \$snpdig_enable,
 		"snpdig-base=s" => \$snpdig_base) or die $usage;
 }
+
+my %snplists;
 
 my @x;
 while (@ARGV && $ARGV[0] ne '--') { push @x, shift @ARGV }
@@ -43,8 +51,18 @@ for my $yfile (@y)
     {
 	my $xlist_orig = $xlists[$xi];
 
-	my $xlist = [ @$xlist_orig ];
-	my $ylist = [ @$ylist_orig ];
+	printf STDERR ("%s vs. %s\n",
+		       $xlist_orig->{"object_name"},
+		       $ylist_orig->{"object_name"})
+	    if $debug_enable;
+	my $xlist = $xlist_orig->{"data"};
+	my $ylist = $ylist_orig->{"data"};
+	$xlist_orig->reset();
+	$ylist_orig->reset();
+	$xlist_orig->load1();
+	$xlist_orig->load1();
+	$ylist_orig->load1();
+	$ylist_orig->load1();
 	my $score_nocall_x = 0;
 	my $score_nocall_y = 0;
 	my $score_yes = 0;
@@ -56,10 +74,12 @@ for my $yfile (@y)
 	    if ($cmp < 0)
 	    {
 		shift @$xlist;
+		$xlist_orig->load1();
 	    }
 	    elsif ($cmp > 0)
 	    {
 		shift @$ylist;
+		$ylist_orig->load1();
 	    }
 	    else
 	    {
@@ -88,6 +108,8 @@ for my $yfile (@y)
 		}
 		shift @$xlist;
 		shift @$ylist;
+		$xlist_orig->load1();
+		$ylist_orig->load1();
 	    }
 	}
 	my $score = ($score_yes + $score_no)
@@ -132,6 +154,13 @@ print "<TABLE>", @snpcounts, "</TABLE>";
 sub readsnplist
 {
     my $file = shift;
+    if (exists $main::snplists{$file}) {
+	my $fh = new FileHandle ($main::snplists{$file}->{"tempfile"}->filename, "r");
+	return  new snplist ("object_name" => $file,
+			     "tempfile" => $fh);
+    }
+
+    print STDERR "Reading $file\n" if $debug_enable;
     $file =~ s/:.*//;
     if ($file =~ /^[0-9a-f]{32}/ && !-e $file)
     {
@@ -164,7 +193,18 @@ sub readsnplist
     }
     close STDIN or die "input: $!";
     while (0 < wait) { }
-    return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
+    print STDERR "Sorting $file\n" if $debug_enable;
+    my $listref = [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
+    my $tempfile = new File::Temp (TEMPLATE => 'snplist.XXXXXXXXXX',
+				   SUFFIX => '.tmp',
+				   DIR => File::Spec->tmpdir);
+    print STDERR "Created ".$tempfile->filename."\n" if $debug_enable;
+    foreach (@$listref) {
+	print $tempfile (join ("\t", @$_), "\n");
+    }
+    $main::snplists{$file} = new snplist ("tempfile" => $tempfile,
+					  "object_name" => $file);
+    return $main::snplists{$file};
 }
 
 sub fasta2bin
@@ -197,6 +237,33 @@ sub unique_part
     }
     $ustart = 0 if $ustart <= 3;
     return substr ($this, $ustart, $thislen - $uend - $ustart);
+}
+
+package snplist;
+use Fcntl qw/ :seek /;
+
+sub new {
+    my $class = shift;
+    my $self = {@_};
+    bless $self, $class;
+    $self->{"data"} = [];
+    return $self;
+}
+
+sub reset {
+    my $self = shift;
+    $self->{"tempfile"}->seek (0, SEEK_SET) or die $self->{"tempfile"} . ": " . $!;
+    @{$self->{"data"}} = ();
+}
+
+sub load1 {
+    my $self = shift;
+    my $tempfile = $self->{"tempfile"};
+    return if eof ($tempfile);
+    local $_ = <$tempfile>;
+    chomp;
+    my @f = split /\t/;
+    push @{$self->{"data"}}, \@f;
 }
 
 __DATA__
