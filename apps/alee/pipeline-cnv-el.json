@@ -57,7 +57,7 @@
 	 {"name": "REFERENCE2", "optional": 1}],
 	 "max_nodes": 8,
 	 "max_steps_per_node": 1,
-	 "min_revision": 3174},
+	 "min_revision": 3237},
      {"name": "bwa-readmap", "function": "bwa-readmap", "params":
         [{"name": "INPUT", "from_step": 1},
 	 {"name": "BWA", "value": null},
@@ -70,7 +70,7 @@
 	 {"name": "REFERENCE2", "optional": 1}],
 	 "max_nodes": 8,
 	 "max_steps_per_node": 1,
-	 "min_revision": 3174},
+	 "min_revision": 3237},
      {"name": "readmap-merge", "function": "readmap-merge", "params":
         [{"name": "INPUT", "from_step": 7}],
 	 "max_nodes": 1,
