@@ -210,10 +210,9 @@ wait \$job2
 };
     }
 
-    $script .== qq{
+    $script .= qq{
 whput -r --as-stream '$out_path'
 };
-    }
 
     system("bash", "-c", $script) == 0
 	or die "script failed: error $! exit 0x".sprintf ("%x", $?);
