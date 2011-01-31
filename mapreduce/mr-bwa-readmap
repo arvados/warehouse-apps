@@ -207,7 +207,10 @@ job2=`jobs -p %+`
 $bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
 wait \$job1
 wait \$job2
+};
+    }
 
+    $script .== qq{
 whput -r --as-stream '$out_path'
 };
     }
