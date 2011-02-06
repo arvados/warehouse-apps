@@ -2712,7 +2712,8 @@ sub _unsafe_decrypt_block
     }
 
     # Something else went wrong...
-    warn "_decrypt_block() error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
+    my $hash = Digest::MD5::md5_hex($$dataref);
+    warn "_decrypt_block($hash) error decrypting:\nError output: $error_output\nStatus output: $status_output\n";
     return 0;
 }
 
