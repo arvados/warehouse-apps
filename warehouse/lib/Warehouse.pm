@@ -13,6 +13,7 @@ use Warehouse::Stream;
 use CGI;
 use Time::HiRes;
 use Warehouse::HTTP;
+use POSIX;
 
 
 $memcached_max_data = 1000000;
@@ -2592,7 +2593,6 @@ sub _decrypt_block
     die "couldn't fork" if !defined $child;
     if ($child == 0)
     {
-	close STDIN;
 	if ($self->_unsafe_decrypt_block ($dataref)) {
 	    exit 0;
 	}
@@ -2621,12 +2621,15 @@ sub _unsafe_decrypt_block
 {
     my ($self, $dataref) = @_;
 
+    local $^F = 999;
+
     pipe STDIN, WRITER or die "Pipe failed: $!";
+    POSIX::dup2(fileno(STDIN), 0) or die "$$ dup2: $!";
+
     my $wchild = fork;
     die "Pipe failed: $!" if !defined $wchild;
     if ($wchild == 0)
     {
-	close STDOUT;
 	close STDIN;
 	select WRITER; $|=1;
 	print WRITER $$dataref;
@@ -2635,21 +2638,18 @@ sub _unsafe_decrypt_block
     }
     close WRITER;
 
-    local $^F = 999;
     pipe STATUSR, STATUSW or die "Pipe failed: $!";
     pipe ERRORR, ERRORW or die "Pipe failed: $!";
-    pipe PASSR, PASSW or die "Pipe failed: $!";
     my $rchild = fork();
     die "no fork" if !defined $rchild;
     if ($rchild == 0) {
 	close STATUSR;
 	close ERRORR;
-	close PASSW;
 	select STDOUT; $|=1;
 	exec ("gpg",
 	      "--status-fd", fileno(STATUSW),
 	      "--logger-fd", fileno(ERRORW),
-	      "--passphrase-fd", fileno(PASSR),
+	      "--passphrase-file", "/dev/null",
 	      "--homedir", $self->{gpg_homedir},
 	      "--batch",
 	      "--armor",
@@ -2658,11 +2658,8 @@ sub _unsafe_decrypt_block
 	exit 1;
     }
     close STDOUT;
-    close PASSR;
     close ERRORW;
     close STATUSW;
-
-    close PASSW;
 
     local $/ = undef;
     my $status_output = <STATUSR>;
