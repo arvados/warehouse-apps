@@ -632,7 +632,7 @@ sub read_until
 	or die "fetch_block_ref($nexthash) failed";
     if ($nexthash =~ /\+GS(\d+)/ || $nexthash =~ /\+(\d+)/) {
       if ($1 != length $$dataref) {
-	warn "Warning: fetch($nexthash) returned ".length($$dataref)." bytes";
+	die "Error: fetch($nexthash) returned ".length($$dataref)." bytes, expected $1";
       }
     }
     $self->{buf} .= $$dataref;
