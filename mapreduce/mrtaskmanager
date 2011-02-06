@@ -43,6 +43,7 @@ foreach (split ("\n", $ENV{MR_KNOBS}))
   my ($k, $v) = split ("=", $_, 2);
   $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1/ges;
   $ENV{"KNOB_$k"} = $v;
+  $ENV{$k} = $v if $k =~ /^DEBUG_/;
 }
 
 $ENV{NOCACHE} ||= $ENV{KNOB_NOCACHE};
