@@ -1,43 +1,83 @@
 #!/usr/bin/perl
 
+=head1 NAME
+
+mount.whmanifest
+
+=head1 SYNOPSIS
+
+  mount.whmanifest [options] manifesthash /path/to/mountpoint
+
+Make the contents of the specified manifest appear as part of the unix
+filesystem.
+
+  fusermount -u /path/to/mountpoint
+
+Unmount.
+
+=head1 OPTIONS
+
+  --debug
+
+		Print extra debugging information on stderr.  Implies
+		--no-detach.
+
+  --help
+
+		Display this page.
+
+  --no-detach
+
+		Run in the foreground.  The default behavior is to
+		detach from the parent process.
+
+=cut
+
+use strict;
+use Getopt::Long;
+use Pod::Usage;
 use Warehouse;
 use Warehouse::Manifest;
 use Warehouse::Stream;
-use strict;
 use Fuse;
-use POSIX qw(ENOENT EAGAIN EINVAL);
+use POSIX qw(ENOENT EAGAIN EINVAL EPERM setsid);
 
 my $debugflag = 0;
-if ($ARGV[0] eq '--debug') { shift @ARGV; $debugflag = 1; }
+my $helpflag = 0;
+my $nodetachflag = 0;
 
-@ARGV == 2 or die "usage: $0 [--debug] manifesthash mountpoint\n";
+GetOptions (
+    "debug"			=> \$debugflag,
+    "help"			=> \$helpflag,
+    "no-detach"			=> \$nodetachflag,
+    )
+    or die "usage: $0 [options] manifesthash mountpoint (or try --help)\n";
+
+if ($helpflag)
+{
+    pod2usage(1);
+}
+
+$nodetachflag = 1 if $debugflag;
+
+@ARGV == 2 or die "usage: $0 [options] manifesthash mountpoint (or try --help)\n";
 my ($manifesthash, $mountpoint) = @ARGV;
 
+my $loaded;
 my $faketime = scalar time;
 my $fakeblocksize = 1024;
 my $whc = new Warehouse;
-my $m = new Warehouse::Manifest ('whc' => $whc,
-				 'key' => $manifesthash);
+my $m;
 my %fs;
-my %ds;
-$m->rewind;
-while (my $s = $m->subdir_next) {
-    my $dir = $s->name;
-    if ($dir =~ /^\.$/) { $dir = '/'; }
-    else { $dir = $dir . '/'; }
-    $dir =~ s:^\./:/:;
-    $s->rewind;
-    add_ds ($dir);
-    while (my ($pos, $size, $basename) = $s->file_next) {
-	last if !defined $pos;
-	my $filename = $dir . $basename;
-	if (!exists $fs{$filename}) {
-	    $fs{$filename} = [$s, $pos, $size];
-	    if ($basename =~ m:/:) {
-		add_ds ($filename);
-	    }
-	}
-    }
+my @fs;
+
+do { load($manifesthash) == 0 or die } if $manifesthash ne '/';
+map { print STDERR $_."\n" } @fs if $debugflag;
+
+if (!$nodetachflag) {
+    defined (my $child = fork) or die "Cannot fork: $!\n";
+    if ($child) { exit 0; }
+    setsid or die "Can't start a new session: $!\n";
 }
 
 Fuse::main(
@@ -48,18 +88,70 @@ Fuse::main(
     'debug' => $debugflag,
     );
 
-sub add_ds {
+sub chmanifest {
+    return 0 if $manifesthash ne '/';
+    my $fnref = shift;
+    if ($$fnref =~ s:^/([0-9a-f]{32}[^/]*)::) {
+	return load ($1);
+    }
+    if ($$fnref eq '/') {
+	return -EPERM();
+    }
+    return -ENOENT();
+}
+
+sub load {
+    my $manifesthash = shift;
+    return if $loaded eq $manifesthash;
+    $m = undef;
+    %fs = ();
+    @fs = ();
+    $loaded = undef;
+    eval {
+	$m = new Warehouse::Manifest ('whc' => $whc,
+				      'key' => $manifesthash);
+    };
+    return -ENOENT() if ($@);
+    $m->rewind;
+    while (my $s = $m->subdir_next) {
+	my $dir = $s->name;
+	if ($dir =~ /^\.$/) { $dir = '/'; }
+	else { $dir = $dir . '/'; }
+	$dir =~ s:^\./:/:;
+	$s->rewind;
+	add_parent_dirs ($dir);
+	while (my ($pos, $size, $basename) = $s->file_next) {
+	    last if !defined $pos;
+	    my $filename = $dir . $basename;
+	    if (!exists $fs{$filename}) {
+		$fs{$filename} = [$s, $pos, $size];
+		if ($basename =~ m:/:) {
+		    add_parent_dirs ($filename);
+		}
+	    }
+	}
+	@fs = sort keys %fs;
+    }
+    $loaded = $manifesthash;
+    return 0;
+}
+
+sub add_parent_dirs {
     my $name = shift;
     while ($name =~ s:/[^/]*$::) {
-	$ds{$name} = 1;
+	$fs{$name.'/'} = 1;
     }
 }
 
 sub fuse_getattr
 {
     my $filename = shift;
-    if ($filename eq '/' || $filename =~ m:/$: || exists $ds{$filename}) {
-	return (1, 1, 040755, 1, 0, 0, 0, 1, $faketime, $faketime, $faketime, 1, 1);
+    if ($filename eq '/' && $manifesthash eq '/') {
+	return (1, 1, 040111, 1, 0, 0, 0, 0, $faketime, $faketime, $faketime, 1, 1);
+    }
+    chmanifest(\$filename) == 0 or return -ENOENT();
+    if ($filename eq '/' || exists $fs{$filename.'/'}) {
+	return (1, 1, 040755, 1, 0, 0, 0, 0, $faketime, $faketime, $faketime, 1, 1);
     } elsif (defined ($fs{$filename})) {
 	return (1, 1, 0100644, 1, 0, 0, 0, $fs{$filename}->[2], $faketime, $faketime, $faketime, $fakeblocksize, int (($fs{$filename}->[2] + $fakeblocksize - 1) / $fakeblocksize));
     } else {
@@ -70,20 +162,39 @@ sub fuse_getattr
 sub fuse_getdir
 {
     my $dirname = shift;
-    $dirname =~ s:/$::;
-    my %ls;
-    foreach (keys %fs, keys %ds) {
-	if (m:^\Q$dirname\E/([^/]+):) {
-	    ++$ls{$1};
+    my $err = chmanifest(\$dirname);
+    $err == 0 or return $err;
+    $dirname .= '/' if $dirname !~ m:/$:;
+    my $min = 0;
+    my $max = $#fs;
+    while ($min <= $max) {
+	my $i = int(($min + $max)/2);
+	my $cmp = substr($fs[$i],0,length $dirname) cmp $dirname;
+	if ($cmp < 0) {
+	    $min = $i + 1;
+	}
+	else {
+	    $max = $i - 1;
 	}
     }
-    if (%ls) { return ('.', '..', sort (keys %ls), 0); }
+    my @ret;
+    while ($min <= $#fs && substr($fs[$min],0,length $dirname) eq $dirname) {
+	if ($#ret == -1) { push @ret, '.', '..'; }
+	else {
+	    push @ret, substr($fs[$min], length $dirname);
+	    $ret[-1] =~ s:/$::;
+	    pop @ret if $ret[-1] =~ m:/:;
+	}
+	$min++;
+    }
+    return (@ret, 0) if @ret;
     return -ENOENT();
 }
 
 sub fuse_read
 {
     my ($filename, $readsize, $offset) = @_;
+    chmanifest(\$filename) == 0 or return -ENOENT();
     if (defined ($fs{$filename})) {
 	my ($s, $pos, $filesize) = @{$fs{$filename}};
 	$readsize = $filesize - $offset if $readsize + $offset > $filesize;
