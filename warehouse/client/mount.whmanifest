@@ -59,9 +59,9 @@ sub fuse_getattr
 {
     my $filename = shift;
     if ($filename eq '/' || $filename =~ m:/$: || exists $ds{$filename}) {
-	return (1, 1, 040555, 1, 0, 0, 0, 1, $faketime, $faketime, $faketime, 1, 1);
+	return (1, 1, 040755, 1, 0, 0, 0, 1, $faketime, $faketime, $faketime, 1, 1);
     } elsif (defined ($fs{$filename})) {
-	return (1, 1, 0100444, 1, 0, 0, 0, $fs{$filename}->[2], $faketime, $faketime, $faketime, $fakeblocksize, int (($fs{$filename}->[2] + $fakeblocksize - 1) / $fakeblocksize));
+	return (1, 1, 0100644, 1, 0, 0, 0, $fs{$filename}->[2], $faketime, $faketime, $faketime, $fakeblocksize, int (($fs{$filename}->[2] + $fakeblocksize - 1) / $fakeblocksize));
     } else {
 	return -ENOENT();
     }
