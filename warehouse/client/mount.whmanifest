@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use strict;
+use Fuse;
+use POSIX qw(ENOENT EAGAIN EINVAL);
+
+my $debugflag = 0;
+if ($ARGV[0] eq '--debug') { shift @ARGV; $debugflag = 1; }
+
+@ARGV == 2 or die "usage: $0 [--debug] manifesthash mountpoint\n";
+my ($manifesthash, $mountpoint) = @ARGV;
+
+my $faketime = scalar time;
+my $fakeblocksize = 1024;
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest ('whc' => $whc,
+				 'key' => $manifesthash);
+my %fs;
+my %ds;
+$m->rewind;
+while (my $s = $m->subdir_next) {
+    my $dir = $s->name;
+    if ($dir =~ /^\.$/) { $dir = '/'; }
+    else { $dir = $dir . '/'; }
+    $dir =~ s:^\./:/:;
+    $s->rewind;
+    add_ds ($dir);
+    while (my ($pos, $size, $basename) = $s->file_next) {
+	last if !defined $pos;
+	my $filename = $dir . $basename;
+	if (!exists $fs{$filename}) {
+	    $fs{$filename} = [$s, $pos, $size];
+	    if ($basename =~ m:/:) {
+		add_ds ($filename);
+	    }
+	}
+    }
+}
+
+Fuse::main(
+    'mountpoint' => $mountpoint,
+    'getattr' => 'main::fuse_getattr',
+    'getdir' => 'main::fuse_getdir',
+    'read' => 'main::fuse_read',
+    'debug' => $debugflag,
+    );
+
+sub add_ds {
+    my $name = shift;
+    while ($name =~ s:/[^/]*$::) {
+	$ds{$name} = 1;
+    }
+}
+
+sub fuse_getattr
+{
+    my $filename = shift;
+    if ($filename eq '/' || $filename =~ m:/$: || exists $ds{$filename}) {
+	return (1, 1, 040555, 1, 0, 0, 0, 1, $faketime, $faketime, $faketime, 1, 1);
+    } elsif (defined ($fs{$filename})) {
+	return (1, 1, 0100444, 1, 0, 0, 0, $fs{$filename}->[2], $faketime, $faketime, $faketime, $fakeblocksize, int (($fs{$filename}->[2] + $fakeblocksize - 1) / $fakeblocksize));
+    } else {
+	return -ENOENT();
+    }
+}
+
+sub fuse_getdir
+{
+    my $dirname = shift;
+    $dirname =~ s:/$::;
+    my %ls;
+    foreach (keys %fs, keys %ds) {
+	if (m:^\Q$dirname\E/([^/]+):) {
+	    ++$ls{$1};
+	}
+    }
+    if (%ls) { return ('.', '..', sort (keys %ls), 0); }
+    return -ENOENT();
+}
+
+sub fuse_read
+{
+    my ($filename, $readsize, $offset) = @_;
+    if (defined ($fs{$filename})) {
+	my ($s, $pos, $filesize) = @{$fs{$filename}};
+	$readsize = $filesize - $offset if $readsize + $offset > $filesize;
+	$s->seek ($pos + $offset);
+	my $until = $pos + $offset + $readsize;
+	$until = $pos + $filesize if $offset + $readsize > $filesize;
+	my $buf = "";
+	while (my $dataref = $s->read_until ($until)) {
+	    $buf .= $$dataref;
+	}
+	return -EAGAIN() if $readsize != length $buf;
+	$main::tot += $readsize;
+	return $buf;
+    } else {
+	return -ENOENT();
+    }
+}
