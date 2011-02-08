@@ -53,9 +53,6 @@ sub _init
 {
   my Warehouse::Stream $self = shift;
   $self->{myhashes} = \@{$self->{hash}} if exists $self->{hash};
-  $self->{bufpos} = 0;
-  $self->{bufcursor} = 0;
-  $self->{buf} = "";
   $self->{async_writes} = 0;
   $self->rewind;
   return $self;
@@ -462,6 +459,9 @@ sub rewind
     $self->{nexthashes} = \@hashes;
     $self->{nextfiles} = \@files;
   }
+  $self->{bufpos} = 0;
+  $self->{bufcursor} = 0;
+  $self->{buf} = "";
 }
 
 
@@ -506,6 +506,8 @@ sub seek
 {
     my $self = shift;
     my $pos = shift;
+
+    $self->rewind if $pos < $self->{bufpos};
 
     my $sizehint;
     while (@{$self->{nexthashes}} &&
