@@ -27,6 +27,11 @@ our $VERSION = '0.01';
  my $manifest = Warehouse::Manifest->new (whc => $whc,
 					  data => \$manifestdata);
 
+ $manifest->rewind;
+ while (my $s = $manifest->subdir_next) {
+    # ...
+ }
+
  my $file_data_ref = $manifest->get_file_data ($filename)
   or die $manifest->errstr;
 
