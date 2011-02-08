@@ -11,6 +11,11 @@ mount.whmanifest
 Make the contents of the specified manifest appear as part of the unix
 filesystem.
 
+  mount.whmanifest [options] / /path/to/mountpoint
+
+Mount any manifest on demand: make the contents of any manifest H
+appear at /path/to/mountpoint/H/.
+
   fusermount -u /path/to/mountpoint
 
 Unmount.
