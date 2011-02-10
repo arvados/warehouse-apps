@@ -9,7 +9,6 @@ WriteMakefile
      VERSION_FROM => 'lib/Warehouse.pm',
      EXE_FILES => [
 		   'client/auto_rebalance_keep.pl',
-		   'client/mount.whmanifest',
 		   'client/wh',
 		   'client/whcopy',
 		   'client/whence',
@@ -17,6 +16,7 @@ WriteMakefile
 		   'client/whget.cgi',
 		   'client/whintro',
 		   'client/whless',
+		   'client/whmount',
 		   'client/whpipeline',
 		   'client/whput',
 		   'client/rwhence',

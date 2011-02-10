@@ -2,16 +2,16 @@
 
 =head1 NAME
 
-mount.whmanifest
+whmount
 
 =head1 SYNOPSIS
 
-  mount.whmanifest [options] manifesthash /path/to/mountpoint
+  whmount [options] manifesthash /path/to/mountpoint
 
 Make the contents of the specified manifest appear as part of the unix
 filesystem.
 
-  mount.whmanifest [options] / /path/to/mountpoint
+  whmount [options] / /path/to/mountpoint
 
 Mount any manifest on demand: make the contents of any manifest H
 appear at /path/to/mountpoint/H/.
@@ -24,17 +24,38 @@ Unmount.
 
   --debug
 
-		Print extra debugging information on stderr.  Implies
-		--no-detach.
+	Print extra debugging information on stderr.  Implies
+	--no-detach.
 
   --help
 
-		Display this page.
+	Display this page.
 
   --no-detach
 
-		Run in the foreground.  The default behavior is to
-		detach from the parent process.
+	Run in the foreground.  The default behavior is to detach from
+	the parent process.
+
+=head1 CAVEATS
+
+Mounts are read-only.
+
+When using "whmount / /mnt", a command like "ls /mnt" will not give
+you a list of available manifests.  The permissions of /mnt are set to
+0111 (executable but not readable) so this shortcoming does not seem
+so confusing to standard filesystem tools.
+
+File creation, modification, and access times for files and
+directories are set to the time when whmount was invoked.
+
+Performance is optimized for long sequential reads.
+
+When whmount is invoked as "whmount / ...", it only keeps one manifest
+in memory at a time, and loading a manifest is relatively slow.
+Therefore, if you are doing something that requires alternating
+accesses between two manifests -- for example, comparing the contents
+of two manifests -- it is much more efficient to launch a separate
+whmount process for each manifest.
 
 =cut
 
@@ -70,7 +91,12 @@ my ($manifesthash, $mountpoint) = @ARGV;
 
 my $loaded;
 my $faketime = scalar time;
-my $fakeblocksize = 1024;
+my $fakeblocksize = 512;	# Although it should work fine to set this to
+				# 1024 or 2^26, fuse doesn't seem to
+				# care what we set it to.  A
+				# fakeblocksize of 512 seems to be
+				# necessary to make "du" report
+				# reasonable values.
 my $whc = new Warehouse;
 my $m;
 my %fs;
