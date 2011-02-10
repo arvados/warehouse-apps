@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+
+# convert CGI .var format v1.3 to GFF
+
+use Safepipe;
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $whc = new Warehouse;
+
+if ($ENV{MR_LEVEL} == 0) {
+    my $m = new Warehouse::Manifest (whc => $whc,
+				     key => $ENV{MR_INPUT0});
+    $m->rewind;
+    while (my $s = $m->subdir_next)
+    {
+	my $outdir = $s->name;
+	my $indir = $s->name;
+	$indir .= '/';
+	$indir =~ s{^\./}{};
+	while (my ($pos, $size, $filename) = $s->file_next)
+	{
+	    last if !defined $pos;
+	    my $outfilename = $filename;
+	    $outfilename =~ s:(\.tsv)?\.(g?z|bz2)$::i;
+	    $outfilename .= '.gff.gz';
+	    print STDERR "+++mrjobstep 1 $outdir $outfilename $ENV{MR_INPUT0}/$indir$filename+++\n";
+	}
+    }
+    
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+    exit 0;
+}
+
+else {
+    my ($outdir, $outfile, $inpath) = split (' ', $ENV{MR_INPUT}, 3);
+
+    Safepipe::readfrom
+	('main::IN',
+	 'git archive --format=tar --remote=git://git.clinicalfuture.com/get-evidence.git 7216c0167627dab56e2dbb4dd2a9f00715ac5838 server/conversion/cgi1.3_to_gff.py',
+	 'tar xOf - > cgi1.3_to_gff.py',
+	)
+	or die "git archive failed: $@";
+    close IN or die "git archive failed: $!";
+
+    my @uncompress;
+    @uncompress = ('gzip -cdf') if $inpath =~ m:\.g?z$:i;
+    @uncompress = ('bunzip2') if $inpath =~ m:\.bz2$:i;
+    my @compress;
+    @compress = ('gzip -9n') if $outfile =~ m:\.gz$:;
+    Safepipe::readfrom
+	('main::IN',
+	 "whget $inpath",
+	 @uncompress,
+	 'python ./cgi1.3_to_gff.py',
+	 @compress,
+	 "mrs-store '$outdir' '$outfile'",
+	 "mrs-output",
+	)
+	or die "pipe failed: $!";
+    close IN or die "pipe failed: $!";
+    exit 0;
+}
