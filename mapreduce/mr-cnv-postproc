@@ -45,7 +45,7 @@ print TMP <<EOF;
 source("$cnv_path/cnv/BIC-postprocessing.R")
 chromosome_names = paste("chr",c(c(1:22),"X"),sep="")
 bic_files_list = paste(chromosome_names,".bic",sep="")
-post_proc_new(bic_files_list,chromosome_names,"$tmp/out/out.R.bic",$min_diff)
+post_proc(bic_files_list,chromosome_names,"$tmp/out/out.R.bic",$min_diff)
 EOF
 ;
 close(TMP);
