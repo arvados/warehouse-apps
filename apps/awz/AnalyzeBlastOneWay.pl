@@ -1,0 +1,39 @@
+use strict;
+use Bio::SearchIO;
+use ProcessAlignmentOneWay;
+
+#my $blast_name = shift;
+my @cmd_line = @ARGV;
+
+#( my $output_file, my $pvalue, my $th ) = @cmd_line;
+#my $cluster_name =	">" . $output_file . "_" . $pvalue . "_" . $th . "_control.txt";
+#open (my $f, $cluster_name);
+#close($f);
+#$cluster_name =	">" . $output_file . "_" . $pvalue . "_" . $th . "_real.txt";
+#open (my $f, $cluster_name);
+#close($f);
+
+#my $blast_file = $blast_name;
+
+#my $in = new Bio::SearchIO(-format => 'blast', -file   => $blast_file);
+my $in = new Bio::SearchIO(-format => 'blast', -fh   => \*STDIN);
+my %queries;
+my $num_queries = 0;
+my $num_hits;
+my $num_hsps;
+
+while( my $result = $in->next_result )
+{
+	$num_queries++;
+	$num_hits = 0;
+	while( my $hit = $result->next_hit )
+	{
+		$num_hits++;
+		$num_hsps = 0;
+		while( my $hsp = $hit->next_hsp )
+		{
+			$num_hsps++;
+			ProcessAlignmentOneWay::process_alignment_by_length(\$hsp,$result->query_name(),$hit->name(),\@cmd_line);
+		}
+	}
+}
