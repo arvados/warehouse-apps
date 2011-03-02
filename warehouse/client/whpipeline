@@ -672,7 +672,8 @@ sub find_job
     my $stepno = shift;
     my $step = shift;
     my $joblist = $whc->job_list (%$mrjobspec);
-    if (!$joblist)
+    if (!$joblist &&
+	!($joblist = $whc->job_list (%$mrjobspec)))
     {
 	push @{$step->{"warnings"}}, "Error retrieving job list";
 	return undef;
