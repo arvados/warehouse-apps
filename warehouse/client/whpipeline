@@ -63,9 +63,27 @@ overridden with the --no-reuse option.
 		Content type for callback (default
 		multipart/form-data)
 
-  --debug       Print diagnostic messages on stderr
+  --debug	Print diagnostic messages on stderr
 
-  --help        Print usage message
+  --detach
+
+		Fork and detach from the parent process.  This returns
+		control to the calling process immediately, while
+		whpipeline continues to submit jobs, monitor pipeline
+		progress, and perform callbacks in the background.
+
+  --help	Print usage message
+
+  --lockfile /path/file
+
+		Obtain an exclusive lock on the specified file before
+		doing anything else, and keep the lock for the
+		duration of this process.  If the file does not exist,
+		create it.  If the file is already locked by another
+		process, or an exclusive lock cannot be obtained right
+		now for any other reason, just quit.  This can be used
+		to avoid having multiple whpipeline processes
+		shepherding identical pipelines.
 
   --max-nodes 10
 
@@ -76,23 +94,26 @@ overridden with the --no-reuse option.
 
   --no-new-jobs Do not start any new jobs
 
-  --no-reuse    Always run new jobs, even if jobs already exist
-                that match the pipeline requirements
+  --no-reuse	Always run new jobs, even if jobs already exist
+		that match the pipeline requirements
 
-  --no-wait     Do not wait for jobs to finish, exit asap
+  --no-wait	Do not wait for jobs to finish, exit asap
 
   --secret-key keyid
 
-                Encrypt/decrypt alldata using the specified GPG key
+		Encrypt/decrypt alldata using the specified GPG key
 
-  --tty-status  Print status summary to STDERR even if not a tty
+  --[no-]tty-status
+
+		[Do not] print status summary to STDERR.  Default:
+		print summary if STDERR is a tty.
 
   --label string
 
-                Display the specified string in each row of the status
-                display, and include it as the value for the "label"
-                key of each pipeline in the JSON data passed to
-                callback handlers
+		Display the specified string in each row of the status
+		display, and include it as the value for the "label"
+		key of each pipeline in the JSON data passed to
+		callback handlers
 
 =head1 PIPELINE PARAMETERS
 
@@ -145,7 +166,9 @@ my %callbackparam = ( "json" => "{}" );
 my $callbacktimeout;
 my $callbacktype = "form-data";
 my $debugflag;
+my $detachflag;
 my $helpflag;
+my $lockfile;
 my $maxnodes_default = 2;
 my $nokeepgoingflag;
 my $nonewjobsflag;
@@ -163,14 +186,16 @@ GetOptions (
     "callback-timeout=i"	=> \$callbacktimeout,
     "callback-type=s"		=> \$callbacktype,
     "debug"			=> \$debugflag,
+    "detach"			=> \$detachflag,
     "help"			=> \$helpflag,
+    "lockfile=s"		=> \$lockfile,
     "max-nodes=i"		=> \$main::Options->{"maxnodes"},
     "no-keep-going"		=> \$nokeepgoingflag,
     "no-new-jobs"		=> \$nonewjobsflag,
     "no-reuse"			=> \$noreuseflag,
     "no-wait"			=> \$nowaitflag,
     "secret-key=s"		=> \$secretkey,
-    "tty-status"		=> \$ttyflag,
+    "tty-status!"		=> \$ttyflag,
     "label=s"			=> \$label,
     )
     or die "Failed to parse command line options.  Try:  $0 --help\n";
@@ -178,6 +203,26 @@ GetOptions (
 if ($helpflag)
 {
     pod2usage(1);
+}
+
+
+if (defined $lockfile)
+{
+    open LOCKFILE, ">>", $lockfile or die "Can't open lockfile $lockfile: $!";
+    if (!flock LOCKFILE, Fcntl::LOCK_EX | Fcntl::LOCK_NB) {
+	warn "Could not lock $lockfile: $!" if $debugflag;
+	exit 0;
+    }
+}
+
+
+if (defined $detachflag)
+{
+    use POSIX 'setsid';
+    my $child = fork;
+    die "Fork failed: $!" if !defined $child;
+    exit 0 if $child;
+    setsid or die "Detach failed: $!";
 }
 
 
