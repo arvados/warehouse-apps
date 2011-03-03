@@ -1,5 +1,7 @@
 #!/usr/bin/perl -w 
 
+use lib "$ENV{MR_REVISION_SRCDIR}/apps/awz";
+
 use strict;
 use Bio::SearchIO;
 use ProcessAlignmentOneWay;
