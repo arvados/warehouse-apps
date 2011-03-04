@@ -108,6 +108,10 @@ while (!$main::DRAIN || $main::children > 0)
       {
 	@nodes_arg = ("--nodes", $job_nodes);
       }
+      elsif ($job_nodes =~ /^(\d+),(\d+)M/)
+      {
+	@nodes_arg = ("--nodes", $1, "--mem", $2);
+      }
       else
       {
 	$job_nodes =~ s/\s+/,/g;
