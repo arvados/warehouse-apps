@@ -558,6 +558,7 @@ KNOW_JOB_ID:
 	    "max_nodes" => $main::Options->{"maxnodes"} || $pipe->{"max_nodes"} || $maxnodes_default,
 	    "min_revision" => $pipe->{"min_revision"},
 	    "max_revision" => $pipe->{"max_revision"},
+	    "min_memory" => $pipe->{"min_memory"},
 	};
 	my $mrjobspec = {
 	    "mrfunction" => $step->{"function"},
@@ -603,6 +604,8 @@ KNOW_JOB_ID:
 					       && $mrjobspec->{"nodes"} > $v);
 		$mrjobspec->{"stepspernode"} = $v if $p eq "max_steps_per_node";
 	    }
+	    $mrjobspec->{"nodes"} .= "," . $sysparam->{"min_memory"} . "M"
+		if $sysparam->{"min_memory"};
 	    $step_job = start_job ($mrjobspec);
 	    return !$nonewjobsflag if $step_job eq "None";
 	    if (!$step_job)
