@@ -19,7 +19,9 @@ open STDOUT, "| mrs-store . $prefix.txt | mrs-output";
 my $keeps = $whc->{keeps};
 foreach (@$keeps) {
     if ($self->{config}->{keeps_status}->{$_} !~ /^down/) {
-	my $cmd = sprintf "timeout 20 wget -O- -q http://%s/index/%s", $_, $prefix;
+	my $cmd = sprintf "timeout 20 wget -O- -q http://%s/index/%s || echo >&2 fail node %s prefix %s", $_, $prefix, $_, $prefix;
 	system $cmd;
     }
 }
+
+close STDOUT;
