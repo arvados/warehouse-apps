@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+
+my $build = shift @ARGV;
+die "usage: '$0 b36 < samtools_pileup' or '$0 b37 ...' etc." if $build !~ /^b\d+$/;
+
+print "##genome-build $build\n";
+while (<>) {
+    chomp;
+    my ($chr, $pos, $ref, $alleles, @scores) = split;
+    my $comment = "orig $ref $alleles";
+    my $feature = 'INDEL';
+    $feature = 'SNP' if "$ref$alleles" =~ /^[acgt][a-z]$/i;
+    my $start = $pos;
+    my $end = $pos;
+    if ($ref eq '*') {
+	if ($alleles =~ m{\*/-([acgt]+)}i || $alleles =~ m{-([acgt]+)/\*}i) {
+	    $end = $start + length($1) - 1;
+	    $alleles = "-/$1";
+	    $ref = $1;
+	}
+	elsif ($alleles =~ m{\*/\+([acgt]+)}i || $alleles =~ m{\+([acgt]+)/\*}i) {
+	    $end = $start - 1;
+	    $ref = '-';
+	    $alleles = "$1/-";
+	}
+	elsif ($alleles =~ m{\+([acgt]+)/\+$1}i) {
+	    $end = $start - 1;
+	    $ref = '-';
+	    $alleles = "$1";
+	}
+	elsif ($alleles =~ m{-([acgt]+)/-$1}i) {
+	    $end = $start + length($1) - 1;
+	    $ref = $1;
+	    $alleles = "-";
+	}
+	else {
+	    print "#vcf:\t$_\n";
+	    warn "#vcf:\t$_\n";
+	    next;
+	}
+    } elsif (length $alleles == 1) {
+	$alleles = uncompress_bp ($alleles);
+    }
+    my @gff = ($chr, 'pileup', $feature, $start, $end, $scores[0], '+', '.');
+    $comment = "alleles $alleles;ref_allele $ref;$comment";
+    print (join ("\t", @gff, $comment), "\n");
+}
+
+sub uncompress_bp
+{
+    my $x = shift;
+    $x =~ tr/a-z/A-Z/;
+    $x =~ tr/XACMGRSVTWYHKDBN/0123456789abcdef/;
+    $x = hex($x);
+    while ($x & ~0xf)
+    {
+	$x = ($x & 0xf) | ($x >> 4);
+    }
+    my @bp;
+    push @bp, 'A' if $x & 1;
+    push @bp, 'C' if $x & 2;
+    push @bp, 'G' if $x & 4;
+    push @bp, 'T' if $x & 8;
+    push @bp, 'N' if !@bp;
+    return join ('/', @bp);
+}
+
+sub bin2
