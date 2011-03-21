@@ -24,8 +24,11 @@ Safeget::git ($ENV{KNOB_GIT_REPO},
 	      $ENV{KNOB_GET_VERSION});
 symlink "config.default.py", "$get_dir/server/config.py";
 if (open (L, "+>>", "$get_dir.lock") &&
-    flock (L, LOCK_EX)) {
-    system ("cd '$get_dir/server' && python setup.py build_ext --inplace");
+    flock (L, LOCK_EX) &&
+    !-l "$get_dir/.build_done") {
+    system ("cd '$get_dir/server' && python setup.py build_ext --inplace") == 0
+	or die "python setup.py build_ext --inplace failed: $?";
+    symlink ".", "$get_dir/.build_done";
 }
 close L;
 $ENV{PYTHONPATH} = "$get_dir/server";
@@ -54,7 +57,9 @@ while (my $s = $m->subdir_next)
 	# If this is level 0 (i.e., job step 0) then just queue up one
 	# step for each file in the input.
 	if ($ENV{MR_LEVEL} == 0) {
-	    print STDERR "+++mrjobstep 1 $dirindex $fileindex+++\n";
+	    if ($filename !~ /\.json$/ && $filename ne 'log') {
+		print STDERR "+++mrjobstep 1 $dirindex $fileindex+++\n";
+	    }
 	    next;
 	}
 
@@ -66,6 +71,16 @@ while (my $s = $m->subdir_next)
 
 	# Finally we're on level 1 (really doing the work) and this is
 	# the file we're supposed to be working on.
+
+	# Store the processed data in a subdir named ./{dir}/{filename_base}
+	my $subdir = $s->name;
+	if ($filename ne 'ns.gff.gz') {
+	    $subdir .= '/' . $filename ;
+	    $subdir =~ s{(\.(gff|gz|bz2))*$}{}i;
+	}
+
+	# Make a temporary copy of the input file, just called "input"
+	# but with the original filename extensions ("input.{exts}")
 	$filename =~ /(\.[^\/]*)$/;
 	$filename = "input$1";
 	open GFF, ">", "$filename" or die "open $filename: $!";
@@ -83,7 +98,7 @@ while (my $s = $m->subdir_next)
 	    or die "genome_analyzer failed: exit $?";
 
 	Safepipe::readfrom ('main::IN',
-			    'whput -r ./.-out/',
+			    "whput -r --as-stream --use-subdir='$subdir' ./.-out/",
 			    'mrs-output')
 	    or die "pipe failed: $!";
 	close IN or die "pipe failed: $!";
