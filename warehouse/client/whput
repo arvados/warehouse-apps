@@ -92,7 +92,11 @@ if ($localbase eq "-" || -f $localbase)
 }
 else
 {
-    traverse ($localbase, "", ".", \$manifest);
+    my $subdir = $main::opt{'use-subdir'} || '.';
+    $subdir = "./$subdir" unless $subdir eq '.' || $subdir =~ m{^\./};
+    $subdir =~ s{/+$}{};
+
+    traverse ($localbase, "", $subdir, \$manifest);
 
     if ($main::opt{"as-stream"})
     {
