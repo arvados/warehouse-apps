@@ -1,0 +1,99 @@
+#!/usr/bin/perl
+
+# run genome_analyzer
+
+# KNOB_DATA_TARBALL => warehouse locator for ref/gene data
+# KNOB_GETEV_JSON => warehouse locator for get-evidence snapshot
+# KNOB_GET_VERSION => git commit id in get-evidence repository
+# KNOB_GIT_REPO => git://git.clinicalfuture.com/get-evidence.git
+
+use Safeget;
+use Safepipe;
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Fcntl ':flock';
+
+chdir ($ENV{MR_JOBSTEP_TMP})
+    or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
+
+# Set up get-evidence source tree
+my $get_dir = $ENV{MR_JOB_TMP}."/get-evidence";
+Safeget::git ($ENV{KNOB_GIT_REPO},
+	      $get_dir,
+	      $ENV{KNOB_GET_VERSION});
+symlink "config.default.py", "$get_dir/server/config.py";
+if (open (L, "+>>", "$get_dir.lock") &&
+    flock (L, LOCK_EX)) {
+    system ("cd '$get_dir/server' && python setup.py build_ext --inplace");
+}
+close L;
+$ENV{PYTHONPATH} = "$get_dir/server";
+
+# set up reference data dir
+my $data_dir = $ENV{MR_JOB_TMP}."/data";
+
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc,
+				 key => $ENV{MR_INPUT0});
+my $dirindex = -1;
+$m->rewind;
+while (my $s = $m->subdir_next)
+{
+    ++$dirindex;
+    my $outdir = $s->name;
+    my $indir = $s->name;
+    $indir .= '/';
+    $indir =~ s{^\./}{};
+    my $fileindex = -1;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+	++$fileindex;
+	last if !defined $pos;
+
+	# If this is level 0 (i.e., job step 0) then just queue up one
+	# step for each file in the input.
+	if ($ENV{MR_LEVEL} == 0) {
+	    print STDERR "+++mrjobstep 1 $dirindex $fileindex+++\n";
+	    next;
+	}
+
+	# If this isn't the file we're supposed to be working on in
+	# this job step, just move along.
+	if ($ENV{MR_INPUT} ne "$dirindex $fileindex") {
+	    next;
+	}
+
+	# Finally we're on level 1 (really doing the work) and this is
+	# the file we're supposed to be working on.
+	$filename =~ /(\.[^\/]*)$/;
+	$filename = "input$1";
+	open GFF, ">", "$filename" or die "open $filename: $!";
+	$s->seek($pos);
+	while (my $dataref = $s->read_until ($pos + $size)) {
+	    print GFF $$dataref or die "write $filename: $!";
+	}
+	close GFF or die "close $filename: $!";
+
+	Safeget::wh_tarball_extract ($ENV{KNOB_DATA_TARBALL}, $data_dir);
+	Safeget::wh_file ($ENV{KNOB_GETEV_JSON}, "$data_dir/getev-latest.json.gz");
+	$ENV{CORE} = "$get_dir/server";
+	$ENV{DATA} = $data_dir;
+	system ("$get_dir/server/genome_analyzer.py", "-g", "./$filename") == 0
+	    or die "genome_analyzer failed: exit $?";
+
+	Safepipe::readfrom ('main::IN',
+			    'whput -r ./.-out/',
+			    'mrs-output')
+	    or die "pipe failed: $!";
+	close IN or die "pipe failed: $!";
+	exit 0;
+    }
+}
+
+if ($ENV{MR_LEVEL} == 0) {
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+    exit 0;
+}
+
+die "never found specified index ($ENV{MR_INPUT})";
