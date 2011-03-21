@@ -18,6 +18,7 @@ Options:
     --in-manifest or --as-manifest
     --as-stream
     --use-filename=read-from-stdin.txt
+    --use-subdir=./subdir/in/manifest
     --progress
     --batch-progress
     --progress-interval=n_seconds
@@ -355,6 +356,9 @@ options:
     --as-stream
     --use-filename=read-from-stdin.txt
     --use-subdir=./subdir/in/manifest
+    --progress
+    --batch-progress
+    --progress-interval=n_seconds
 
 };
 }
