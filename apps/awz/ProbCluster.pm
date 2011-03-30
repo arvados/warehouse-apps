@@ -1,7 +1,7 @@
 package ProbCluster;
 sub prob_of_cluster
 {	
-	( my $p, my $n, my $k ) = @_;
+	( my $p, my $n, my $k ) = @_;	
 	my $lambda = $n * $p;
 	my $term;
 	my $sum = 0;

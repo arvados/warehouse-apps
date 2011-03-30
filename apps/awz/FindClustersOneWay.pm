@@ -4,7 +4,8 @@ use ProbCluster;
 
 my $c_handle = \*STDOUT;
 my @mm;
-my @mm_address;
+my @mm_genome_address;
+my @mm_trace_address;
 my @ind;
 my $total_prob;
 my @where;
@@ -23,15 +24,16 @@ my $strand;
 sub find_clusters_by_length
 {
 	(my $mm_ref_q, my $mm_ref_s, my $ind_ref, $a_name, $g_name, my $prob, $strand, $control, $mm_count, $len, my $cmd_line_ref) = @_;
-	@mm = @$mm_ref_q;
-	@mm_address = @$mm_ref_s;
+	@mm = @$mm_ref_s;
+	@mm_genome_address = @$mm_ref_s;
+	@mm_trace_address = @$mm_ref_q;
 	@ind = @$ind_ref;
 	my @cmd_line = @$cmd_line_ref;
 	#( $output_file, $pvalue, $th ) = @cmd_line;
 	($pvalue, $th ) = @cmd_line;
 
 	#	print "a name = $a_name, g name = $g_name\n";
-	#	print "mm: size = ", scalar @mm, ", @mm \n";
+	#   print "mm: size = ", scalar @mm, ", @mm, ind: @ind\n";
 	#	print "prob = $prob\n";
 	#	print "pvalue = $pvalue, th = $th\n";
 
@@ -44,12 +46,12 @@ sub find_clusters_by_length
 	$best_j     = -1;
 	$total_prob = 1;
 	@where      = ();
-	$number_of_clusters = 0;
+	$number_of_clusters = 0;	
 	while ( $i < $#mm )
 	{
-		$jmin = max( $best_j, $i + $th - 2 );
+		$jmin = max( $best_j, $i + $th - 2 );		
 		for ( $j = $#mm ; $j > $jmin ; $j-- )
-		{
+		{			
 			if (($j - $i + 1) < $th)  {next;}
 			if (($ind[$j] - $ind[$i] + 1) > ($j - $i + 1)) {next;}
 			my $cprob = ProbCluster::prob_of_cluster( $prob, $mm[$j] - $mm[$i] + 1, $j - $i + 1 );
@@ -58,7 +60,7 @@ sub find_clusters_by_length
 				print "prob = $cprob, p = $prob, n = ", $mm[$j] - $mm[$i] + 1, ", k = ", $j - $i + 1, "\n";
 			}
 			if ( $cprob < $pvalue )
-			{
+			{				
 				push( @where, ( max( $i, $best_j + 1 ) .. $j ) );
 				if ($i > $best_j)
 				{
@@ -116,8 +118,10 @@ sub write_cluster
 	my @where1base;
 	foreach my $i ( 0 .. $#where ) { $where1base[$i] = $where[$i] + 1; }
 	#printf $c_handle $str_format , @where1base;
-	print $c_handle "All locations: ";
-	printf $c_handle $str_format , @mm_address[@where];
+	print $c_handle "All genome locations: ";
+	printf $c_handle $str_format , @mm_genome_address[@where];
+	print $c_handle "All trace locations : ";
+	printf $c_handle $str_format , @mm_trace_address[@where];
 	print $c_handle "Total length: $len, Direct mismatches: ", scalar(@mm), ", All mismatches: $mm_count\n";
 	print $c_handle "End cluster\n\n";
 

@@ -13,24 +13,22 @@ sub process_alignment_by_length
 	my $hit_name     = shift;
 	my $cmd_line_ref = shift;
 	my $len = int( ( $hsp->length('query') + $hsp->length('hit') ) / 2 );
-
+	#print "trace: $query_name, hit name: $hit_name, lenght = $len\n";
 	my $strand;
 	my $factor;
 	my $q_start;
 	my $s_start;
+	$q_start  = $hsp->start('query');
 	if ( $hsp->strand('query') == $hsp->strand('hit') )
 	{	
 		$strand = '+';
-		$factor = 1;
-		$q_start  = $hsp->start('query');
-		$s_start  = $hsp->start('subject');
-	
+		$factor = 1;		
+		$s_start  = $hsp->start('subject');	
 	}
 	else
 	{		
 		$strand = '-';
-		$factor = -1;
-		$q_start  = $hsp->end('query');
+		$factor = -1;		
 		$s_start  = $hsp->end('subject');
 		#print "Alignement $query_name<=>$hit_name between different strands!!!\n";
 		#return;
@@ -44,7 +42,7 @@ sub process_alignment_by_length
 	my $str1      = $hsp->query_string;
 	my $str2      = $hsp->hit_string;
 	my $alignment = $hsp->homology_string;
-
+	
 	my @s1 = split( //, $str1 );
 	my @s2 = split( //, $str2 );
 
@@ -114,44 +112,23 @@ sub process_alignment_by_length
 			$ga_count++;
 		}
 		$count_mm++;
-	}	
-	
-	my $prob_real;
-	my $prob_control;
-	if ($strand eq '+')
-	{
-		$prob_real    = ($ct_count+$tc_count+$ga_count) / ( 3 * $len );
-		$prob_control = ($ct_count+$tc_count+$ag_count) / ( 3 * $len );		
-	}
-	else
-	{
-		$prob_real    = ($ct_count+$ag_count+$ga_count) / ( 3 * $len );
-		$prob_control = ($tc_count+$ag_count+$ga_count) / ( 3 * $len );		
-	}
+	}		
+	my $prob_ag    = ($ct_count+$tc_count+$ga_count) / ( 3 * $len );
+	my $prob_ga = ($ct_count+$tc_count+$ag_count) / ( 3 * $len );		
+	my $prob_tc    = ($ct_count+$ag_count+$ga_count) / ( 3 * $len );
+	my $prob_ct = ($tc_count+$ag_count+$ga_count) / ( 3 * $len );		
 	#print "len = $len, tc count = $tc_count, prob = $prob_real\n";
 
 	# Real	
-	if ($strand eq '+')
-	{
-		FindClustersOneWay::find_clusters_by_length( \@mm_ag_q, \@mm_ag_s, \@ag_ind, $query_name,
-			$hit_name, $prob_real, $strand, 0, $count_mm, $len, $cmd_line_ref );
-	}
-	else
-	{
-		FindClustersOneWay::find_clusters_by_length( \@mm_tc_q, \@mm_tc_s, \@tc_ind, $query_name,
-			$hit_name, $prob_real, $strand, 0, $count_mm, $len, $cmd_line_ref );
-	}
+	FindClustersOneWay::find_clusters_by_length( \@mm_ag_q, \@mm_ag_s, \@ag_ind, $query_name,
+		$hit_name, $prob_ag, '+', 0, $count_mm, $len, $cmd_line_ref );
+	FindClustersOneWay::find_clusters_by_length( \@mm_tc_q, \@mm_tc_s, \@tc_ind, $query_name,
+		$hit_name, $prob_tc, '-', 0, $count_mm, $len, $cmd_line_ref );	
 	# Control
-	if ($strand eq '+')
-	{
-		FindClustersOneWay::find_clusters_by_length( \@mm_ga_q, \@mm_ga_s, \@ga_ind, $hit_name,
-			$query_name, $prob_control, $strand, 1, $count_mm, $len, $cmd_line_ref );
-	}
-	else
-	{
-		FindClustersOneWay::find_clusters_by_length( \@mm_ct_q, \@mm_ct_s, \@ct_ind, $hit_name,
-				$query_name, $prob_control, $strand, 1, $count_mm, $len, $cmd_line_ref );
-	}	
+	FindClustersOneWay::find_clusters_by_length( \@mm_ga_q, \@mm_ga_s, \@ga_ind, $hit_name,
+		$query_name, $prob_ga, '+', 1, $count_mm, $len, $cmd_line_ref );
+	FindClustersOneWay::find_clusters_by_length( \@mm_ct_q, \@mm_ct_s, \@ct_ind, $hit_name,
+		$query_name, $prob_ct, '-', 1, $count_mm, $len, $cmd_line_ref );	
 }
 
 1;
