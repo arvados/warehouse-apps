@@ -1,0 +1,44 @@
+use strict;
+use Bio::SearchIO;
+use ProcessAlignmentOneWay;
+
+my @cmd_line = @ARGV;
+
+my $in = new Bio::SearchIO(-format => 'blast', -fh   => \*STDIN);
+my %queries;
+my $num_queries = 0;
+my $num_hits;
+my $num_hsps;
+
+my $first_hsp;
+my $first_hit;
+while( my $result = $in->next_result )
+{	
+	$num_queries++;
+	$num_hits = 0;
+	my $first = 1;
+	my $unique = 1;
+	while( my $hit = $result->next_hit )
+	{
+		$num_hits++;
+		$num_hsps = 0;
+		while( my $hsp = $hit->next_hsp )
+		{			
+			if ($first)
+			{			
+				$first_hsp = $hsp;
+				$first_hit = $hit;
+				$first = 0;
+			}
+			else
+			{
+				$unique = 0;
+			}
+			$num_hsps++;
+		}
+	}
+	if (not $unique)	
+	{		
+		ProcessAlignmentOneWay::process_alignment_by_length(\$first_hsp,$result->query_name(),$first_hit->name(),\@cmd_line);
+	}
+}
