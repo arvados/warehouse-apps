@@ -23,7 +23,7 @@ while (my $s = $m->subdir_next) {
       exec ('mr-gbm2bam');
       die;
     }
-    if ($filename =~ /^\.bam$/i) {
+    if ($filename =~ /^\.(sam|bam)$/i) {
       print STDERR "+++mrout $ENV{MR_INPUT0}+++\n";
       exit 0;
     }
