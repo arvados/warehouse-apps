@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:convert csfasta to bam
+###MR_INPUT:manifest
+###MR_KNOBS:SAM
+###MR_KNOBS:REFERENCE
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT});
+$m->rewind;
+while (my $s = $m->subdir_next) {
+  my $stream;
+  while (my ($pos, $size, $filename) = $s->file_next)
+  {
+    last if !defined $pos;
+    if ($filename =~ /^(.*)\.(cs)?fasta(\.gz)?$/i) {
+      exec ('mr-gbm2bam');
+      die;
+    }
+    if ($filename =~ /^\.bam$/i) {
+      print STDERR "+++mrout $ENV{MR_INPUT0}+++\n";
+      exit 0;
+    }
+  }
+  die;
+}
