@@ -19,14 +19,14 @@ while (my $s = $m->subdir_next) {
   while (my ($pos, $size, $filename) = $s->file_next)
   {
     last if !defined $pos;
-    if ($filename =~ /^(.*)\.(cs)?fasta(\.gz)?$/i) {
+    if ($filename =~ /\.(cs)?fasta(\.gz)?$/i) {
       exec ('mr-gbm2bam');
       die;
     }
-    if ($filename =~ /^\.(sam|bam)$/i) {
+    if ($filename =~ /\.(sam|bam)$/i) {
       print STDERR "+++mrout $ENV{MR_INPUT0}+++\n";
       exit 0;
     }
   }
-  die;
+  die "failed to identify a file format";
 }
