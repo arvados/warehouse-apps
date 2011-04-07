@@ -74,9 +74,17 @@ while (my $s = $m->subdir_next)
 
 	# Store the processed data in a subdir named ./{dir}/{filename_base}
 	my $subdir = $s->name;
-	if ($filename ne 'ns.gff.gz') {
+	my $rename_subdir = 0;
+	if ($filename !~ /^ns.gff(.gz)?$/ ||
+	    $subdir !~ /^[0-9a-f]{40}/) {
+	    # doesn't look like the result of a previous get-evidence
+	    # run, so we'll try our best to come up with a unique
+	    # subdir name -- for now just based on the input subdir +
+	    # filename, in case we can't get a sha256 of the source
+	    # file (see below).
 	    $subdir .= '/' . $filename ;
 	    $subdir =~ s{(\.(gff|gz|bz2))*$}{}i;
+	    $rename_subdir = 1;
 	}
 
 	# Make a temporary copy of the input file, just called "input"
@@ -89,6 +97,13 @@ while (my $s = $m->subdir_next)
 	    print GFF $$dataref or die "write $filename: $!";
 	}
 	close GFF or die "close $filename: $!";
+
+	if ($rename_subdir) {
+	    my ($shasum) = `sha256sum $filename` =~ /^([0-9a-f]+)/;
+	    if ($shasum) {
+		$subdir = "./$shasum-out";
+	    }
+	}
 
 	Safeget::wh_tarball_extract ($ENV{KNOB_DATA_TARBALL}, $data_dir);
 	Safeget::wh_file ($ENV{KNOB_GETEV_JSON}, "$data_dir/getev-latest.json.gz");
