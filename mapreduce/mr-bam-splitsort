@@ -86,7 +86,7 @@ if ($ENV{MR_LEVEL} == 1)
       $dir = "$dir/$streamname/$filename.$pos";
       system ("mkdir -p $dir") == 0 or die "mkdir $dir: $?";
       open STDIN, "$sam_path/samtools view -h -|" or die "samtools view: $!";
-      open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view -buht $index_path - | $sam_path/samtools sort -m $memory_limit - $dir/$chr";
+      open STDOUT, "|-", "bash", "-c", "set -o pipefail; $sam_path/samtools view -S -buht $index_path - | $sam_path/samtools sort -m $memory_limit - $dir/$chr";
       print scalar <>;
       while (<>) {
 	print if /^\@/ || /^[^\t]*\t[^\t]*\t\Q$chr\E\t/;
