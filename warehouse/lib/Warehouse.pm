@@ -166,7 +166,7 @@ sub _init
     if ($no_warehouse_client_conf) {
 	$warehouses = [{
 	    'controllers' => 'controller:24848',
-	    'configurl' = 'http://controller:44848/warehouse-client.conf',
+	    'configurl' => 'http://controller:44848/warehouse-client.conf',
 	    'name' => 'default',
 		       }];
     }
