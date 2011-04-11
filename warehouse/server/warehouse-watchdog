@@ -107,6 +107,7 @@ sub update
 		mogilefs_directory_class
 		mogilefs_file_class
 		mogilefs_domain
+		name
 		keeps
 		keeps_status)) {
 	    $x->{$_} = $whc->{config}->{$_};

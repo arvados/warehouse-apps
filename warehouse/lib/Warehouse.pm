@@ -163,6 +163,14 @@ sub _init
 
     die "Failed to load /etc/warehouse/warehouse-client.conf" if $no_warehouse_client_conf;
 
+    if ($no_warehouse_client_conf) {
+	$warehouses = [{
+	    'controllers' => 'controller:24848',
+	    'configurl' = 'http://controller:44848/warehouse-client.conf',
+	    'name' => 'default',
+		       }];
+    }
+
     my $warehouse_name =
 	$self->{warehouse} ||
 	$self->{warehouse_name} ||
@@ -198,7 +206,8 @@ sub _init
 		{
 		    if (!exists $warehouses->[$idx]->{$_} ||
 			/^(controllers|keeps|keeps_status)$/ ||
-			/^mogilefs_/)
+			/^mogilefs_/ ||
+			($_ eq 'name' && $warehouse_name eq 'default'))
 		    {
 			$warehouses->[$idx]->{$_} = $warehouse_config->{$_};
 			warn "$$ $_ => ".$warehouse_config->{$_}."\n" if $ENV{DEBUG_CONFIG};

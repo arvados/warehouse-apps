@@ -1,46 +1,20 @@
 # -*- mode: perl; perl-indent-level: 4; -*-
 
-$Warehouse::svn_root
-    = "http://dev.oxf.freelogy.org/svn/polony/polony-tools/trunk";
 $Warehouse::blocksize
     = 64*1024*1024;
-
-$Warehouse::warehouse_servers
-    = "warehouse.server.host.name:24848"; # should be unused in current version
-$Warehouse::keep_controller_ip	# only needed on Keep storage nodes -- who is
-    = "ip.ad.dr.ess";		# allowed to delete blocks from Keep?
-
-$Warehouse::mogilefs_trackers = "mogilefs.tracker.host.name:6001";
-$Warehouse::mogilefs_domain = "warehouse";
-$Warehouse::mogilefs_directory_class = "directory"; # recommend mindevcount=3
-$Warehouse::mogilefs_file_class = "file"; # recommend mindevcount=2
 
 $Warehouse::warehouses
     = [
        {
 	   name => "uncle",
-	   controllers => "uncle-controller.nrb.freelogy.org:24848",
-	   mogilefs_trackers => "uncle-controller.nrb.freelogy.org:6001",
-	   mogilefs_domain => "warehouse",
-	   mogilefs_directory_class => "directory",
-	   mogilefs_file_class => "file",
-	   keeps => [ map { "uncle$_" } (3,4,6..13) ],
+	   controllers => "controller.nrb.freelogy.org:24848",
+	   configurl => "http://controller.nrb.freelogy.org:44848/warehouse-client.conf",
        }
        ,
        {
 	   name => "templeton",
-	   controllers => "templeton-controller.oxf.freelogy.org:24848",
-	   mogilefs_trackers => "templeton-controller.oxf.freelogy.org:6001",
-	   mogilefs_domain => "warehouse",
-	   mogilefs_directory_class => "directory",
-	   mogilefs_file_class => "file",
-	   keeps => [ map { "templeton$_" } (2..48) ],
-	   keeps_status => {
-	       "templeton3" => "down", # no disks
-	       "templeton6" => "down", # no disks
-	       "templeton12" => "down",
-	       "templeton27" => "down", # no disks
-	   },
+	   configurl => "http://controller.oxf.freelogy.org:44848/warehouse-client.conf",
+	   controllers => "controller.oxf.freelogy.org:24848",
        }
        ];
 

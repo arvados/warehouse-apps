@@ -439,7 +439,8 @@ sub process
 	    {
 		$self->_log($c, "SigFail ignored");
 	    }
-	    if ($c->peerhost() ne $Warehouse::keep_controller_ip)
+	    if (!defined $Warehouse::keep_controller_ip ||
+		$c->peerhost() ne $Warehouse::keep_controller_ip)
 	    {
 		my $resp = HTTP::Response->new
 		    (401, "Unauthorized",
