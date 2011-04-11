@@ -161,8 +161,6 @@ sub _init
 
     $self->{ua} = LWP::UserAgent->new;
 
-    die "Failed to load /etc/warehouse/warehouse-client.conf" if $no_warehouse_client_conf;
-
     if ($no_warehouse_client_conf) {
 	$warehouses = [{
 	    'controllers' => 'controller:24848',
