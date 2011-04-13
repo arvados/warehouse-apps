@@ -1217,7 +1217,19 @@ sub fetch_from_keep
 	{
 	    my $data = $r->get_body();
 	    my $datasize = length $data;
-	    if (Digest::MD5::md5_hex ($data) eq $md5)
+	    my $fail_verify = 0;
+	    if ($opts->{nodecrypt}) {
+		$fail_verify = !$opts->{noverify} && Digest::MD5::md5_hex ($data) ne $md5;
+	    } else {
+		my $decrypt = $self->_decrypt_block (\$data);
+		if ($$decrypt eq $data) {
+		    $fail_verify = !$opts->{noverify} && Digest::MD5::md5_hex ($data) ne $md5;
+		} else {
+		    $data = $$decrypt;
+		}
+	    }
+
+	    if (!$fail_verify)
 	    {
 		$t = Time::HiRes::time() - $t; $t =~ s/(\.\d\d\d).*/$1/;
 		warn "Keep ${t}s read $keep_host_port $md5 $datasize\n"
@@ -1225,8 +1237,6 @@ sub fetch_from_keep
 		$self->{stats_keepread_blocks} ++;
 		$self->{stats_keepread_bytes} += $datasize;
 		++$successes;
-		$data = $ { $self->_decrypt_block (\$data) }
-		    unless $opts->{nodecrypt};
 		if (!$opts->{nnodes} || $successes == $opts->{nnodes}) {
 		    return \$data if !wantarray;
 		    $md5 .= "+K\@" . $warehouses->[$kwhid]->{name};
@@ -2358,7 +2368,7 @@ sub _cryptsetup
 				    meta_interactive => 0,
 				    );
 
-	open (TMP, "/etc/warehouse/gnupg-keys.pub.asc") or die;
+	open (TMP, "<", "/etc/warehouse/gnupg-keys.pub.asc") or die;
 
 	my ( $input, $output, $error, $status ) =
 		( IO::Handle->new(),
