@@ -1,0 +1,230 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:split unsorted BAM files into sorted bins
+###MR_INPUT:manifest
+###MR_KNOBS:SAM
+###MR_KNOBS:REFERENCE
+###MR_KNOBS:CHUNKSIZE
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Fcntl ':flock';
+use POSIX qw(strftime);
+
+
+$ENV{ASYNC_WRITE} = 4;
+$ENV{ASYNC_READ} = 3;
+
+
+my $tmp = $ENV{MR_JOBSTEP_TMP};
+
+my $verbose = 1;
+my $reference_manifest_key = $ENV{KNOB_REFERENCE};
+my $sam_manifest_key = $ENV{KNOB_SAM} or die;
+my $reffile = "$tmp/ref";
+
+my $sam_path="$tmp/sam";
+atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
+
+my $whc = new Warehouse;
+
+my $index_path;
+if (defined $reference_manifest_key) {
+  $index_path = "$tmp/chrom.fa.fai";
+  atomic_whget("$reference_manifest_key/chrom.fa.fai", $index_path);
+}
+
+if ($ENV{MR_LEVEL} == 0)
+{
+  my ($manifest_name, $want_path) = split ("/", $ENV{MR_INPUT}, 2);
+  my $m = new Warehouse::Manifest (whc => $whc, key => $manifest_name);
+  $m->rewind;
+  my $stream_index = -1;
+  while (my $s = $m->subdir_next) {
+    ++$stream_index;
+    my $stream;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+      last if !defined $pos;
+      if (length $want_path) {
+	my $pathname = $s->name . "/" . $filename;
+	$pathname =~ s/^\.\///;
+	next if $want_path ne $pathname;
+      }
+      next if $filename !~ /^(.*)\.[bs]am$/;
+
+      $s->seek ($pos);
+      my $want = $size > 1000000 ? 1000000 : $size;
+      my $samheader = "";
+      while (my $dataref = $s->read_until ($pos + $want)) {
+	$samheader .= $$dataref;
+      }
+      my $child = open H, "-|";
+      die "no fork" if !defined $child;
+      if ($child == 0) {
+	my $viewflag = $filename =~ /\.sam$/i ? "-S" : "";
+	open STDOUT, "|$sam_path/samtools view -H $viewflag -";
+	print STDOUT $samheader;
+	exit;
+      }
+      my @rg;
+      my %rg;
+      while (<H>) {
+	next unless /^\@RG\t/;
+	my ($rg) = /\tID:(\S+)/;
+	next if ++$rg{$rg} > 1;
+	push @rg, $rg;
+      }
+      my $mem = 1000000;
+      $mem = $1 if `grep MemTotal /proc/meminfo` =~ /(\d+)/;
+      my $rg_per_step = int($mem / 500000);
+      $rg_per_step = 1 if $rg_per_step < 1;
+      warn "Processing $rg_per_step read group(s) per step.\n";
+      while (@rg) {
+	my $rg = join ('|', splice (@rg, 0, $rg_per_step));
+	if ($ENV{KNOB_COLLATE_PAIRS}) {
+	  print STDERR "+++mrjobstep 1 $rg $stream_index $pos:$size:$filename+++\n";
+	}
+      }
+      if (!%rg) {
+	if ($ENV{KNOB_COLLATE_PAIRS}) {
+	  print STDERR "+++mrjobstep 1  $stream_index $pos:$size:$filename+++\n";
+	}
+      }
+    }
+  }
+
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+if ($ENV{MR_LEVEL} == 1)
+{
+  my ($rgs, $want_stream_index, $file_list) = split (" ", $ENV{MR_INPUT}, 3);
+  my $stream;
+
+  my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
+  $m->rewind;
+  my $stream_index = -1;
+  while (my $s = $m->subdir_next) {
+    ++$stream_index;
+    next if $stream_index < $want_stream_index;
+    chomp ($stream = $s->as_string);
+    $stream =~ s/ \d+:\d+:.*/ $file_list/;
+    last;
+  }
+  die "stream index $want_stream_index not found" if !defined $stream;
+
+  my $dir ="$tmp/out";
+  system "rm -rf $dir";
+  mkdir $dir or die "mkdir $dir";
+  chdir $dir or die "chdir $dir: $!";
+
+  my $s = new Warehouse::Stream (whc => $whc, subdir => $stream);
+
+  my $outpid = open STDOUT, "| mrs-output" or die "mrs-output: $! $?";
+
+  my $streamname = $s->name;
+  while (my ($pos, $size, $filename) = $s->file_next)
+  {
+    last if !defined $pos;
+    $filename =~ s/\.([bs])am$//;
+    my $samtools_view_s_flag = $1 eq "s" ? "-S" : "";
+    my $cs_suffix = $ENV{KNOB_COLORSPACE} ? ".cs" : "";
+    $filename =~ s/[\'\"\s]//g;
+
+    my $index_args = defined ($index_path) ? "-t $index_path" : "";
+    my $rg_args = ($rgs eq "" || $rgs =~ /\|/) ? "" : "-r \"$rgs\"";
+    $ENV{RGSPLIT_RG_LIST} = $rgs;
+    $ENV{RGSPLIT_FILENAME} = $filename;
+    open SPLIT, "|-",  'bash', '-c', "set -o pipefail; exec $sam_path/samtools view $samtools_view_s_flag $rg_args $index_args - | mrs-sam-rgsplit"
+	or die "no fork";
+    $s->seek ($pos);
+    while (my $dataref = $s->read_until ($pos+$size)) {
+      print SPLIT $$dataref;
+    }
+    close SPLIT or die "samtools view|mrs-sam-rgsplit: error $! exit $?";
+  }
+
+  close STDOUT or die "mrs-output: error $! exit $?";
+  exit 0;
+}
+
+sub whget {
+  my ($source, $target) = @_;
+
+  if (0 != system "whget '$source' '$target'")
+  {
+    die "whget exited $?";
+  }
+}
+
+sub atomic_whget {
+  my ($source, $target) = @_;
+
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) &&
+      !-e ($target))
+  {
+    if (0 != system "whget '$source' '$target.tmp'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_tar {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX) )
+  {
+    if (0 != system "whget '$source' '$target.tgz.tmp'")
+    {
+      system "rm -rf '$target.tgz.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tgz.tmp", "$target.tgz" or die "rename $target.tgz.tmp failed";
+    mkdir "$target" or die "mkdir $target failed";
+    system("tar -C $target -xzf $target.tgz") == 0 or die "tar -xz $target.tgz failed";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub atomic_whget_dir {
+  my ($source, $target) = @_;
+
+  system "rm -rf '$target'";
+  if (open (L, "+>>", "$target.lock") &&
+      flock (L, LOCK_EX))
+  {
+    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    {
+      system "rm -rf '$target.tmp'";
+      close L;
+      die "whget exited $?";
+    }
+    rename "$target.tmp", $target;
+    system "rm -rf '$target.tmp'";
+  }
+  close L;
+  die "Failed to whget $source -> $target" if !-e $target;
+}
+
+sub emit_date {
+  my $who = shift;
+  my $now_string = strftime "%H:%M:%S", localtime;
+  warn "$who @ $now_string\n";
+}

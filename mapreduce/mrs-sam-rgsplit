@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+
+my $chunksize = $ENV{KNOB_CHUNKSIZE};
+$chunksize = 1_000_000 if !defined $chunksize;
+
+my $filename = $ENV{RGSPLIT_FILENAME};
+
+my $rg_list = $ENV{RGSPLIT_RG_LIST};
+my @rg_list = split (/[ \|]/, $rg_list);
+@rg_list = ("") if !@rg_list;
+
+my @pair_select = ('*');
+if ($ENV{KNOB_COLLATE_PAIRS}) {
+    @pair_select = (0,1,2);
+}
+
+foreach my $rg (@rg_list) {
+
+    foreach my $pair_select (@pair_select) {
+
+	my $pairsuffix = "";
+	$pairsuffix = "_1" if $pair_select == 1;
+	$pairsuffix = "_2" if $pair_select == 2;
+	$ENV{PAIR_SELECT} = $pair_select;
+
+	my $store_cmd;
+
+	my $rgsuffix = $rg eq "" ? "" : ".rg$rg";
+
+	if ($chunksize > 0) {
+	    my $chunklines = 4 * $chunksize;
+	    $store_cmd = "mrs-split-store -z --lines=$chunklines --filesperstream=10 . \"$filename.{}$rgsuffix$pairsuffix$cs_suffix.fastq.gz\"";
+	} else {
+	    $store_cmd = "gzip -9n | whput --as-stream --use-filename=\"$filename$rgsuffix$pairsuffix$cs_suffix.fastq.gz\" -";
+	}
+	open $out{$rg."_".$pair_select}, "| bash -c 'set -o pipefail; exec mrs-sam2fastq | $store_cmd'"
+	    or die "no fork";
+    }
+}
+
+while (<>) {
+    next if !/.*\sRG:Z:(\S+)/o;
+    my $rg = $1;
+    next if !exists $out{$rg."_".$pair_select[0]};
+    for my $pair_select (@pair_select) {
+	my $out = $out{$rg."_".$pair_select};
+	print $out $_;
+    }
+}
+
+foreach my $rg (@rg_list) {
+    foreach my $pair_select (@pair_select) {
+	print STDERR "closing rg $rg pair $pair_select\n";
+	my $key = $rg."_".$pair_select;
+	my $fh = $out{$key};
+	close $fh or die "close $key: $!";
+    }
+}
