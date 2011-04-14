@@ -1084,12 +1084,15 @@ sub Log				# ($jobstep_id, $logmessage)
   my $message = sprintf ("%s %d %s %s", $job_id, $$, @_);
   $message =~ s{([^ -\176])}{"\\" . sprintf ("%03o", ord($1))}ge;
   $message .= "\n";
-  print STDERR $message;
+  my $datetime;
+  if ($metastream || -t STDERR) {
+    my @gmtime = gmtime;
+    $datetime = sprintf ("%04d-%02d-%02d_%02d:%02d:%02d",
+			 $gmtime[5]+1900, $gmtime[4]+1, @gmtime[3,2,1,0]);
+  }
+  print STDERR ((-t STDERR) ? ($datetime." ".$message) : $message);
 
   return if !$metastream;
-  my @gmtime = gmtime;
-  my $datetime = sprintf ("%04d-%02d-%02d_%02d:%02d:%02d",
-			  $gmtime[5]+1900, $gmtime[4]+1, @gmtime[3,2,1,0]);
   $metastream->write_data ($datetime . " " . $message);
 }
 
