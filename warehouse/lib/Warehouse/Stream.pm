@@ -54,6 +54,7 @@ sub _init
   my Warehouse::Stream $self = shift;
   $self->{myhashes} = \@{$self->{hash}} if exists $self->{hash};
   $self->{async_writes} = 0;
+  $self->{readahead} = [];
   $self->rewind;
   return $self;
 }
@@ -534,8 +535,9 @@ sub seek
 
 	# seek past stuff in current buffer, if any, and read next block
 	$self->{bufpos} += length $self->{buf};
-	$self->{buf} = $self->{whc}->fetch_block (shift @{$self->{nexthashes}})
+	my $dataref = $self->{whc}->fetch_block_ref (shift @{$self->{nexthashes}})
 	    or die "fetch_block failed";
+	$self->{buf} = $$dataref;
 	$self->{bufcursor} = 0;
 
 	# this loop should only run once if size hints are present
@@ -549,6 +551,107 @@ sub seek
     {
 	die "Internal error: sought $pos but at ".($self->{bufpos} + $self->{bufcursor});
     }
+    $self->_fill_readahead;
+    return 1;
+}
+
+sub fetch_block_ref
+{
+  my $self = shift;
+  return $self->{whc}->fetch_block_ref(@_) if !$ENV{'ASYNC_READ'};
+
+  my $dataref;
+
+  my $hash = $_[0];
+  my $readahead = $self->{readahead};
+  while (@$readahead) {
+    my $reader = shift @$readahead;
+    next if $reader->{parent} != $$;
+    if ($reader->{hash} eq $hash) {
+      warn "async read pid ".$reader->{pid}." hash ".$reader->{hash}."\n" if $ENV{DEBUG_ASYNC_READ};
+      my $handle = $reader->{readhandle};
+      binmode $handle;
+      my $data;
+      my $data_size = 0;
+      my $bytes_read;
+      do {
+	$bytes_read = sysread $handle, $data, 70000000, $data_size;
+	$data_size += $bytes_read if $bytes_read;
+      } while ($bytes_read);
+      my $close_ok = close $handle;
+      if (defined $bytes_read && $close_ok) {
+	warn "async finish OK $hash\n" if $ENV{DEBUG_ASYNC_READ};
+	$dataref = \$data;
+      }
+      else {
+	warn "async finish fail $hash $?\n" if $ENV{DEBUG_ASYNC_READ};
+      }
+      last;
+    }
+    else {
+      warn "reader pid ".$reader->{pid}." hash ".$reader->{hash}." not needed, sending SIGPIPE\n" if $ENV{DEBUG_ASYNC_READ};
+      kill 13, $reader->{pid};
+      close $reader->{readhandle};
+      warn "reader pid ".$reader->{pid}." hash ".$reader->{hash}.", finished\n" if $ENV{DEBUG_ASYNC_READ};
+    }
+  }
+  $self->_fill_readahead;
+  warn "async read miss $hash\n" if $ENV{DEBUG_ASYNC_READ} && !defined $dataref;
+  $dataref = $self->{whc}->fetch_block_ref(@_) if !defined $dataref;
+  return $dataref;
+}
+
+sub _fill_readahead
+{
+  my $self = shift;
+  return if !$ENV{'ASYNC_READ'};
+  my $readahead = $self->{readahead};
+  my @next = @{$self->{nexthashes}};
+  for (my $i=0; $i < @next && $i < $ENV{'ASYNC_READ'}; $i++) {
+    while (@$readahead > $i && $readahead->[$i]->{hash} ne $next[$i]) {
+      my $reader = splice @$readahead, $i, 1;
+      next if $reader->{parent} != $$;
+      warn "fill: reader pid ".$reader->{pid}." hash ".$reader->{hash}." not needed, sending SIGPIPE\n" if $ENV{DEBUG_ASYNC_READ};
+      kill 13, $reader->{pid};
+      close $reader->{readhandle};
+      warn "fill: reader pid ".$reader->{pid}." hash ".$reader->{hash}.", finished\n" if $ENV{DEBUG_ASYNC_READ};
+    }
+    if (@$readahead <= $i) {
+      my $reader = {};
+      my $fh;
+      $reader->{parent} = $$;
+      $reader->{hash} = $next[$i];
+      $reader->{pid} = open $fh, '-|';
+      return undef if !defined $reader->{pid};
+      if ($reader->{pid} == 0) {
+	# child process
+	my $dataref = $self->{whc}->fetch_block_ref($next[$i]);
+	binmode STDOUT;
+	length $$dataref == syswrite STDOUT, $$dataref or do { die "child $$ write failed" if $ENV{DEBUG_ASYNC_READ}; exit 1; };
+	exit 0;
+      }
+      $reader->{readhandle} = $fh;
+      push @$readahead, $reader;
+      warn "started pid ".$reader->{pid}." hash ".$reader->{hash}."\n" if $ENV{DEBUG_ASYNC_READ};
+    }
+  }
+}
+
+sub DESTROY
+{
+  my $self = shift;
+  for my $reader (@{$self->{readahead}}) {
+    next if $reader->{parent} != $$;
+    warn "reader pid ".$reader->{pid}." hash ".$reader->{hash}." not needed, sending SIGPIPE\n" if $ENV{DEBUG_ASYNC_READ};
+    kill 13, $reader->{pid};
+  }
+  for my $reader (@{$self->{readahead}}) {
+    next if $reader->{parent} != $$;
+    close $reader->{readhandle};
+    warn "reader pid ".$reader->{pid}." hash ".$reader->{hash}." finished\n" if $ENV{DEBUG_ASYNC_READ};
+  }
+  $self->{readahead} = [];
+  1;
 }
 
 
@@ -630,7 +733,7 @@ sub read_until
     shift @{$self->{nexthashes}} if $self->{nexthashes}->[0] =~ /^-\d+$/;
 
     my $nexthash = shift @{$self->{nexthashes}};
-    my $dataref = $self->{whc}->fetch_block_ref ($nexthash)
+    my $dataref = $self->fetch_block_ref ($nexthash)
 	or die "fetch_block_ref($nexthash) failed";
     if ($nexthash =~ /\+GS(\d+)/ || $nexthash =~ /\+(\d+)/) {
       if ($1 != length $$dataref) {
@@ -665,7 +768,7 @@ sub read_until
     $self->{bufpos} += $self->{bufcursor};
     $self->{bufcursor} = 0;
   }
-  
+
   return \$self->{clientbuf};
 }
 
