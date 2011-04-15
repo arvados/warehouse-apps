@@ -1,7 +1,10 @@
 package Warehouse::HTTP;
 
 BEGIN {
-    eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
+    eval "use WWW::Curl::Easy; \$Warehouse::HTTP::useCurl = 1;";
+    if ($@) {
+	eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
+    }
     if ($@) {
 	eval "use LW2; \$Warehouse::HTTP::useLW2 = 1;";
     }
@@ -16,11 +19,64 @@ BEGIN {
 sub new
 {
     my $class = shift;
+    if ($Warehouse::HTTP::useCurl) { return new Warehouse::HTTP::Curl (@_); }
     if ($Warehouse::HTTP::useGHTTP) { return new HTTP::GHTTP (@_); }
     if ($Warehouse::HTTP::useLW2) { return new Warehouse::HTTP::LW2 (@_); }
     if ($Warehouse::HTTP::useLWP) { return new Warehouse::HTTP::LWP (@_); }
     die "could not find a supported HTTP library";
 }
+
+package Warehouse::HTTP::Curl;
+
+sub new
+{
+    my $class = shift;
+    my $self = {};
+    bless ($self, $class);
+    return $self->_init();
+}
+
+sub _init
+{
+    my $self = shift;
+    return $self;
+}
+
+sub set_uri
+{
+    my $self = shift;
+    $self->{uri} = shift;
+}
+
+sub process_request
+{
+    use WWW::Curl::Easy;
+    my $self = shift;
+    $self->{curl} = WWW::Curl::Easy->new;
+    $self->{curl}->setopt(CURLOPT_HEADER, 0);
+    $self->{curl}->setopt(CURLOPT_FAILONERROR, 1);
+    $self->{curl}->setopt(CURLOPT_URL, $self->{uri});
+    my $data = "";
+    open (my $fh, ">", \$data);
+    $self->{dataref} = \$data;
+    $self->{curl}->setopt(CURLOPT_WRITEDATA, $fh);
+    $self->{retcode} = $self->{curl}->perform;
+}
+
+sub get_status
+{
+    my $self = shift;
+    if ($self->{retcode} == 0) { return (200, "OK"); }
+    return ($self->{retcode}, $self->{curl}->strerror($self->{retcode})." ".$self->{curl}->errbuf);
+}
+
+sub get_body
+{
+    my $self = shift;
+    return ${$self->{dataref}};
+}
+
+
 
 package Warehouse::HTTP::LW2;
 
