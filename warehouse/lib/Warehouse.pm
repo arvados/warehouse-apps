@@ -2515,7 +2515,12 @@ sub _encrypt_block
     {
 	close WRITER0;
 	local $/ = undef;
-	my $enc = <READER0>;
+	my $enc = "";
+	my $inbytes;
+	do {
+	    $inbytes = sysread READER0, $enc, 2**26, length($enc);
+	} while ($inbytes > 0);
+	if (!defined $inbytes) { die "Read error: $!"; }
 	close READER0 or die "Close: $!";
 	waitpid $child, 0;
 	printf STDERR ("$$ gpg: encrypt -> %s (%d bytes)\n",
