@@ -2,7 +2,7 @@ package Warehouse::HTTP;
 
 BEGIN {
     eval "use WWW::Curl::Easy; \$Warehouse::HTTP::useCurl = 1;";
-    if (1 || $@) {
+    if ($@) {
 	eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
     }
     if ($@) {
@@ -53,13 +53,20 @@ sub process_request
     my $self = shift;
     $self->{curl} = WWW::Curl::Easy->new;
     $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_HEADER, 0);
+    $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_HEADERFUNCTION, \&writecb);
     $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_FAILONERROR, 1);
     $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_URL, $self->{uri});
     my $data = "";
     open (my $fh, ">", \$data);
     $self->{dataref} = \$data;
     $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_WRITEDATA, $fh);
+    $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_FILE, $fh);
     $self->{retcode} = $self->{curl}->perform;
+}
+
+sub writecb
+{
+    return length ($_[0]);
 }
 
 sub get_status
