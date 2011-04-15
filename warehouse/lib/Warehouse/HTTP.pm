@@ -1,5 +1,4 @@
 package Warehouse::HTTP;
-use strict;
 
 BEGIN {
     eval "use WWW::Curl::Easy; \$Warehouse::HTTP::useCurl = 1;";
