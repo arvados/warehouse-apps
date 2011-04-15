@@ -1,12 +1,12 @@
 package Warehouse::HTTP;
 
 BEGIN {
-    eval "use WWW::Curl::Easy; \$Warehouse::HTTP::useCurl = 1;";
-    if ($@) {
-	eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
-    }
+    eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
     if ($@) {
 	eval "use LW2; \$Warehouse::HTTP::useLW2 = 1;";
+    }
+    if ($@) {
+	eval "use WWW::Curl::Easy; \$Warehouse::HTTP::useCurl = 1;";
     }
     if ($@) {
 	eval "use LWP::UserAgent; \$Warehouse::HTTP::useLWP = 1;";
