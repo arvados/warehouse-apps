@@ -2,7 +2,7 @@ package Warehouse::HTTP;
 
 BEGIN {
     eval "use WWW::Curl::Easy; \$Warehouse::HTTP::useCurl = 1;";
-    if ($@) {
+    if (1 || $@) {
 	eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
     }
     if ($@) {
