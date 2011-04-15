@@ -1,4 +1,5 @@
 package Warehouse::HTTP;
+use strict;
 
 BEGIN {
     eval "use WWW::Curl::Easy; \$Warehouse::HTTP::useCurl = 1;";
@@ -50,16 +51,15 @@ sub set_uri
 
 sub process_request
 {
-    use WWW::Curl::Easy;
     my $self = shift;
     $self->{curl} = WWW::Curl::Easy->new;
-    $self->{curl}->setopt(CURLOPT_HEADER, 0);
-    $self->{curl}->setopt(CURLOPT_FAILONERROR, 1);
-    $self->{curl}->setopt(CURLOPT_URL, $self->{uri});
+    $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_HEADER, 0);
+    $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_FAILONERROR, 1);
+    $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_URL, $self->{uri});
     my $data = "";
     open (my $fh, ">", \$data);
     $self->{dataref} = \$data;
-    $self->{curl}->setopt(CURLOPT_WRITEDATA, $fh);
+    $self->{curl}->setopt(WWW::Curl::Easy::CURLOPT_WRITEDATA, $fh);
     $self->{retcode} = $self->{curl}->perform;
 }
 
