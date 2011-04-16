@@ -2545,8 +2545,14 @@ sub _encrypt_block
     if ($child == 0)
     {
 	close READER;
-	print WRITER $$dataref;
-	close WRITER;
+	my $wrote = 0;
+	my $b;
+	while ($wrote < length $$dataref) {
+	    $b = syswrite WRITER, $$dataref, length($$dataref), $wrote;
+	    $wrote += $b if $b;
+	    exit 1 if !defined $b;
+	}
+	close WRITER or exit 1;
 	exit 0;
     }
     close WRITER;
@@ -2653,9 +2659,14 @@ sub _unsafe_decrypt_block
     if ($wchild == 0)
     {
 	close STDIN;
-	select WRITER; $|=1;
-	print WRITER $$dataref;
-	close WRITER;
+	my $wrote = 0;
+	my $b;
+	while ($wrote < length $$dataref) {
+	    $b = syswrite WRITER, $$dataref, length($$dataref), $wrote;
+	    $wrote += $b if $b;
+	    exit 1 if !defined $b;
+	}
+	close WRITER or exit 1;
 	exit 0;
     }
     close WRITER;
