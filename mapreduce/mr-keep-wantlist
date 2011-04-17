@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+
+use Warehouse;
+use Safepipe;
+
+if ($ENV{MR_LEVEL} == 0)
+{
+    for ($i=0; $i<4096; $i++) {
+	printf STDERR "+++mrjobstep 1 %03x+++\n", $i;
+    }
+    print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+    exit 0;
+}
+
+my $prefix = $ENV{MR_INPUT};
+my $whc = new Warehouse;
+
+Safepipe::readfrom ("main::S",
+		    "whget -r '$ENV{MR_INPUT0}/'",
+		    "mrs-keep-wantlist $prefix",
+		    "mrs-store . $prefix.txt",
+		    "mrs-output")
+    or die "Safepipe: $!";
+close "S" or die "close S: $!";

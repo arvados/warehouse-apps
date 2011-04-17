@@ -1,0 +1,51 @@
+#!/usr/bin/ruby
+# -*- mode: ruby; -*-
+
+# in: list of valuable manifest locators (e.g., from "wh manifest
+# list") possibly prefixed by [MDU?] (e.g., output of this program)
+
+# out: list of valuable manifest blocks (M ...), their constituent
+# data blocks (D ...), named but unreadable/lost blocks that might be
+# manifests (? ...), and named but indecipherable blocks that might be
+# encrypted manifests (U ...)
+
+# Get the lines matching prefix
+arg1 = ARGV[0]
+r = STDIN
+
+if !arg1
+  arg1 = ''
+end
+
+pieces = Array.new
+r.each do |line|
+  locator = line.sub(/^. /, '')
+  locator = locator.sub(/ .*/, '')
+  if (line =~ /[ ]\/gpg\// || locator !~ /^#{arg1}/i || locator !~ /^[0-9a-f]{32}/)
+    # just a plain->encrypted map entry, or doesn't have the prefix
+    # we're supposed to be looking at
+    next
+  end
+  if (line =~ /^[MDU] /)
+    # Doing another pass through our own output, and no more
+    # investigation is needed/worthwhile for this block
+    puts line
+    next
+  end
+  output = `whget #{locator}`
+  if $?.exitstatus != 0
+    puts "? #{locator}"
+    next
+  end
+  if output !~ /^\.\S*( [0-9a-f]{32}(\+\S+)?)+( \d+:\d+:\S+)+\n/i
+    puts "U #{locator}"
+    next
+  end
+  puts "M #{locator}"
+  o_matches = output.scan(/\s([0-9a-f]{32,})/i);
+  if o_matches.length > 0
+    o_matches.each do |o_locator|
+      puts "D #{o_locator}"
+    end
+  end
+end
