@@ -39,15 +39,23 @@ elsif ($ENV{MR_LEVEL} == 0)
   my $whc = new Warehouse;
   my $in = new Warehouse::Manifest (whc => $whc, key => $inhashes);
   $in->rewind;
+  my $streamindex = -1;
   while (my $s = $in->subdir_next)
   {
+    ++$streamindex;
     my $stream_string = $s->as_string;
     $s->rewind;
+    my $fileindex = -1;
     while (my ($pos, $size, $filename) = $s->file_next)
     {
       last if !defined $pos;
+      ++$fileindex;
       $stream_string =~ s/ \d+:.*/ $pos:$size:$filename/;
-      print STDERR "+++mrjobstep 1 $stream_string+++\n";
+      if (8192 < length $stream_string) {
+	print STDERR "+++mrjobstep 1 $streamindex $fileindex+++\n";
+      } else {
+	print STDERR "+++mrjobstep 1 $stream_string+++\n";
+      }
     }
   }
   print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
@@ -61,6 +69,35 @@ sub level1
 {
   my $input = shift;
   my $outdir = shift;
+
+  if ($input =~ /^(\d+) (\d+)$/) {
+    # stream was too long to pass by environment variable, so we'll
+    # have to read the input manifest and work on the Nth file in the
+    # Mth stream.
+    my ($want_streamindex, $want_fileindex) = ($1, $2);
+    my $whc = new Warehouse;
+    my $in = new Warehouse::Manifest (whc => $whc, key => $inhashes);
+    $in->rewind;
+    my $streamindex = -1;
+  S:
+    while (my $s = $in->subdir_next)
+    {
+      ++$streamindex;
+      next if $want_streamindex != $streamindex;
+      my $stream_string = $s->as_string;
+      $s->rewind;
+      my $fileindex = -1;
+      while (my ($pos, $size, $filename) = $s->file_next)
+      {
+	last if !defined $pos;
+	++$fileindex;
+	next if $want_fileindex != $fileindex;
+	$input =~ s/ \d+:.*/ $pos:$size:$filename/;
+	last S;
+      }
+    }
+  }
+
 
   my ($last_infile) = $input =~ /.* \d+:\d+:(\S+)/;
   my %special = ("%" => "%",
