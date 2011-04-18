@@ -74,6 +74,7 @@ sub level1
     # stream was too long to pass by environment variable, so we'll
     # have to read the input manifest and work on the Nth file in the
     # Mth stream.
+    undef $outdir;
     my ($want_streamindex, $want_fileindex) = ($1, $2);
     my $whc = new Warehouse;
     my $in = new Warehouse::Manifest (whc => $whc, key => $inhashes);
@@ -94,9 +95,12 @@ sub level1
 	next if $want_fileindex != $fileindex;
 	$stream_string =~ s/ \d+:.*/ $pos:$size:$filename/;
 	$input = $stream_string;
+	$outdir = $s->name;
 	last S;
       }
     }
+    die "no such {stream,file}: {$want_streamindex,$want_fileindex}"
+	if !defined $outdir;
   }
 
 
