@@ -155,7 +155,12 @@ if ($ENV{MR_LEVEL} == 1)
 	or die "no fork";
     $s->seek ($pos);
     while (my $dataref = $s->read_until ($pos+$size)) {
-      print WHPUT $$dataref;
+      my $offset = 0;
+      do {
+	my $done = syswrite WHPUT, $$dataref, length($$dataref), $offset;
+	die "write failed" if !defined $done;
+	$offset += $done;
+      } while $offset < length $$dataref;
     }
     close WHPUT or die "samtools view|mrs-sam2fastq|gzip|whput: error $! exit $?";
   }
