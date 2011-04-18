@@ -26,7 +26,7 @@ r.each do |line|
     # we're supposed to be looking at
     next
   end
-  if (line =~ /^[MDU] /)
+  if (ENV['KNOB_TRY_UNREADABLE'] ? (line =~ /^[MD\?] /) : (line =~ /^[MDU] /))
     # Doing another pass through our own output, and no more
     # investigation is needed/worthwhile for this block
     puts line
