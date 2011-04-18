@@ -191,8 +191,9 @@ sub run
 		    }
 		}
 		$resp->{sth} = $self->{dbh}->prepare
-		    ("select mkey, name, keyid from manifests $where order by name")
+		    ("select mkey, name, keyid from manifests $where")
 		    or die DBI->errstr;
+		$resp->{sth}->{'mysql_use_result'} = 1;
 		$resp->{sth}->execute(@bindvars)
 		    or die DBI->errstr;
 		$resp->{md5_ctx} = Digest::MD5->new;
