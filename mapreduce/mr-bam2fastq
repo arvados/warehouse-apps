@@ -79,17 +79,26 @@ if ($ENV{MR_LEVEL} == 0)
       $mem = $1 if `grep MemTotal /proc/meminfo` =~ /(\d+)/;
       my $rg_per_step = int($mem / 500000);
       $rg_per_step = 1 if $rg_per_step < 1;
-      warn "Processing $rg_per_step read group(s) per step.\n";
+
+      if (@rg) {
+	# decrease $rg_per_step in order to distribute the rg's more
+	# evenly among the steps (but not so much that we increase the
+	# total # steps required)
+	my $rgcount = scalar @rg;
+	my $steps = int (($rgcount + $rg_per_step - 1) / $rg_per_step);
+	$rg_per_step = int (($rgcount / $steps) + 0.999999);
+	warn "Processing $rgcount read groups in $steps steps ($rg_per_step per step).\n";
+      }
+
+      my $steps = 0;
       while (@rg) {
 	my $rg = join ('|', splice (@rg, 0, $rg_per_step));
-	if ($ENV{KNOB_COLLATE_PAIRS}) {
-	  print STDERR "+++mrjobstep 1 $rg $stream_index $pos:$size:$filename+++\n";
-	}
+	print STDERR "+++mrjobstep 1 $rg $stream_index $pos:$size:$filename+++\n";
+	warn "Queued stream $stream_index rg $rg\n";
       }
       if (!%rg) {
-	if ($ENV{KNOB_COLLATE_PAIRS}) {
-	  print STDERR "+++mrjobstep 1  $stream_index $pos:$size:$filename+++\n";
-	}
+	print STDERR "+++mrjobstep 1  $stream_index $pos:$size:$filename+++\n";
+	warn "Queued stream $stream_index\n";
       }
     }
   }
