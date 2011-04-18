@@ -16,10 +16,6 @@ use Fcntl ':flock';
 use POSIX qw(strftime);
 
 
-$ENV{ASYNC_WRITE} = 4;
-$ENV{ASYNC_READ} = 3;
-
-
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 
 my $verbose = 1;
@@ -144,7 +140,12 @@ if ($ENV{MR_LEVEL} == 1)
 	or die "no fork";
     $s->seek ($pos);
     while (my $dataref = $s->read_until ($pos+$size)) {
-      print SPLIT $$dataref;
+      my $offset = 0;
+      do {
+	my $done = syswrite SPLIT, $$dataref, length($$dataref), $offset;
+	die "write failed" if !defined $done;
+	$offset += $done;
+      } while $offset < length $$dataref;
     }
     close SPLIT or die "samtools view|mrs-sam-rgsplit: error $! exit $?";
   }
