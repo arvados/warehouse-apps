@@ -92,7 +92,8 @@ sub level1
 	last if !defined $pos;
 	++$fileindex;
 	next if $want_fileindex != $fileindex;
-	$input =~ s/ \d+:.*/ $pos:$size:$filename/;
+	$stream_string =~ s/ \d+:.*/ $pos:$size:$filename/;
+	$input = $stream_string;
 	last S;
       }
     }
