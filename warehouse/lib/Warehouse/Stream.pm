@@ -1,4 +1,4 @@
-# -*- mode: perl; perl-indent-level: 2; -*-
+# -*- mode: perl; perl-indent-level: 2; indent-tabs-mode: nil; -*-
 
 package Warehouse::Stream;
 
@@ -648,8 +648,9 @@ sub DESTROY
   my $self = shift;
   for my $reader (@{$self->{readahead}}) {
     next if $reader->{parent} != $$;
-    warn "reader pid ".$reader->{pid}." hash ".$reader->{hash}." not needed, sending SIGPIPE\n" if $ENV{DEBUG_ASYNC_READ};
-    kill 13, $reader->{pid};
+    warn "reader pid ".$reader->{pid}." hash ".$reader->{hash}." not needed, sending SIGPIPE and SIGTERM\n" if $ENV{DEBUG_ASYNC_READ};
+    kill 13, $reader->{pid};    # SIGPIPE
+    kill 15, $reader->{pid};    # SIGTERM
   }
   for my $reader (@{$self->{readahead}}) {
     next if $reader->{parent} != $$;
