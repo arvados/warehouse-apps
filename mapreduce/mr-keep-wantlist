@@ -7,7 +7,7 @@ if ($ENV{MR_LEVEL} == 0)
 {
     my $in = `whget '$ENV{MR_INPUT0}'`;
     $alreadysplit = 0;
-    if ($in =~ /^ 0:\d+:([0-9a-f]+)\.txt\n/) {
+    if ($in =~ / 0:\d+:([0-9a-f]+)\.txt\n/) {
 	$alreadysplit = 1;
     }
 
