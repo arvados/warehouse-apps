@@ -54,6 +54,12 @@ sub _init
   my Warehouse::Stream $self = shift;
   $self->{myhashes} = \@{$self->{hash}} if exists $self->{hash};
   $self->{async_writes} = 0;
+  $self->{max_async_writes} = 0;
+  $self->{max_async_writes} = 0+$ENV{KNOB_ASYNC_WRITE} if defined $ENV{KNOB_ASYNC_WRITE};
+  $self->{max_async_writes} = 0+$ENV{ASYNC_WRITE} if defined $ENV{ASYNC_WRITE};
+  $self->{max_async_reads} = 0;
+  $self->{max_async_reads} = 0+$ENV{KNOB_ASYNC_READ} if defined $ENV{KNOB_ASYNC_READ};
+  $self->{max_async_reads} = 0+$ENV{ASYNC_READ} if defined $ENV{ASYNC_READ};
   $self->{readahead} = [];
   $self->rewind;
   return $self;
@@ -275,7 +281,7 @@ sub _write_flush
     $self->{write_buf} = \$leftover;
     substr($$data_ref, $writesize, length($$data_ref)-$writesize, "");
 
-    if (!$self->_finish_async_writes ($ENV{ASYNC_WRITE} - 1))
+    if (!$self->_finish_async_writes ($self->{max_async_writes} - 1))
     {
       warn "_finish_async_writes failed";
       return undef;
@@ -283,7 +289,7 @@ sub _write_flush
     my $pid;
     my $r;
     my $w;
-    if ($ENV{ASYNC_WRITE} > $self->{async_writes} &&
+    if ($self->{max_async_writes} > $self->{async_writes} &&
 	pipe ($r, $w) &&
 	defined ($pid = fork()))
     {
@@ -558,7 +564,7 @@ sub seek
 sub fetch_block_ref
 {
   my $self = shift;
-  return $self->{whc}->fetch_block_ref(@_) if !$ENV{'ASYNC_READ'};
+  return $self->{whc}->fetch_block_ref(@_) if !$self->{max_async_reads};
 
   my $dataref;
 
@@ -604,10 +610,10 @@ sub fetch_block_ref
 sub _fill_readahead
 {
   my $self = shift;
-  return if !$ENV{'ASYNC_READ'};
+  return if !$self->{max_async_reads};
   my $readahead = $self->{readahead};
   my @next = @{$self->{nexthashes}};
-  for (my $i=0; $i < @next && $i < $ENV{'ASYNC_READ'}; $i++) {
+  for (my $i=0; $i < @next && $i < $self->{max_async_reads}; $i++) {
     while (@$readahead > $i && $readahead->[$i]->{hash} ne $next[$i]) {
       my $reader = splice @$readahead, $i, 1;
       next if $reader->{parent} != $$;
