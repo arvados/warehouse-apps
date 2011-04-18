@@ -674,8 +674,13 @@ sub _fetch
         open($lockhandle,">>$dir/.lock");
 	flock($lockhandle,LOCK_EX);
 
-	local $/ = undef;
-	my $data = <F>;
+	my $data = "";
+	my $offset = 0;
+	my $b;
+	do {
+	    $b = sysread F, $data, 70000000, $offset;
+	    $offset += $b if $b;
+	} while defined $b;
 	close F;
 
 	close($lockhandle);
@@ -738,7 +743,14 @@ sub _store
             close($lockhandle);
 	    next;
 	}
-	if (!print F $$dataref)
+	my $offset = 0;
+	my $b;
+	do {
+	    my $b = syswrite F, $$dataref, length($$dataref)-$offset, $offset;
+	    last if !defined $b;
+	    $offset += $b;
+	} while $offset < length $$dataref;
+	if (!defined $b)
 	{
 	    $errstr = "write $dir/$first12bits/$md5: $!";
 	    $self->act_on_disk_error ($!, $dir);
