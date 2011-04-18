@@ -5,18 +5,26 @@ use Safepipe;
 
 if ($ENV{MR_LEVEL} == 0)
 {
+    my $in = `whget '$ENV{MR_INPUT0}'`;
+    $alreadysplit = 0;
+    if ($in =~ /^ 0:\d+:([0-9a-f]+)\.txt\n/) {
+	$alreadysplit = 1;
+    }
+
     for ($i=0; $i<4096; $i++) {
-	printf STDERR "+++mrjobstep 1 %03x+++\n", $i;
+	printf STDERR "+++mrjobstep 1 %03x $alreadysplit+++\n", $i;
     }
     print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
     exit 0;
 }
 
-my $prefix = $ENV{MR_INPUT};
+my ($prefix, $alreadysplit) = split (/ /, $ENV{MR_INPUT});
 my $whc = new Warehouse;
 
+my $want = "";
+$want = "$prefix.txt" if $alreadysplit;
 Safepipe::readfrom ("main::S",
-		    "whget -r '$ENV{MR_INPUT0}/'",
+		    "whget -r '$ENV{MR_INPUT0}/$want'",
 		    "mrs-keep-wantlist $prefix",
 		    "mrs-store . $prefix.txt",
 		    "mrs-output")
