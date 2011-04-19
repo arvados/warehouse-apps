@@ -80,8 +80,8 @@ while (my $s = $m->subdir_next)
 	    # doesn't look like the result of a previous get-evidence
 	    # run, so we'll try our best to come up with a unique
 	    # subdir name -- for now just based on the input subdir +
-	    # filename, in case we can't get a sha256 of the source
-	    # file (see below).
+	    # filename, in case we can't get a sha1 of the source file
+	    # (see below).
 	    $subdir .= '/' . $filename ;
 	    $subdir =~ s{(\.(gff|gz|bz2))*$}{}i;
 	    $rename_subdir = 1;
@@ -99,7 +99,7 @@ while (my $s = $m->subdir_next)
 	close GFF or die "close $filename: $!";
 
 	if ($rename_subdir) {
-	    my ($shasum) = `sha256sum $filename` =~ /^([0-9a-f]+)/;
+	    my ($shasum) = `sha1sum $filename` =~ /^([0-9a-f]+)/;
 	    if ($shasum) {
 		$subdir = "./$shasum-out";
 	    }
