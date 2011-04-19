@@ -747,7 +747,7 @@ sub _store
 	my $offset = 0;
 	my $b;
 	do {
-	    my $b = syswrite F, $$dataref, length($$dataref)-$offset, $offset;
+	    $b = syswrite F, $$dataref, length($$dataref)-$offset, $offset;
 	    last if !defined $b;
 	    $offset += $b;
 	} while $offset < length $$dataref;
