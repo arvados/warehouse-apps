@@ -679,8 +679,9 @@ sub _fetch
 	my $b;
 	do {
 	    $b = sysread F, $data, 70000000, $offset;
-	    $offset += $b if $b;
-	} while defined $b;
+	    last if !defined $b;
+	    $offset += $b;
+	} while $b > 0;
 	close F;
 
 	close($lockhandle);
