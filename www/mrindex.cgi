@@ -13,6 +13,16 @@ print q{
 <html>
 <head>
 <title>mapreduce jobs</title>
+<style type="text/css">
+tr.success { background: #ddffdd; }
+tr.running { background: #ffffff; }
+tr.running td.col10 { background: #ddffdd; }
+tr.running td.col12 { background: #dddddd; }
+tr.fail { background: #ffdddd; }
+tr.queued { background: #dddddd; }
+th { text-align: left; }
+td.col5, td.col9, td.col10, td.col11, td.col12, td.col13 { text-align: right; }
+</style>
 </head>
 <body>
 <h2>mapreduce jobs</h2>
@@ -42,9 +52,9 @@ my $sth = $dbh->prepare("
       mrjob.starttime,
       mrjob.finishtime,
       unix_timestamp(if(mrjob.finishtime is null,now(),mrjob.finishtime))-unix_timestamp(mrjob.starttime),
-      steps_todo,
       steps_done,
       steps_running,
+      steps_todo,
       mrjob.success,
       mrjob.output,
       mrjob.metakey,
@@ -58,7 +68,7 @@ print q{
 <table>
 <tr>
 };
-print map ("<td>$_</td>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed ToDo Done Run Success Output Meta));
+print map ("<th>$_</th>\n", qw(JobID MgrID Rev Function Procs Nodes Knobs Start Finish Elapsed Done Run ToDo Success Output Meta));
 print q{
 </tr>
 };
@@ -88,8 +98,14 @@ while (my @row = $sth->fetchrow)
     $row[3] .= "($atag<code>".substr($input0,0,8)."</code></a>)";
   }
 
-  print "<tr>\n";
-  print map ("<td valign=top>$_</td>\n", @row);
+  my $class = 'queued';
+  $class = 'running' if length $row[7] && !length $row[13];
+  $class = 'success' if $row[13];
+  $class = 'fail' if length $row[13] && !$row[13];
+  $class = 'fail' if !length $row[7] && length $row[8];
+  print "<tr class=\"$class\">\n";
+  my $x = -1;
+  print map { ++$x; "<td valign=top class=\"col$x\">$_</td>\n" } @row;
   print "</tr>\n";
 }
 print q{
