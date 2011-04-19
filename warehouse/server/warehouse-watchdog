@@ -36,7 +36,7 @@ my $whc = new Warehouse;
 $whc->{ua}->timeout(3);
 &update;
 $whc->{ua}->timeout(30);
-&update while sleep 1;
+&update while sleep 30;
 
 sub update
 {
