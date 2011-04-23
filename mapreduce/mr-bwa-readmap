@@ -9,6 +9,8 @@
 ###MR_KNOBS:REFERENCE2
 ###MR_KNOBS:MAX_MISMATCHES
 ###MR_KNOBS:READLENGTH
+###MR_KNOBS:SEED_LENGTH
+###MR_KNOBS:SEED_EDIT_DISTANCE
 
 use strict; 
 use Warehouse;
@@ -181,6 +183,7 @@ if ($ENV{MR_LEVEL} == 1)
       }
     }
 
+    my $convert_names = q{perl -lane '$a=shift @F;print "$_\t$a" for @F'};
     my $script = qq{
 set -o pipefail
 set -e
@@ -193,6 +196,13 @@ job1=`jobs -p %+`
 $bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
 wait \$job1
 
+gunzip < '$saifile1.gz' \\
+    | $bwa_path/bwa readmap    -n '$readfile1' '$reffile1/$ref1_basename' /dev/stdin \\
+    | $convert_names \\
+    | bzip2 -c \\
+    > '$out_path/${filename}.names.bz2' \\
+ || rm -f '$out_path/${filename}.names.bz2' \\
+ || true
 };
 
     if ($ref2_manifest_key) {
@@ -200,11 +210,28 @@ wait \$job1
 $bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' | gzip > '$saifile2.gz'
 rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 mkfifo '$saifile1.fifo' '$saifile2.fifo'
+mkfifo '$saifile1.fifo2' '$saifile2.fifo2'
 gunzip < '$saifile1.gz' > '$saifile1.fifo' &
 job1=`jobs -p %+`
 gunzip < '$saifile2.gz' > '$saifile2.fifo' &
 job2=`jobs -p %+`
 $bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
+wait \$job1
+wait \$job2
+
+rm -f '$saifile1.fifo' '$saifile2.fifo' || true
+mkfifo '$saifile1.fifo' '$saifile2.fifo'
+mkfifo '$saifile1.fifo2' '$saifile2.fifo2'
+gunzip < '$saifile1.gz' > '$saifile1.fifo' &
+job1=`jobs -p %+`
+gunzip < '$saifile2.gz' > '$saifile2.fifo' &
+job2=`jobs -p %+`
+$bwa_path/bwa readmap -m -n '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' \\
+    | $convert_names \\
+    | bzip2 -c \\
+    > '$out_path/${filename}.comp.names.bz2' \\
+ || rm -f '$out_path/${filename}.comp.names.bz2' \\
+ || true
 wait \$job1
 wait \$job2
 };
