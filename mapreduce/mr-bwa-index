@@ -32,9 +32,24 @@ if ($ENV{MR_LEVEL} == 0)
 
   my $colorspace_flag = $want_colorspace ? "-c" : "";
 
+  my $algorithm = "is";
+  my $inbytes = 0;
+  my $in = new Warehouse::Manifest (whc => $whc,
+				    key => $input_manifest_key);
+  while (my $s = $in->subdir_next) {
+    while (my ($pos, $size, $name) = $s->file_next) {
+      last if !defined $pos;
+      $inbytes += $size;
+      if ($inbytes > 100_000_000) {
+	$algorithm = "bwtsw";
+	last;
+      }
+    }
+  }
+
   mkdir ("$tmp/out") or die "mkdir: $!";
   chdir ("$tmp/out") or die "chdir: $!";
-  system ("bash -c 'set -o pipefail; whget -rz $input_manifest_key/ - | egrep -v ^chr | $bwa_path/bwa index $colorspace_flag -a bwtsw -'")
+  system ("bash -c 'set -o pipefail; whget -rz $input_manifest_key/ - | egrep -v ^chr | $bwa_path/bwa index $colorspace_flag -a $algorithm -'")
       == 0 or die "whget|bwa: error $! exit $?";
   opendir D, "." or die "opendir: $!";
   while (my $f = readdir D) {
