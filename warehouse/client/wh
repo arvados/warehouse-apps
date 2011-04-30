@@ -21,6 +21,7 @@ Working with named manifests:
 
  wh manifest name ...      Assign a locator to a name
  wh manifest list          List all named manifests
+ wh manifest list search=X List manifests whose names contain string X
  wh manifest lookup name=X Show locator of manifest with name X
 
 Working with data: see whget(1p), whput(1p), whless(1p).
