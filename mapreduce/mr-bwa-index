@@ -61,6 +61,7 @@ if ($ENV{MR_LEVEL} == 0)
   }
   my $out = `whput -r --in-manifest .`;
   die sprintf "whput: exit 0x%x", $? if $?;
+  chomp ($out);
   print STDERR "+++mrout $out+++\n";
   exit 0;
 }
