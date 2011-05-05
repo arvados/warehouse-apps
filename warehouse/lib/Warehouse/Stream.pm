@@ -514,7 +514,12 @@ sub seek
     my $self = shift;
     my $pos = shift;
 
-    $self->rewind if $pos < $self->{bufpos};
+    $self->rewind if
+        $pos < $self->{bufpos};
+    $self->{bufcursor} = $pos - $self->{bufpos} if
+        $pos < $self->{bufpos} + $self->{bufcursor};
+    $self->{bufcursor} = 0 if
+        $self->{bufcursor} < 0; # impossible after last 2 statements, but checking anyway
 
     my $sizehint;
     while (@{$self->{nexthashes}} &&
