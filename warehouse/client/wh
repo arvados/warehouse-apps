@@ -14,8 +14,9 @@ Working with batch jobs:
  wh job wait id=123          Wait for job to stop; print output locator
  wh job show id=123          Describe job (function, version, inputs)
  wh job show id=123 X Y Z    Describe job specified fields (see INSPECTING)
- wh job freeze id=123        Save state of a running job, leave it running
- wh job freeze id=123 stop=1 Save state of a running job, then stop it
+ wh job freeze id=123        Save state of a running job; leave it running
+ wh job cancel id=123        Cancel a queued or running job
+                             (saving its state first, if it has started)
 
 Working with named manifests:
 
@@ -145,6 +146,7 @@ use Warehouse;
 my $commands = {
     "help" => \&help,
     "block bucket" => \&block_bucket,
+    "job cancel" => \&job_cancel,
     "job freeze" => \&job_freeze,
     "job list" => \&job_list,
     "job new" => \&job_new,
@@ -242,13 +244,23 @@ sub job_wait
     }
 }
 
+sub job_cancel
+{
+    $opt{stop} = 1;
+    return job_freeze();
+}
+
 sub job_freeze
 {
     my $ok = 1;
     my $oldfrozento;
     my $joblist;
-    if (($joblist = $whc->job_list (id_min => $opt{id},
-				    id_max => $opt{id}))
+    my $id = +$opt{id};
+    if (!$id) {
+	die "Error: no job id specified";
+    }
+    if (($joblist = $whc->job_list (id_min => $id,
+				    id_max => $id))
 	&& $#$joblist == 0)
     {
 	$oldfrozento = $joblist->[0]->{frozentokey};
@@ -262,8 +274,8 @@ sub job_freeze
     {
 	print STDERR "." if $_ >= 2;
 	sleep $_;
-	if (($joblist = $whc->job_list (id_min => $opt{id},
-					id_max => $opt{id}))
+	if (($joblist = $whc->job_list (id_min => $id,
+					id_max => $id))
 	    && $#$joblist == 0)
 	{
 	    return 1 if !$joblist->[0]->{starttime}; # never started
