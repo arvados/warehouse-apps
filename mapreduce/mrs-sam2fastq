@@ -23,17 +23,26 @@ while (<>)
 	$out = "\@$F[0]\n$csread\n+\n$csqual\n";
     } else {
 	if ($F[1] & 0x10) {
-	    $F[9] =~ tr:ACGTacgt:TGCAtgca:;
-	    die if $F[9] =~ m:[^NACGT]:i;
-	    $F[9] = reverse $F[9];
-	    $F[10] = reverse $F[10];
-	    $F[1] = $F[1] & ~0x10;
+	    my $seq = reverse $F[9];
+	    my $qual = reverse $F[10];
+	    # complement bases
+	    $seq =~ tr/acgt ryswkm bdhv ACGT RYSWKM BDHV/tgca yrswmk vhdb TGCA YRSWMK VHDB/;
+	    $out = "\@$F[0]\n$seq\n+\n$qual\n";
+	} else {
+	    $out = "\@$F[0]\n$F[9]\n+\n$F[10]\n";
 	}
-	$out = "\@F=$F[1]:$F[0]\n$F[9]\n+\n$F[10]\n";
     }
-    if ($ENV{PAIR_SELECT} ne '*' &&
-	($F[1] & 1)) {
-	next if $pair_select == 0;
+    if ($ENV{PAIR_SELECT} eq '*') {
+	# don't try to match pairs, just print all reads.
+	print $out;
+    }
+    elsif (!($F[1] & 1)) {
+	# this is not part of a paired-end read. include it in group 0.
+	print $out if $pair_select == 0;
+    }
+    else {
+	# this is part of a paired-end read. make sure we output the
+	# _1 and _2 reads in the same order, given the same input.
 	if ($F[1] & 0x40) {	# first in pair
 	    if (exists $out_2{$F[0]}) {
 		print $out if $pair_select == 1;
@@ -50,7 +59,9 @@ while (<>)
 	    } else {
 		$out_2{$F[0]} = $pair_select == 2 ? $out : 1234;
 	    }
-	} else {		# part of an unordered pair
+	} else {		# part of an unordered pair; print the
+				# first one encountered as _1 and the
+				# second one encountered as _2
 	    if (exists $out_1{$F[0]}) {
 		print $out_1{$F[0]} if $pair_select == 1;
 		print $out if $pair_select == 2;
@@ -59,8 +70,6 @@ while (<>)
 		$out_1{$F[0]} = $pair_select == 1 ? $out : 1234;
 	    }
 	}
-    } else {
-	print $out if $pair_select == 0;
     }
 }
 
