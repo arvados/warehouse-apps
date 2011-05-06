@@ -7,14 +7,16 @@
 	 {"name": "COLORSPACE", "value": null, "optional": 1},
 	 {"name": "COLLATE_PAIRS", "value": null, "optional": 1},
 	 {"name": "INPUT", "data_locator": null}],
-	 "max_nodes": 5,
+	 "max_nodes": 1,
+	 "max_steps_per_node": 1,
 	 "min_revision": 3184},
      {"name": "sam2fastq", "function": "sam2fastq", "params":
         [{"name": "SAM", "value": null},
 	 {"name": "COLORSPACE", "value": null, "optional": 1},
 	 {"name": "COLLATE_PAIRS", "value": null, "optional": 1},
 	 {"name": "INPUT", "data_locator": null}],
-	 "max_nodes": 5,
+	 "max_nodes": 1,
+	 "max_steps_per_node": 1,
 	 "min_revision": 3184},
      {"name": "fq-stats", "function": "filefilter", "params":
         [{"name": "INPUT", "from_step": 0},
@@ -55,7 +57,7 @@
 	 {"name": "SEED_EDIT_DISTANCE", "value": null, "optional": 1},
 	 {"name": "REFERENCE1", "value": null},
 	 {"name": "REFERENCE2", "optional": 1}],
-	 "max_nodes": 8,
+	 "max_nodes": 14,
 	 "max_steps_per_node": 1,
 	 "min_revision": 3237},
      {"name": "bwa-readmap", "function": "bwa-readmap", "params":
@@ -68,7 +70,7 @@
 	 {"name": "SEED_EDIT_DISTANCE", "value": null, "optional": 1},
 	 {"name": "REFERENCE1", "value": null},
 	 {"name": "REFERENCE2", "optional": 1}],
-	 "max_nodes": 8,
+	 "max_nodes": 14,
 	 "max_steps_per_node": 1,
 	 "min_revision": 3237},
      {"name": "readmap-merge", "function": "readmap-merge", "params":
