@@ -252,7 +252,7 @@ job2=`jobs -p %+`
 $bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' | gzip -9n > '${out_basename}.comp.counts.gz'
 wait \$job1
 wait \$job2
-rm -f '$saifile1.fifo'
+rm -f '$saifile1.fifo' || true
 
 rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 mkfifo '$saifile1.fifo' '$saifile2.fifo'
@@ -269,16 +269,16 @@ $bwa_path/bwa readmap -m -n '$readfile1' '$reffile1/$ref1_basename' '$saifile1.f
  || true
 wait \$job1
 wait \$job2
-rm -f '$saifile1.fifo' '$saifile2.fifo'
+rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 };
     }
 
     system("bash", "-c", $script) == 0
 	or die "script failed: error $! exit 0x".sprintf ("%x", $?);
 
-    unlink $readfile1 if $readfile1;
-    unlink $saifile1 if $saifile1;
-    unlink $saifile2 if $saifile2;
+    unlink $readfile1;
+    unlink "${saifile1}.gz";
+    unlink "${saifile2}.gz";
 
     goto dochunk if @readfile1;
 
