@@ -144,14 +144,18 @@ if ($ENV{MR_LEVEL} == 1)
 
   open STDOUT, "|-", "mrs-output" or die "mrs-output: $!";
 
-  foreach my $filename (@files) {
+  my $chunk_threshold_bytes = 500_000_000;
+  my $chunk_lines = 8_000_000;
+
+  $ENV{ASYNC_READ} = 3;
+
+  foreach my $manifest_filename (@files) {
     my $bwa_sam_cmd;
 
+    my $filename = $manifest_filename;
     $filename =~ s{.*/}{};
 
     my $readfile1 = "$tmp/${filename}";
-    my $saifile1 = "$tmp/${filename}.comb.sai";
-    my $saifile2 = "$tmp/${filename}.comp.sai";
 
     my $is_colorspace = "$filename." =~ /\.cs(fast[aq])?\./i;
     my $ref_is_colorspace = "$ref1_basename." =~ /\.cs(fasta)?\./i;
@@ -166,22 +170,52 @@ if ($ENV{MR_LEVEL} == 1)
       warn "paired-end reads are being processed as single-end reads";
     }
 
-    atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
+    atomic_whget("$input_manifest_key$subdir/${manifest_filename}", $readfile1);
 
     if ($readlength) {
       warn "trimming reads to $readlength bp\n";
       my $orig_filename = $readfile1;
       if ($readfile1 =~ s/\.gz$//) {
-	system ("gunzip", $orig_filename) == 0 or die "gunzip exited $?";
+	system ("bash", "-c",
+		"set -o pipefail; gzip -cd < '$orig_filename' | perl -S mrs-fastq-trim '$readlength' > '$readfile1'") == 0
+		    or die "gunzip|trim exited $?";
       }
-      system ("perl -S -i~ mrs-fastq-trim '$readlength' '$readfile1'") == 0 or die "trim exited $?";
-      unlink $readfile1."~";
+      else {
+	system ("perl -S -i~ mrs-fastq-trim '$readlength' '$readfile1'") == 0
+	    or die "trim exited $?";
+	unlink $readfile1."~";
+      }
       if (-s $readfile1 == 0) {
 	warn "$filename: no reads passed readlength filter\n";
 	unlink $readfile1, $orig_filename;
 	next;
       }
     }
+
+    my @readfile1 = ($readfile1);
+    my $readfile1_size = -s $readfile1;
+    if ($readfile1_size > $chunk_threshold_bytes) {
+      @readfile1 = ();
+      my $prefix = $readfile1;
+      $prefix =~ s/(.*)(\.[^\/]+)$/$1/;
+      my $ext = $2;
+      0 == system ("split -d -a 4 -l ${chunk_lines} '${readfile1}' '${prefix}.'")
+	  or die "split failed (exit $?)";
+      for (my $n = 0; ; $n++) {
+	my $suffix = sprintf "%04d", $n;
+	last if !-e "${prefix}.${suffix}";
+	rename "${prefix}.${suffix}", "${prefix}.${suffix}${ext}" or die "rename: $!";
+	push @readfile1, "${prefix}.${suffix}${ext}";
+      }
+    }
+
+  dochunk:
+    $readfile1 = shift @readfile1;
+    my $saifile1 = "${readfile1}.comb.sai";
+    my $saifile2 = "${readfile1}.comp.sai";
+    my $out_basename = $readfile1;
+    $out_basename =~ s{^.*/}{};
+    $out_basename = "$out_path/$out_basename";
 
     my $convert_names = q{perl -lane '$a=shift @F;print "$_\t$a" for @F'};
     my $script = qq{
@@ -193,15 +227,15 @@ rm -f '$saifile1.fifo' || true
 mkfifo '$saifile1.fifo'
 gunzip < '$saifile1.gz' > '$saifile1.fifo' &
 job1=`jobs -p %+`
-$bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' | gzip -9n > '$out_path/${filename}.comb.counts.gz'
+$bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' | gzip -9n > '${out_basename}.comb.counts.gz'
 wait \$job1
 
 gunzip < '$saifile1.gz' \\
     | $bwa_path/bwa readmap    -n '$readfile1' '$reffile1/$ref1_basename' /dev/stdin \\
     | $convert_names \\
     | bzip2 -c \\
-    > '$out_path/${filename}.names.bz2' \\
- || rm -f '$out_path/${filename}.names.bz2' \\
+    > '${out_basename}.names.bz2' \\
+ || rm -f '${out_basename}.names.bz2' \\
  || true
 };
 
@@ -215,9 +249,10 @@ gunzip < '$saifile1.gz' > '$saifile1.fifo' &
 job1=`jobs -p %+`
 gunzip < '$saifile2.gz' > '$saifile2.fifo' &
 job2=`jobs -p %+`
-$bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' | gzip -9n > '$out_path/${filename}.comp.counts.gz'
+$bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' | gzip -9n > '${out_basename}.comp.counts.gz'
 wait \$job1
 wait \$job2
+rm -f '$saifile1.fifo'
 
 rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 mkfifo '$saifile1.fifo' '$saifile2.fifo'
@@ -229,17 +264,14 @@ job2=`jobs -p %+`
 $bwa_path/bwa readmap -m -n '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' '$reffile2/$ref2_basename' '$saifile2.fifo' \\
     | $convert_names \\
     | bzip2 -c \\
-    > '$out_path/${filename}.comp.names.bz2' \\
- || rm -f '$out_path/${filename}.comp.names.bz2' \\
+    > '${out_basename}.comp.names.bz2' \\
+ || rm -f '${out_basename}.comp.names.bz2' \\
  || true
 wait \$job1
 wait \$job2
+rm -f '$saifile1.fifo' '$saifile2.fifo'
 };
     }
-
-    $script .= qq{
-whput -r --as-stream '$out_path'
-};
 
     system("bash", "-c", $script) == 0
 	or die "script failed: error $! exit 0x".sprintf ("%x", $?);
@@ -247,6 +279,11 @@ whput -r --as-stream '$out_path'
     unlink $readfile1 if $readfile1;
     unlink $saifile1 if $saifile1;
     unlink $saifile2 if $saifile2;
+
+    goto dochunk if @readfile1;
+
+    system ("whput -r --as-stream '$out_path'") == 0
+	or die "whput failed: error $! exit 0x".sprintf ("%x", $?);
   }
   close STDOUT or die "close output pipe: $!";
   exit 0;
