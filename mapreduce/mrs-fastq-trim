@@ -17,7 +17,9 @@ if ($bphead =~ m/^\@F=(\d+)/ && $1 & 0x10) {
 	s/(.*)(.{$targetlength})/$2/;
     }
 }
-if ($bpdata =~ s/^(.{$targetlength})(.*)/$1/ &&
-    $qdata =~ s/^(.{$targetlength})(.*)/$1/) {
-    print ($bphead, $bpdata, $qhead, $qdata);
+if ($targetlength <= length($bpdata) - 1) {
+    print ($bphead,
+	   substr($bpdata, 0, $targetlength), "\n",
+	   $qhead,
+	   substr($qdata, 0, $targetlength), "\n");
 }
