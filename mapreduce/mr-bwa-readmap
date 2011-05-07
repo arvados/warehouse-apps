@@ -144,7 +144,6 @@ if ($ENV{MR_LEVEL} == 1)
 
   open STDOUT, "|-", "mrs-output" or die "mrs-output: $!";
 
-  my $chunk_threshold_bytes = 500_000_000;
   my $chunk_lines = 8_000_000;
 
   $ENV{ASYNC_READ} = 3;
@@ -170,43 +169,36 @@ if ($ENV{MR_LEVEL} == 1)
       warn "paired-end reads are being processed as single-end reads";
     }
 
-    atomic_whget("$input_manifest_key$subdir/${manifest_filename}", $readfile1);
+    my @readpipeline = ("whget '$input_manifest_key$subdir/${manifest_filename}'");
+
+    if ($readfile1 =~ s/\.gz$//) {
+      push @readpipeline, "gzip -cdf";
+    }
 
     if ($readlength) {
       warn "trimming reads to $readlength bp\n";
-      my $orig_filename = $readfile1;
-      if ($readfile1 =~ s/\.gz$//) {
-	system ("bash", "-c",
-		"set -o pipefail; gzip -cd < '$orig_filename' | perl -S mrs-fastq-trim '$readlength' > '$readfile1'") == 0
-		    or die "gunzip|trim exited $?";
-      }
-      else {
-	system ("perl -S -i~ mrs-fastq-trim '$readlength' '$readfile1'") == 0
-	    or die "trim exited $?";
-	unlink $readfile1."~";
-      }
-      if (-s $readfile1 == 0) {
-	warn "$filename: no reads passed readlength filter\n";
-	unlink $readfile1, $orig_filename;
-	next;
-      }
+      push @readpipeline, "perl -S mrs-fastq-trim '$readlength'"
     }
 
-    my @readfile1 = ($readfile1);
-    my $readfile1_size = -s $readfile1;
-    if ($readfile1_size > $chunk_threshold_bytes) {
-      @readfile1 = ();
-      my $prefix = $readfile1;
-      $prefix =~ s/(.*)(\.[^\/]+)$/$1/;
-      my $ext = $2;
-      0 == system ("split -d -a 4 -l ${chunk_lines} '${readfile1}' '${prefix}.'")
-	  or die "split failed (exit $?)";
-      for (my $n = 0; ; $n++) {
-	my $suffix = sprintf "%04d", $n;
-	last if !-e "${prefix}.${suffix}";
-	rename "${prefix}.${suffix}", "${prefix}.${suffix}${ext}" or die "rename: $!";
-	push @readfile1, "${prefix}.${suffix}${ext}";
-      }
+    my $prefix = $readfile1;
+    $prefix =~ s/(.*)(\.[^\/]+)$/$1/;
+    my $ext = $2;
+    push @readpipeline, "split -d -a 4 -l ${chunk_lines} - '${prefix}.'";
+
+    Safepipe::readfrom("main::R", @readpipeline);
+    close "R" or die "close R: $!";
+
+    my @readfile1 = ();
+    for (my $n = 0; ; $n++) {
+      my $suffix = sprintf "%04d", $n;
+      last if !-e "${prefix}.${suffix}";
+      rename "${prefix}.${suffix}", "${prefix}.${suffix}${ext}" or die "rename: $!";
+      push @readfile1, "${prefix}.${suffix}${ext}";
+    }
+
+    if (!@readfile1) {
+      warn "warning: no reads passed filter";
+      next;
     }
 
   dochunk:
