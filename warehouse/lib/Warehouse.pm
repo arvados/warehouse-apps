@@ -3,7 +3,6 @@
 package Warehouse;
 
 use Digest::MD5;
-use Cache::Memcached;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Date::Parse;
