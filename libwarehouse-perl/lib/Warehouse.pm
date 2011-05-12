@@ -3,8 +3,6 @@
 package Warehouse;
 
 use Digest::MD5;
-use MogileFS::Client;
-use Cache::Memcached;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Date::Parse;
@@ -312,6 +310,7 @@ sub _init
 	       ++$attempts <= 5)
 	{
 	    $self->{mogc} = eval {
+		eval 'use MogileFS::Client;';
 		MogileFS::Client->new
 		    (hosts => [split(",", $self->{mogilefs_trackers})],
 		     domain => $self->{mogilefs_domain},
@@ -327,6 +326,8 @@ sub _init
 	if (@{$self->{memcached_servers}} &&
 	    $self->{memcached_size_threshold} >= 0)
 	{
+	    eval 'use Cache::Memcached;';
+	    die $@ if $@;
 	    $self->{memc} = new Cache::Memcached {
 		'servers' => $self->{memcached_servers},
 		'debug' => 0,
@@ -2540,7 +2541,7 @@ sub _encrypt_block
 	if !@{$self->{config}->{encrypt}};
 
     pipe READER, WRITER or die "Pipe failed: $!";
-    my $child = fork;
+    $child = fork;
     defined $child or die "Fork failed: $!";
     if ($child == 0)
     {

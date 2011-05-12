@@ -23,7 +23,7 @@ build: build-stamp
 build-stamp:
 	dh_testdir
 
-	# Add commands to compile the package here
+#	Add commands to compile the package here
 	$(PERL) Makefile.PL INSTALLDIRS=vendor
 	$(MAKE) OPTIMIZE="-Wall -O2 -g"
 
@@ -33,7 +33,7 @@ clean:
 	dh_testdir
 	dh_testroot
 
-	# Add commands to clean up after the build process here
+#	Add commands to clean up after the build process here
 	[ ! -f Makefile ] || $(MAKE) realclean
 
 	dh_clean build-stamp install-stamp
@@ -44,14 +44,15 @@ install-stamp:
 	dh_testroot
 	dh_clean -k
 
-	# Add commands to install the package into debian/$PACKAGE_NAME here
+#	Add commands to install the package into debian/$PACKAGE_NAME here
 	$(MAKE) test
 	$(MAKE) install DESTDIR=$(TMP) PREFIX=/usr
 
-	# As this is a architecture independent package, we are not
-	# supposed to install stuff to /usr/lib. MakeMaker creates
-	# the dirs, we delete them from the deb:
-	rmdir --ignore-fail-on-non-empty --parents $(TMP)/usr/lib/perl5
+#	As this is a architecture independent package, we are not
+#	supposed to install stuff to /usr/lib. MakeMaker creates
+#	the dirs, we delete them from the deb:
+	-rmdir --ignore-fail-on-non-empty --parents $(TMP)/usr/lib/perl5
+	-rmdir --ignore-fail-on-non-empty --parents $(TMP)/usr/lib
 
 	touch install-stamp
 
