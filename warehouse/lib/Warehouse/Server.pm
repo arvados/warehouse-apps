@@ -592,6 +592,7 @@ sub run
 		    my $x = {};
 		    for (qw(controllers
 			    svn_root
+			    git_clone_url
 			    mogilefs_trackers
 			    mogilefs_directory_class
 			    mogilefs_file_class
