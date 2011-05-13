@@ -568,17 +568,19 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
       "--job-name=$job_id.$id.$$",
 	);
     my @execargs = qw(sh);
-    my $script =
+    my $script = "";
+    my $command =
 	"mkdir -p $ENV{TMPDIR}/mrcompute/revision "
 	."&& cd $ENV{TMPDIR}/mrcompute ";
     if ($git_build_script)
     {
-      $script .=
-	  "&& whjob-checkout-and-build $ENV{MR_REVISION_SRCDIR} $ENV{MR_REVISION} $ENV{MR_GIT_CLONE_URL}";
+      $script = $git_build_script;
+      $command .=
+	  "&& perl - $ENV{MR_REVISION_SRCDIR} $ENV{MR_REVISION} $ENV{MR_GIT_CLONE_URL}";
     }
     elsif (!$skip_install)
     {
-      $script .=
+      $command .=
 	  "&& "
 	  ."( "
 	  ."  [ -e '$ENV{MR_REVISION_INSTALLDIR}/.tested' ] "
@@ -589,12 +591,13 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	  .") ";
     }
     if (exists $ENV{GPG_KEYS}) {
-      $script .=
+      $command .=
 	  "&& mkdir -p '$ENV{MR_JOBSTEP_TMP}' && (sudo /bin/umount '$ENV{MR_JOBSTEP_TMP}' 2>/dev/null || true) && rm -rf '$ENV{MR_JOBSTEP_TMP}' && exec $ENV{MR_REVISION_SRCDIR}/mapreduce/ecryptfs-wrapper -d '$ENV{MR_JOBSTEP_TMP}' -p $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
     } else {
-      $script .=
+      $command .=
 	  "&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
     }
+    my @execargs = ('bash', '-c', $command);
     srun (\@srunargs, \@execargs, undef, $script);
     exit (1);
   }
