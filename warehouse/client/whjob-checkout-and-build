@@ -31,6 +31,7 @@ else {
 if ($commit) {
     shell_or_die (qw(git stash));
     shell_or_die (qw(git clean -d -x));
+    shell_or_die (qw(git fetch origin));
     shell_or_die (qw(git checkout), $commit);
 }
 
