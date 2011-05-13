@@ -410,13 +410,28 @@ else
     my $repo = $Job->{git_clone_url} || $whc->get_config("git_clone_url");
     $ENV{"MR_GIT_CLONE_URL"} = $repo;
 
-    # FIXME: Translate $treeish to a real commit id
-    my $commit = $treeish;
+    # Translate $treeish to a real commit id
+    if (!-d $ENV{MR_REVISION_SRCDIR}) {
+      system(qw(git clone), $repo, $ENV{MR_REVISION_SRCDIR}) == 0
+	  or die "git clone $repo failed: exit ".($?>>8);
+      system("cd $ENV{MR_REVISION_SRCDIR} && git config clean.requireForce false");
+    }
+    my $commit = `cd $ENV{MR_REVISION_SRCDIR} && git pull -q && git rev-list -1 $treeish`;
+    chomp $commit;
+    $commit =~ /^[0-9a-f]{40}$/s or die "could not get commit id for $treeish";
     $ENV{"MR_GIT_COMMIT"} = $commit;
     $ENV{"MR_REVISION"} = $commit;
 
+    if ($commit ne $treeish) {
+      $Job->{revision} = $commit;
+      dbh_do
+	  ("update mrjob set revision=? where id=?",
+	   undef,
+	   $Job->{revision}, $Job->{id});
+    }
+
     @execargs = ("sh", "-c",
-		 "mkdir -p $ENV{TMPDIR}/mrcompute/opt && cd $ENV{TMPDIR}/mrcompute && perl - $ENV{TMPDIR}/mrcompute/warehouse-apps $treeish $repo");
+		 "mkdir -p $ENV{TMPDIR}/mrcompute/opt && cd $ENV{TMPDIR}/mrcompute && perl - $ENV{MR_REVISION_SRCDIR} $commit $repo");
     open GBS, "<", `echo -n \$(which whjob-checkout-and-build)`
 	or die "can't find whjob-checkout-and-build";
     local $/ = undef;
@@ -443,7 +458,7 @@ else
   if ($cleanpid == 0)
   {
     srun (["srun", "--nodelist=$nodelist", "-D", $ENV{TMPDIR}],
-	  ['bash', '-c', 'sudo /bin/umount $TMPDIR/mrcompute/work/* 2>/dev/null; sleep 1; rm -rf $TMPDIR/mrcompute/work']);
+	  ['bash', '-c', 'if mount | grep -q $TMPDIR/mrcompute/work/; then sudo /bin/umount $TMPDIR/mrcompute/work/* 2>/dev/null; fi; sleep 1; rm -rf $TMPDIR/mrcompute/work']);
     exit (1);
   }
   while (1)
