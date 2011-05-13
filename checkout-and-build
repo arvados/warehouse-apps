@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+
+use Fcntl ':flock';
+
+if (@ARGV < 1 || @ARGV > 3) {
+    die "usage: $0 destdir [commit [repo]]\n";
+}
+
+my ($destdir, $commit, $repo) = @ARGV;
+
+open L, ">", "$destdir.lock" or die "$destdir.lock: $!";
+flock L, LOCK_EX;
+if (readlink ("$destdir.commit") eq $commit) {
+    exit 0;
+}
+
+if (-d $destdir) {
+    chdir $destdir or die "chdir $destdir: $!";
+    shell_or_die (qw(git remote set-url origin), $repo) if $repo;
+}
+elsif ($repo && $commit)
+{
+    shell_or_die('git', 'clone', $repo, $destdir);
+    chdir $destdir or die "chdir $destdir: $!";
+    shell_or_die(qw(git config clean.requireForce false));
+}
+else {
+    die "$destdir does not exist, and no repo/commit specified -- giving up";
+}
+
+if ($commit) {
+    shell_or_die (qw(git stash));
+    shell_or_die (qw(git clean -d -x));
+    shell_or_die (qw(git checkout), $commit);
+}
+
+shell_or_die ("cd warehouse && ./build_deb.sh > $destdir.buildlog");
+
+unlink "$destdir.commit.new";
+symlink ($commit, "$destdir.commit.new") or die "$destdir.commit.new: $!";
+rename ("$destdir.commit.new", "$destdir.commit") or die "$destdir.commit: $!";
+close L;
+
+sub shell_or_die
+{
+    system (@_) == 0
+	or die "@_ failed: $! exit 0x".sprintf("%x",$?);
+}
