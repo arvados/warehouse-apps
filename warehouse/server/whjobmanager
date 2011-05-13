@@ -416,7 +416,12 @@ else
 	  or die "git clone $repo failed: exit ".($?>>8);
       system("cd $ENV{MR_REVISION_SRCDIR} && git config clean.requireForce false");
     }
-    my $commit = `cd $ENV{MR_REVISION_SRCDIR} && git pull -q && git rev-list -1 $treeish`;
+    if ($treeish !~ m{^[0-9a-f]{5,}$}) {
+      # master -> origin/master
+      # username/branch -> origin/username/branch
+      $treeish = "origin/$treeish";
+    }
+    my $commit = `cd $ENV{MR_REVISION_SRCDIR} && git fetch && git rev-list -1 $treeish`;
     chomp $commit;
     $commit =~ /^[0-9a-f]{40}$/s or die "could not get commit id for $treeish";
     $ENV{"MR_GIT_COMMIT"} = $commit;
