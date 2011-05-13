@@ -35,7 +35,12 @@ if ($commit) {
     shell_or_die (qw(git checkout), $commit);
 }
 
-shell_or_die ("cd warehouse && ./build_deb.sh > $destdir.buildlog");
+open STDOUT, ">", "$destdir.buildlog";
+my $pwd;
+chomp ($pwd = `pwd`);
+my $install_dir = $ENV{"MR_REVISION_INSTALLDIR"} || "$pwd/opt";
+mkdir $install_dir;
+shell_or_die ("./install.sh", $install_dir);
 
 unlink "$destdir.commit.new";
 symlink ($commit, "$destdir.commit.new") or die "$destdir.commit.new: $!";
