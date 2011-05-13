@@ -49,6 +49,8 @@ symlink ($commit, "$destdir.commit.new") or die "$destdir.commit.new: $!";
 rename ("$destdir.commit.new", "$destdir.commit") or die "$destdir.commit: $!";
 close L;
 
+exit 0;
+
 sub shell_or_die
 {
     system (@_) == 0
