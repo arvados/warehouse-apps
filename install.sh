@@ -8,7 +8,12 @@ then
   exit 1
 fi
 
-(cd libwarehouse-perl; ./build_deb.sh)
+(
+ cd libwarehouse-perl
+ ./build_deb.sh
+)
 
-ln -sfn "$1" install
-./tests/autotests.sh
+(
+ ln -sfn "$1" install
+ ./projects/polony/tests/autotests.sh
+)

@@ -25,11 +25,7 @@ ln -sfn "$install" ./=install
 "$src"/mkx install
 popd
 
-pushd "$src/warehouse"
-perl Makefile.PL PREFIX="$install"
-make
-make install
-popd
+dpkg -x "$base"/libwarehouse-perl_*_all.deb "$install"
 
 PATH="$install/bin:$PATH"
 
