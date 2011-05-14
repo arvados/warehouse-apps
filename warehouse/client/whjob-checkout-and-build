@@ -32,6 +32,7 @@ else {
 }
 
 if ($commit) {
+    unlink "$destdir.commit";
     shell_or_die (qw(git stash));
     shell_or_die (qw(git clean -d -x));
     shell_or_die (qw(git fetch origin));
@@ -44,9 +45,12 @@ my $install_dir = $ENV{"MR_REVISION_INSTALLDIR"} || "$pwd/opt";
 mkdir $install_dir;
 shell_or_die ("./install.sh", $install_dir);
 
-unlink "$destdir.commit.new";
-symlink ($commit, "$destdir.commit.new") or die "$destdir.commit.new: $!";
-rename ("$destdir.commit.new", "$destdir.commit") or die "$destdir.commit: $!";
+if ($commit) {
+    unlink "$destdir.commit.new";
+    symlink ($commit, "$destdir.commit.new") or die "$destdir.commit.new: $!";
+    rename ("$destdir.commit.new", "$destdir.commit") or die "$destdir.commit: $!";
+}
+
 close L;
 
 exit 0;
