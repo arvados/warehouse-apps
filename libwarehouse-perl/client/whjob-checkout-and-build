@@ -43,7 +43,12 @@ my $pwd;
 chomp ($pwd = `pwd`);
 my $install_dir = $ENV{"MR_REVISION_INSTALLDIR"} || "$pwd/opt";
 mkdir $install_dir;
-shell_or_die ("./install.sh", $install_dir);
+if (!-e "./install.sh" && -e "./tests/autotests.sh") {
+    # Old version
+    shell_or_die ("./tests/autotests.sh", $install_dir);
+} else {
+    shell_or_die ("./install.sh", $install_dir);
+}
 
 if ($commit) {
     unlink "$destdir.commit.new";
