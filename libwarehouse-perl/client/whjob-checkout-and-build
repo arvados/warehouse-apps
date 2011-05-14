@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+
+use Fcntl ':flock';
+
+if (@ARGV < 1 || @ARGV > 3) {
+    die "usage: $0 destdir [commit [repo]]\n";
+}
+
+my ($destdir, $commit, $repo) = @ARGV;
+
+open L, ">", "$destdir.lock" or die "$destdir.lock: $!";
+flock L, LOCK_EX;
+if (readlink ("$destdir.commit") eq $commit) {
+    exit 0;
+}
+
+open STDOUT, ">", "$destdir.log";
+open STDERR, ">&STDOUT";
+
+if (-d $destdir) {
+    chdir $destdir or die "chdir $destdir: $!";
+    shell_or_die (qw(git remote set-url origin), $repo) if $repo;
+}
+elsif ($repo && $commit)
+{
+    shell_or_die('git', 'clone', $repo, $destdir);
+    chdir $destdir or die "chdir $destdir: $!";
+    shell_or_die(qw(git config clean.requireForce false));
+}
+else {
+    die "$destdir does not exist, and no repo/commit specified -- giving up";
+}
+
+if ($commit) {
+    unlink "$destdir.commit";
+    shell_or_die (qw(git stash));
+    shell_or_die (qw(git clean -d -x));
+    shell_or_die (qw(git fetch origin));
+    shell_or_die (qw(git checkout), $commit);
+}
+
+my $pwd;
+chomp ($pwd = `pwd`);
+my $install_dir = $ENV{"MR_REVISION_INSTALLDIR"} || "$pwd/opt";
+mkdir $install_dir;
+shell_or_die ("./install.sh", $install_dir);
+
+if ($commit) {
+    unlink "$destdir.commit.new";
+    symlink ($commit, "$destdir.commit.new") or die "$destdir.commit.new: $!";
+    rename ("$destdir.commit.new", "$destdir.commit") or die "$destdir.commit: $!";
+}
+
+close L;
+
+exit 0;
+
+sub shell_or_die
+{
+    system (@_) == 0
+	or die "@_ failed: $! exit 0x".sprintf("%x",$?);
+}

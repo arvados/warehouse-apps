@@ -28,6 +28,7 @@ $ENV{NOCACHE_WRITE} = 1 if $ENV{NOCACHE};
 
 $blocksize ||= 2**26;
 $svn_root ||= "http://dev.freelogy.org/svn/polony/polony-tools/trunk";
+$git_clone_url ||= "git://git/warehouse-apps.git";
 
 =head1 NAME
 
@@ -227,6 +228,7 @@ sub _init
     $self->{warehouse_index} = $idx;
     $self->{warehouse_name} = $warehouse_name;
     $self->{config}->{svn_root} ||= $svn_root;
+    $self->{config}->{git_clone_url} ||= $git_clone_url;
     $self->{name_warehouse_servers} = $warehouses->[$idx]->{name_controllers};
     $self->{job_warehouse_servers} = $warehouses->[$idx]->{job_controllers};
     $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{cryptmap_name_controllers};

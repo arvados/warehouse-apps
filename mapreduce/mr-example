@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+
+use WarehouseJob;
+use Digest::MD5 qw(md5_hex);
+
+my $worklevel = 1;
+
+if ($ENV{"MR_ID"} == 0) {
+    WarehouseJob::queue_step ($worklevel, "one");
+    WarehouseJob::queue_step ($worklevel, "two");
+    WarehouseJob::queue_step ($worklevel, "three");
+    WarehouseJob::output (md5_hex(""));
+}
+
+elsif ($ENV{"MR_LEVEL"} == $worklevel) {
+    printf STDERR "Job inputkey is %s\n", $ENV{"MR_INPUT0"};
+    printf STDERR "I'm step number %d\n", $ENV{"MR_ID"};
+    printf STDERR "I'm working on '%s'\n", $ENV{"MR_INPUT"};
+    WarehouseJob::output (". ".md5_hex("")." 0:0:empty-".$ENV{"MR_INPUT"}.".txt");
+}

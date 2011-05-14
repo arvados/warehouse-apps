@@ -218,7 +218,7 @@ if ($have_database)
 			 values (?, ?, now())");
   my $rev = q/$Revision$/;
   $rev =~ /\d+/;
-  $sth->execute ($$, $&) or die $dbh->errstr;
+  $sth->execute ($$, +$&) or die $dbh->errstr;
 
   $sth = $dbh->prepare ("select last_insert_id()");
   $sth->execute or die $dbh->errstr;
@@ -377,7 +377,10 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
 
 
 
-my $skip_install = (!$have_slurm && $Job->{revision} =~ /\D/);
+$ENV{"MR_REVISION"} = $Job->{revision};
+
+my $git_build_script;
+my $skip_install = (!$have_slurm && $Job->{revision} =~ m{^/});
 if ($skip_install)
 {
   $ENV{"MR_REVISION_SRCDIR"} = $Job->{revision};
@@ -386,21 +389,66 @@ else
 {
   Log (undef, "Install revision ".$Job->{revision});
   my $nodelist = join(",", @node);
-  $ENV{"MR_REVISION"} = $Job->{revision};
-  $ENV{"MR_REVISION_INSTALLDIR"} = "$ENV{TMPDIR}/mrcompute/revision/$Job->{revision}";
-  $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
-  $ENV{"INSTALL_REPOS"} = $whc->get_config("svn_root");
-  $ENV{"INSTALL_REVISION"} = $Job->{revision};
   my @srunargs = ("srun",
 		  "--nodelist=$nodelist",
 		  "-D", $ENV{TMPDIR}, "--job-name=$job_id");
-  my @execargs = ("sh", "-c",
-		  "mkdir -p $ENV{TMPDIR}/mrcompute/revision && cd $ENV{TMPDIR}/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet \"\$INSTALL_REPOS/installrevision\" && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
+  my @execargs;
+  my $build_script;
+  if ($Job->{revision} =~ m{^(\d{1,5})$}) {
+    # subversion revision number
+    $ENV{"INSTALL_REPOS"} = $whc->get_config("svn_root");
+    $ENV{"INSTALL_REVISION"} = $Job->{revision};
+    $ENV{"MR_REVISION_INSTALLDIR"} = "$ENV{TMPDIR}/mrcompute/revision/$Job->{revision}";
+    $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
+    @execargs = ("sh", "-c",
+		 "mkdir -p $ENV{TMPDIR}/mrcompute/revision && cd $ENV{TMPDIR}/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet \"\$INSTALL_REPOS/installrevision\" && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
+  } else {
+    # git tree-ish
+    $ENV{"MR_REVISION_SRCDIR"} = "$ENV{TMPDIR}/mrcompute/warehouse-apps";
+    $ENV{"MR_REVISION_INSTALLDIR"} = "$ENV{TMPDIR}/mrcompute/opt";
+    my $treeish = $Job->{revision};
+    my $repo = $Job->{git_clone_url} || $whc->get_config("git_clone_url");
+    $ENV{"MR_GIT_CLONE_URL"} = $repo;
+
+    # Translate $treeish to a real commit id
+    if (!-d $ENV{MR_REVISION_SRCDIR}) {
+      system(qw(git clone), $repo, $ENV{MR_REVISION_SRCDIR}) == 0
+	  or die "git clone $repo failed: exit ".($?>>8);
+      system("cd $ENV{MR_REVISION_SRCDIR} && git config clean.requireForce false");
+    }
+    if ($treeish !~ m{^[0-9a-f]{5,}$}) {
+      # master -> origin/master
+      # username/branch -> origin/username/branch
+      $treeish = "origin/$treeish";
+    }
+    my $commit = `cd $ENV{MR_REVISION_SRCDIR} && git fetch && git rev-list -1 $treeish`;
+    chomp $commit;
+    $commit =~ /^[0-9a-f]{40}$/s or die "could not get commit id for $treeish";
+    $ENV{"MR_GIT_COMMIT"} = $commit;
+    $ENV{"MR_REVISION"} = $commit;
+
+    if ($commit ne $treeish) {
+      $Job->{revision} = $commit;
+      dbh_do
+	  ("update mrjob set revision=? where id=?",
+	   undef,
+	   $Job->{revision}, $Job->{id});
+    }
+
+    @execargs = ("sh", "-c",
+		 "mkdir -p $ENV{TMPDIR}/mrcompute/opt && cd $ENV{TMPDIR}/mrcompute && perl - $ENV{MR_REVISION_SRCDIR} $commit $repo");
+    open GBS, "<", `echo -n \$(which whjob-checkout-and-build)`
+	or die "can't find whjob-checkout-and-build";
+    local $/ = undef;
+    $git_build_script = <GBS>;
+    close GBS;
+    $build_script = $git_build_script;
+  }
 
   my $installpid = fork();
   if ($installpid == 0)
   {
-    srun (\@srunargs, \@execargs);
+    srun (\@srunargs, \@execargs, {}, $build_script);
     exit (1);
   }
   while (1)
@@ -415,7 +463,7 @@ else
   if ($cleanpid == 0)
   {
     srun (["srun", "--nodelist=$nodelist", "-D", $ENV{TMPDIR}],
-	  ['bash', '-c', 'sudo /bin/umount $TMPDIR/mrcompute/work/* 2>/dev/null; sleep 1; rm -rf $TMPDIR/mrcompute/work']);
+	  ['bash', '-c', 'if mount | grep -q $TMPDIR/mrcompute/work/; then sudo /bin/umount $TMPDIR/mrcompute/work/* 2>/dev/null; fi; sleep 1; rm -rf $TMPDIR/mrcompute/work']);
     exit (1);
   }
   while (1)
@@ -540,12 +588,19 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
       "--job-name=$job_id.$id.$$",
 	);
     my @execargs = qw(sh);
-    my $script =
+    my $script = "";
+    my $command =
 	"mkdir -p $ENV{TMPDIR}/mrcompute/revision "
 	."&& cd $ENV{TMPDIR}/mrcompute ";
-    if (!$skip_install)
+    if ($git_build_script)
     {
-      $script .=
+      $script = $git_build_script;
+      $command .=
+	  "&& perl - $ENV{MR_REVISION_SRCDIR} $ENV{MR_REVISION} $ENV{MR_GIT_CLONE_URL}";
+    }
+    elsif (!$skip_install)
+    {
+      $command .=
 	  "&& "
 	  ."( "
 	  ."  [ -e '$ENV{MR_REVISION_INSTALLDIR}/.tested' ] "
@@ -556,12 +611,13 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 	  .") ";
     }
     if (exists $ENV{GPG_KEYS}) {
-      $script .=
+      $command .=
 	  "&& mkdir -p '$ENV{MR_JOBSTEP_TMP}' && (sudo /bin/umount '$ENV{MR_JOBSTEP_TMP}' 2>/dev/null || true) && rm -rf '$ENV{MR_JOBSTEP_TMP}' && exec $ENV{MR_REVISION_SRCDIR}/mapreduce/ecryptfs-wrapper -d '$ENV{MR_JOBSTEP_TMP}' -p $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
     } else {
-      $script .=
+      $command .=
 	  "&& exec $ENV{MR_REVISION_SRCDIR}/mapreduce/mrtaskmanager";
     }
+    my @execargs = ('bash', '-c', $command);
     srun (\@srunargs, \@execargs, undef, $script);
     exit (1);
   }

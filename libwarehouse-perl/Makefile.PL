@@ -15,6 +15,7 @@ WriteMakefile
 		   'client/whget',
 		   'client/whget.cgi',
 		   'client/whintro',
+		   'client/whjob-checkout-and-build',
 		   'client/whless',
 		   'client/whmount',
 		   'client/whpipeline',

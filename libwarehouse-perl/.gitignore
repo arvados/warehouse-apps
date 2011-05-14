@@ -1,0 +1,10 @@
+Makefile
+blib/
+build-stamp
+debian/changelog
+debian/files
+debian/libwarehouse-perl.debhelper.log
+debian/libwarehouse-perl.substvars
+debian/libwarehouse-perl/
+install-stamp
+pm_to_blib

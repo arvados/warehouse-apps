@@ -255,6 +255,9 @@ alter table mrjob add index(output)
 	   qq{
 alter table mrjob add signedrequest text after id
   },
+	   qq{
+alter table mrjob change revision revision VARCHAR(40)
+  },
 	   )
   {
     my $sth = $dbh->prepare ($_);
