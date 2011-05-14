@@ -105,8 +105,11 @@ else
   my %knob;
   foreach (@ARGV)
   {
-    $Job->{$1} = $2 if /([a-z].*?)=(.*)/;
-    $knob{$1} = $2 if /([^a-z].*?)=(.*)/;
+    if (/([a-z].*?)=(.*)/) {
+      $Job->{$1} = $2;
+    } elsif (/(.*?)=(.*)/) {
+      $knob{$1} = $2;
+    }
   }
   $Job->{knobs} = join ("\n", map { "$_=$knob{$_}" } sort keys %knob);
 
@@ -389,52 +392,92 @@ else
 {
   Log (undef, "Install revision ".$Job->{revision});
   my $nodelist = join(",", @node);
+
+  # Clean out mrcompute/work and mrcompute/opt
+
+  my $cleanpid = fork();
+  if ($cleanpid == 0)
+  {
+    srun (["srun", "--nodelist=$nodelist", "-D", $ENV{TMPDIR}],
+	  ['bash', '-c', 'if mount | grep -q $TMPDIR/mrcompute/work/; then sudo /bin/umount $TMPDIR/mrcompute/work/* 2>/dev/null; fi; sleep 1; rm -rf $TMPDIR/mrcompute/work $TMPDIR/mrcompute/opt']);
+    exit (1);
+  }
+  while (1)
+  {
+    last if $cleanpid == waitpid (-1, WNOHANG);
+    freeze_if_want_freeze ($cleanpid);
+    select (undef, undef, undef, 0.1);
+  }
+  Log (undef, "Clean-work-dir exited $?");
+
+  # Install requested code version
+
+  my $build_script;
+  my @execargs;
   my @srunargs = ("srun",
 		  "--nodelist=$nodelist",
 		  "-D", $ENV{TMPDIR}, "--job-name=$job_id");
-  my @execargs;
-  my $build_script;
-  if ($Job->{revision} =~ m{^(\d{1,5})$}) {
-    # subversion revision number
-    $ENV{"INSTALL_REPOS"} = $whc->get_config("svn_root");
-    $ENV{"INSTALL_REVISION"} = $Job->{revision};
-    $ENV{"MR_REVISION_INSTALLDIR"} = "$ENV{TMPDIR}/mrcompute/revision/$Job->{revision}";
-    $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
-    @execargs = ("sh", "-c",
-		 "mkdir -p $ENV{TMPDIR}/mrcompute/revision && cd $ENV{TMPDIR}/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet \"\$INSTALL_REPOS/installrevision\" && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
-  } else {
-    # git tree-ish
-    $ENV{"MR_REVISION_SRCDIR"} = "$ENV{TMPDIR}/mrcompute/warehouse-apps";
-    $ENV{"MR_REVISION_INSTALLDIR"} = "$ENV{TMPDIR}/mrcompute/opt";
-    my $treeish = $Job->{revision};
-    my $repo = $Job->{git_clone_url} || $whc->get_config("git_clone_url");
-    $ENV{"MR_GIT_CLONE_URL"} = $repo;
 
-    # Translate $treeish to a real commit id
-    if (!-d $ENV{MR_REVISION_SRCDIR}) {
-      system(qw(git clone), $repo, $ENV{MR_REVISION_SRCDIR}) == 0
-	  or die "git clone $repo failed: exit ".($?>>8);
-      system("cd $ENV{MR_REVISION_SRCDIR} && git config clean.requireForce false");
+  $ENV{"MR_REVISION"} = $Job->{revision};
+  $ENV{"MR_REVISION_SRCDIR"} = "$ENV{TMPDIR}/mrcompute/warehouse-apps";
+  $ENV{"MR_REVISION_INSTALLDIR"} = "$ENV{TMPDIR}/mrcompute/opt";
+
+  my $commit;
+  my $treeish = $Job->{revision};
+  my $repo = $Job->{git_clone_url} || $whc->get_config("git_clone_url");
+
+  # Create/update our clone of the remote git repo
+
+  if (!-d $ENV{MR_REVISION_SRCDIR}) {
+    system(qw(git clone), $repo, $ENV{MR_REVISION_SRCDIR}) == 0
+	or die "git clone $repo failed: exit ".($?>>8);
+    system("cd $ENV{MR_REVISION_SRCDIR} && git config clean.requireForce false");
+  }
+  `cd $ENV{MR_REVISION_SRCDIR} && git fetch -q`;
+
+  # If this looks like a subversion r#, look for it in git-svn commit messages
+
+  if ($treeish =~ m{^\d{1,4}}) {
+    my $gitlog = `cd $ENV{MR_REVISION_SRCDIR} && git log --format="%H" --grep="git-svn-id:.*\@$treeish "`;
+    chomp $gitlog;
+    if ($gitlog =~ /^[a-f0-9]{40}$/) {
+      $commit = $gitlog;
+      Log (undef, "Using commit $commit for revision $treeish");
     }
+  }
+
+  # If that didn't work, try asking git to look it up as a tree-ish.
+
+  if (!defined $commit) {
+
     if ($treeish !~ m{^[0-9a-f]{5,}$}) {
-      # master -> origin/master
-      # username/branch -> origin/username/branch
+      # Looks like a git branch name -- make sure git knows it's
+      # relative to the remote repo
       $treeish = "origin/$treeish";
     }
-    my $commit = `cd $ENV{MR_REVISION_SRCDIR} && git fetch && git rev-list -1 $treeish`;
-    chomp $commit;
-    $commit =~ /^[0-9a-f]{40}$/s or die "could not get commit id for $treeish";
-    $ENV{"MR_GIT_COMMIT"} = $commit;
-    $ENV{"MR_REVISION"} = $commit;
 
-    if ($commit ne $treeish) {
-      $Job->{revision} = $commit;
-      dbh_do
-	  ("update mrjob set revision=? where id=?",
-	   undef,
-	   $Job->{revision}, $Job->{id});
+    my $found = `cd $ENV{MR_REVISION_SRCDIR} && git rev-list -1 $treeish`;
+    chomp $found;
+    if ($found =~ /^[0-9a-f]{40}$/s) {
+      $commit = $found;
+      if ($commit ne $treeish) {
+	# Make sure we record the real commit id in the database,
+	# frozentokey, logs, etc. -- instead of an abbreviation or a
+	# branch name which can become ambiguous or point to a
+	# different commit in the future.
+	$ENV{"MR_REVISION"} = $commit;
+	$Job->{revision} = $commit;
+	dbh_do
+	    ("update mrjob set revision=? where id=?",
+	     undef,
+	     $Job->{revision}, $Job->{id});
+      }
     }
+  }
 
+  if (defined $commit) {
+    $ENV{"MR_GIT_COMMIT"} = $commit;
+    $ENV{"MR_GIT_CLONE_URL"} = $repo;
     @execargs = ("sh", "-c",
 		 "mkdir -p $ENV{TMPDIR}/mrcompute/opt && cd $ENV{TMPDIR}/mrcompute && perl - $ENV{MR_REVISION_SRCDIR} $commit $repo");
     open GBS, "<", `echo -n \$(which whjob-checkout-and-build)`
@@ -443,6 +486,20 @@ else
     $git_build_script = <GBS>;
     close GBS;
     $build_script = $git_build_script;
+  }
+  elsif ($treeish =~ m{^(\d{1,5})$}) {
+    # Want a subversion r# but couldn't find it in git-svn history -
+    # might as well try using the subversion repo in case it's still
+    # there.
+    $ENV{"INSTALL_REPOS"} = $whc->get_config("svn_root");
+    $ENV{"INSTALL_REVISION"} = $Job->{revision};
+    $ENV{"MR_REVISION_INSTALLDIR"} = "$ENV{TMPDIR}/mrcompute/revision/$treeish";
+    $ENV{"MR_REVISION_SRCDIR"} = "$ENV{MR_REVISION_INSTALLDIR}/src";
+    @execargs = ("sh", "-c",
+		 "mkdir -p $ENV{TMPDIR}/mrcompute/revision && cd $ENV{TMPDIR}/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet \"\$INSTALL_REPOS/installrevision\" && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
+  }
+  else {
+    die "could not figure out commit id for $treeish";
   }
 
   my $installpid = fork();
@@ -458,21 +515,6 @@ else
     select (undef, undef, undef, 0.1);
   }
   Log (undef, "Install exited $?");
-
-  my $cleanpid = fork();
-  if ($cleanpid == 0)
-  {
-    srun (["srun", "--nodelist=$nodelist", "-D", $ENV{TMPDIR}],
-	  ['bash', '-c', 'if mount | grep -q $TMPDIR/mrcompute/work/; then sudo /bin/umount $TMPDIR/mrcompute/work/* 2>/dev/null; fi; sleep 1; rm -rf $TMPDIR/mrcompute/work']);
-    exit (1);
-  }
-  while (1)
-  {
-    last if $cleanpid == waitpid (-1, WNOHANG);
-    freeze_if_want_freeze ($cleanpid);
-    select (undef, undef, undef, 0.1);
-  }
-  Log (undef, "Clean-work-dir exited $?");
 }
 
 
@@ -596,7 +638,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     {
       $script = $git_build_script;
       $command .=
-	  "&& perl - $ENV{MR_REVISION_SRCDIR} $ENV{MR_REVISION} $ENV{MR_GIT_CLONE_URL}";
+	  "&& perl - $ENV{MR_REVISION_SRCDIR} $ENV{MR_GIT_COMMIT} $ENV{MR_GIT_CLONE_URL}";
     }
     elsif (!$skip_install)
     {
