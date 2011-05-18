@@ -1,45 +1,30 @@
 Install prerequisites:
 
- sudo apt-get install libcache-memcached-perl libmogilefs-client-perl
+ sudo apt-get install git git-core
 
-Create accounts and database for warehouse system:
+Create account and database for warehouse system:
 
  create database warehouse;
- grant all privileges on warehouse.* to whserver@'%';
- set password for whserver@'%' = old_password('YOURPASSWORDHERE');
-
-Give the warehouse user permission to use the mapreduce database:
-
- grant all privileges on mapreduce.* to whserver@'%';
-
-Extract current version:
-
- cd /tmp
- svn co http://dev.freelogy.org/svn/polony/polony-tools/trunk/warehouse
- cd ./warehouse
+ grant all privileges on warehouse.* to warehouse@'%';
+ set password for warehouse@'%' = old_password('YOURPASSWORDHERE');
 
 Create /etc/warehouse/warehouse-server.conf to suit:
 
  mkdir -p /etc/warehouse
- cp -i server/warehouse-server.conf.sample /etc/warehouse/warehouse-server.conf
- vi /etc/warehouse/warehouse-server.conf
+ cd /etc/warehouse
+ git archive --format=tar --remote=git://git/warehouse-apps.git master \
+   libwarehouse-perl/server/warehouse-server.conf.sample \
+   | tar xOf - > warehouse-server.conf.sample
+ mv -i warehouse-server.conf.sample warehouse-server.conf
+ chmod 600 warehouse-server.conf
+ vi warehouse-server.conf
 
 Create database tables:
 
- sudo -c 'cd server && perl warehoused-initialize-tables.pl'
+ sudo warehoused-initialize-tables.pl
 
 Create /etc/warehouse/warehouse-client.conf to suit -- see
 ../client/INSTALL for details.
-
-Test and install the Perl API, server, and sample client programs:
-
- (
- set -ex
- perl Makefile.PL
- make
- make test
- make install
- )
 
 Create a GPG key (DSA and Elgamal) with no passphrase for
 root@controller.
@@ -47,7 +32,7 @@ root@controller.
  sudo -H gpg --gen-key
  (echo; echo always-trust) | sudo tee -a ~root/.gnupg/gpg.conf
 
-Create supervised service:
+Create supervised services:
 
  (
  set -ex
@@ -76,16 +61,25 @@ Create supervised service:
  sudo chmod +t $d
  (echo '#!/bin/sh'; echo 'exec svlogd -tt main') \
    | sudo bash -c "cat >$d/log/run"
- (echo '#!/bin/sh'; echo 'exec sudo -u www-data whjobinit 2>&1') \
+ (echo '#!/bin/sh'
+  echo 'export UID="`id -u www-data`"'
+  echo 'export GID="`id -g www-data`"'
+  echo 'exec whjobinit 2>&1') \
    | sudo bash -c "cat >$d/run"
  sudo chmod +x $d/run $d/log/run
  )
+
+Start services:
+
+ cd /etc/service
+ ln -s /var/service/* .
 
 Give mrjobmanager a copy of the GPG secret key:
 
  sudo mkdir -m 0700 /var/service/whjobinit/.gnupg
  sudo chown www-data:www-data /var/service/whjobinit/.gnupg
- sudo -H gpg --export-secret-keys | HOME=/var/service/whjobinit sudo -u www-data gpg --import
+ sudo -H gpg --export-secret-keys \
+   | sudo -u www-data HOME=/var/service/whjobinit gpg --import
 
 Set up configurl handler in nginx:
 

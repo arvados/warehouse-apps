@@ -1,8 +1,8 @@
 $Warehouse::Server::DatabaseDSN
     = [ "DBI:mysql:database=warehouse;host=localhost",
-	"whserver",
+	"warehouse",
 	"DBPASSWORDHERE" ];
-$Warehouse::Server::MapReduceDB = 'whserver';
+$Warehouse::Server::MapReduceDB = 'warehouse';
 
 # $Warehouse::Server::ListenAddress = '127.0.0.1';
 

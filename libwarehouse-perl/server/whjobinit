@@ -9,6 +9,9 @@ use POSIX ':sys_wait_h';
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 
 do '/etc/warehouse/warehouse-server.conf';
+$( = $) = $ENV{'GID'} if exists $ENV{'GID'};
+$< = $> = $ENV{'UID'} if exists $ENV{'UID'};
+
 my $max_njobs = 48;		# max "big job" concurrency
 
 
