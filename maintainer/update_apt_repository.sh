@@ -55,11 +55,11 @@ git fetch origin
 git checkout origin/master
 git reset --hard
 
-newcommit=$(git log -1 --format=%H --diff-filter='[A|C|D|M|R|T]' warehouse)
-newversion=$(git log -1 --format=%ct.%h --diff-filter='[A|C|D|M|R|T]' warehouse)
+newcommit=$(git log -1 --format=%H --diff-filter='[A|C|D|M|R|T]' libwarehouse-perl)
+newversion=$(git log -1 --format=%ct.%h --diff-filter='[A|C|D|M|R|T]' libwarehouse-perl)
 
-# First see if this commit updated ./warehouse/. If not, this script is a NOP.
-if ! git log -1 --format=%H --diff-filter='[A|C|D|M|R|T]' $currentcommit..$newcommit warehouse | egrep -q .
+# First see if this commit updated ./libwarehouse-perl/. If not, this script is a NOP.
+if ! git log -1 --format=%H --diff-filter='[A|C|D|M|R|T]' $currentcommit..$newcommit libwarehouse-perl | egrep -q .
 then
     if [ "$1" != "-f" ]
     then
@@ -71,7 +71,7 @@ fi
 ln -sfn $newcommit $basedir/current-commit
 ln -sfn $newversion $basedir/current-version
 
-cd warehouse
+cd libwarehouse-perl
 ./build_deb.sh
 
 # Now install the new versions of the packages
