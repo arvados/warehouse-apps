@@ -438,7 +438,7 @@ else
   # If this looks like a subversion r#, look for it in git-svn commit messages
 
   if ($treeish =~ m{^\d{1,4}}) {
-    my $gitlog = `cd $ENV{MR_REVISION_SRCDIR} && git log --format="%H" --grep="git-svn-id:.*\@$treeish "`;
+    my $gitlog = `cd $ENV{MR_REVISION_SRCDIR} && git log --pretty="format:%H" --grep="git-svn-id:.*\@$treeish "`;
     chomp $gitlog;
     if ($gitlog =~ /^[a-f0-9]{40}$/) {
       $commit = $gitlog;
