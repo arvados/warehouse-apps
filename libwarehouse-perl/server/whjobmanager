@@ -437,7 +437,7 @@ else
 
   # If this looks like a subversion r#, look for it in git-svn commit messages
 
-  if ($treeish =~ m{^\d{1,4}}) {
+  if ($treeish =~ m{^\d{1,4}$}) {
     my $gitlog = `cd $ENV{MR_REVISION_SRCDIR} && git log --pretty="format:%H" --grep="git-svn-id:.*\@$treeish "`;
     chomp $gitlog;
     if ($gitlog =~ /^[a-f0-9]{40}$/) {
@@ -450,13 +450,14 @@ else
 
   if (!defined $commit) {
 
+    my $cooked_treeish = $treeish;
     if ($treeish !~ m{^[0-9a-f]{5,}$}) {
       # Looks like a git branch name -- make sure git knows it's
       # relative to the remote repo
-      $treeish = "origin/$treeish";
+      $cooked_treeish = "origin/$treeish";
     }
 
-    my $found = `cd $ENV{MR_REVISION_SRCDIR} && git rev-list -1 $treeish`;
+    my $found = `cd $ENV{MR_REVISION_SRCDIR} && git rev-list -1 $cooked_treeish`;
     chomp $found;
     if ($found =~ /^[0-9a-f]{40}$/s) {
       $commit = $found;
