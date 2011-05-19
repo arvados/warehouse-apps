@@ -471,6 +471,7 @@ else
 	    ("update mrjob set revision=? where id=?",
 	     undef,
 	     $Job->{revision}, $Job->{id});
+	Log (undef, "Using commit $commit for tree-ish $treeish");
       }
     }
   }
