@@ -328,13 +328,15 @@ sub _init
 	if (@{$self->{memcached_servers}} &&
 	    $self->{memcached_size_threshold} >= 0)
 	{
-	    eval 'use Cache::Memcached;';
-	    die $@ if $@;
-	    $self->{memc} = new Cache::Memcached {
-		'servers' => $self->{memcached_servers},
-		'debug' => 0,
+	    eval q{
+		use Cache::Memcached;
+		$self->{memc} = new Cache::Memcached {
+		    'servers' => $self->{memcached_servers},
+		    'debug' => 0,
+		};
+		$self->{memc}->enable_compress (0);
 	    };
-	    $self->{memc}->enable_compress (0);
+	    die $@ if $@;
 	}
 
 	if ($self->{memcached_size_threshold} + 1
