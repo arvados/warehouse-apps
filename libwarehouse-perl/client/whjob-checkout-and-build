@@ -19,7 +19,10 @@ open STDERR, ">&STDOUT";
 
 if (-d $destdir) {
     chdir $destdir or die "chdir $destdir: $!";
-    shell_or_die (qw(git remote set-url origin), $repo) if $repo;
+    if (0 != system (qw(git remote set-url origin), $repo)) {
+	# awful... for old versions of git that don't know "remote set-url"
+	shell_or_die (q(perl -pi~ -e '$_="\turl = ).$repo.q(\n" if /url = /' .git/config));
+    }
 }
 elsif ($repo && $commit)
 {
