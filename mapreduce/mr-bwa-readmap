@@ -183,7 +183,7 @@ if ($ENV{MR_LEVEL} == 1)
     my $prefix = $readfile1;
     $prefix =~ s/(.*)(\.[^\/]+)$/$1/;
     my $ext = $2;
-    push @readpipeline, "split -d -a 4 -l ${chunk_lines} - '${prefix}.'";
+    push @readpipeline, "mrs-zsplit -d -a 4 -l ${chunk_lines} - '${prefix}.'";
 
     Safepipe::readfrom("main::R", @readpipeline);
     close "R" or die "close R: $!";
@@ -191,9 +191,9 @@ if ($ENV{MR_LEVEL} == 1)
     my @readfile1 = ();
     for (my $n = 0; ; $n++) {
       my $suffix = sprintf "%04d", $n;
-      last if !-e "${prefix}.${suffix}";
-      rename "${prefix}.${suffix}", "${prefix}.${suffix}${ext}" or die "rename: $!";
-      push @readfile1, "${prefix}.${suffix}${ext}";
+      last if !-e "${prefix}.${suffix}.gz";
+      rename "${prefix}.${suffix}.gz", "${prefix}.${suffix}${ext}.gz" or die "rename: $!";
+      push @readfile1, "${prefix}.${suffix}${ext}.gz";
     }
 
     if (!@readfile1) {
@@ -203,11 +203,15 @@ if ($ENV{MR_LEVEL} == 1)
 
   dochunk:
     $readfile1 = shift @readfile1;
-    my $saifile1 = "${readfile1}.comb.sai";
-    my $saifile2 = "${readfile1}.comp.sai";
+    my $tmp_basename = $readfile1;
+    $tmp_basename =~ s/\.gz$//;
+    my $saifile1 = "${tmp_basename}.comb.sai";
+    my $saifile2 = "${tmp_basename}.comp.sai";
+
     my $out_basename = $readfile1;
     $out_basename =~ s{^.*/}{};
     $out_basename = "$out_path/$out_basename";
+    $out_basename =~ s/\.gz$//;
 
     my $convert_names = q{perl -lane '$a=shift @F;print "$_\t$a" for @F'};
     my $script = qq{
