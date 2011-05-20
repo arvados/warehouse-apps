@@ -549,10 +549,10 @@ sub seek
       # either we don't know how much data is in this block, or we do
       # know but the $pos we seek is in the next block... either way,
       # we have to read it
+      shift @{$self->{nexthashes}};
       my $dataref = $self->fetch_block_ref ($nexthash)
           or die "fetch_block failed";
       $self->{buf} = $$dataref;
-      shift @{$self->{nexthashes}};
     }
 
     if ($pos > $self->{bufpos}
