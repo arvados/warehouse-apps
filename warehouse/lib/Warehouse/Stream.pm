@@ -522,37 +522,39 @@ sub seek
         $self->{bufcursor} < 0; # impossible after last 2 statements, but checking anyway
 
     my $sizehint;
-    while (@{$self->{nexthashes}} &&
-	   ($self->{nexthashes}->[0] =~ /^([0-9a-f]{32})?.*?\+GS()(\d+)/ ||
-	    $self->{nexthashes}->[0] =~ /^([0-9a-f]{32})?([-\+])(\d+)/) &&
-	   $pos >= ($self->{bufpos}
-		    + ($sizehint = ($2 eq '-'
-				    ? $Warehouse::blocksize - $3
-				    : $3))
-		    + length $self->{buf}))
-    {
-	shift @{$self->{nexthashes}};
-	shift @{$self->{nexthashes}} if !defined $1;
-	$self->{bufpos} += length $self->{buf};
-	$self->{bufpos} += $sizehint;
-	$self->{buf} = "";
-	$self->{bufcursor} = 0;
-    }
+
     while ($pos > $self->{bufpos} + length $self->{buf}
 	   && @{$self->{nexthashes}})
     {
-	# skip "blockshortness" token
-	shift @{$self->{nexthashes}} if $self->{nexthashes}->[0] =~ /^-\d+$/;
+      # seek past stuff in current buffer, if any
+      $self->{bufpos} += length $self->{buf};
+      $self->{buf} = "";
+      $self->{bufcursor} = 0;
 
-	# seek past stuff in current buffer, if any, and read next block
-	$self->{bufpos} += length $self->{buf};
-	my $dataref = $self->{whc}->fetch_block_ref (shift @{$self->{nexthashes}})
-	    or die "fetch_block failed";
-	$self->{buf} = $$dataref;
-	$self->{bufcursor} = 0;
+      # read (or skip) next block
+      my $nexthash = $self->{nexthashes}->[0];
+      if ($nexthash =~ /^([0-9a-f]{32}).*?\+GS()(\d+)/ ||
+          $nexthash =~ /^([0-9a-f]{32})?([-\+])(\d+)/) {
+        # we know how much data is in this block
+        my $nextblocksize = ($2 eq '-' ? $Warehouse::blocksize - $3 : $3);
 
-	# this loop should only run once if size hints are present
+        if ($pos >= $self->{bufpos} + $nextblocksize) {
+          # the $pos we seek is past this block
+          $self->{bufpos} += $nextblocksize;
+          shift @{$self->{nexthashes}} if !defined $1; # deprecated "block shortness" token
+          shift @{$self->{nexthashes}};                # the block we're skipping
+          next;
+        }
+      }
+      # either we don't know how much data is in this block, or we do
+      # know but the $pos we seek is in the next block... either way,
+      # we have to read it
+      my $dataref = $self->fetch_block_ref ($nexthash)
+          or die "fetch_block failed";
+      $self->{buf} = $$dataref;
+      shift @{$self->{nexthashes}};
     }
+
     if ($pos > $self->{bufpos}
 	&& $pos <= $self->{bufpos} + length $self->{buf})
     {
