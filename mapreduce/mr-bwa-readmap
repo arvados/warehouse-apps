@@ -146,7 +146,7 @@ if ($ENV{MR_LEVEL} == 1)
 
   my $chunk_lines = 8_000_000;
 
-  $ENV{ASYNC_READ} = 3;
+  # $ENV{ASYNC_READ} = 3;
 
   foreach my $manifest_filename (@files) {
     my $bwa_sam_cmd;
