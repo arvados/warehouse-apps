@@ -14,11 +14,15 @@ eval {
 };
 
 $ENV{PATH} = "$ENV{MR_REVISION_INSTALLDIR}/bin"
+    . ":$ENV{MR_REVISION_INSTALLDIR}/usr/bin"
     . ":$ENV{MR_REVISION_SRCDIR}/warehouse/client"
     . ":$ENV{MR_REVISION_SRCDIR}/mapreduce"
     . ":$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce"
     . ":$ENV{PATH}";
-$ENV{PERLLIB} = "$ENV{MR_REVISION_SRCDIR}/warehouse/lib:$ENV{MR_REVISION_INSTALLDIR}/src/warehouse/lib:$ENV{MR_REVISION_SRCDIR}/mapreduce:$ENV{MR_REVISION_INSTALLDIR}/src/mapreduce:$ENV{PERLLIB}";
+$ENV{PERLLIB} = "$ENV{MR_REVISION_INSTALLDIR}/usr/share/perl5"
+    . ":$ENV{MR_REVISION_SRCDIR}/mapreduce"
+    . ":$ENV{MR_REVISION_SRCDIR}/libwarehouse-perl/lib"
+    . ":$ENV{PERLLIB}";
 
 $ENV{TMPDIR} ||= "/tmp";
 $ENV{MR_JOB_TMP} = "$ENV{TMPDIR}/mrcompute/work";
