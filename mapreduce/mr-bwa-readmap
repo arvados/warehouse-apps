@@ -11,6 +11,7 @@
 ###MR_KNOBS:READLENGTH
 ###MR_KNOBS:SEED_LENGTH
 ###MR_KNOBS:SEED_EDIT_DISTANCE
+###MR_KNOBS:RNAME
 
 use strict; 
 use Warehouse;
@@ -214,6 +215,7 @@ if ($ENV{MR_LEVEL} == 1)
     $out_basename =~ s/\.gz$//;
 
     my $convert_names = q{perl -lane '$a=shift @F;print "$_\t$a" for @F'};
+
     my $script = qq{
 set -o pipefail
 set -e
@@ -225,15 +227,22 @@ gunzip < '$saifile1.gz' > '$saifile1.fifo' &
 job1=`jobs -p %+`
 $bwa_path/bwa readmap    -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.fifo' | gzip -9n > '${out_basename}.comb.counts.gz'
 wait \$job1
+};
+    if (!defined $ENV{KNOB_RNAME} || $ENV{KNOB_RNAME}) {
+      my $or_ignore = "";
+      if (!defined $ENV{KNOB_RNAME}) {
+	$or_ignore = qq{|| rm -f '${out_basename}.names.bz2' || true};
+      }
 
+      $script .= qq{
 gunzip < '$saifile1.gz' \\
     | $bwa_path/bwa readmap    -n '$readfile1' '$reffile1/$ref1_basename' /dev/stdin \\
     | $convert_names \\
     | bzip2 -c \\
     > '${out_basename}.names.bz2' \\
- || rm -f '${out_basename}.names.bz2' \\
- || true
+ $or_ignore
 };
+    }
 
     if ($ref2_manifest_key) {
       $script .= qq{
@@ -249,7 +258,13 @@ $bwa_path/bwa readmap -m -c '$readfile1' '$reffile1/$ref1_basename' '$saifile1.f
 wait \$job1
 wait \$job2
 rm -f '$saifile1.fifo' || true
-
+};
+      if (!defined $ENV{KNOB_RNAME} || $ENV{KNOB_RNAME}) {
+	my $or_ignore = "";
+	if (!defined $ENV{KNOB_RNAME}) {
+	  $or_ignore = qq{|| rm -f '${out_basename}.comp.names.bz2' || true};
+	}
+	$script .= qq{
 rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 mkfifo '$saifile1.fifo' '$saifile2.fifo'
 mkfifo '$saifile1.fifo2' '$saifile2.fifo2'
@@ -261,12 +276,12 @@ $bwa_path/bwa readmap -m -n '$readfile1' '$reffile1/$ref1_basename' '$saifile1.f
     | $convert_names \\
     | bzip2 -c \\
     > '${out_basename}.comp.names.bz2' \\
- || rm -f '${out_basename}.comp.names.bz2' \\
- || true
+ $or_ignore
 wait \$job1
 wait \$job2
 rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 };
+      }
     }
 
     system("bash", "-c", $script) == 0
