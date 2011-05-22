@@ -359,13 +359,17 @@ if ($$Job{knobs} =~ /^GPG_KEYS=(.*)/m) {
   # use the new gnupg dir from now on
   $ENV{"GNUPGHOME"} = $newhomedir;
 
-  # if I have a secret key for root@{host} or {user}@{host}, add that
-  # as a recipient too so I'll be able to read frozentokeys etc. later
+  # if I have a secret key for root@{host} or {user}@{host} or
+  # {configured-controller-gpg-uid}, add that as a recipient too so
+  # I'll be able to read frozentokeys etc. later
   my %allkeys;
   while (`gpg --list-secret-keys` =~ /^uid\s.*?<(.+?)>/gm) {
     $allkeys{$1} = 1;
   }
-  foreach my $id ("root\@".$hostname, $ENV{"USER"}."\@".$hostname) {
+  my @try_these_uids = ("root\@".$hostname, $ENV{"USER"}."\@".$hostname);
+  push @try_these_uids, ($whc->{config}->{controller_gpg_uid})
+      if exists $whc->{config}->{controller_gpg_uid};
+  foreach my $id (@try_these_uids) {
     if (exists $allkeys{$id}) {
       $encrypt_to{$id} = 1;
       last;

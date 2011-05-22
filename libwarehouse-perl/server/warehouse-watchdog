@@ -102,6 +102,10 @@ sub update
 
 	my $x = {};
 	for (qw(controllers
+		name_controllers
+		job_controllers
+		cryptmap_name_controllers
+		controller_gpg_uid
 		svn_root
 		git_clone_url
 		mogilefs_trackers
@@ -109,9 +113,10 @@ sub update
 		mogilefs_file_class
 		mogilefs_domain
 		name
+		keep_name
 		keeps
 		keeps_status)) {
-	    $x->{$_} = $whc->{config}->{$_};
+	    $x->{$_} = $whc->{config}->{$_} if exists $whc->{config}->{$_};
 	}
 
 	# Disconnect array/hash refs from our own config

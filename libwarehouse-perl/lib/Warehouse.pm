@@ -1244,7 +1244,10 @@ sub fetch_from_keep
 		++$successes;
 		if (!$opts->{nnodes} || $successes == $opts->{nnodes}) {
 		    return \$data if !wantarray;
-		    $md5 .= "+K\@" . $warehouses->[$kwhid]->{name};
+		    my $keep_name =
+			$warehouses->[$kwhid]->{keep_name} ||
+			$warehouses->[$kwhid]->{name};
+		    $md5 .= "+K\@" . $keep_name;
 		    return (\$data, $md5);
 		}
 	    }
