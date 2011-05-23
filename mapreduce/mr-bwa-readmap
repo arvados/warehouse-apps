@@ -42,6 +42,9 @@ my $bwa_path="$tmp/bwa";
 my $sam_path="$tmp/sam";
 my $out_path="$tmp/out";
 
+my @cpus = opendir(D,'/sys/devices/system/cpu') ? grep { /^cpu\d+$/ } readdir D : ();
+my $ncpus = +@cpus || 4;
+
 system ("mkdir -p '$out_path'") == 0
     or mkdir ($out_path)
     or die "mkdir $out_path: $!";
@@ -220,7 +223,7 @@ if ($ENV{MR_LEVEL} == 1)
 set -o pipefail
 set -e
 set -x
-$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basename' '$readfile1' | gzip > '$saifile1.gz'
+$bwa_path/bwa aln -t $ncpus -n $max_mismatches $aln_flags -N '$reffile1/$ref1_basename' '$readfile1' | gzip > '$saifile1.gz'
 rm -f '$saifile1.fifo' || true
 mkfifo '$saifile1.fifo'
 gunzip < '$saifile1.gz' > '$saifile1.fifo' &
@@ -246,7 +249,7 @@ gunzip < '$saifile1.gz' \\
 
     if ($ref2_manifest_key) {
       $script .= qq{
-$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' | gzip > '$saifile2.gz'
+$bwa_path/bwa aln -t $ncpus -n $max_mismatches $aln_flags    '$reffile2/$ref2_basename' '$readfile1' | gzip > '$saifile2.gz'
 rm -f '$saifile1.fifo' '$saifile2.fifo' || true
 mkfifo '$saifile1.fifo' '$saifile2.fifo'
 mkfifo '$saifile1.fifo2' '$saifile2.fifo2'
