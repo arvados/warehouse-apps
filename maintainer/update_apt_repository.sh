@@ -55,8 +55,8 @@ git fetch origin
 git checkout origin/master
 git reset --hard
 
-newcommit=$(git log -1 --format=%H --diff-filter='[A|C|D|M|R|T]' libwarehouse-perl)
-newversion=$(git log -1 --format=%ct.%h --diff-filter='[A|C|D|M|R|T]' libwarehouse-perl)
+newcommit=$(git log -1 --format=%H libwarehouse-perl)
+newversion=$(git log -1 --format=%ct.%h libwarehouse-perl)
 
 # First see if this commit updated ./libwarehouse-perl/. If not, this script is a NOP.
 if ! git log -1 --format=%H --diff-filter='[A|C|D|M|R|T]' $currentcommit..$newcommit libwarehouse-perl | egrep -q .
