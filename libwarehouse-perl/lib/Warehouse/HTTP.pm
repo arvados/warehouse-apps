@@ -3,9 +3,11 @@ package Warehouse::HTTP;
 BEGIN {
     eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
     if ($@) {
-	if (`which curl 2>/dev/null` =~ m{/curl}) {
-	    $Warehouse::HTTP::useCurlCmd = 1;
-	}
+	eval {
+	    if (`which curl 2>/dev/null` =~ m{/curl}) {
+		$Warehouse::HTTP::useCurlCmd = 1;
+	    }
+	};
 	eval "use LW2; \$Warehouse::HTTP::useLW2 = 1;";
     }
     if ($@) {
