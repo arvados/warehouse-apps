@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+my $lines = 1000;
+my $suffixlength = 1;
+my $numeric;
+
+while (@ARGV && $ARGV[0] =~ /^-./) {
+    $_ = shift @ARGV;
+    if (/a/) {
+	$suffixlength = 0 + shift @ARGV;
+    }
+    if (/[bC]/) {
+	die "-$& not supported";
+    }
+    if (/d/) {
+	$numeric = 1;
+    }
+    if (/l/) {
+	$lines = 0 + shift @ARGV;
+    }
+}
+die "-d is mandatory" if !$numeric;
+
+my $outprefix = pop @ARGV or die "usage: $0 [options] input prefix\n";
+my $suffix;
+my $open;
+my $part = -1;
+my $pos = 0;
+
+while (<>)
+{
+    if (!$open) {
+	$open = 1;
+	++$part;
+	$outfile = sprintf "%s%0*d.gz", $outprefix, $suffixlength, $part;
+	open STDOUT, ">", $outfile
+	    or die "$outfile: $!";
+	open STDOUT, "|-", "gzip"
+	    or die "$outfile: gzip: $!";
+    }
+    print or die "$outfile: $!";
+    if (++$pos == $lines) {
+	close STDOUT or die "$outfile: gzip: $!";
+	$open = 0;
+	$pos = 0;
+    }
+}
+if ($open) {
+    close STDOUT or die "$outfile: gzip: $!";
+}

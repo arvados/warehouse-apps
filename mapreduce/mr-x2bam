@@ -19,7 +19,7 @@ while (my $s = $m->subdir_next) {
   while (my ($pos, $size, $filename) = $s->file_next)
   {
     last if !defined $pos;
-    if ($filename =~ /\.(cs)?fasta(\.gz)?$/i) {
+    if ($filename =~ /\.(cs)?fasta(\.(ma|gz|\d+))*$/i) {
       exec ('mr-gbm2bam');
       die;
     }
