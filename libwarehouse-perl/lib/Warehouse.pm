@@ -1214,13 +1214,27 @@ sub fetch_from_keep
 	my $keep_host_port = $keeps->[$keep_id];
 	my $url = "http://".$keep_host_port."/".$md5;
 	warn "Keep GET $url\n" if $ENV{DEBUG_KEEP} >= 2;
-	my $r = Warehouse::HTTP->new();
-	$r->set_uri($url);
-	$r->process_request();
-	my ($status_number, $status_phrase) = $r->get_status();
-	if ($status_number == 200)
+	my $r;
+	my ($status_number, $status_phrase);
+	my $data;
+	if ($Warehouse::HTTP::useCurlCmd &&
+	    open F, '-|', 'curl', '-s', $url) {
+	    $data = "";
+	    my $bytes = 0;
+	    do {
+		$bytes = sysread F, $data, 2**26, length($data);
+	    } while ($bytes > 0);
+	    close F or undef $data;
+	}
+	else {
+	    $r = Warehouse::HTTP->new();
+	    $r->set_uri($url);
+	    $r->process_request();
+	    ($status_number, $status_phrase) = $r->get_status();
+	    $data = $r->get_body() if $status_number == 200;
+	}
+	if (defined $data)
 	{
-	    my $data = $r->get_body();
 	    my $datasize = length $data;
 	    my $fail_verify = 0;
 	    if ($opts->{nodecrypt}) {
