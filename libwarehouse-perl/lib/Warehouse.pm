@@ -446,7 +446,8 @@ sub store_block
 	if !$ENV{NOPLAIN};
     if ($alreadyhave && $$dataref eq $$alreadyhave)
     {
-	return $existinghash if defined $existinghash;
+	return $existinghash if (defined $existinghash &&
+				 ($existinghash !~ /\+(\d+)/ || $1 == $size));
 	return $hash;
     }
     if (my $alreadyhavehash = $self->_cryptmap_fetchable ($dataref, $md5))
@@ -1261,6 +1262,7 @@ sub fetch_from_keep
 		    my $keep_name =
 			$warehouses->[$kwhid]->{keep_name} ||
 			$warehouses->[$kwhid]->{name};
+		    $md5 .= "+$datasize";
 		    $md5 .= "+K\@" . $keep_name;
 		    return (\$data, $md5);
 		}
