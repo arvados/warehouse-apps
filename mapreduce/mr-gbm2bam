@@ -57,7 +57,7 @@ if ($ENV{MR_LEVEL} == 0)
     while (my ($pos, $size, $filename) = $s->file_next)
     {
       last if !defined $pos;
-      next if $filename !~ /^(.*)\.(cs)?fasta(\.gz)?$/i;
+      next if $filename !~ /^(.*)\.(cs)?fasta(\.(ma|gz|\d+))*$/i;
 
       # maybe we have quality data in a separate stream...
       my $basename = $s->name . "/" . $1;
