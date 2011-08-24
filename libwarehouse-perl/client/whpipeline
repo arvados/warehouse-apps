@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 4; indent-tabs-mode: nil; -*-
 
 use strict;
 
@@ -115,6 +116,14 @@ overridden with the --no-reuse option.
 		key of each pipeline in the JSON data passed to
 		callback handlers
 
+  --warehouse-apps-work-tree /path/to/warehouse-apps
+
+		Path to a local clone of the warehouse-apps git
+		repository.  If the path does not exist, it will be
+		created using "git clone".  If it does exist, it will
+		be updated using "git fetch origin".  Default
+		{posix-temp}/$WAREHOUSE-warehouse-apps-$USER/.
+
 =head1 PIPELINE PARAMETERS
 
 A pipeline specification typically refers to some user-provided
@@ -158,6 +167,8 @@ use Pod::Usage;
 use Warehouse;			# apt-get install libwarehouse-perl
 				# or see http://factories.freelogy.org
 use Fcntl;
+use POSIX;
+use File::Basename;
 
 $SIG{"CHILD"} = "IGNORE";	# otherwise GnuPG::Interface wrecks everything
 
@@ -177,6 +188,7 @@ my $nowaitflag;
 my $secretkey;
 my $ttyflag = -t STDERR;
 my $label;
+my $worktree;
 
 $main::Options = { "maxnodes" => undef };
 
@@ -197,6 +209,7 @@ GetOptions (
     "secret-key=s"		=> \$secretkey,
     "tty-status!"		=> \$ttyflag,
     "label=s"			=> \$label,
+    "warehouse-apps-work-tree=s"=> \$worktree,
     )
     or die "Failed to parse command line options.  Try:  $0 --help\n";
 
@@ -245,6 +258,21 @@ while (my ($key, $value) = each %ENV)
 my $whc = new Warehouse;
 
 
+# Update the local copy of the git repository
+if (!defined $worktree) {
+    $worktree = dirname(tmpnam())."/".$whc->{warehouse_name}."-warehouse-apps-".$ENV{"USER"};
+}
+my @cmd;
+if (-d $worktree) {
+    die "$worktree exists but is not a git repository" if !-d "$worktree/.git";
+    @cmd = ('git', "--git-dir=$worktree/.git", "fetch", "origin");
+} else {
+    @cmd = ('git', 'clone', $whc->{config}->{git_clone_url}, $worktree);
+}
+system(@cmd) == 0
+    or die "@cmd: exit $?";
+
+
 my $gpg_keys;
 if ($secretkey)
 {
@@ -273,8 +301,11 @@ if ($secretkey)
 
 
 $JSON::UnMapping = 1;
-local $/ = undef;
-my $json = <>;
+my $json;
+do {
+    local $/ = undef;
+    $json = <>;
+};
 my $pipe = jsonToObj ($json);
 $pipe->{"label"} = $label if defined $label;
 my $failed = 0;
@@ -592,6 +623,7 @@ KNOW_JOB_ID:
 	elsif ($step_job eq "None")
 	{
 	    return 1 if $dryrunflag && !$nonewjobsflag;
+            $mrjobspec->{"revision"} = "master";
 	    $mrjobspec->{"photons"} = 1; # todo: command line parameter?
 	    $mrjobspec->{"nodes"} = 47;
 #print STDERR "maxnodes -> ".$main::Options->{"maxnodes"}."\n";
@@ -599,10 +631,13 @@ KNOW_JOB_ID:
 	    while (my ($p, $v) = each %$sysparam)
 	    {
 		next if !defined $v;
-		$mrjobspec->{"revision"} = $v if $p eq "max_revision";
-		$mrjobspec->{"nodes"} = $v if ($p eq "max_nodes"
-					       && $mrjobspec->{"nodes"} > $v);
-		$mrjobspec->{"stepspernode"} = $v if $p eq "max_steps_per_node";
+		$mrjobspec->{"revision"} = commit_resolve($v)
+                    if $p eq "max_revision";
+		$mrjobspec->{"nodes"} = $v
+                    if ($p eq "max_nodes"
+                        && $mrjobspec->{"nodes"} > $v);
+		$mrjobspec->{"stepspernode"} = $v
+                    if $p eq "max_steps_per_node";
 	    }
 	    $mrjobspec->{"nodes"} .= "," . $sysparam->{"min_memory"} . "M"
 		if $sysparam->{"min_memory"};
@@ -704,8 +739,23 @@ sub find_job
 		next J;
 	    }
 	}
-	next J if $sysparam->{"min_revision"} && $j->{"revision"} < $sysparam->{"min_revision"};
-	next J if $sysparam->{"max_revision"} && $j->{"revision"} > $sysparam->{"max_revision"};
+        # Legacy handling for subversion revision numbers
+	next J if ($sysparam->{"min_revision"} &&
+                   $sysparam->{"min_revision"} =~ /^\d{1,5}$/ &&
+                   $j->{"revision"} =~ /^\d{1,5}$/ &&
+                   $j->{"revision"} < $sysparam->{"min_revision"});
+	next J if ($sysparam->{"max_revision"} &&
+                   $sysparam->{"min_revision"} =~ /^\d{1,5}$/ &&
+                   $j->{"revision"} =~ /^\d{1,5}$/ &&
+                   $j->{"revision"} > $sysparam->{"max_revision"});
+        # Convert all commit-ish and svn revision numbers to commit ids
+        my $jobrev = commit_resolve($j->{"revision"});
+        my $minrev = commit_resolve($sysparam->{"min_revision"} eq 0 ? undef : $sysparam->{"min_revision"});
+        my $maxrev = commit_resolve($sysparam->{"max_revision"});
+        next J if (defined $minrev &&
+                   !commit_reachable_from($minrev, $jobrev));
+        next J if (defined $maxrev &&
+                   !commit_reachable_from($jobrev, $maxrev));
 	next J if !$j->{"success"} && (length $j->{"success"} || length $j->{"finishtime_s"});
 	next J if ref $step_job && $step_job->{"success"} && !$j->{"success"};
 	printf STDERR "Job %d is the best yet\n", $j->{"id"} if $debugflag;
@@ -769,4 +819,61 @@ sub print_status_summary
 	printf STDERR "%-8s ", $pipe->{"label"} if exists $pipe->{"label"};
 	printf STDERR "%2d %-12.12s %6s %s\n", $stepno, $step->{"name"}, $jobno, $status;
     }
+}
+
+# Cache of subversion r# -> commit id and commit-ish -> commit mappings
+my %commit_resolve;
+
+sub commit_resolve
+{
+    my $commitish = shift;
+    return undef if !defined $commitish;
+    if (!exists $commit_resolve{$commitish}) {
+        my $cmd;
+        if ($commitish =~ /^r?(\d{1,5})$/) {
+            # subversion revision number
+            $cmd = "git --git-dir='$worktree/.git' rev-list --grep='git-svn-id:.*/trunk\@$1' --glob='*'";
+        }
+        else {
+            $cmd = "git --git-dir='$worktree/.git' rev-list --max-count=1 '$commitish'";
+        }
+        my $commit = `$cmd`;
+        chomp($commit);
+        if ($commit !~ /^[a-f0-9]{40}$/s) {
+            warn "Could not resolve commitish $commitish -- proceeding with undefined results";
+            return "";
+        }
+        $commit_resolve{$commitish} = $commit;
+        warn "commit_resolve: $commitish => $commit_resolve{$commitish}\n"
+            if $debugflag;
+    }
+    return $commit_resolve{$commitish};
+}
+
+# Cache of "commit A reachable from commit B?" answers
+my %commit_reachable_from;      # ("child,parent" => 0, "parent,child" => 1)
+
+sub commit_reachable_from
+{
+    my ($parent, $child) = @_;
+    if (!exists $commit_reachable_from{$parent,$child}) {
+        my $cmd = "git --git-dir=$worktree/.git rev-list '$child'";
+        my @reachable_from_child = `$cmd`;
+        if ($? != 0) {
+            warn "$cmd failed -- proceeding with undefined results";
+            return undef;
+        }
+        my $is = 0;
+        for (@reachable_from_child) {
+            chomp;
+            if ($_ eq $parent) {
+                $is = 1;
+                last;
+            }
+        }
+        $commit_reachable_from{$parent,$child} = $is;
+        warn "commit_reachable_from: $parent,$child => $is\n"
+            if $debugflag;
+    }
+    return $commit_reachable_from{$parent,$child};
 }
