@@ -832,7 +832,13 @@ sub commit_resolve
         my $cmd;
         if ($commitish =~ /^r?(\d{1,5})$/) {
             # subversion revision number
-            $cmd = "git --git-dir='$worktree/.git' rev-list --grep='git-svn-id:.*/trunk\@$1' --glob='*'";
+            my $svn_revision = $1;
+            my $commit_id_arg = "--glob='*'";
+            $main::git_version = `git --version`
+                if !defined $main::git_version;
+            $commit_id_arg = "HEAD"
+                if ($main::git_version =~ / 1\.(\d)/ && $1 < 7);
+            $cmd = "git --git-dir='$worktree/.git' rev-list --grep='git-svn-id:.*/trunk\@$svn_revision ' $commit_id_arg";
         }
         else {
             $cmd = "git --git-dir='$worktree/.git' rev-list --max-count=1 '$commitish'";
