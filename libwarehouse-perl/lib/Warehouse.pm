@@ -1767,13 +1767,18 @@ sub job_new
     my %job = @_;
     map { for ($job{$_}) { s/\\/\\\\/g; s/\n/\\n/g; } } keys %job;
 
-    if (!defined $job{"revision"})
+    if (!defined $job{"revision"} || $job{"revision"} !~ /\S/)
     {
-	my $repo = $self->get_config("svn_root");
-	$repo =~ s/\'/\'\\\'\'/g;
-	if (`svn info '$repo'` =~ /\nRevision:\s*(\d+)/)
-	{
-	    $job{"revision"} = $1;
+	if ($self->get_config("git_clone_url")) {
+	    $job{"revision"} = "master";
+	}
+	else {
+	    my $repo = $self->get_config("svn_root");
+	    $repo =~ s/\'/\'\\\'\'/g;
+	    if (`svn info '$repo'` =~ /\nRevision:\s*(\d+)/)
+	    {
+		$job{"revision"} = $1;
+	    }
 	}
     }
 
