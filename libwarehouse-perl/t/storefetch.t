@@ -1,4 +1,5 @@
 #!perl
+# -*- mode: perl; perl-indent-level: 4; indent-tabs-mode: nil; -*-
 
 use strict;
 use warnings;
@@ -7,6 +8,8 @@ use Warehouse;
 
 SKIP: {
     skip "warehouse client not configured on this machine", 8 if (! -f "/etc/warehouse/warehouse-client.conf");
+    skip "preparing to run a warehouse job", 8 if exists $ENV{"MR_JOB_ID"};
+
     my $whc = new Warehouse (debug_mogilefs_paths => 1);
 
     my $content26 = "abcdefghijklmnopqrstuvwxyz";

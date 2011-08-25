@@ -258,6 +258,7 @@ $main::please_continue = 0;
 my $jobsteps_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 grep { $ENV{$1} = $2 if /^(NOCACHE.*?)=(.*)/ } split ("\n", $$Job{knobs});
+$ENV{"MR_JOB_ID"} = $job_id;
 
 
 my @jobstep;
@@ -612,7 +613,6 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 
     delete $ENV{"GNUPGHOME"};
     $ENV{"MR_ID"} = $id;
-    $ENV{"MR_JOB_ID"} = $job_id;
     $ENV{"MR_INPUT"} = $Jobstep->{input};
     $ENV{"MR_KNOBS"} = $Job->{knobs};
     $ENV{"MR_LEVEL"} = $level;

@@ -1,6 +1,5 @@
 #!perl
-
-# -*- mode: perl; perl-indent-level: 4; -*-
+# -*- mode: perl; perl-indent-level: 4; indent-tabs-mode: nil; -*-
 
 use strict;
 use warnings;
@@ -11,6 +10,8 @@ use Digest::MD5;
 
 SKIP: {
     skip "warehouse client not configured on this machine", 6 if (! -f "/etc/warehouse/warehouse-client.conf");
+    skip "preparing to run a warehouse job", 6 if exists $ENV{"MR_JOB_ID"};
+
     my $whc = new Warehouse;
 
     my $check;

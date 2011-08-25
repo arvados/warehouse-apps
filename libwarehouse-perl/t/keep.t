@@ -1,5 +1,5 @@
 #!perl
-# -*- mode: perl; perl-indent-level: 4; -*-
+# -*- mode: perl; perl-indent-level: 4; indent-tabs-mode: nil; -*-
 
 use strict;
 use warnings;
@@ -22,37 +22,38 @@ my $data = "0123456789abcdef0123456789abcdef";
 my $hash = Digest::MD5::md5_hex ($data);
 
 SKIP: {
-	skip "warehouse client not configured on this machine", 7 if (! -f "/etc/warehouse/warehouse-client.conf");
+    skip "warehouse client not configured on this machine", 7 if (! -f "/etc/warehouse/warehouse-client.conf");
+    skip "preparing to run a warehouse job", 7 if exists $ENV{"MR_JOB_ID"};
 
-	my $whc = new Warehouse (keeps => ["localhost:25168"]);
+    my $whc = new Warehouse (keeps => ["localhost:25168"]);
 
-	my $storehash = $whc->store_block (\$data);
-	ok ($storehash, "store_block")
-    or diag ($whc->errstr);
-	ok (substr ($storehash,0,32) eq $hash, "storehash eq $hash");
+    my $storehash = $whc->store_block (\$data);
+    ok ($storehash, "store_block")
+        or diag ($whc->errstr);
+    ok (substr ($storehash,0,32) eq $hash, "storehash eq $hash");
 
-	my $keephash;
-	ok (($keephash = $whc->store_in_keep (hash => $storehash)), "store_in_keep")
-    or diag ($whc->errstr);
+    my $keephash;
+    ok (($keephash = $whc->store_in_keep (hash => $storehash)), "store_in_keep")
+        or diag ($whc->errstr);
 
-	diag ("keephash = $keephash");
+    diag ("keephash = $keephash");
 
-	my $dataref;
-	ok ($dataref = $whc->fetch_from_keep ($keephash), "fetch-$keephash")
-    or diag ($whc->errstr);
-	$dataref && ok ($$dataref eq $data, "fetch-$keephash eq stored");
+    my $dataref;
+    ok ($dataref = $whc->fetch_from_keep ($keephash), "fetch-$keephash")
+        or diag ($whc->errstr);
+    $dataref && ok ($$dataref eq $data, "fetch-$keephash eq stored");
 
-	ok ($dataref = $whc->fetch_from_keep ($hash), "fetch-$hash")
-    or diag ($whc->errstr);
-	$dataref && ok ($$dataref eq $data, "fetch-$hash eq stored");
+    ok ($dataref = $whc->fetch_from_keep ($hash), "fetch-$hash")
+        or diag ($whc->errstr);
+    $dataref && ok ($$dataref eq $data, "fetch-$hash eq stored");
 
-	my ($k, @probe) = $whc->_hash_keeps (0, $storehash);
-	diag ("probe order for $storehash is @probe");
+    my ($k, @probe) = $whc->_hash_keeps (0, $storehash);
+    diag ("probe order for $storehash is @probe");
 
-	($k, @probe) = $whc->_hash_keeps (0, $hash);
-	diag ("probe order for $hash is @probe");
+    ($k, @probe) = $whc->_hash_keeps (0, $hash);
+    diag ("probe order for $hash is @probe");
 
-	diag ($whc->iostats);
+    diag ($whc->iostats);
 
 }
 
