@@ -12,7 +12,7 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 
 my $whc = new Warehouse;
-my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT});
+my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
 $m->rewind;
 while (my $s = $m->subdir_next) {
   my $stream;
