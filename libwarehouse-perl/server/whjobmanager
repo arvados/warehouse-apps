@@ -506,7 +506,7 @@ else
 		 "mkdir -p $ENV{TMPDIR}/mrcompute/revision && cd $ENV{TMPDIR}/mrcompute && ( [ -e $ENV{MR_REVISION_INSTALLDIR}/.tested ] || ( svn export --quiet \"\$INSTALL_REPOS/installrevision\" && INSTALLREVISION_NOLOCK=1 ./installrevision ) )");
   }
   else {
-    die "could not figure out commit id for $treeish";
+    croak ("could not figure out commit id for $treeish");
   }
 
   my $installpid = fork();
