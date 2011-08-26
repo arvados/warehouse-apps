@@ -416,17 +416,18 @@ sub do_step
     # is no point in reinspecting
 
     return undef if (($step->{"failed"} || $step->{"complete"}) &&
+                     ref $step->{"warehousejob"} &&
 		     $step->{"warehousejob"}->{"metakey"});
 
     delete $step->{"errors"};
     delete $step->{"warnings"};
     delete $step->{"waitingfor"};
 
-    if (!defined $step->{"warehousejob"} &&
+    if (!ref $step->{"warehousejob"} &&
 	exists $supplied_param->{$stepno."/warehousejob"}) {
 	$step->{"warehousejob"} = { "id" => $supplied_param->{$stepno."/warehousejob"}};
     }
-    goto KNOW_JOB_ID if $step->{"warehousejob"};
+    goto KNOW_JOB_ID if ref $step->{"warehousejob"};
 
     my $mrparam = {};
   PARAM:
@@ -569,7 +570,8 @@ sub do_step
     # dependencies are satisfied.
 
     my $step_job;
-    if ($step->{"warehousejob"})
+    if (ref $step->{"warehousejob"} &&
+        $step->{"warehousejob"}->{"id"} > 0)
     {
 KNOW_JOB_ID:
 	my $joblist = $whc->job_list
