@@ -260,7 +260,7 @@ my $whc = new Warehouse;
 
 # Update the local copy of the git repository
 if (!defined $worktree) {
-    $worktree = dirname(tmpnam())."/".$whc->{warehouse_name}."-warehouse-apps-".$ENV{"USER"};
+    $worktree = dirname(tmpnam())."/".$whc->{warehouse_name}."-warehouse-apps-".scalar(getpwuid($>));
 }
 my @cmd;
 if (-d $worktree) {
