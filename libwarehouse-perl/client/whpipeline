@@ -739,6 +739,9 @@ sub find_job
 		next J;
 	    }
 	}
+	next J if ref $step_job && $step_job->{"success"} && !$j->{"success"};
+	next J if !$j->{"success"} && (length $j->{"success"} || length $j->{"finishtime_s"});
+
         # Legacy handling for subversion revision numbers
 	next J if ($sysparam->{"min_revision"} &&
                    $sysparam->{"min_revision"} =~ /^\d{1,5}$/ &&
@@ -748,16 +751,17 @@ sub find_job
                    $sysparam->{"min_revision"} =~ /^\d{1,5}$/ &&
                    $j->{"revision"} =~ /^\d{1,5}$/ &&
                    $j->{"revision"} > $sysparam->{"max_revision"});
+
         # Convert all commit-ish and svn revision numbers to commit ids
-        my $jobrev = commit_resolve($j->{"revision"});
         my $minrev = commit_resolve($sysparam->{"min_revision"} eq 0 ? undef : $sysparam->{"min_revision"});
         my $maxrev = commit_resolve($sysparam->{"max_revision"});
+        next J if (!defined $j->{"revision"} ||
+                   $j->{"revision"} !~ /\S/); # controller should have prevented this
         next J if (defined $minrev &&
-                   !commit_reachable_from($minrev, $jobrev));
+                   !commit_reachable_from($minrev, commit_resolve($j->{"revision"})));
         next J if (defined $maxrev &&
-                   !commit_reachable_from($jobrev, $maxrev));
-	next J if !$j->{"success"} && (length $j->{"success"} || length $j->{"finishtime_s"});
-	next J if ref $step_job && $step_job->{"success"} && !$j->{"success"};
+                   !commit_reachable_from(commit_resolve($j->{"revision"}), $maxrev));
+
 	printf STDERR "Job %d is the best yet\n", $j->{"id"} if $debugflag;
 	$step_job = $j;
     }
@@ -828,6 +832,7 @@ sub commit_resolve
 {
     my $commitish = shift;
     return undef if !defined $commitish;
+    return undef if $commitish eq "";
     if (!exists $commit_resolve{$commitish}) {
         my $cmd;
         if ($commitish =~ /^r?(\d{1,5})$/) {
