@@ -75,7 +75,7 @@ $SIG{'USR2'} = sub
 
 
 
-my $whc = new Warehouse or die "failed to create Warehouse client";
+my $whc = new Warehouse or croak ("failed to create Warehouse client");
 my $metastream = new Warehouse::Stream (whc => $whc);
 $metastream->clear;
 $metastream->name (".");
@@ -92,12 +92,12 @@ if ($have_database)
   ($job_id) = @ARGV;
 
   $dbh = DBI->connect(@$Warehouse::Server::DatabaseDSN);
-  die $DBI::errstr if !$dbh;
+  croak ($DBI::errstr) if !$dbh;
   $dbh->{InactiveDestroy} = 1;
 
   $sth = $dbh->prepare ("select * from mrjob where id=?");
-  $sth->execute ($job_id) or die $dbh->errstr;
-  $Job = $sth->fetchrow_hashref or die $sth->errstr;
+  $sth->execute ($job_id) or croak ($dbh->errstr);
+  $Job = $sth->fetchrow_hashref or croak ($sth->errstr);
 }
 
 else
@@ -115,7 +115,7 @@ else
 
   if (!$Job->{thawedfromkey})
   {
-    map { die "No $_ specified" unless $Job->{$_} }
+    map { croak ("No $_ specified") unless $Job->{$_} }
     qw(mrfunction revision inputkey);
   }
 
@@ -221,10 +221,10 @@ if ($have_database)
 			 values (?, ?, now())");
   my $rev = q/$Revision$/;
   $rev =~ /\d+/;
-  $sth->execute ($$, +$&) or die $dbh->errstr;
+  $sth->execute ($$, +$&) or croak ($dbh->errstr);
 
   $sth = $dbh->prepare ("select last_insert_id()");
-  $sth->execute or die $dbh->errstr;
+  $sth->execute or croak ($dbh->errstr);
   ($jobmanager_id) = $sth->fetchrow_array;
 
   $sth = $dbh->prepare ("update mrjob set jobmanager_id=?, starttime=now()
@@ -435,7 +435,7 @@ else
 
   if (!-d $ENV{MR_REVISION_SRCDIR}) {
     system(qw(git clone), $repo, $ENV{MR_REVISION_SRCDIR}) == 0
-	or die "git clone $repo failed: exit ".($?>>8);
+	or croak ("git clone $repo failed: exit ".($?>>8));
     system("cd $ENV{MR_REVISION_SRCDIR} && git config clean.requireForce false");
   }
   `cd $ENV{MR_REVISION_SRCDIR} && git fetch -q`;
@@ -488,7 +488,7 @@ else
     @execargs = ("sh", "-c",
 		 "mkdir -p $ENV{TMPDIR}/mrcompute/opt && cd $ENV{TMPDIR}/mrcompute && perl - $ENV{MR_REVISION_SRCDIR} $commit $repo");
     open GBS, "<", `echo -n \$(which whjob-checkout-and-build)`
-	or die "can't find whjob-checkout-and-build";
+	or croak ("can't find whjob-checkout-and-build");
     local $/ = undef;
     $git_build_script = <GBS>;
     close GBS;
@@ -682,7 +682,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 		       slot => $childslot,
 		       jobstepname => "$job_id.$id.$childpid",
 		     };
-  die "assert failed" if exists $slot[$childslot]->{pid};
+  croak ("assert failed: \$slot[$childslot]->{'pid'} exists") if exists $slot[$childslot]->{pid};
   $slot[$childslot]->{pid} = $childpid;
 
   Log ($id, "child $childpid started on $childslotname");
@@ -1236,7 +1236,7 @@ sub croak
   Log (undef, $message);
   freeze() if @jobstep_todo;
   collate_output() if @jobstep_todo;
-  cleanup() if $dbh;
+  cleanup();
   save_meta() if $metastream;
   die;
 }
@@ -1244,7 +1244,7 @@ sub croak
 
 sub cleanup
 {
-  return if !$have_database;
+  return if !$have_database || !$dbh;
 
   reconnect_database();
   my $sth;
