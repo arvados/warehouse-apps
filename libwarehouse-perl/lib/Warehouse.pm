@@ -1219,7 +1219,7 @@ sub fetch_from_keep
 	my ($status_number, $status_phrase);
 	my $data;
 	if ($Warehouse::HTTP::useCurlCmd &&
-	    open F, '-|', 'curl', '--fail', '-s', $url) {
+	    open F, '-|', 'curl', '--max-time', $self->{timeout}, '--fail', '-s', $url) {
 	    $data = "";
 	    my $bytes = 0;
 	    do {
