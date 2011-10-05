@@ -179,6 +179,118 @@ sub _init
 	die "I don't have a default warehouse to use";
     }
 
+    $self->{config} = $self->_get_configurl($warehouse_name);
+
+    $self->{ua}->timeout ($self->{timeout});
+
+    $self->_cryptsetup();
+    $self->{warehouse_name} = $warehouse_name;
+    $self->{config}->{svn_root} ||= $svn_root;
+    $self->{config}->{git_clone_url} ||= $git_clone_url;
+    for (qw(name_warehouse_servers job_warehouse_servers cryptmap_name_controllers)) {
+	$self->{config}->{$_} = $self->{config}->{controllers}
+	if !defined $self->{config}->{$_};
+    }
+    if (!defined($self->{config}->{keep_name})) {
+        $self->{config}->{keep_name} = $self->{warehouse_name};
+    }
+    $self->{memcached_size_threshold} = 0 if $idx != 0;
+    $self->{memcached_size_threshold} = -1 if $no_memcached_conf;
+
+    $self->{memcached_size_threshold} = $memcached_max_data
+	if !defined $self->{memcached_size_threshold};
+
+    $self->{memcached_servers} = $memcached_servers_arrayref
+	if !defined $self->{memcached_servers};
+
+    $self->{debug_mogilefs_paths} = 0
+	if !defined $self->{debug_mogilefs_paths};
+
+    $self->{timeout} = 30
+	if !defined $self->{timeout};
+
+    $self->{rand01} = int(rand 2);
+
+    $self->{stats_time_created} = time;
+    $self->{stats_read_bytes} = 0;
+    $self->{stats_read_blocks} = 0;
+    $self->{stats_read_attempts} = 0;
+    $self->{stats_wrote_bytes} = 0;
+    $self->{stats_wrote_blocks} = 0;
+    $self->{stats_wrote_attempts} = 0;
+    $self->{stats_memread_bytes} = 0;
+    $self->{stats_memread_blocks} = 0;
+    $self->{stats_memread_attempts} = 0;
+    $self->{stats_memwrote_bytes} = 0;
+    $self->{stats_memwrote_blocks} = 0;
+    $self->{stats_memwrote_attempts} = 0;
+    $self->{stats_keepread_bytes} = 0;
+    $self->{stats_keepread_blocks} = 0;
+    $self->{stats_keepread_attempts} = 0;
+    $self->{stats_keepwrote_bytes} = 0;
+    $self->{stats_keepwrote_blocks} = 0;
+    $self->{stats_keepwrote_attempts} = 0;
+
+    if (!$ENV{NOCACHE_READ} || !$ENV{NOCACHE_WRITE})
+    {
+	while ($self->{config}->{mogilefs_trackers} &&
+	       !$self->{mogc} &&
+	       ++$attempts <= 5)
+	{
+	    $self->{mogc} = eval {
+		eval 'use MogileFS::Client;';
+		MogileFS::Client->new
+		    (hosts => [split(",", $self->{config}->{mogilefs_trackers})],
+		     domain => $self->{config}->{mogilefs_domain},
+		     timeout => $self->{timeout});
+	      };
+	    last if $self->{mogc};
+	    print STDERR "MogileFS connect failure #$attempts: $@\n";
+		sleep $attempts;
+	}
+	warn "Can't connect to MogileFS"
+	    if $self->{config}->{mogilefs_trackers} && !$self->{mogc};
+
+	if (@{$self->{memcached_servers}} &&
+	    $self->{memcached_size_threshold} >= 0)
+	{
+	    eval q{
+		use Cache::Memcached;
+		$self->{memc} = new Cache::Memcached {
+		    'servers' => $self->{memcached_servers},
+		    'debug' => 0,
+		};
+		$self->{memc}->enable_compress (0);
+	    };
+	    die $@ if $@;
+	}
+
+	if ($self->{memcached_size_threshold} + 1
+	    < $self->{config}->{mogilefs_size_threshold})
+	{
+	    warn("Warehouse: Blocks with "
+		 .$self->{memcached_size_threshold}
+		 ." < size < "
+		 .$self->{config}->{mogilefs_size_threshold}
+		 ." will not be stored in either memcached or mogilefs!\n");
+	}
+    }
+
+    $self->{job_hashref} = {};
+    $self->{manifest_stats_hashref} = {};
+    $self->{meta_stats_hashref} = {};
+    $self->{job_list_arrayref} = undef;
+    $self->{job_list_fetched} = undef;
+
+    return $self;
+}
+
+
+sub _get_configurl
+{
+    my $self = shift;
+    my $warehouse_name = shift;
+
     my ($idx) = grep {
 	$warehouses->[$_]->{name} eq $warehouse_name
     } (0..$#$warehouses)
@@ -221,142 +333,7 @@ sub _init
 	    warn "Config url $url failed: " . $r->status_line;
 	}
     }
-    $self->{ua}->timeout ($self->{timeout});
-
-    $self->{config} = $warehouses->[$idx];
-    $self->_cryptsetup();
-    $self->{warehouse_index} = $idx;
-    $self->{warehouse_name} = $warehouse_name;
-    $self->{config}->{svn_root} ||= $svn_root;
-    $self->{config}->{git_clone_url} ||= $git_clone_url;
-    $self->{name_warehouse_servers} = $warehouses->[$idx]->{name_controllers};
-    $self->{job_warehouse_servers} = $warehouses->[$idx]->{job_controllers};
-    $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{cryptmap_name_controllers};
-    $self->{name_warehouse_servers} = $warehouses->[$idx]->{controllers}
-	if !defined $self->{name_warehouse_servers};
-    $self->{job_warehouse_servers} = $warehouses->[$idx]->{controllers}
-	if !defined $self->{job_warehouse_servers};
-    $self->{cryptmap_name_controllers} = $warehouses->[$idx]->{controllers}
-	if !defined $self->{cryptmap_name_controllers};
-    $self->{mogilefs_trackers} = $warehouses->[$idx]->{mogilefs_trackers};
-    $self->{mogilefs_domain} = $warehouses->[$idx]->{mogilefs_domain};
-    $self->{mogilefs_directory_class} = $warehouses->[$idx]->{mogilefs_directory_class};
-    $self->{mogilefs_file_class} = $warehouses->[$idx]->{mogilefs_file_class};
-    $self->{keeps} = $warehouses->[$idx]->{keeps};
-    if (!defined($warehouses->[$idx]->{keep_name})) {
-        $self->{keep_name} = $self->{warehouse_name};
-    } else {
-        $self->{keep_name} = $warehouses->[$idx]->{keep_name};
-    }
-    $self->{memcached_size_threshold} = 0 if $idx != 0;
-    $self->{memcached_size_threshold} = -1 if $no_memcached_conf;
-
-    $self->{name_warehouse_servers} = $warehouse_servers
-	if !defined $self->{name_warehouse_servers};
-    $self->{job_warehouse_servers} = $warehouse_servers
-	if !defined $self->{job_warehouse_servers};
-
-    $self->{memcached_size_threshold} = $memcached_max_data
-	if !defined $self->{memcached_size_threshold};
-
-    $self->{memcached_servers} = $memcached_servers_arrayref
-	if !defined $self->{memcached_servers};
-
-    $self->{mogilefs_trackers} = $mogilefs_trackers
-	if !defined $self->{mogilefs_trackers};
-
-    $self->{mogilefs_domain} = $mogilefs_domain
-	if !defined $self->{mogilefs_domain};
-
-    $self->{mogilefs_directory_class} = $mogilefs_directory_class
-	if !defined $self->{mogilefs_directory_class};
-
-    $self->{mogilefs_file_class} = $mogilefs_file_class
-	if !defined $self->{mogilefs_file_class};
-
-    $self->{mogilefs_size_threshold} = 0
-	if !defined $self->{mogilefs_size_threshold};
-
-    $self->{debug_mogilefs_paths} = 0
-	if !defined $self->{debug_mogilefs_paths};
-
-    $self->{timeout} = 30
-	if !defined $self->{timeout};
-
-    $self->{rand01} = int(rand 2);
-
-    $self->{stats_time_created} = time;
-    $self->{stats_read_bytes} = 0;
-    $self->{stats_read_blocks} = 0;
-    $self->{stats_read_attempts} = 0;
-    $self->{stats_wrote_bytes} = 0;
-    $self->{stats_wrote_blocks} = 0;
-    $self->{stats_wrote_attempts} = 0;
-    $self->{stats_memread_bytes} = 0;
-    $self->{stats_memread_blocks} = 0;
-    $self->{stats_memread_attempts} = 0;
-    $self->{stats_memwrote_bytes} = 0;
-    $self->{stats_memwrote_blocks} = 0;
-    $self->{stats_memwrote_attempts} = 0;
-    $self->{stats_keepread_bytes} = 0;
-    $self->{stats_keepread_blocks} = 0;
-    $self->{stats_keepread_attempts} = 0;
-    $self->{stats_keepwrote_bytes} = 0;
-    $self->{stats_keepwrote_blocks} = 0;
-    $self->{stats_keepwrote_attempts} = 0;
-
-    if (!$ENV{NOCACHE_READ} || !$ENV{NOCACHE_WRITE})
-    {
-	while ($self->{mogilefs_trackers} &&
-	       !$self->{mogc} &&
-	       ++$attempts <= 5)
-	{
-	    $self->{mogc} = eval {
-		eval 'use MogileFS::Client;';
-		MogileFS::Client->new
-		    (hosts => [split(",", $self->{mogilefs_trackers})],
-		     domain => $self->{mogilefs_domain},
-		     timeout => $self->{timeout});
-	      };
-	    last if $self->{mogc};
-	    print STDERR "MogileFS connect failure #$attempts: $@\n";
-		sleep $attempts;
-	}
-	warn "Can't connect to MogileFS"
-	    if $self->{mogilefs_trackers} && !$self->{mogc};
-
-	if (@{$self->{memcached_servers}} &&
-	    $self->{memcached_size_threshold} >= 0)
-	{
-	    eval q{
-		use Cache::Memcached;
-		$self->{memc} = new Cache::Memcached {
-		    'servers' => $self->{memcached_servers},
-		    'debug' => 0,
-		};
-		$self->{memc}->enable_compress (0);
-	    };
-	    die $@ if $@;
-	}
-
-	if ($self->{memcached_size_threshold} + 1
-	    < $self->{mogilefs_size_threshold})
-	{
-	    warn("Warehouse: Blocks with "
-		 .$self->{memcached_size_threshold}
-		 ." < size < "
-		 .$self->{mogilefs_size_threshold}
-		 ." will not be stored in either memcached or mogilefs!\n");
-	}
-    }
-
-    $self->{job_hashref} = {};
-    $self->{manifest_stats_hashref} = {};
-    $self->{meta_stats_hashref} = {};
-    $self->{job_list_arrayref} = undef;
-    $self->{job_list_fetched} = undef;
-
-    return $self;
+    return $warehouses->[$idx];
 }
 
 
@@ -435,7 +412,7 @@ sub store_block
 					    nnodes => 2);
     }
 
-    my $mogilefs_class = shift || $self->{mogilefs_file_class};
+    my $mogilefs_class = shift || $self->{config}->{mogilefs_file_class};
     my $md5 = Digest::MD5::md5_hex ($$dataref);
     my $size = length $$dataref;
     my $hash = "$md5+$size";
@@ -487,7 +464,7 @@ sub store_block
 	$self->_store_block_memcached ($md5, $dataref);
     }
 
-    if ($size >= $self->{mogilefs_size_threshold})
+    if ($size >= $self->{config}->{mogilefs_size_threshold})
     {
 	eval
 	{
@@ -594,8 +571,8 @@ sub write_start
     $self->{output_buffer} = "";
     $self->{hashes_written} = [];
     $self->{write_class} = ($is_directory
-			    ? $self->{mogilefs_directory_class}
-			    : $self->{mogilefs_file_class});
+			    ? $self->{config}->{mogilefs_directory_class}
+			    : $self->{config}->{mogilefs_file_class});
     1;
 }
 
@@ -799,6 +776,20 @@ sub fetch_block_ref
 
     my $tried_keep;
     my $tried_cryptmap;
+
+    my $cfg = $self->{config};
+    if ($hash =~ /\+K\d*\@([a-z]+)/ && $self->{config}->{warehouse_name} ne $1) {
+	my $name = $1;
+	for (my $i=0; $i<=$#$warehouses; $i++) {
+	    if ($warehouses->[$i]->{name} eq $name) {
+		$cfg = $warehouses->[$i];
+		if (!$cfg->{keeps_status}) {
+		    $self->_get_configurl($name);
+		}
+	    }
+	}
+    }
+    local $self->{config} = $cfg;
 
     if ($hash =~ /\+K/ || $ENV{NOCACHE_READ} || $ENV{NOCACHE})
     {
@@ -1153,10 +1144,10 @@ ok:
     {
 	$_ = 67108864 if $_ eq "0";
 	next if !/\D/ && defined $keepreportedsize;
-	next if /^K.*\@(.*)/ && $1 eq $self->{keep_name};
+	next if /^K.*\@(.*)/ && $1 eq $self->{config}->{keep_name};
 	$hash .= "+$_";
     }
-    $hash .= "+K\@" . $self->{keep_name};
+    $hash .= "+K\@" . $self->{config}->{keep_name};
     return $hash if !wantarray;
     return ($hash, $nnodes);
 }
@@ -1303,7 +1294,7 @@ sub _hash_keeps
     my $warehouse_id = shift;
     my $hash = shift;
 
-    my $keeps = $self->{keeps};
+    my $keeps = $self->{config}->{keeps};
     $warehouse_id = 0 if !$keeps && !defined $warehouse_id;
     $keeps = $warehouses->[$warehouse_id]->{keeps} if defined $warehouse_id;
 
@@ -1445,11 +1436,11 @@ sub store_manifest_by_name
 		    $streamsize += $size if defined $streamsize;
 		    if (defined $size)
 		    {
-			$scrubbed .= " $hash+$size+K@".$self->{keep_name};
+			$scrubbed .= " $hash+$size+K@".$self->{config}->{keep_name};
 		    }
 		    else
 		    {
-			$scrubbed .= " $hash+K@".$self->{keep_name};
+			$scrubbed .= " $hash+K@".$self->{config}->{keep_name};
 		    }
 		}
 	    }
@@ -1468,7 +1459,7 @@ sub store_manifest_by_name
 	$self->store_manifest_by_name ($scrubbedkey, $oldkey, $name."~");
     }
 
-    my $url = "http://".$self->{name_warehouse_servers}."/put";
+    my $url = "http://".$self->{config}->{name_warehouse_servers}."/put";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $signedreq);
     $req->content ($signedreq);
@@ -1511,7 +1502,7 @@ sub fetch_manifest_key_by_name
     my $self = shift;
     my $name = shift;
 
-    my $url = "http://".$self->{name_warehouse_servers}."/get";
+    my $url = "http://".$self->{config}->{name_warehouse_servers}."/get";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $name);
     $req->content ($name);
@@ -1558,7 +1549,7 @@ sub list_manifests
   my $self = shift;
   my %what = @_;
 
-  my $url = "http://".$self->{name_warehouse_servers}."/list?";
+  my $url = "http://".$self->{config}->{name_warehouse_servers}."/list?";
   while (@_)
   {
       $url .= ";".CGI->escape(shift);
@@ -1608,7 +1599,7 @@ sub _job_list
 {
     my $self = shift;
     my %what = @_;
-    my $url = "http://".$self->{job_warehouse_servers}."/job/list";
+    my $url = "http://".$self->{config}->{job_warehouse_servers}."/job/list";
     $url .= "?";
     $url .= "".($what{id_min} || "")."-".($what{id_max} || "")
 	if $what{id_min} || $what{id_max};
@@ -1725,7 +1716,7 @@ sub job_freeze
     my $reqtext = join ("\n", map { $_."=".$job{$_} } keys %job);
     my $signedreq = $self->_sign ($reqtext);
 
-    my $url = "http://".$self->{job_warehouse_servers}."/job/freeze";
+    my $url = "http://".$self->{config}->{job_warehouse_servers}."/job/freeze";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $signedreq);
     $req->content ($signedreq);
@@ -1785,7 +1776,7 @@ sub job_new
     my $reqtext = join ("\n", map { $_."=".$job{$_} } keys %job);
     my $signedreq = $self->_sign ($reqtext);
 
-    my $url = "http://".$self->{job_warehouse_servers}."/job/new";
+    my $url = "http://".$self->{config}->{job_warehouse_servers}."/job/new";
     my $req = HTTP::Request->new (POST => $url);
     $req->header ('Content-Length' => length $signedreq);
     $req->content ($signedreq);
@@ -1966,7 +1957,7 @@ sub _get_file_data
 	{
 	    next if !$self->{memc};
 	    $pathref = $self->{memc}->get
-		($hash."\@".$self->{mogilefs_trackers})
+		($hash."\@".$self->{config}->{mogilefs_trackers})
 		unless $self->{memcached_size_threshold} < 0;
 	    next if !$pathref;
 	}
@@ -1979,7 +1970,7 @@ sub _get_file_data
 	    return undef if !@paths;
 	    $pathref = \@paths;
 	    $self->{memc}->set
-		($hash."\@".$self->{mogilefs_trackers}, $pathref)
+		($hash."\@".$self->{config}->{mogilefs_trackers}, $pathref)
 		unless $self->{memcached_size_threshold} < 0;
 	}
 	if ($self->{rand01} && @$pathref > 1)
@@ -2057,7 +2048,7 @@ sub write_cache
 					    job_list_fetched
 					    meta_stats_hashref
 					    manifest_stats_hashref);
-    my $cachefile = "/tmp/warehouse.cache.$<.".$self->{name_warehouse_servers};
+    my $cachefile = "/tmp/warehouse.cache.$<.".$self->{config}->{name_warehouse_servers};
     eval {
 	use Storable "lock_store";
 	lock_store $storeme, "$cachefile";
@@ -2071,7 +2062,7 @@ sub _read_cache
     my $stored;
     eval {
 	use Storable "lock_retrieve";
-	$stored = lock_retrieve "/tmp/warehouse.cache.$<.".$self->{name_warehouse_servers};
+	$stored = lock_retrieve "/tmp/warehouse.cache.$<.".$self->{config}->{name_warehouse_servers};
     };
     if (ref $stored eq 'HASH')
     {
@@ -2452,7 +2443,7 @@ sub _cryptmap_write
 		   )
 	if $ENV{DEBUG_GPG};
 
-    local $self->{name_warehouse_servers} = $self->{cryptmap_name_controllers};
+    local $self->{config}->{name_warehouse_servers} = $self->{config}->{cryptmap_name_controllers};
     return $self->store_manifest_by_name
 	($enchash,
 	 $oldenchash,
@@ -2481,8 +2472,8 @@ sub _cryptmap_fetchable
     my $decdataref;
     eval
     {
-	local $self->{name_warehouse_servers} =
-	    $self->{cryptmap_name_controllers};
+	local $self->{config}->{name_warehouse_servers} =
+	    $self->{config}->{cryptmap_name_controllers};
 	$enchash = $self->fetch_manifest_key_by_name
 	    ($self->{config}->{_cryptmap_name_prefix}.$hash)
 	    or die "cryptmap: no cryptmap for $hash";
