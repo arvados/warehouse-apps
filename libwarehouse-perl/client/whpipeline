@@ -169,6 +169,7 @@ use Warehouse;			# apt-get install libwarehouse-perl
 use Fcntl;
 use POSIX;
 use File::Basename;
+use Digest::MD5;
 
 $SIG{"CHILD"} = "IGNORE";	# otherwise GnuPG::Interface wrecks everything
 
@@ -186,6 +187,7 @@ my $nonewjobsflag;
 my $noreuseflag;
 my $nowaitflag;
 my $secretkey;
+my $gpg_keys;
 my $ttyflag = -t STDERR;
 my $label;
 my $worktree;
@@ -207,6 +209,7 @@ GetOptions (
     "no-reuse"			=> \$noreuseflag,
     "no-wait"			=> \$nowaitflag,
     "secret-key=s"		=> \$secretkey,
+    "gpg-keys=s"		=> \$gpg_keys,
     "tty-status!"		=> \$ttyflag,
     "label=s"			=> \$label,
     "warehouse-apps-work-tree=s"=> \$worktree,
@@ -273,13 +276,13 @@ system(@cmd) == 0
     or die "@cmd: exit $?";
 
 
-my $gpg_keys;
+my $configurl = $whc->get_config ("configurl");
+$configurl =~ /^(.*?\/\/([^:\/]+).*\/)/ or die "disgrok configurl";
+my $controller_key_url = $1."server_key.txt";
+my $controller_hostname = $2;
+
 if ($secretkey)
 {
-    my $configurl = $whc->get_config ("configurl");
-    $configurl =~ /^(.*?\/\/([^:\/]+).*\/)/ or die "disgrok configurl";
-    my $controller_key_url = $1."server_key.txt";
-    my $controller_hostname = $2;
     my $import = `wget -O- -q '$controller_key_url' | gpg --import 2>&1`;
     $import =~ /^gpg: key \S+: [^<]*<(root\@\Q$controller_hostname\E)>/m
 	or die "disgrok gpg import";
@@ -287,14 +290,48 @@ if ($secretkey)
     print STDERR "Imported key for $controller_key_id\n"
 	if $debugflag;
 
-    local $ENV{ENCRYPT_TO} = "$controller_key_id,$secretkey";
-    my $cryptwhc = new Warehouse;
-    my $secretexport = `gpg --export-secret-key '$secretkey'`
-	or die "could not export secret key $secretkey";
-    $gpg_keys = $cryptwhc->store_block ($secretexport);
-    print STDERR "Stored encrypted secret key $secretkey in $gpg_keys\n"
-	if $debugflag;
-
+    if (!$gpg_keys) {
+        local $ENV{ENCRYPT_TO} = "$controller_key_id,$secretkey";
+        my $cryptwhc = new Warehouse;
+        my $secretexport = `gpg --export-secret-key '$secretkey'`
+            or die "could not export secret key $secretkey";
+        $gpg_keys = $cryptwhc->store_block ($secretexport);
+        print STDERR "Stored encrypted secret key $secretkey in $gpg_keys\n"
+            if $debugflag;
+    }
+    $ENV{SIGN_AS} = $secretkey;
+    delete $ENV{NOSIGN};
+}
+elsif ($gpg_keys) {
+    # try to determine email address to use as $secretkey by reading
+    # $gpg_keys
+    my %tried;
+  GPG2SEC:
+    while (`whget '$gpg_keys' | gpg --list-packets` =~ /keyid ([\dA-F]+)/gm) {
+        my $keyid = $1;
+        next if exists $tried{$keyid};
+        $tried{$keyid} = 1;
+        while (`gpg --list-keys '$keyid'` =~ /<(\S+\@\S+?)>/gm) {
+            my $keyemail = $1;
+            my @keys = sort ("root\@$controller_hostname", $keyemail);
+            warn "trying ... @keys\n" if $debugflag;
+            my $stored_key_block = $whc->fetch_manifest_key_by_name
+                ('/gpg/' .
+                 Digest::MD5::md5_hex(join(',',@keys)) .
+                 '/' .
+                 Digest::MD5::md5_hex(`gpg --export-secret-key '$keyemail'`));
+            warn "$stored_key_block\n" if $debugflag;
+            if (($stored_key_block =~ /(\+GM[0-9a-f]{32,})/)[0] eq
+                ($gpg_keys =~ /(\+GM[0-9a-f]{32,})/)[0]) {
+                warn "Using SIGN_AS=$keyemail\n" if $debugflag;
+                $secretkey = $keyemail;
+                last GPG2SEC;
+            }
+        }
+    }
+    if (!$secretkey) {
+        die "Could not figure out key id stored in --gpg-keys parameter.  Specify key email address in --secret-key parameter.\n";
+    }
     $ENV{SIGN_AS} = $secretkey;
     delete $ENV{NOSIGN};
 }
@@ -737,7 +774,7 @@ sub find_job
 		$got =~ s/\+[^,\/]+//g;
 	    }
 	    if ($want ne $got) {
-		printf STDERR ("%d has wrong %s (%s)\n", $j->{"id"}, $k, $j->{$k}) if $debugflag;
+		printf STDERR ("%d has wrong %s (want %s got %s)\n", $j->{"id"}, $k, $quoted_jobspec->{$k}, $j->{$k}) if $debugflag;
 		next J;
 	    }
 	}
