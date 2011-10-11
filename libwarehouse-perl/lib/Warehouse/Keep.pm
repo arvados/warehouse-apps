@@ -9,6 +9,7 @@ use HTTP::Response;
 use Digest::MD5 qw(md5_hex);
 use Warehouse;
 use Fcntl ':flock';
+use JSON;
 
 use strict;
 
@@ -107,7 +108,16 @@ sub _init
 
     $self->{whc} = new Warehouse;
 
-    $self->{dir_status} = {};
+    $self->{node_status} = {
+	'time' => scalar time,
+	'df' => scalar `df --block-size=1k`,
+	'dirs' => {},
+    };
+    foreach (@{$self->{Directories}}) {
+	$self->{node_status}->{dirs}->{$_} = {
+	    'status' => '',
+	};
+    }
 
     $SIG{HUP} = $SIG{INT} = $SIG{TERM} = sub {
       # Any sort of death trigger results in death of all
@@ -239,6 +249,27 @@ sub process
 		$c->send_response (HTTP::Response->new
 				   (200, "OK", [],
 				    $self->_is_full() ? "1" : "0"));
+		last;
+	    }
+	    if ($r->url->path =~ /^\/status\.json$/)
+	    {
+		if (scalar time - $self->{node_status}->{'time'} > 300) {
+		    $self->{node_status}->{'df'} = `df --block-size=1k`;
+		    $self->{node_status}->{'time'} = scalar time;
+		}
+		$self->get_last_errors();
+
+		map { $self->_is_full($_) } @{$self->{Directories}};
+
+		my @disk_devices = `ls /dev/| egrep '^(s|xv|h)d'`;
+		chomp @disk_devices;
+		$self->{node_status}->{'disk_devices'} = \@disk_devices;
+
+		$c->send_response
+		    (HTTP::Response->new
+		     (200, "OK", [],
+		      JSON::to_json
+		      ( $self->{node_status} )));
 		last;
 	    }
     	    my ($md5) = $r->url->path =~ /^\/([0-9a-f]{32})$/;
@@ -696,7 +727,9 @@ sub _fetch
 	}
 
 	return (\$data, length $data) if md5_hex ($data) eq $md5;
-	warn "Checksum mismatch: $realdir/$md5\n";
+	my $error = "Checksum mismatch: $realdir/$md5";
+	warn "$error\n";
+	$self->act_on_disk_error($error, $dir);
     }
     $self->{errstr} = "Not found: $md5";
     return undef;
@@ -804,9 +837,28 @@ sub act_on_disk_error
     my $dir = shift;
     if ($error =~ /no space left on device/i)
     {
-	$self->{dir_status}->{$dir} = "full " . scalar time;
+	$self->{node_status}->{dirs}->{$dir}->{status} = "full " . scalar time;
 	symlink scalar time, "$dir/full~";
 	rename "$dir/full~", "$dir/full";
+    }
+    else {
+	open E, "+>>", "$dir/last_error~";
+	flock E, LOCK_EX;
+	truncate E, 0;
+	print E "$error\n";
+	rename "$dir/last_error~", "$dir/last_error";
+	close E;
+    }
+}
+
+sub get_last_errors
+{
+    my $self = shift;
+    for my $dir (@{$self->{Directories}}) {
+	if (open E, "<", "$dir/last_error") {
+	    $self->{node_status}->{dirs}->{$dir}->{last_error} = scalar <E>;
+	    $self->{node_status}->{dirs}->{$dir}->{last_error_time} = (stat E)[9];
+	}
     }
 }
 
@@ -825,7 +877,7 @@ sub _is_full
     }
 
     my $fulltime;
-    if ($self->{dir_status}->{$dir} =~ /^full (\d+)/ && $1 > time - 3600)
+    if ($self->{node_status}->{dirs}->{$dir}->{status} =~ /^full (\d+)/ && $1 > time - 3600)
     {
 	return 1;
     }
@@ -833,22 +885,22 @@ sub _is_full
 	($fulltime = readlink ("$dir/full")) &&
 	$fulltime > time - 3600)
     {
-	$self->{dir_status}->{$dir} = "full $fulltime";
+	$self->{node_status}->{dirs}->{$dir}->{status} = "full $fulltime";
 	return 1;
     }
-    if ($self->{dir_status}->{$dir} =~ /^ok (\d+)/ && $1 > time - 60)
+    if ($self->{node_status}->{dirs}->{$dir}->{status} =~ /^ok (\d+)/ && $1 > time - 60)
     {
 	return 0;
     }
     if (`df --block-size=1k '$dir'` =~ /^\S+\s+\d+\s+\d+\s+(-?\d+)\s+\d+%/m
 	&& $1 < 65536)
     {
-	$self->{dir_status}->{$dir} = "full " . scalar time;
+	$self->{node_status}->{dirs}->{$dir}->{status} = "full " . scalar time;
 	symlink scalar time, "$dir/full~";
 	rename "$dir/full~", "$dir/full";
 	return 1;
     }
-    $self->{dir_status}->{$dir} = "ok " . scalar time;
+    $self->{node_status}->{dirs}->{$dir}->{status} = "ok " . scalar time;
     return 0;
 }
 
