@@ -33,6 +33,8 @@ if ($ServerKey =~ /BEGIN PGP PUBLIC KEY BLOCK/) {
 
 my $whc = new Warehouse;
 
+$SIG{'ALRM'} = sub { $main::alarm_time = scalar time; };
+
 $whc->{ua}->timeout(3);
 &update;
 $whc->{ua}->timeout(30);
@@ -46,11 +48,12 @@ sub update
 	my $previous = $whc->{config}->{keeps_status}->{$keep_host_port};
 
 	# don't check nodes that were marked as "down" in the last
-	# 5 minutes
+	# 5 minutes, unless we've received an ALARM signal since then
 
 	if ($previous =~ /^down (\d+)/ &&
 	    $1 > time - 300 &&
-	    $1 <= time)
+	    $1 <= time &&
+	    (!defined $main::alarm_time || $1 > $main::alarm_time))
 	{
 	    next;
 	}
