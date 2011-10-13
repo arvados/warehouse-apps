@@ -216,7 +216,7 @@ sub traverse
 	{
 	    next;
 	}
-	if (-l "$localdir/$file")
+	if (-l "$localdir/$file" && !$main::opt{'follow-symlinks'})
 	{
 	    warn "Skipped symbolic link: $localdir/$file\n";
 	    next;
