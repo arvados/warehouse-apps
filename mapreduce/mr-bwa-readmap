@@ -352,7 +352,7 @@ sub atomic_whget_dir {
       flock (L, LOCK_EX) &&
       !-d $target)
   {
-    if (0 != system "whget -r '$source'/ '$target.tmp/'")
+    if (0 != system "ASYNC_READ=2 whget -r '$source'/ '$target.tmp/'")
     {
       system "rm -rf '$target.tmp'";
       close L;
