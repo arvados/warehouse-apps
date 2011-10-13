@@ -209,10 +209,9 @@ sub atomic_whget_dir {
   my ($source, $target) = @_;
 
   if (open (L, "+>>", "$target.lock") &&
-      flock (L, LOCK_EX))
+      flock (L, LOCK_EX) &&
+      !-d $target)
   {
-    return if -d $target;
-
     if (0 != system "whget -r '$source'/ '$target.tmp/'")
     {
       system "rm -rf '$target.tmp'";
@@ -223,5 +222,5 @@ sub atomic_whget_dir {
     system "rm -rf '$target.tmp'";
   }
   close L;
-  die "Failed to whget $source -> $target" if !-e $target;
+  die "Failed to whget $source -> $target" if !-d $target;
 }
