@@ -44,7 +44,7 @@ my $out_path="$tmp/out";
 
 my @cpus = opendir(D,'/sys/devices/system/cpu') ? grep { /^cpu\d+$/ } readdir D : ();
 my $ncpus = +@cpus || 4;
-$ncpus = int(0.999 + $ncpus / $ENV{MR_NODE_SLOTS}) if $ENV{MR_NODE_SLOTS} > 1;
+$ncpus = int(0.999 + 2 * $ncpus / $ENV{MR_NODE_SLOTS}) if $ENV{MR_NODE_SLOTS} > 1;
 
 system ("mkdir -p '$out_path'") == 0
     or mkdir ($out_path)
