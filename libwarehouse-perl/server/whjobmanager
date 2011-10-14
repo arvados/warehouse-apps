@@ -190,9 +190,13 @@ foreach (@sinfo)
       push @nodelist, $nodelist;
     }
   }
-  foreach my $node (@nodelist)
+  foreach my $nodename (@nodelist)
   {
-    Log (undef, "node $node - $ncpus slots");
+    Log (undef, "node $nodename - $ncpus slots");
+    my $node = { name => $nodename,
+		 ncpus => $ncpus,
+		 losing_streak => 0,
+		 hold_until => 0 };
     foreach my $cpu (1..$ncpus)
     {
       push @slot, { node => $node,
@@ -562,6 +566,7 @@ Log (undef, "start level $level");
 
 my %proc;
 my @freeslot = (0..$#slot);
+my @holdslot;
 my %reader;
 my ($id, $input, $attempts);
 my $progress_is_dirty = 1;
@@ -596,7 +601,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   my $childslot = $freeslot[0];
   my $childnode = $slot[$childslot]->{node};
   my $childslotname = join (".",
-			    $slot[$childslot]->{node},
+			    $slot[$childslot]->{node}->{name},
 			    $slot[$childslot]->{cpu});
   my $childpid = fork();
   if ($childpid == 0)
@@ -629,7 +634,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MR_SLOT"} = $childslotname;
     $ENV{"MR_JOB_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work";
     $ENV{"MR_JOBSTEP_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work/".$childslotname;
-    $ENV{"MR_NODE_SLOTS"} = $maxstepspernode;
+    $ENV{"MR_NODE_SLOTS"} = $slot[$childslot]->{node}->{ncpus};
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
@@ -637,7 +642,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
 
     my @srunargs = (
       "srun",
-      "--nodelist=".$childnode,
+      "--nodelist=".$childnode->{name},
       qw(-n1 -c1 -N1 -D), $ENV{TMPDIR},
       "--job-name=$job_id.$id.$$",
 	);
@@ -694,7 +699,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   Log ($id, "child $childpid started on $childslotname");
   $Jobstep->{attempts} ++;
   $Jobstep->{starttime} = time;
-  $Jobstep->{node} = $childnode;
+  $Jobstep->{node} = $childnode->{name};
   delete $Jobstep->{stderr};
   delete $Jobstep->{output};
   delete $Jobstep->{finishtime};
@@ -739,8 +744,31 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
       Log (undef, $message);
       last THISROUND;
     }
+
+    # move slots from freeslot to holdslot (or back to freeslot) if necessary
+    for (my $i=$#freeslot; $i>=0; $i--) {
+      if ($slot[$freeslot[$i]]->{node}->{hold_until} > scalar time) {
+	push @holdslot, (splice @freeslot, $i, 1);
+      }
+    }
+    for (my $i=$#holdslot; $i>=0; $i--) {
+      if ($slot[$holdslot[$i]]->{node}->{hold_until} <= scalar time) {
+	push @freeslot, (splice @holdslot, $i, 1);
+      }
+    }
+
+    # give up if no nodes are succeeding
+    if (!grep { $_->{node}->{losing_streak} == 0 } @slot) {
+      my $message = "Every node has failed -- giving up on this round";
+      Log (undef, $message);
+      last THISROUND;
+    }
   }
 }
+
+
+push @freeslot, splice @holdslot;
+map { $slot[$freeslot[$_]]->{node}->{losing_streak} = 0 } (0..$#freeslot);
 
 
 Log (undef, "wait for last ".(scalar keys %proc)." children to finish");
@@ -862,7 +890,7 @@ sub reapchildren
   my $pid = waitpid (-1, WNOHANG);
   return 0 if $pid <= 0;
 
-  my $whatslot = ($slot[$proc{$pid}->{slot}]->{node}
+  my $whatslot = ($slot[$proc{$pid}->{slot}]->{node}->{name}
 		  . "."
 		  . $slot[$proc{$pid}->{slot}]->{cpu});
   my $jobstepid = $proc{$pid}->{jobstep};
@@ -884,12 +912,28 @@ sub reapchildren
   {
     ++$thisround_failed;
     ++$thisround_failed_multiple if $Jobstep->{attempts} > 1;
+
+    # Check for signs of a failed or misconfigured node
+    if (++$slot[$proc{$pid}->{slot}]->{node}->{losing_streak} >=
+	2+$slot[$proc{$pid}->{slot}]->{node}->{ncpus}) {
+      # Don't count this against jobstep failure thresholds if this
+      # node is already suspected faulty and srun exited quickly
+      if ($slot[$proc{$pid}->{slot}]->{node}->{hold_until} &&
+	  $elapsed < 5) {
+	--$Jobstep->{attempts} if $Jobstep->{attempts} > 1;
+      }
+      # Don't start any new jobsteps on this node for 60 seconds
+      $slot[$proc{$pid}->{slot}]->{node}->{hold_until} = 60 + scalar time;
+    }
+
     push @jobstep_todo, $jobstepid;
     Log ($jobstepid, "failure in $elapsed seconds");
   }
   else
   {
     ++$thisround_succeeded;
+    $slot[$proc{$pid}->{slot}]->{node}->{losing_streak} = 0;
+    $slot[$proc{$pid}->{slot}]->{node}->{hold_until} = 0;
     push @jobstep_done, $jobstepid;
     Log ($jobstepid, "success in $elapsed seconds");
   }
