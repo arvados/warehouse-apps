@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-my $gzip = $ENV{GZIP} || 'gzip';
+my $gzip = $ENV{GZIP_COMMAND} || 'gzip';
 
 my $chunksize = $ENV{KNOB_CHUNKSIZE};
 $chunksize = 1_000_000 if !defined $chunksize;

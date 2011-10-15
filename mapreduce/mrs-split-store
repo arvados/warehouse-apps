@@ -89,7 +89,7 @@ sub make_filename
 
 sub open_z
 {
-  my $gzip = $ENV{GZIP} || 'gzip';
+  my $gzip = $ENV{GZIP_COMMAND} || 'gzip';
   open Z, "|-", "$gzip -n > '".$ENV{MR_JOBSTEP_TMP}."/.mrs-split-store.$$.gz'"
       or die "$gzip: error $! exit $?";
 }

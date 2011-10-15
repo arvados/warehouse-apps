@@ -37,7 +37,7 @@ my $seed_length = $ENV{KNOB_SEED_LENGTH};
 my $readlength = $ENV{KNOB_READLENGTH};
 my $reffile1 = "$ENV{MR_JOB_TMP}/ref1";
 my $reffile2 = "$ENV{MR_JOB_TMP}/ref2";
-my $gzip = $ENV{GZIP} || 'gzip';
+my $gzip = $ENV{GZIP_COMMAND} || 'gzip';
 
 my $bwa_path="$tmp/bwa";
 my $sam_path="$tmp/sam";
