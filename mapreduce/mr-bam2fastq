@@ -53,7 +53,7 @@ if ($ENV{MR_LEVEL} == 0)
 	$pathname =~ s/^\.\///;
 	next if $want_path ne $pathname;
       }
-      next if $filename !~ /^(.*)\.[bs]am$/;
+      next if $filename !~ /^(.*)\.[bs]am(\.gz)?$/;
 
       $s->seek ($pos);
       my $want = $size > 1000000 ? 1000000 : $size;
