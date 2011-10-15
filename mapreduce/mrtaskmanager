@@ -24,6 +24,11 @@ $ENV{PERLLIB} = "$ENV{MR_REVISION_INSTALLDIR}/usr/share/perl5"
     . ":$ENV{MR_REVISION_SRCDIR}/libwarehouse-perl/lib"
     . ":$ENV{PERLLIB}";
 
+if (scalar `which pigz` && $? == 0) {
+    $ENV{GZIP} = 'pigz';
+}
+print $ENV{GZIP};
+
 $ENV{TMPDIR} ||= "/tmp";
 $ENV{MR_JOB_TMP} = "$ENV{TMPDIR}/mrcompute/work";
 $ENV{MR_JOBSTEP_TMP} = "$ENV{TMPDIR}/mrcompute/work/$ENV{MR_SLOT}";
