@@ -111,7 +111,7 @@ if ($ENV{MR_LEVEL} == 0)
 }
 if ($ENV{MR_LEVEL} == 1)
 {
-  my ($rgs, $want_stream_index, $file_list) = split (" ", $ENV{MR_INPUT}, 3);
+  my ($rgs, $want_stream_index, $file_list) = split (/ /, $ENV{MR_INPUT}, 3);
   my $stream;
 
   my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
