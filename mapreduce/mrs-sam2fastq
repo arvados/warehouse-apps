@@ -22,15 +22,21 @@ while (<>)
 	$csread =~ s/^.//;
 	$out = "\@$F[0]\n$csread\n+\n$csqual\n";
     } else {
+	my $seq, $qual;
+	if (@F == 4) {		# just 4 fields? assume {id,flags,bases,quality}
+	    $seq = $F[2];
+	    $qual = $F[3];
+	} else {
+	    $seq = $F[9];
+	    $qual = $F[10];
+	}
 	if ($F[1] & 0x10) {
-	    my $seq = reverse $F[9];
-	    my $qual = reverse $F[10];
+	    $seq = reverse $seq;
+	    $qual = reverse $qual;
 	    # complement bases
 	    $seq =~ tr/acgt ryswkm bdhv ACGT RYSWKM BDHV/tgca yrswmk vhdb TGCA YRSWMK VHDB/;
-	    $out = "\@$F[0]\n$seq\n+\n$qual\n";
-	} else {
-	    $out = "\@$F[0]\n$F[9]\n+\n$F[10]\n";
 	}
+	$out = "\@$F[0]\n$seq\n+\n$qual\n";
     }
     if ($ENV{PAIR_SELECT} eq '*') {
 	# don't try to match pairs, just print all reads.

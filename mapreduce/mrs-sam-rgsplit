@@ -7,6 +7,7 @@ my $filename = $ENV{RGSPLIT_FILENAME};
 
 my $rg_list = $ENV{RGSPLIT_RG_LIST};
 my @rg_list = split (/[ \|]/, $rg_list);
+my $rg_all = !@rg_list;
 @rg_list = ("") if !@rg_list;
 
 my @pair_select = ('*');
@@ -39,9 +40,10 @@ foreach my $rg (@rg_list) {
 }
 
 while (<>) {
-    next if !/.*\sRG:Z:(\S+)/o;
+    next if !$rg_all and !/.*\sRG:Z:(\S+)/o;
     my $rg = $1;
-    $rg = "" if "$rg_list" eq "";
+    $rg = "" if $rg_all;
+    warn "$rg";
     next if !exists $out{$rg."_".$pair_select[0]};
     for my $pair_select (@pair_select) {
 	my $out = $out{$rg."_".$pair_select};
