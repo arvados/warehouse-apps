@@ -41,6 +41,7 @@ foreach my $rg (@rg_list) {
 while (<>) {
     next if !/.*\sRG:Z:(\S+)/o;
     my $rg = $1;
+    $rg = "" if "$rg_list" eq "";
     next if !exists $out{$rg."_".$pair_select[0]};
     for my $pair_select (@pair_select) {
 	my $out = $out{$rg."_".$pair_select};

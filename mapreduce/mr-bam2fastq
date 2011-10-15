@@ -64,8 +64,9 @@ if ($ENV{MR_LEVEL} == 0)
       my $child = open H, "-|";
       die "no fork" if !defined $child;
       if ($child == 0) {
-	my $viewflag = $filename =~ /\.sam$/i ? "-S" : "";
-	open STDOUT, "|$sam_path/samtools view -H $viewflag -";
+	my $viewflag = $filename =~ /\.sam(\.gz)?$/i ? "-S" : "";
+	my $gunzip = $filename =~ /\.gz$/ ? "gzip -cd |" : "";
+	open STDOUT, "| $gunzip $sam_path/samtools view -H $viewflag -";
 	print STDOUT $samheader;
 	exit;
       }
@@ -138,16 +139,24 @@ if ($ENV{MR_LEVEL} == 1)
   while (my ($pos, $size, $filename) = $s->file_next)
   {
     last if !defined $pos;
-    $filename =~ s/\.([bs])am$//;
+    $filename =~ s/\.([bs])am(\.gz)?$//;
+    my $input_gzip = $2;
     my $samtools_view_s_flag = $1 eq "s" ? "-S" : "";
     my $cs_suffix = $ENV{KNOB_COLORSPACE} ? ".cs" : "";
     $filename =~ s/[\'\"\s]//g;
 
+    my $gunzip = $input_gzip ? "gzip -cd |" : "";
     my $index_args = defined ($index_path) ? "-t $index_path" : "";
     my $rg_args = ($rgs eq "" || $rgs =~ /\|/) ? "" : "-r \"$rgs\"";
+    my $sam_view_cmd = "$sam_path/samtools view $samtools_view_s_flag $rg_args $index_args - |";
+    if ($rg_args eq "" && $samtools_view_s_flag == "-S") {
+      $sam_view_cmd = "";
+    }
+    my $cmd = "$gunzip $sam_view_cmd mrs-sam-rgsplit";
+    warn "$cmd\n";
     $ENV{RGSPLIT_RG_LIST} = $rgs;
     $ENV{RGSPLIT_FILENAME} = $filename;
-    open SPLIT, "|-",  'bash', '-c', "set -o pipefail; exec $sam_path/samtools view $samtools_view_s_flag $rg_args $index_args - | mrs-sam-rgsplit"
+    open SPLIT, "|-",  'bash', '-c', "set -o pipefail; exec $cmd"
 	or die "no fork";
     $s->seek ($pos);
     while (my $dataref = $s->read_until ($pos+$size)) {
