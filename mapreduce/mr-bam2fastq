@@ -18,8 +18,6 @@ use POSIX qw(strftime);
 
 my $tmp = $ENV{MR_JOBSTEP_TMP};
 
-$ENV{ASYNC_READ} ||= 2;
-
 my $verbose = 1;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE};
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
