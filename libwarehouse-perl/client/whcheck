@@ -100,7 +100,7 @@ sub check_replication
     for (@_) {
         my $have = $whc->fetch_block_ref($_, { probeonly => $want });
         if ($want > $have->[0]) {
-            print STDERR "\n$_: want $want have $have\n";
+            print STDERR "\n$_: want $want have $have->[0]\n";
         }
         $main::blocks_on_disk += $have->[0];
         $main::bytes_on_disk += $have->[1];
