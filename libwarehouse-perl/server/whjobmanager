@@ -919,11 +919,14 @@ sub reapchildren
       # Don't count this against jobstep failure thresholds if this
       # node is already suspected faulty and srun exited quickly
       if ($slot[$proc{$pid}->{slot}]->{node}->{hold_until} &&
-	  $elapsed < 5) {
-	--$Jobstep->{attempts} if $Jobstep->{attempts} > 1;
+	  $elapsed < 5 &&
+	  $Jobstep->{attempts} > 1) {
+	Log ($jobstepid, "blaming failure on suspect node " . $slot[$proc{$pid}->{slot}]->{node}->{name} . " instead of incrementing jobstep attempts");
+	--$Jobstep->{attempts};
       }
       # Don't start any new jobsteps on this node for 60 seconds
       $slot[$proc{$pid}->{slot}]->{node}->{hold_until} = 60 + scalar time;
+      Log ($jobstepid, "backing off node " . $slot[$proc{$pid}->{slot}]->{node}->{name} . " for 60 seconds");
     }
 
     push @jobstep_todo, $jobstepid;
