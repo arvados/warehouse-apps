@@ -1255,9 +1255,9 @@ sub fetch_from_keep
 		    }
 		}
 		$bytes_in_blocks += $datasize;
-	    }
-	    if (++$successes == $opts->{probeonly}) {
-		last;
+		if (++$successes == $opts->{probeonly}) {
+		    last;
+		}
 	    }
 	    next;
 	}
