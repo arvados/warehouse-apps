@@ -22,7 +22,7 @@ my $verbose = 1;
 my $reference_manifest_key = $ENV{KNOB_REFERENCE};
 my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $reffile = "$tmp/ref";
-my $gzip = $ENV{GZIP_COMMAND} || 'gzip';
+my $gzip = 'gzip'; # $ENV{GZIP_COMMAND} || 'gzip'; # pigz -d not faster anyway
 
 my $sam_path="$tmp/sam";
 atomic_whget_tar("$sam_manifest_key/samtools.tgz", $sam_path);
