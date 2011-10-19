@@ -233,7 +233,7 @@ sub job_wait
 	{
 	    printf STDERR ("\r%d: %d elapsed %d done %d run %d todo   ",
 			   $jobid,
-			   time() - $j->{starttime_s},
+			   ($j->{starttime_s} ? time() - $j->{starttime_s} : 0),
 			   $j->{steps_done},
 			   $j->{steps_running},
 			   $j->{steps_todo},
