@@ -1,0 +1,132 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 4; indent-tabs-mode: nil; -*-
+
+=head1 NAME
+
+whcheck
+
+=head1 SYNOPSIS
+
+  whcheck [options] manifesthash ...
+
+Make sure the data referenced in the given manifest is still available
+from the storage nodes.
+
+=head1 DESCRIPTION
+
+Counts stored copies of data blocks in warehouses.
+
+=head1 OPTIONS
+
+  --manifest-replication N
+
+		Desired replication for manifests.  Default 3.
+
+  --replication N
+
+		Desired replication for data blocks.  Default 2.
+
+=head1 SEE ALSO
+
+whput(1p), whget(1p), whless(1p)
+
+=cut
+
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Getopt::Long;
+use Pod::Usage;
+
+my $whc = new Warehouse;
+
+my $helpflag;
+my $want_replication = 2;
+my $want_manifest_replication = 3;
+
+GetOptions (
+    "manifest-replication=i"    => \$want_manifest_replication,
+    "replication=i"             => \$want_replication,
+    "help"                      => \$helpflag,
+    )
+    or die "Failed to parse command line options.  Try:  $0 --help\n";
+
+if ($helpflag)
+{
+    pod2usage(1);
+}
+
+die "Usage: $0 [--help] [options] manifesthash ...\n" if !@ARGV;
+
+for my $mhash (@ARGV) {
+    my $m = new Warehouse::Manifest (whc => $whc,
+                                     key => $mhash);
+    if (!$m) {
+        print STDERR "$mhash: ".$whc->errstr."\n";
+        next;
+    }
+    print STDERR "$mhash\n";
+
+    my $tot = 0;
+    for (split (/,/, $mhash)) {
+        ++$tot;
+    }
+    while (my $s = $m->subdir_next) {
+        my $ss = $s->as_string;
+        while ($ss =~ / ([0-9a-f]{32}\S*)/g) {
+            ++$tot;
+        }
+    }
+    $m->rewind;
+
+    $main::blocks_in_manifest = 0;
+    $main::blocks_on_disk = 0;
+    $main::bytes_in_manifest = 0;
+    $main::bytes_on_disk = 0;
+    $main::total_blocks_in_manifest = 0;
+    check_replication ($want_manifest_replication, split (/,/, $mhash));
+    $main::total_blocks_in_manifest = $tot;
+    while (my $s = $m->subdir_next) {
+        my $ss = $s->as_string;
+        check_replication ($want_replication, $ss =~ / ([0-9a-f]{32}\S*)/g);
+    }
+    print STDERR "\n";
+}
+
+sub check_replication
+{
+    my $want = shift;
+    for (@_) {
+        my $have = $whc->fetch_block_ref($_, { probeonly => $want });
+        if ($want > $have->[0]) {
+            print STDERR "\n$_: want $want have $have\n";
+        }
+        $main::blocks_on_disk += $have->[0];
+        $main::bytes_on_disk += $have->[1];
+        $main::blocks_in_manifest += 1;
+        if (/\+GS(\d+)/ || /\+(\d+)/) {
+            $main::bytes_in_manifest += $1;
+        } else {
+            $main::bytes_in_manifest += int($have->[1] / $have->[0]);
+        }
+        status();
+    }
+}
+
+sub status
+{
+    my $b = readable_bytes($main::bytes_in_manifest);
+    my $bb = readable_bytes($main::bytes_on_disk);
+    my $pct = 0;
+    $pct = int(100 * $main::blocks_in_manifest / $main::total_blocks_in_manifest) if $main::total_blocks_in_manifest;
+    print STDERR "\r$b bytes / $main::blocks_in_manifest bl data, $bb bytes / $main::blocks_on_disk bl disk / $pct%";
+}
+
+sub readable_bytes
+{
+    my $s = shift;
+    my @prefix = qw(K M G T P E);
+    while (@prefix && $s =~ s/(.*\d)(\d\d\d)/$1$prefix[0],$2/g) { shift @prefix }
+    $s;
+}

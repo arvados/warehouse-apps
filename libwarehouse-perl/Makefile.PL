@@ -10,6 +10,7 @@ WriteMakefile
      EXE_FILES => [
 		   'client/auto_rebalance_keep.pl',
 		   'client/wh',
+		   'client/whcheck',
 		   'client/whcopy',
 		   'client/whence',
 		   'client/whget',
