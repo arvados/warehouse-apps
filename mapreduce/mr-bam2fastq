@@ -158,15 +158,17 @@ if ($ENV{MR_LEVEL} == 1)
     open SPLIT, "|-",  'bash', '-c', "set -o pipefail; exec $cmd"
 	or die "no fork";
     $s->seek ($pos);
+    my $bytes_written = 0;
     while (my $dataref = $s->read_until ($pos+$size)) {
       my $offset = 0;
       do {
 	my $done = syswrite SPLIT, $$dataref, length($$dataref), $offset;
 	die "write failed" if !defined $done;
 	$offset += $done;
+	$bytes_written += $done;
       } while $offset < length $$dataref;
     }
-    close SPLIT or die "samtools view|mrs-sam-rgsplit: error $! exit $?";
+    close SPLIT or die "$cmd: error $! exit $? [wrote $bytes_written bytes]";
   }
 
   close STDOUT or die "mrs-output: error $! exit $?";
