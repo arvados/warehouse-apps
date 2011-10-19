@@ -794,7 +794,10 @@ sub fetch_block_ref
     if ($hash =~ /\+K/ || $ENV{NOCACHE_READ} || $ENV{NOCACHE})
     {
 	my ($dataref, $existinghash) = $self->fetch_from_keep
-	    ($hash, { nodecrypt => $options->{nodecrypt}, maxprobe => $options->{maxprobe} });
+	    ($hash, { nodecrypt => $options->{nodecrypt},
+		      maxprobe => $options->{maxprobe},
+		      probeonly => $options->{probeonly},
+	     });
 	if (!$dataref && !$options->{nodecrypt} && $hash !~ /\+G/)
 	{
 	    # Perhaps an encrypted copy exists even though the plain
@@ -902,7 +905,12 @@ sub fetch_block_ref
     if (!defined $dataref && !$tried_keep)
     {
 	# didn't try Keep earlier, and other methods failed, so try it now
-	($dataref, $existinghash) = $self->fetch_from_keep ($hash, { nodecrypt => 1, maxprobe => $options->{maxprobe} });
+	($dataref, $existinghash) = $self->fetch_from_keep
+	    ($hash, {
+		nodecrypt => 1,
+		maxprobe => $options->{maxprobe},
+		probeonly => $options->{probeonly},
+	     });
 	if ($dataref && ($options->{offset} || exists $options->{length}))
 	{
 	    if (!exists $options->{nodecrypt})
@@ -937,6 +945,8 @@ sub fetch_block_ref
 	warn "fetch_block_ref($md5) failed: ".$self->{errstr}
 	    unless $nowarnflag;
     }
+
+    return $dataref if $dataref && ref $dataref ne 'SCALAR';
 
     if ($dataref
 	&& length $$dataref <= $self->{memcached_size_threshold}
@@ -1199,37 +1209,63 @@ sub fetch_from_keep
     }
     splice @bucket, $opts->{maxprobe} if $opts->{maxprobe};
     my $successes = 0;
+    my $bytes_in_blocks = 0;
     foreach my $keep_id (@bucket)
     {
 	my $t = Time::HiRes::time();
 	$self->{stats_keepread_attempts} ++;
 	my $keep_host_port = $keeps->[$keep_id];
 	my $url = "http://".$keep_host_port."/".$md5;
-	warn "Keep GET $url\n" if $ENV{DEBUG_KEEP} >= 2;
+	my $method = 'GET';
+	my @method = ();
+	if ($opts->{probeonly}) {
+	    $method = 'HEAD';
+	    @method = ('--request', $method, '--dump-header', '/dev/stdout');
+	}
+	warn "Keep $method $url\n" if $ENV{DEBUG_KEEP} >= 2;
 	my $r;
 	my ($status_number, $status_phrase);
 	my $data;
+	my $headers;
 	if ($Warehouse::HTTP::useCurlCmd &&
-	    open F, '-|', 'curl', '--max-time', $self->{timeout}, '--fail', '-s', $url) {
+	    open F, '-|', 'curl', @method, '--max-time', $self->{timeout}, '--fail', '-s', $url) {
 	    $data = "";
 	    my $bytes = 0;
 	    do {
 		$bytes = sysread F, $data, 2**26, length($data);
 	    } while ($bytes > 0);
 	    close F or undef $data;
+	    $headers = $data if $method eq 'HEAD';
 	}
 	else {
 	    $r = Warehouse::HTTP->new();
+	    $r->set_method('HEAD') if $opts->{probeonly};
 	    $r->set_uri($url);
 	    $r->process_request();
 	    ($status_number, $status_phrase) = $r->get_status();
 	    $data = $r->get_body() if $status_number == 200;
+	    $headers = $r->get_headers();
+	}
+	if ($opts->{probeonly}) {
+	    if ($headers =~ /^X-Block-Size: (\d+)/im) {
+		my $datasize = $1;
+		if ($hash =~ /\+(\d+)/) {
+		    if ($1 != $datasize) {
+			next;
+		    }
+		}
+		$bytes_in_blocks += $datasize;
+	    }
+	    if (++$successes == $opts->{probeonly}) {
+		last;
+	    }
+	    next;
 	}
 	if (defined $data)
 	{
 	    my $datasize = length $data;
 	    my $fail_verify = 0;
-	    if ($opts->{nodecrypt}) {
+	    if ($opts->{nodecrypt} || $opts->{probeonly}) {
 		$fail_verify = !$opts->{noverify} && Digest::MD5::md5_hex ($data) ne $md5;
 	    } else {
 		my $decrypt = $self->_decrypt_block (\$data);
@@ -1273,6 +1309,7 @@ sub fetch_from_keep
 	    $self->{errstr} = "$status_number $status_phrase";
 	}
     }
+    return [$successes, $bytes_in_blocks] if $opts->{probeonly};
     return undef;
 }
 

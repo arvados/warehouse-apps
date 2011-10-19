@@ -25,13 +25,27 @@ sub new
 {
     my $class = shift;
     if ($Warehouse::HTTP::useCurl) { return new Warehouse::HTTP::Curl (@_); }
-    if ($Warehouse::HTTP::useGHTTP) { return new HTTP::GHTTP (@_); }
+    if ($Warehouse::HTTP::useGHTTP) { return new Warehouse::HTTP::GHTTP (@_); }
     if ($Warehouse::HTTP::useLW2) { return new Warehouse::HTTP::LW2 (@_); }
     if ($Warehouse::HTTP::useLWP) { return new Warehouse::HTTP::LWP (@_); }
     die "could not find a supported HTTP library";
 }
 
+sub set_method
+{
+    my $self = shift;
+    $self->{method} = shift;
+}
+
+sub get_headers
+{
+    ""
+}
+
+
 package Warehouse::HTTP::Curl;
+
+@ISA = qw(Warehouse::HTTP);
 
 sub new
 {
@@ -91,6 +105,8 @@ sub get_body
 
 package Warehouse::HTTP::LW2;
 
+@ISA = qw(Warehouse::HTTP);
+
 sub new
 {
     my $class = shift;
@@ -138,6 +154,8 @@ sub get_body
 
 package Warehouse::HTTP::LWP;
 
+@ISA = qw(Warehouse::HTTP);
+
 sub new
 {
     my $class = shift;
@@ -163,7 +181,11 @@ sub set_uri
 sub process_request
 {
     my $self = shift;
-    $self->{req} = new HTTP::Request (GET => $self->{uri});
+    if ($self->{method} eq 'HEAD') {
+	$self->{req} = new HTTP::Request (HEAD => $self->{uri});
+    } else {
+	$self->{req} = new HTTP::Request (GET => $self->{uri});
+    }
     $self->{res} = $self->{ua}->request ($self->{req});
 }
 
@@ -178,6 +200,63 @@ sub get_body
 {
     my $self = shift;
     return $self->{res}->content;
+}
+
+
+package Warehouse::HTTP::GHTTP;
+
+@ISA = qw(Warehouse::HTTP);
+
+sub new
+{
+    my $class = shift;
+    my $self = {};
+    bless ($self, $class);
+    return $self->_init(@_);
+}
+
+sub _init
+{
+    my $self = shift;
+    $self->{ghttp} = new HTTP::GHTTP(@_);
+    return $self;
+}
+
+sub set_uri
+{
+    my $self = shift;
+    return $self->{ghttp}->set_uri(@_);
+}
+
+sub process_request
+{
+    my $self = shift;
+    return $self->{ghttp}->process_request(@_);
+}
+
+sub get_status
+{
+    my $self = shift;
+    return $self->{ghttp}->get_status(@_);
+}
+
+sub get_body
+{
+    my $self = shift;
+    return $self->{ghttp}->get_body(@_);
+}
+
+sub set_method
+{
+    my $self = shift;
+    my $method = shift;
+    $self->{ghttp}->set_type(HTTP::GHTTP::METHOD_HEAD) if $method eq 'HEAD';
+}
+
+sub get_headers
+{
+    my $self = shift;
+    return join ("\n", map { "$_: " . $self->{ghttp}->get_header($_) } $self->{ghttp}->get_headers);
 }
 
 
