@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+my $gzip = $ENV{GZIP_COMMAND} || 'gzip';
+
 my $lines = 1000;
 my $suffixlength = 1;
 my $numeric;
@@ -35,16 +37,16 @@ while (<>)
 	$outfile = sprintf "%s%0*d.gz", $outprefix, $suffixlength, $part;
 	open STDOUT, ">", $outfile
 	    or die "$outfile: $!";
-	open STDOUT, "|-", "gzip"
-	    or die "$outfile: gzip: $!";
+	open STDOUT, "|-", "$gzip"
+	    or die "$outfile: $gzip: $!";
     }
     print or die "$outfile: $!";
     if (++$pos == $lines) {
-	close STDOUT or die "$outfile: gzip: $!";
+	close STDOUT or die "$outfile: $gzip: $!";
 	$open = 0;
 	$pos = 0;
     }
 }
 if ($open) {
-    close STDOUT or die "$outfile: gzip: $!";
+    close STDOUT or die "$outfile: $gzip: $!";
 }
