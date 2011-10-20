@@ -18,6 +18,11 @@ Counts stored copies of data blocks in warehouses.
 
 =head1 OPTIONS
 
+  --fix
+
+                Bring replication up to the desired level where
+                necessary.
+
   --manifest-replication N
 
 		Desired replication for manifests.  Default 3.
@@ -44,10 +49,12 @@ my $whc = new Warehouse;
 my $helpflag;
 my $want_replication = 2;
 my $want_manifest_replication = 3;
+my $fixflag = 0;
 
 GetOptions (
     "manifest-replication=i"    => \$want_manifest_replication,
     "replication=i"             => \$want_replication,
+    "fix"                       => \$fixflag,
     "help"                      => \$helpflag,
     )
     or die "Failed to parse command line options.  Try:  $0 --help\n";
@@ -100,14 +107,24 @@ sub check_replication
     for (@_) {
         my $have = $whc->fetch_block_ref($_, { probeonly => $want });
         if ($want > $have->[0]) {
-            print STDERR "\n$_: want $want have $have->[0]\n";
+            print STDERR "\n$_: want $want have $have->[0]";
+	    my $dataref = $whc->fetch_block_ref($_);
+	    my @kept;
+	    if ($dataref &&
+		(@kept = $whc->store_in_keep (dataref => $dataref,
+					      nnodes => $want)) &&
+		$kept[1] >= $want) {
+		print STDERR " -- fixed\n";
+	    } else {
+		print STDERR " -- couldn't fix\n";
+	    }
         }
         $main::blocks_on_disk += $have->[0];
         $main::bytes_on_disk += $have->[1];
         $main::blocks_in_manifest += 1;
         if (/\+GS(\d+)/ || /\+(\d+)/) {
             $main::bytes_in_manifest += $1;
-        } else {
+        } elsif ($have->[0] > 0) {
             $main::bytes_in_manifest += int($have->[1] / $have->[0]);
         }
         status();
