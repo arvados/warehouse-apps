@@ -7,7 +7,7 @@ whcheck
 
 =head1 SYNOPSIS
 
-  whcheck [options] manifesthash ...
+  whcheck [options] { --data datahash | --manifest manifesthash } ...
 
 Make sure the data referenced in the given manifest is still available
 from the storage nodes.
@@ -89,10 +89,11 @@ if ($helpflag)
     pod2usage(1);
 }
 
-push @manifesthash, @ARGV;
-
-die "Usage: $0 [--help] [options] manifesthash ...\n"
-    if !@manifesthash && !@datahash;
+if (@ARGV ||
+    (!@manifesthash && !@datahash) ||
+    grep { !/^[0-9a-f]{32}/ } (@manifesthash, @datahash)) {
+    die "Usage: $0 [--help] [options] { --data HASH | --manifest HASH } ...\n";
+}
 
 for my $mhash (@datahash) {
     $main::blocks_in_manifest = 0;
