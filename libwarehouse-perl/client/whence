@@ -142,7 +142,9 @@ while (@todo)
 
     printf "#%d\@%s\n", $targetjob->{id}, $whc->{warehouse_name};
     print_times ($whc->job_stats ($targetjob->{id}));
-    printf "  mrfunction = %s r%d\n", $targetjob->{mrfunction}, $targetjob->{revision};
+    printf ("  mrfunction = %s %s\n",
+	    $targetjob->{mrfunction},
+	    $targetjob->{revision} =~ /^\d{1,5}$/ ? "r".$targetjob->{revision} : $targetjob->{revision});
 
     if (($opt{"skip-thawed"} && $targetjob->{revision} != -1)
 	|| !$targetjob->{thawedfromkey})
