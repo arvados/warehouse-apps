@@ -419,7 +419,7 @@ sub store_block
 
     my $alreadyhave;
     my $existinghash;
-    ($alreadyhave, $existinghash) = $self->fetch_block_ref ($hash, 1, 1, { nodecrypt => 1, maxprobe => 4 })
+    ($alreadyhave, $existinghash) = $self->fetch_block_ref ($hash, 1, 1, { nodecrypt => 1, maxprobe => 8, nnodes => 2 })
 	if !$ENV{NOPLAIN};
     if ($alreadyhave && $$dataref eq $$alreadyhave)
     {
@@ -797,6 +797,7 @@ sub fetch_block_ref
 	    ($hash, { nodecrypt => $options->{nodecrypt},
 		      maxprobe => $options->{maxprobe},
 		      probeonly => $options->{probeonly},
+		      nnodes => $options->{nnodes},
 	     });
 	if (!$dataref && !$options->{nodecrypt} && $hash !~ /\+G/)
 	{
@@ -910,6 +911,7 @@ sub fetch_block_ref
 		nodecrypt => 1,
 		maxprobe => $options->{maxprobe},
 		probeonly => $options->{probeonly},
+		nnodes => $options->{nnodes},
 	     });
 	if ($dataref && ($options->{offset} || exists $options->{length}))
 	{
