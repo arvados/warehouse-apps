@@ -23,13 +23,31 @@ Counts stored copies of data blocks in warehouses.
                 Bring replication up to the desired level where
                 necessary.
 
+  --data HASH
+
+		Check the data block referenced by HASH.
+
+  --manifest HASH
+
+                Check the manifest referenced by HASH, and all of the
+                data blocks referenced by that manifest.
+
   --manifest-replication N
 
 		Desired replication for manifests.  Default 3.
 
-  --replication N
+  --replication N, --data-replication N
 
 		Desired replication for data blocks.  Default 2.
+
+  --skip N
+
+		Do not check the first N blocks of each manifest
+		(including the manifest itself).  This lets you resume
+		a scan after an interruption, but it only makes sense
+		if you're scanning a single manifest, and no effort is
+		made to preserve the accuracy of the bytes-and-blocks
+		status display.
 
 =head1 SEE ALSO
 
@@ -50,11 +68,18 @@ my $helpflag;
 my $want_replication = 2;
 my $want_manifest_replication = 3;
 my $fixflag = 0;
+my $skip = 0;
+my @datahash;
+my @manifesthash;
 
 GetOptions (
-    "manifest-replication=i"    => \$want_manifest_replication,
-    "replication=i"             => \$want_replication,
+    "data=s"                    => \@datahash,
+    "manifest=s"                => \@manifesthash,
     "fix"                       => \$fixflag,
+    "replication=i"             => \$want_replication,
+    "data-replication=i"        => \$want_replication,
+    "manifest-replication=i"    => \$want_manifest_replication,
+    "skip=i"                    => \$skip,
     "help"                      => \$helpflag,
     )
     or die "Failed to parse command line options.  Try:  $0 --help\n";
@@ -64,36 +89,55 @@ if ($helpflag)
     pod2usage(1);
 }
 
-die "Usage: $0 [--help] [options] manifesthash ...\n" if !@ARGV;
+push @manifesthash, @ARGV;
 
-for my $mhash (@ARGV) {
+die "Usage: $0 [--help] [options] manifesthash ...\n"
+    if !@manifesthash && !@datahash;
+
+for my $mhash (@datahash) {
+    $main::blocks_in_manifest = 0;
+    $main::blocks_on_disk = 0;
+    $main::bytes_in_manifest = 0;
+    $main::bytes_on_disk = 0;
+    $main::total_blocks_in_manifest = 0;
+    $main::total_blocks_in_manifest = scalar split(/,/, $mhash);
+
+    check_replication ($want_replication, $mhash);
+}
+
+for my $mhash (@manifesthash) {
+    $main::blocks_in_manifest = 0;
+    $main::blocks_on_disk = 0;
+    $main::bytes_in_manifest = 0;
+    $main::bytes_on_disk = 0;
+    $main::total_blocks_in_manifest = 0;
+    $main::total_blocks_in_manifest = scalar split(/,/, $mhash);
+
     my $m = new Warehouse::Manifest (whc => $whc,
                                      key => $mhash);
     if (!$m) {
         print STDERR "$mhash: ".$whc->errstr."\n";
         next;
     }
+
     print STDERR "$mhash\n";
 
     my $tot = 0;
     for (split (/,/, $mhash)) {
         ++$tot;
     }
+
+    $m->rewind;
     while (my $s = $m->subdir_next) {
         my $ss = $s->as_string;
         while ($ss =~ / ([0-9a-f]{32}\S*)/g) {
             ++$tot;
         }
     }
-    $m->rewind;
+    $main::total_blocks_in_manifest += $tot;
 
-    $main::blocks_in_manifest = 0;
-    $main::blocks_on_disk = 0;
-    $main::bytes_in_manifest = 0;
-    $main::bytes_on_disk = 0;
-    $main::total_blocks_in_manifest = 0;
+    $m->rewind;
     check_replication ($want_manifest_replication, split (/,/, $mhash));
-    $main::total_blocks_in_manifest = $tot;
     while (my $s = $m->subdir_next) {
         my $ss = $s->as_string;
         check_replication ($want_replication, $ss =~ / ([0-9a-f]{32}\S*)/g);
@@ -104,17 +148,24 @@ for my $mhash (@ARGV) {
 sub check_replication
 {
     my $want = shift;
+    if ($main::blocks_in_manifest < $skip) {
+	++$main::blocks_in_manifest;
+	return;
+    }
     for (@_) {
         my $have = $whc->fetch_block_ref($_, { probeonly => $want });
         if ($want > $have->[0]) {
             print STDERR "\n$_: want $want have $have->[0]";
-	    my $dataref = $whc->fetch_block_ref($_);
+	    my $dataref;
 	    my @kept;
-	    if ($dataref &&
+	    if (!$fixflag) {
+		print STDERR "\n";
+	    } elsif (($dataref = $whc->fetch_block_ref($_)) &&
 		(@kept = $whc->store_in_keep (dataref => $dataref,
 					      nnodes => $want)) &&
 		$kept[1] >= $want) {
 		print STDERR " -- fixed\n";
+		$have = [$want, $want * length($$dataref)];
 	    } else {
 		print STDERR " -- couldn't fix\n";
 	    }
