@@ -9,12 +9,18 @@ whcheck
 
   whcheck [options] { --data datahash | --manifest manifesthash } ...
 
-Make sure the data referenced in the given manifest is still available
-from the storage nodes.
+Make sure the given data blocks (and, in the case of --manifest, the
+data blocks referenced by the given manifests) are still available on
+the warehouse storage nodes.
 
 =head1 DESCRIPTION
 
-Counts stored copies of data blocks in warehouses.
+Whcheck(1p) ensures that data is stored that desired replication
+level.  For each data block, it probes warehouse storage nodes for
+presence of the block until it receives a positive response from the
+desired number of nodes.  If too few nodes report success, whcheck(1p)
+reports the shortfall and (if the --fix option is used) attempts to
+store additional copies on other nodes.
 
 =head1 OPTIONS
 
@@ -157,14 +163,15 @@ sub check_replication
     for (@_) {
         my $have = $whc->fetch_block_ref($_, { probeonly => $want });
         if ($want > $have->[0]) {
-            print STDERR "\n$_: want $want have $have->[0]";
+            print STDERR "\n$_: want $want have $have->[0] ";
 	    my $dataref;
 	    my @kept;
 	    if (!$fixflag) {
 		print STDERR "\n";
-	    } elsif (($dataref = $whc->fetch_block_ref($_)) &&
+	    } elsif (($dataref = $whc->fetch_block_ref($_, { nodecrypt => 1, nowarn => 1 })) &&
 		(@kept = $whc->store_in_keep (dataref => $dataref,
-					      nnodes => $want)) &&
+					      nnodes => $want,
+					      noencrypt => 1)) &&
 		$kept[1] >= $want) {
 		print STDERR " -- fixed\n";
 		$have = [$want, $want * length($$dataref)];
