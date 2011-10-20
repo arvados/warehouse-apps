@@ -103,6 +103,7 @@ for my $mhash (@datahash) {
     $main::total_blocks_in_manifest = scalar split(/,/, $mhash);
 
     check_replication ($want_replication, $mhash);
+    print STDERR "\n";
 }
 
 for my $mhash (@manifesthash) {
