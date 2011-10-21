@@ -109,6 +109,10 @@ for my $mhash (@datahash) {
     $main::total_blocks_in_manifest = 0;
     $main::total_blocks_in_manifest = scalar split(/,/, $mhash);
 
+    if ($mhash =~ /\+K\@([^\+,]+)/) {
+	local $ENV{WAREHOUSE} = $1;
+	$whc = new Warehouse;
+    }
     check_replication ($want_replication, $mhash);
     print STDERR "\n";
 }
@@ -120,6 +124,11 @@ for my $mhash (@manifesthash) {
     $main::bytes_on_disk = 0;
     $main::total_blocks_in_manifest = 0;
     $main::total_blocks_in_manifest = scalar split(/,/, $mhash);
+
+    if ($mhash =~ /\+K\@([^\+,]+)/) {
+	local $ENV{WAREHOUSE} = $1;
+	$whc = new Warehouse;
+    }
 
     my $m = new Warehouse::Manifest (whc => $whc,
                                      key => $mhash);
@@ -197,13 +206,15 @@ sub status
     my $bb = readable_bytes($main::bytes_on_disk);
     my $pct = 0;
     $pct = int(100 * $main::blocks_in_manifest / $main::total_blocks_in_manifest) if $main::total_blocks_in_manifest;
-    print STDERR "\r$b bytes / $main::blocks_in_manifest bl data, $bb bytes / $main::blocks_on_disk bl disk / $pct%";
+    print STDERR "\rData: $b, $main::blocks_in_manifest bl. Disk: $bb, $main::blocks_on_disk bl.  $pct%    ";
 }
 
 sub readable_bytes
 {
     my $s = shift;
-    my @prefix = qw(K M G T P E);
-    while (@prefix && $s =~ s/(.*\d)(\d\d\d)/$1$prefix[0],$2/g) { shift @prefix }
+    my @prefix = qw(KB MB GB TB PB EB);
+    while ($s =~ s/(.*\d{4})\d{3}$/$1/) { shift @prefix }
+    return sprintf ("%.3f %s", $s/1000, $prefix[0]);
+    while (@prefix && $s =~ s/(.*\d)(\d\d\d).*/$1,$2 $prefix[0]/g) { shift @prefix }
     $s;
 }
