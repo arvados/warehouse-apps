@@ -64,7 +64,7 @@ if ($ENV{MR_LEVEL} == 0)
       die "no fork" if !defined $child;
       if ($child == 0) {
 	my $viewflag = $filename =~ /\.sam(\.gz)?$/i ? "-S" : "";
-	my $gunzip = $filename =~ /\.gz$/ ? "$gzip -cd |" : "";
+	my $gunzip = $filename =~ /\.gz$/ ? "gzip -cd |" : "";
 	open STDOUT, "| $gunzip $sam_path/samtools view -H $viewflag -";
 	print STDOUT $samheader;
 	exit;
@@ -144,7 +144,7 @@ if ($ENV{MR_LEVEL} == 1)
     my $cs_suffix = $ENV{KNOB_COLORSPACE} ? ".cs" : "";
     $filename =~ s/[\'\"\s]//g;
 
-    my $gunzip = $input_gzip ? "$gzip -cd |" : "";
+    my $gunzip = $input_gzip ? "gzip -cd |" : "";
     my $index_args = defined ($index_path) ? "-t $index_path" : "";
     my $rg_args = ($rgs eq "" || $rgs =~ /\|/) ? "" : "-r \"$rgs\"";
     my $sam_view_cmd = "$sam_path/samtools view $samtools_view_s_flag $rg_args $index_args - |";

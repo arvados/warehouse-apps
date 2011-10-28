@@ -177,7 +177,7 @@ if ($ENV{MR_LEVEL} == 1)
     my @readpipeline = ("whget '$input_manifest_key$subdir/${manifest_filename}'");
 
     if ($readfile1 =~ s/\.gz$//) {
-      push @readpipeline, "$gzip -cd";
+      push @readpipeline, "gzip -cd";
     }
 
     if ($readlength) {
