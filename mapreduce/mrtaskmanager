@@ -24,8 +24,9 @@ $ENV{PERLLIB} = "$ENV{MR_REVISION_INSTALLDIR}/usr/share/perl5"
     . ":$ENV{MR_REVISION_SRCDIR}/libwarehouse-perl/lib"
     . ":$ENV{PERLLIB}";
 
+$ENV{GZIP_COMMAND} = 'gzip -n';
 if (scalar `which pigz` && $? == 0) {
-    $ENV{GZIP_COMMAND} = 'pigz';
+    $ENV{GZIP_COMMAND} = 'pigz -T -n';
 }
 
 $ENV{TMPDIR} ||= "/tmp";
