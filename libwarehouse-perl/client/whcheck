@@ -113,7 +113,7 @@ for my $mhash (@datahash) {
 	local $ENV{WAREHOUSE} = $1;
 	$whc = new Warehouse;
     }
-    check_replication ($want_replication, $mhash);
+    check_replication ($want_replication, "$1") while $mhash =~ /([^,]+)/g;
     print STDERR "\n";
 }
 
