@@ -391,7 +391,7 @@ for (my $iteration = 0;
 	{
 	    push @postdata, ($_,
 			     $callbackparam{$_} eq "{}"
-			     ? objToJson ($pipe)
+			     ? json_encode ($pipe)
 			     : $callbackparam{$_});
 	}
 	my $req = $ua->request (POST $callbackurl,
@@ -405,7 +405,7 @@ for (my $iteration = 0;
     }
     elsif ($callbackurl eq "-")
     {
-	print objToJson ($pipe, { "pretty" => 1 });
+	print json_encode ($pipe, { "pretty" => 1 });
 	print "\n";
     }
     elsif ($callbackurl =~ /^\//)
@@ -415,7 +415,7 @@ for (my $iteration = 0;
 	{
 	    print STDERR "Error creating $tmpfile: $!\n";
 	}
-	elsif (!print STATUS objToJson ($pipe, { "pretty" => 1 }))
+	elsif (!print STATUS json_encode ($pipe, { "pretty" => 1 }))
 	{
 	    print STDERR "Error writing $tmpfile: $!\n";
 	    close STATUS;
@@ -932,4 +932,13 @@ sub commit_reachable_from
             if $debugflag;
     }
     return $commit_reachable_from{$parent,$child};
+}
+
+sub json_encode
+{
+    if (exists &to_json) {
+        return to_json(splice @_);
+    } else {
+        return objToJson(splice @_);
+    }
 }
