@@ -193,6 +193,7 @@ while (my $s = $m->subdir_next)
     my $subdir_name = $s->name;
     $subdir_name =~ s{^\.}{};
     if ($subdir_name eq $wantsubdir ||
+	$wantsubdir eq '/**' ||
 	($opt{r} &&
 	 $wantfile eq "" &&
 	 substr($subdir_name, 0, 1 + length $wantsubdir) eq $wantsubdir."/"))
