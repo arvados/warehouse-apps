@@ -17,28 +17,13 @@ use Fcntl ':flock';
 chdir ($ENV{MR_JOBSTEP_TMP})
     or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
 
-# Set up get-evidence source tree
-my $get_dir = $ENV{MR_JOB_TMP}."/get-evidence";
-Safeget::git ($ENV{KNOB_GIT_REPO},
-	      $get_dir,
-	      $ENV{KNOB_GET_VERSION});
-symlink "config.default.py", "$get_dir/server/config.py";
-if (open (L, "+>>", "$get_dir.lock") &&
-    flock (L, LOCK_EX) &&
-    !-l "$get_dir/.build_done") {
-    system ("cd '$get_dir/server' && python setup.py build_ext --inplace") == 0
-	or die "python setup.py build_ext --inplace failed: $?";
-    symlink ".", "$get_dir/.build_done";
-}
-close L;
-$ENV{PYTHONPATH} = "$get_dir/server";
-
-# set up reference data dir
-my $data_dir = $ENV{MR_JOB_TMP}."/data";
-
 my $whc = new Warehouse;
 my $m = new Warehouse::Manifest (whc => $whc,
 				 key => $ENV{MR_INPUT0});
+my $sort_buffer_size = "20%";
+if ($ENV{MR_NODE_SLOTS} >= 1) {
+    $sort_buffer_size = (1 + int(70 / $ENV{MR_NODE_SLOTS})) . "%";
+}
 my $dirindex = -1;
 $m->rewind;
 while (my $s = $m->subdir_next)
@@ -58,19 +43,40 @@ while (my $s = $m->subdir_next)
 	# step for each file in the input.
 	if ($ENV{MR_LEVEL} == 0) {
 	    if ($filename !~ /\.json$/ && $filename ne 'log') {
-		print STDERR "+++mrjobstep 1 $dirindex $fileindex+++\n";
+		print STDERR "+++mrjobstep 1 $dirindex $fileindex --metadata-only+++\n";
+		for my $chromosome (1..22,'X','Y') {
+		    print STDERR "+++mrjobstep 1 $dirindex $fileindex --chromosome chr$chromosome+++\n";
+		}
 	    }
 	    next;
 	}
 
 	# If this isn't the file we're supposed to be working on in
 	# this job step, just move along.
-	if ($ENV{MR_INPUT} ne "$dirindex $fileindex") {
+	my ($di, $fi, @what_part) = split (/ /, $ENV{MR_INPUT});
+	if ($di != $dirindex ||
+	    $fi != $fileindex) {
 	    next;
 	}
 
 	# Finally we're on level 1 (really doing the work) and this is
 	# the file we're supposed to be working on.
+
+	# Set up get-evidence source tree.
+	my $get_dir = $ENV{MR_JOB_TMP}."/get-evidence";
+	Safeget::git ($ENV{KNOB_GIT_REPO},
+		      $get_dir,
+		      $ENV{KNOB_GET_VERSION});
+	symlink "config.default.py", "$get_dir/server/config.py";
+	if (open (L, "+>>", "$get_dir.lock") &&
+	    flock (L, LOCK_EX) &&
+	    !-l "$get_dir/.build_done") {
+	    system ("cd '$get_dir/server' && python setup.py build_ext --inplace") == 0
+		or die "python setup.py build_ext --inplace failed: $?";
+	    symlink ".", "$get_dir/.build_done";
+	}
+	close L;
+	$ENV{PYTHONPATH} = "$get_dir/server";
 
 	# Store the processed data in a subdir named ./{dir}/{filename_base}
 	my $subdir = $s->name;
@@ -87,16 +93,12 @@ while (my $s = $m->subdir_next)
 	    $rename_subdir = 1;
 	}
 
-	# Make a temporary copy of the input file, just called "input"
-	# but with the original filename extensions ("input.{exts}")
+	# Make a temporary copy of the input file, named "$fileno-$dirno"
+	# but with the original filename extensions (e.g., "2-1.gff.gz")
 	$filename =~ /(\.[^\/]*)$/;
-	$filename = "input$1";
-	open GFF, ">", "$filename" or die "open $filename: $!";
-	$s->seek($pos);
-	while (my $dataref = $s->read_until ($pos + $size)) {
-	    print GFF $$dataref or die "write $filename: $!";
-	}
-	close GFF or die "close $filename: $!";
+	$filename = "$dirindex-$fileindex$1";
+	Safeget::wh_stream_segment($s, $pos, $size, "$ENV{MR_JOB_TMP}/$filename");
+	symlink "$ENV{MR_JOB_TMP}/$filename", $filename or die;
 
 	if ($rename_subdir) {
 	    my ($shasum) = `sha1sum $filename` =~ /^([0-9a-f]+)/;
@@ -105,11 +107,17 @@ while (my $s = $m->subdir_next)
 	    }
 	}
 
+	# Set up the reference data.
+	my $data_dir = $ENV{MR_JOB_TMP}."/data";
 	Safeget::wh_tarball_extract ($ENV{KNOB_DATA_TARBALL}, $data_dir);
 	Safeget::wh_file ($ENV{KNOB_GETEV_JSON}, "$data_dir/getev-latest.json.gz");
 	$ENV{CORE} = "$get_dir/server";
 	$ENV{DATA} = $data_dir;
-	system ("$get_dir/server/genome_analyzer.py", "-g", "./$filename") == 0
+	system ("$get_dir/server/genome_analyzer.py",
+		"--genome", "./$filename",
+		"--sort-buffer-size", $sort_buffer_size,
+		@what_part,
+	    ) == 0
 	    or die "genome_analyzer failed: exit $?";
 
 	Safepipe::readfrom ('main::IN',
