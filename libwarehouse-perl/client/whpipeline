@@ -343,7 +343,13 @@ do {
     local $/ = undef;
     $json = <>;
 };
-my $pipe = jsonToObj ($json);
+my $pipe;
+if (exists &from_json) {
+    $pipe = from_json ($json);
+} else {
+    # old JSON API
+    $pipe = jsonToObj ($json);
+};
 $pipe->{"label"} = $label if defined $label;
 my $failed = 0;
 my $more_todo = 1;
