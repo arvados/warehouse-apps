@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+
+chdir ($ENV{MR_JOBSTEP_TMP})
+    or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
+
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc,
+				 key => $ENV{MR_INPUT0});
+$m->rewind;
+while (my $s = $m->subdir_next)
+{
+    my $dir = $s->name;
+    if ($dir !~ /^\.\/[0-9a-f]+-out$/) {
+	warn "Ignoring stream: $dir";
+	next;
+    }
+    if (!-d $dir) {
+	mkdir ($dir) or die "mkdir $dir: $!";
+    }
+
+    my $is_metadata = 0;
+    $s->rewind;
+    while (my ($pos, $size, $filename) = $s->file_next) {
+	last if !defined $pos;
+	$is_metadata = 1 if $filename eq 'missing_coding.json';
+    }
+
+    $s->rewind;
+    while (my ($pos, $size, $filename) = $s->file_next)
+    {
+	last if !defined $pos;
+	if ($filename eq 'ns.gff.gz') {
+	    open OUT, "|gzip -cd >>$dir/ns.gff" or die "gzip open: $!";
+	}
+	elsif (($is_metadata && $filename =~ /^(metadata|missing_coding)\.json/)
+	       ||
+	       (!$is_metadata && $filename =~ /^get-ev(idence|_genes).json/)) {
+	    open OUT, ">>", "$dir/$filename";
+	}
+	else {
+	    next;
+	}
+	$s->seek ($pos);
+	while (my $dataref = $s->read_until ($pos + $size))
+	{
+	    print OUT $$dataref or die "write: $!";
+	}
+	close OUT or die "close: $!";
+    }
+}
+system ('$GZIP_COMMAND */ns.gff') == 0 or die "gzip: $!";
+Safepipe::readfrom ('main::IN',
+		    "whput -r .",
+		    'mrs-output')
+    or die "pipe failed: $!";
+close IN or die "pipe failed: $!";
+exit 0;
