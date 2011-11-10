@@ -7,26 +7,26 @@ sub wh_tarball_extract
     my ($data_locator, $local_dir) = @_;
     $local_dir
 	or die "no local_dir specified";
-    return 1 if -d $local_dir && -e "$local_dir/.locator.".md5_hex($data_locator);
-    if (open (L, "+>>", "$local_dir.lock") &&
-	flock (L, LOCK_EX) )
-    {
-	system ('rm', '-rf', "$local_dir.tmp") == 0
-	    or die "rm $local_dir.tmp failed: $?";
-	mkdir "$local_dir.tmp"
-	    or die "mkdir $local_dir.tmp failed: $!";
-	if (0 != system "whget '$data_locator' - | tar -C '$local_dir.tmp' -xzf -")
-	{
-	    system "rm -rf '$local_dir.tmp'";
-	    close L;
-	    die "whget exited $?";
-	}
-	symlink ".", "$local_dir.tmp/.locator.".md5_hex($data_locator);
-	rename "$local_dir.tmp", "$local_dir"
-	    or die "rename $local_dir.tmp -> $local_dir failed: $!";
+    (open (L, "+>>", "$local_dir.lock") && flock (L, LOCK_EX))
+	or die "Failed to lock $local_dir.lock";
+    if (-d $local_dir &&
+	-e "$local_dir/.locator.".md5_hex($data_locator)) {
+	close L;
+	return 1;
     }
+    system ('rm', '-rf', "$local_dir.tmp") == 0
+	or die "rm $local_dir.tmp failed: $?";
+    mkdir "$local_dir.tmp"
+	or die "mkdir $local_dir.tmp failed: $!";
+    if (0 != system "whget '$data_locator' - | tar -C '$local_dir.tmp' -xzf -")
+    {
+	system "rm -rf '$local_dir.tmp'";
+	die "whget exited $?";
+    }
+    symlink ".", "$local_dir.tmp/.locator.".md5_hex($data_locator);
+    rename "$local_dir.tmp", "$local_dir"
+	or die "rename $local_dir.tmp -> $local_dir failed: $!";
     close L;
-    die "Failed to whget $data_locator -> $local_dir" if !-d $local_dir;
     return 1;
 }
 
