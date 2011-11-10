@@ -95,9 +95,12 @@ sub git {
     $local_dir
 	or die "no local_dir specified";
 
-    my $commit = `git ls-remote '$git_url' '$checkout_tag' | head -c40`;
-    die "Failed to find commit-ish $checkout_tag at $git_url"
-	unless $commit =~ /^[0-9a-f]{40}$/;
+    my $commit = $checkout_tag;
+    if ($commit !~ /^[0-9a-f]{5,40}$/) {
+	$commit = `git ls-remote '$git_url' '$checkout_tag' | head -c40`;
+	die "Failed to find commit-ish $checkout_tag at $git_url"
+	    unless $commit =~ /^[0-9a-f]{40}$/;
+    }
 
     my $sourcetag = md5_hex($git_url.$;.$commit);
     my ($local_dir_basename) = $local_dir =~ /([^\/]+)$/;
