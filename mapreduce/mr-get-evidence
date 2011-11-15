@@ -100,6 +100,16 @@ while (my $s = $m->subdir_next)
 	Safeget::wh_stream_segment($s, $pos, $size, "$ENV{MR_JOB_TMP}/$filename");
 	symlink "$ENV{MR_JOB_TMP}/$filename", $filename or die;
 
+	my $fileext = "";
+	if (open F, "<", $filename) {
+	    my $top;
+	    read F, $top, 8192;
+	    $fileext = ".gz" if $top =~ /\x1f\x8b/;
+	    $fileext = ".bz2" if $top =~ /^BZ.\d\x31\x41\x59\x26\x53\x59/;
+	}
+	rename $filename, $filename.$fileext if $fileext;
+	$filename = $filename.$fileext;
+
 	if ($rename_subdir) {
 	    my ($shasum) = `sha1sum $filename` =~ /^([0-9a-f]+)/;
 	    if ($shasum) {
