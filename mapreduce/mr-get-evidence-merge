@@ -7,6 +7,10 @@ use Safepipe;
 
 chdir ($ENV{MR_JOBSTEP_TMP})
     or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
+mkdir ("out")
+    or die "mkdir out: $!";
+chdir ("out")
+    or die "chdir out: $!";
 
 my $whc = new Warehouse;
 my $m = new Warehouse::Manifest (whc => $whc,
