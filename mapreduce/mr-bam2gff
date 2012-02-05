@@ -16,6 +16,7 @@ chdir ($ENV{MR_JOBSTEP_TMP})
     or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
 
 my $data_dir = $ENV{MR_JOB_TMP}."/data";
+mkdir $data_dir;
 Safeget::wh_tarball_extract ("$ENV{KNOB_SAM}/samtools.tgz", "$data_dir/samtools");
 Safeget::wh_manifest_tree ($ENV{KNOB_REFERENCE}, "$data_dir/ref");
 
