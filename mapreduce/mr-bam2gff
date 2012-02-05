@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:call variants from aligned bam file; output as gff
+###MR_INPUT:manifest
+###MR_KNOBS:SAM=3355183d4edd617f275fec9d457f131d+72+K@ant
+###MR_KNOBS:REFERENCE=b23dbd27a12af10f2725b567df162e23+2355+K@ant
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safeget;
+
+chdir ($ENV{MR_JOBSTEP_TMP})
+    or die "chdir $ENV{MR_JOBSTEP_TMP}: $!";
+
+my $data_dir = $ENV{MR_JOB_TMP}."/data";
+Safeget::wh_tarball_extract ("$ENV{KNOB_SAM}/samtools.tgz", "$data_dir/samtools");
+Safeget::wh_manifest_tree ($ENV{KNOB_REFERENCE}, "$data_dir/ref");
+
+my $ref_file = `ls -1 $data_dir/ref/*.fa`;
+chomp ($ref_file);
+
+my $build;
+($ref_file =~ /hg19.fa$/ && ($build = 'b37')) or
+($ref_file =~ /hg18.fa$/ && ($build = 'b36')) or
+(($build) = $ref_file =~ m{([^/]*)$});
+
+warn "Using $ref_file as ref.fa";
+
+$ENV{KNOB_COMMAND} = "samtools pileup -vcf $ref_file - | $data_dir/samtools/misc/samtools.pl varFilter - | awk '\$6>=20' | mrs-snp2gff | sed '1i ##genome-build $build' | mrs-chrstatus";
+$ENV{KNOB_OUTPUTNAME} = '%F.gff.gz';
+$ENV{KNOB_NO_GUNZIP} = '1';
+
+exec 'mr-filefilter';

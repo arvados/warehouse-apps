@@ -192,7 +192,7 @@ sub level1
     exit 0;
   }
   Safepipe::readfrom ("main::S",
-		      ["main::INSTREAM", "gzip -cdf"],
+		      ["main::INSTREAM", (defined($ENV{KNOB_NO_GUNZIP}) ? "cat" : "gzip -cdf")],
 		      split (/\|/, $ENV{KNOB_COMMAND}),
 		      $ENV{KNOB_OUTPUTNAME} =~ /\.gz$/ ? "gzip -cn" : (),
 		      "mrs-store '$outdir' '$ENV{KNOB_OUTPUTNAME}'",

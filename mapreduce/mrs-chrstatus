@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+my $expect = $ARGV[0] || 23;
+my %saw;
+
+while (<>)
+{
+  if (/^chr(\S+)/ && !exists $saw{$1}) {
+    $saw{$1} = 1;
+    printf STDERR "#status %d\n", (100 * ((scalar keys %saw) - 1) / $expect);
+  }
+  print;
+}
+print STDERR "#status 100\n";
+

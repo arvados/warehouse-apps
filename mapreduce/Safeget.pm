@@ -2,6 +2,34 @@ package Safeget;
 use Fcntl ':flock';
 use Digest::MD5 'md5_hex';
 
+sub wh_manifest_tree
+{
+    my ($data_locator, $local_dir) = @_;
+    $local_dir
+	or die "no local_dir specified";
+    (open (L, "+>>", "$local_dir.lock") && flock (L, LOCK_EX))
+	or die "Failed to lock $local_dir.lock";
+    if (-d $local_dir &&
+	-e "$local_dir/.locator.".md5_hex($data_locator)) {
+	close L;
+	return 1;
+    }
+    system ('rm', '-rf', "$local_dir.tmp") == 0
+	or die "rm $local_dir.tmp failed: $?";
+    mkdir "$local_dir.tmp"
+	or die "mkdir $local_dir.tmp failed: $!";
+    if (0 != system "whget -r '$data_locator'/ '$local_dir.tmp'/")
+    {
+	system "rm -rf '$local_dir.tmp'";
+	die "whget exited $?";
+    }
+    symlink ".", "$local_dir.tmp/.locator.".md5_hex($data_locator);
+    rename "$local_dir.tmp", "$local_dir"
+	or die "rename $local_dir.tmp -> $local_dir failed: $!";
+    close L;
+    return 1;
+}
+
 sub wh_tarball_extract
 {
     my ($data_locator, $local_dir) = @_;
