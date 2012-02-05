@@ -7,7 +7,7 @@
 	 {"name": "REFERENCE", "value": "b23dbd27a12af10f2725b567df162e23+2355+K@ant"},
 	 {"name": "INPUT", "data_locator": null}],
 	"max_nodes": 1,
-	"max_steps_per_node": 1}
+	"max_steps_per_node": 1},
      {"name": "xref", "function": "get-evidence", "params":
         [{"name": "DATA_TARBALL", "value": "a8948d1a428977c9dce50415b2e5938b+1476+K@templeton/analysis_data.tar.gz"},
 	 {"name": "GETEV_JSON", "value": "9ab707253e5983349af382964ac05c34+86+K@templeton/getev-latest.json.gz"},
