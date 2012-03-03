@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+
+use JSON;
+use Safeget;
+
+if ($ENV{LAST_INFILENAME} ne 'get-evidence.json') {
+    exec ('cat');
+    die;
+}
+
+my $json = new JSON;
+eval { $json->allow_blessed; }; # new version of JSON
+local $JSON::ConvBlessed = 1; # old version
+
+$data_dir = $ENV{MR_JOB_TMP};
+Safeget::wh_file ($ENV{KNOB_GETEV_JSON}, "$data_dir/getev-latest.json.gz");
+
+my %latest;
+open LATEST, '-|', 'gzip', '-cdf', "$data_dir/getev-latest.json.gz";
+while (<LATEST>) {
+    my $variant = eval { $json->decode ($_) } || $json->jsonToObj ($_);
+    warn "unreadable $_", next if !$variant;
+    if ($variant->{dbsnp_id}) {
+	$latest{$variant->{dbsnp_id}} = $variant;
+    }
+    if ($variant->{aa_change}) {
+	$latest{$variant->{gene}, $variant->{aa_change_short}} = $variant;
+    }
+}
+
+my %copyto = qw{
+overall_frequency_n num
+overall_frequency_d denom
+qualified_impact qualified_impact
+impact impact
+in_omim in_omim
+in_pharmgkb in_pharmgkb
+in_gwas in_gwas
+summary_short summary_short
+variant_quality variant_quality
+max_or_disease_name max_or_disease_name
+max_or_or max_or_or
+pph2_score pph2_score
+genetests_testable genetests_testable
+genetests_reviewed genetests_reviewed
+gene_in_genetests gene_in_genetests
+suff_eval suff_eval
+};
+
+while (<>)
+{
+    my $orig = $_;
+    my $hit = eval { $json->decode ($_) } || $json->jsonToObj ($_);
+    my $variant;
+    if ($hit->{amino_acid_change}) {
+	my $aa_change = $hit->{amino_acid_change};
+	$aa_change =~ s/\*/X/;
+	$variant = $latest{$hit->{gene}, $aa_change};
+    }
+    if (!$variant) {
+	for (split (',', $hit->{dbSNP})) {
+	    $variant = $variant || $latest{$_};
+	}
+    }
+    if ($variant) {
+	$hit->{'GET-Evidence'} = JSON::true;
+	for (keys %copyto) {
+	    if (exists $variant->{$_}) {
+		$hit->{$copyto{$_}} = $variant->{$_};
+	    }
+	}
+	my $out = eval { $json->encode ($hit) } || $json->objToJson ($hit);
+	print "$out\n";
+    } else {
+	print $orig;
+    }
+}
