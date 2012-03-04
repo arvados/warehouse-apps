@@ -54,7 +54,7 @@ while (<>)
     my $variant;
     if ($hit->{amino_acid_change}) {
 	my $aa_change = $hit->{amino_acid_change};
-	$aa_change =~ s/\*/X/;
+	$aa_change =~ s/\*/X/g;
 	$variant = $latest{$hit->{gene}, $aa_change};
     }
     if (!$variant) {
@@ -63,7 +63,7 @@ while (<>)
 	}
     }
     if ($variant) {
-	$hit->{'GET-Evidence'} = JSON::true;
+	$hit->{'GET-Evidence'} = "Y";
 	for (keys %copyto) {
 	    if (exists $variant->{$_}) {
 		$hit->{$copyto{$_}} = $variant->{$_};
