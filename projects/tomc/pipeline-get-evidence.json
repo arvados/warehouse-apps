@@ -16,6 +16,7 @@
      {"name": "refresh", "function": "filefilter", "params":
 	[{"name": "GETEV_JSON", "value": "7295ea70f1a51bf118ee12b329927f2b+80+K@ant/getev-latest.json.gz"},
          {"name": "COMMAND", "value": "mrs-get-evidence-refresh"},
+         {"name": "OUTPUTNAME", "value": "%F"},
          {"name": "INPUT", "from_step": 1}],
 	"max_nodes": 1,
 	"max_steps_per_node": 2}
