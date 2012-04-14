@@ -1,0 +1,117 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+whput-n - compute block hashes for a local file
+
+=head1 SYNOPSIS
+
+ whput-n [options] localfile
+ whput-n [options] -
+
+=head1 DESCRIPTION
+
+B<whput-n> shows you the block hashes that would be written to the warehouse if you used whput to store the specified file.
+
+=head1 OPTIONS
+
+=over
+
+=item --as-stream
+
+Output a manifest to standard output (this is the default).
+
+=item --progress
+
+Display progress indicator on stderr (suitable for tty if stdout is
+redirected somewhere other than the same tty).
+
+=item --batch-progress
+
+Display progress indicator on stderr (suitable for scripts).
+
+=item --block-size=N
+
+Calculate hashes of N-byte blocks (default 2**26)
+
+=back
+
+=cut
+
+use strict;
+
+use Digest::MD5;
+
+$main::opt{'block-size'} = 2**26;
+while ($ARGV[0] =~ /^-(?:-(\S+?)(=(.*))?|([^-]+))$/)
+{
+    if ($4) { map { $main::opt{$_}++ } split ("", $4); }
+    else { $main::opt{$1} = defined ($2) ? $3 : 1; }
+    shift @ARGV;
+}
+print STDERR map { "opt{$_} = $main::opt{$_}\n" } keys %main::opt
+    if $main::opt{v} >= 3;
+
+
+my $localbase = shift @ARGV or usage();
+@ARGV == 0 or usage();
+
+
+if ($localbase eq "-" || -f $localbase)
+{
+    my $filesize = -s $localbase;
+    if ($localbase eq '-') {
+	open F, "<&STDIN" or die "can't reopen stdin: $!";
+    } else {
+	open F, '<', $localbase or die "can't open $localbase: $!";
+    }
+    my $bytes_total = 0;
+    my $part_bytes = 0;
+    my $buf = '';
+    my $m = Digest::MD5->new;
+    my $starttime = time;
+    $| = 1;
+    print ". ";
+    while (1) {
+	my $bytes = read F, $buf, $main::opt{'block-size'} - $part_bytes;
+	die "read failed: $!" if !defined $bytes;
+	$bytes_total += $bytes;
+	$m->add($buf);
+	if ($bytes == 0 || length($buf) == $main::opt{'block-size'} - $part_bytes) {
+	    print $m->hexdigest, " ";
+	    $m = Digest::MD5->new;
+	    $part_bytes = 0;
+	}
+	$buf = '';
+	if ($main::opt{'progress'}) {
+	    my $percent = "";
+	    if ($filesize > 0) {
+		$percent = sprintf (" %4.1f%%", 100 * $bytes_total / $filesize);
+	    }
+	    my $MBps = "";
+	    if (time - $starttime > 0) {
+		$MBps = sprintf ("%.3f MB/s", $bytes_total / (time - $starttime) / 1000000);
+	    };
+	    print STDERR "\r$bytes_total / $filesize$percent $MBps         ";
+	}
+	if ($main::opt{"batch-progress"}) {
+	    printf STDERR "%d bytes read\n", $bytes_total;
+	}
+	last if $bytes == 0;
+    }
+    close F;
+    print " $localbase\n";
+    print "\n";
+    print STDERR "\n" if $main::opt{'progress'};
+}
+else
+{
+    usage();
+}
+
+
+sub usage
+{
+    system ("pod2usage $0");
+    exit 1;
+}

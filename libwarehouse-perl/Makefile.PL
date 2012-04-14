@@ -21,6 +21,7 @@ WriteMakefile
 		   'client/whmount',
 		   'client/whpipeline',
 		   'client/whput',
+		   'client/whput-n',
 		   'client/rwhence',
 		   'server/memcached-install.sh',
 		   'server/memcached-show-servers.pl',
