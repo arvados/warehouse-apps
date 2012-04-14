@@ -1234,7 +1234,7 @@ sub fetch_from_keep
 	    $data = "";
 	    my $bytes = 0;
 	    do {
-		$bytes = sysread F, $data, 2**26, length($data);
+		$bytes = read F, $data, 2**26, length($data);
 	    } while ($bytes > 0);
 	    close F or undef $data;
 	    $headers = $data if $method eq 'HEAD';
@@ -2577,7 +2577,7 @@ sub _encrypt_block
 	my $enc = "";
 	my $inbytes;
 	do {
-	    $inbytes = sysread READER0, $enc, 2**26, length($enc);
+	    $inbytes = read READER0, $enc, 2**26, length($enc);
 	} while ($inbytes > 0);
 	if (!defined $inbytes) { die "Read error: $!"; }
 	close READER0 or die "Close: $!";
@@ -2689,7 +2689,7 @@ sub _decrypt_block
     my $decrypted = "";
     my $inbytes;
     do {
-	$inbytes = sysread D, $decrypted, 2**26, length($decrypted);
+	$inbytes = read D, $decrypted, 2**26, length($decrypted);
     } while ($inbytes > 0);
     if (!defined $inbytes) { $decrypted = ""; }
     if (!close D) { $decrypted = ""; }
