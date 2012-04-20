@@ -30,7 +30,8 @@ my $build;
 
 warn "Using $ref_file as ref.fa";
 
-$ENV{KNOB_COMMAND} = "$data_dir/samtools/samtools pileup -vcf $ref_file - | $data_dir/samtools/misc/samtools.pl varFilter - | awk '\$6>=20' | mrs-snp2gff | sed '1i ##genome-build $build' | mrs-chrstatus";
+$ENV{PATH} = "$data_dir/samtools:".$ENV{PATH};
+$ENV{KNOB_COMMAND} = "mrs-bam-sn-fix | $data_dir/samtools/samtools pileup -vcf $ref_file - | $data_dir/samtools/misc/samtools.pl varFilter - | awk '\$6>=20' | mrs-snp2gff | sed '1i ##genome-build $build' | mrs-chrstatus";
 $ENV{KNOB_OUTPUTNAME} = '%F.gff.gz';
 $ENV{KNOB_NO_GUNZIP} = '1';
 

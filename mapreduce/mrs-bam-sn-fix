@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+samtools view -h - \
+ | perl -lape 'if(/^\@/){ s/SN:(\d\d?|X|Y|M)\t/SN:chr$1\t/ } else { s/(\S+\t\S+\t)(\d\d?|X|Y|M)/${1}chr$2/ }' \
+ | samtools view -h -S -b -
