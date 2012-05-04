@@ -79,7 +79,7 @@ while (<>)
 		}
 	    }
 	    elsif ($_ eq '*') {
-		push @bp, '-';
+		push @bp, $ref_bp;
 	    }
 	    else {
 		$error = "#indel-format-error#";
