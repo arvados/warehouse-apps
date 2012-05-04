@@ -2,7 +2,8 @@
 
 use strict;
 
-my %addslashes = qw(A A
+my %addslashes = qw(* -
+		    A A
 		    C C
 		    G G
 		    T T
@@ -22,16 +23,94 @@ my %addslashes = qw(A A
 while (<>)
 {
     chomp;
+    my $error = "";
     my @in = split;
     next if $in[1] !~ /^\d+$/;
+    my $ref_bp = uc $in[2];
+    my $start = $in[1];
+    my $end = $in[1];
     my $bp = $addslashes{uc $in[3]};
-    next if !$bp;
+    my $read_depth = 0;
+    if ($ref_bp eq '*') {
+	# parse indel from samtools pileup -vcf
+
+	$ref_bp = '-';
+
+	# '-A/-AC' -> ('-A', '-AC')
+	my @indel = split ('/', uc($in[3]));
+
+	# figure out ref sequence (i.e., longest deletion)
+	my $ref_length = 0;
+	for (@indel) {
+	    if (/^-([ACGT]+)$/ && length($1) > $ref_length) {
+		$ref_length = length($1);
+		$ref_bp = $1;
+	    }
+	}
+
+	$end = $start + $ref_length - 1;
+
+	# figure out inserted/substituted sequences
+	my @bp;
+	for (@indel) {
+	    if (/^\+([ACGT]+)$/) {
+		push @bp, $1;
+	    }
+	    elsif (/^-([ACGT]+)$/) {
+		if (length($1) == $ref_length) {
+		    # entire specified region deleted
+		    push @bp, '-';
+		}
+		else {
+		    # (Noting [length($1) < $ref_length] is always
+		    # true here) Some of the ref_bp are not deleted on
+		    # this copy. samtools tells us which bp *are*
+		    # deleted; we want to output the bp that *are not*
+		    # deleted.
+		    my $deleted = $1;
+		    if ($ref_bp =~ /^(.*)\Q$deleted\E(.*)$/) {
+			push @bp, "$1$2";
+		    }
+		    else {
+			# Well, this is awkward.  If we get here,
+			# samtools must think the reference is
+			# heterozygous.
+			$error = "#indel-ref-error#";
+		    }
+		}
+	    }
+	    elsif ($_ eq '*') {
+		push @bp, '-';
+	    }
+	    else {
+		$error = "#indel-format-error#";
+	    }
+	}
+	pop @bp if (2 == @bp && $bp[0] eq $bp[1]);
+	$bp = join ('/', @bp);
+	$read_depth = $in[10] + $in[11];
+    }
+    else {
+	$read_depth = length $in[8];
+    }
     next if $bp eq "A/C/G/T";
+    my $feature = 'INDEL';
+    if ($start == $end && $bp =~ /^([ACGT]\/)*[ACGT]$/) {
+	$feature = 'SNP';
+    } elsif ($bp =~ /^([ACGT]+)\/([ACGT]+)$/ &&
+	     length $1 == length $2 &&
+	     length $1 == length $ref_bp) {
+	$feature = 'SUB';
+    }
+    next if $feature eq 'INDEL' && $in[5] < 800; # snp quality
+    next if $feature eq 'INDEL' && $in[10] < 6; # reads supporting first 1st
+    next if $feature eq 'INDEL' && $in[11] < 6; # reads supporting first 2nd
+    print $error;
     print join ("\t",
 		$in[0],
-		"maq", "SNP",
-		$in[1], $in[1],
+		"bam", $feature,
+		$start, $end,
 		".", "+", ".",
-		"alleles $bp;ref_allele $in[2];read_depth $in[5]");
+		"alleles $bp;ref_allele $ref_bp;read_depth $read_depth");
     print "\n";
 }
