@@ -30,7 +30,6 @@ while (<>)
     my $start = $in[1];
     my $end = $in[1];
     my $bp = $addslashes{uc $in[3]};
-    my $read_depth = 0;
     if ($ref_bp eq '*') {
 	# parse indel from samtools pileup -vcf
 
@@ -88,10 +87,6 @@ while (<>)
 	}
 	pop @bp if (2 == @bp && $bp[0] eq $bp[1]);
 	$bp = join ('/', @bp);
-	$read_depth = $in[10] + $in[11];
-    }
-    else {
-	$read_depth = length $in[8];
     }
     next if $bp eq "A/C/G/T";
     my $feature = 'INDEL';
@@ -102,15 +97,18 @@ while (<>)
 	     length $1 == length $ref_bp) {
 	$feature = 'SUB';
     }
-    next if $feature eq 'INDEL' && $in[5] < 800; # snp quality
-    next if $feature eq 'INDEL' && $in[10] < 6; # reads supporting first 1st
-    next if $feature eq 'INDEL' && $in[11] < 6; # reads supporting first 2nd
+    my $additional = ";consq $in[4];snpq $in[5]";
+    if ($feature eq 'INDEL') {
+	next if $in[4] < 300; # consensus quality
+	next if $in[5] < 500; # snp quality
+	$additional .= ";call_depth $in[8],$in[10],$in[9],$in[11],N,$in[12]";
+    }
     print $error;
     print join ("\t",
 		$in[0],
 		"bam", $feature,
 		$start, $end,
 		".", "+", ".",
-		"alleles $bp;ref_allele $ref_bp;read_depth $read_depth");
+		"alleles $bp;ref_allele $ref_bp;read_depth $in[7]$additional");
     print "\n";
 }
