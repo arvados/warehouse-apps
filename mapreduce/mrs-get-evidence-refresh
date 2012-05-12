@@ -8,6 +8,8 @@ if ($ENV{LAST_INFILENAME} ne 'get-evidence.json') {
     die;
 }
 
+open STDOUT, '|-', 'mrs-esp-freq' if exists $ENV{'KNOB_ESP_TARBALL'};
+
 my $json = new JSON;
 eval { $json->allow_blessed; }; # new version of JSON
 local $JSON::ConvBlessed = 1; # old version
