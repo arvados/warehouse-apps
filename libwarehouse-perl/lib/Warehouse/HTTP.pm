@@ -1,13 +1,23 @@
 package Warehouse::HTTP;
 
 BEGIN {
-    eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
+    eval {
+	if (`which curl 2>/dev/null` =~ m{/curl}) {
+	    $Warehouse::HTTP::useCurlCmd = 1;
+	}
+    };
+    # libghttp seems to be the fastest perl http library.
+    # Unfortunately, 'eval "use HTTP::GHTTP"' crashes perl if you
+    # install libhttp-ghttp-perl on an ubuntu system and then upgrade
+    # past ~maverick without removing it. "/usr/bin/perl: symbol
+    # lookup error: /usr/lib/perl5/auto/HTTP/GHTTP/GHTTP.so: undefined
+    # symbol: Perl_Tstack_sp_ptr"
+    if (`perl -e 'use HTTP::GHTTP; print "ok"' 2>/dev/null` eq 'ok') {
+	eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
+    } else {
+	$@ = 1;
+    }
     if ($@) {
-	eval {
-	    if (`which curl 2>/dev/null` =~ m{/curl}) {
-		$Warehouse::HTTP::useCurlCmd = 1;
-	    }
-	};
 	eval "use LW2; \$Warehouse::HTTP::useLW2 = 1;";
     }
     if ($@) {
