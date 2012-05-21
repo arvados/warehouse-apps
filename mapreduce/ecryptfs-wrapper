@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; indent-tabs-mode: nil; -*-
 use strict qw( vars );
 use Getopt::Long;
 
@@ -15,13 +16,19 @@ $NAME =~ s/^\.\///;
 
 sub usage_information {
   my $retval;
-  $retval .= "\n$NAME takes these arguments:\n";
-  $retval .= " $NAME -d <directory> -p <program> [-a <arguments>] [-v]\n\n";
-  $retval .= "  <directory>     the mount point for the encrypted directory. Must not exist.\n";
-  $retval .= "  <program>       the program to run after mounting the encrypted directory\n";
-  $retval .= "  <arguments>     optional arguments for the program to run after mounting the encrypted directory\n";
-  $retval .= "  -v (optional)   be more verbose - handy for debugging\n\n";
-  return $retval;
+  return qq{
+Usage:
+
+$NAME -d <directory> -p <program> [-a <arguments>] [-v] [-n]
+
+<directory>     the mount point for the encrypted directory
+<program>       the program to run after mounting the encrypted directory
+<arguments>     optional arguments for the program to run after mounting
+                the encrypted directory
+-n              fail if the directory exists, instead of trying to unmount
+                and remove the directory if it already exists
+-v              be more verbose, for debugging
+};
 }
 
 sub run {
@@ -39,19 +46,39 @@ sub run {
 }
 
 
+sub realpath {
+  my $directory = shift;
+  my $dir_quoted = $directory;
+  $dir_quoted =~ s/(\W)/\\$1/g;
+  my $realdir = `realpath $dir_quoted`;
+  chomp ($realdir);
+  return $realdir;
+}
+
+
 sub main {
   # First read the parameter(s)
   # note: you could use -s or --server to specify them
   my $directory = '';
   my $program = '';
   my $arguments = '';
+  my $noremovefirst = 0;
 
-  GetOptions ("directory=s" => \$directory, "program=s" => \$program, "arguments=s" => \$arguments, "verbose" => \$debug);
+  GetOptions ("directory=s" => \$directory, "program=s" => \$program, "arguments=s" => \$arguments, "verbose" => \$debug, "noremovefirst" => \$noremovefirst);
 
   if (($directory eq '') || ($program eq '')) {
     print STDERR "\nERROR: You have not supplied all required parameters.\n";
     print &usage_information();
     exit(1);
+  }
+
+  if (!$noremovefirst && -d $directory) {
+    my $realdir = realpath($directory);
+    if ($realdir) {
+      system ("fuser", "-k", "--ismountpoint", "--mount", $realdir);
+    }
+    system ("sudo", "/bin/umount", $directory);
+    rmdir ($directory);
   }
 
   if (-e $directory) {
@@ -72,7 +99,7 @@ sub main {
   &run("ERROR: unable to mount '$directory'",('sudo', '/bin/mount', '-t', 'ecryptfs', "$directory", "$directory", '-o', "key=passphrase:passwd=$PASS:salt=$SALT,ecryptfs_cipher=aes,ecryptfs_key_bytes=16,ecryptfs_passthrough=n,no_sig_cache,verbosity=0"));
 
   my $exitcode;
-  if (0 == system($program,split(/ /,$arguments))) {
+  if (0 == system("$program $arguments")) {
     $exitcode = 0;
   }
   else {
@@ -84,6 +111,11 @@ sub main {
     }
   }
 
+  my $realdir = realpath($directory);
+  if ($realdir) {
+    system ("fuser", "-k", "--ismountpoint", "--mount", $realdir);
+  }
+
   0 == system ("sudo", "/bin/umount", $directory)
       or warn "$0: warning: failed to sudo /bin/umount '$directory'\n";
 
@@ -93,4 +125,3 @@ sub main {
 
   exit ($exitcode);
 }
-
