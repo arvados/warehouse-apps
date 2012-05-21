@@ -12,6 +12,7 @@ BEGIN {
     # past ~maverick without removing it. "/usr/bin/perl: symbol
     # lookup error: /usr/lib/perl5/auto/HTTP/GHTTP/GHTTP.so: undefined
     # symbol: Perl_Tstack_sp_ptr"
+    local $ENV{PATH} = '/bin:/usr/bin'; # avoids "insecure $ENV{PATH} while running with -T" (or setuid)
     if (`perl -e 'use HTTP::GHTTP; print "ok"' 2>/dev/null` eq 'ok') {
 	eval "use HTTP::GHTTP; \$Warehouse::HTTP::useGHTTP = 1;";
     } else {
