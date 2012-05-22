@@ -1878,6 +1878,7 @@ sub _sign
     if (exists $ENV{"SIGN_AS"}) {
 	push @command_args, "--local-user", $ENV{"SIGN_AS"};
     }
+    push @command_args, "--no-permission-warning";
 
     my $pid = $gnupg->clearsign( handles => $handles,
 				 command_args => \@command_args );
