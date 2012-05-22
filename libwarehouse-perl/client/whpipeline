@@ -225,9 +225,16 @@ if ($helpflag)
 if (defined $lockfile)
 {
     open LOCKFILE, ">>", $lockfile or die "Can't open lockfile $lockfile: $!";
-    if (!flock LOCKFILE, Fcntl::LOCK_EX | Fcntl::LOCK_NB) {
-	warn "Could not lock $lockfile: $!" if $debugflag;
-	exit 0;
+    eval {
+        local $SIG{ALRM} = sub { die "alarm\n" };
+        alarm 1;
+        flock LOCKFILE, Fcntl::LOCK_EX;
+        alarm 0;
+    };
+    if ($@) {
+        die unless $@ eq "alarm\n";
+        warn "Could not lock $lockfile: $!" if $debugflag;
+        exit 0;
     }
 }
 
