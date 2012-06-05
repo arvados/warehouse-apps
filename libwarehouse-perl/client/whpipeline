@@ -412,7 +412,7 @@ for (my $iteration = 0;
     }
     elsif ($callbackurl eq "-")
     {
-	print json_encode ($pipe, { "pretty" => 1 });
+	print json_encode ($pipe);
 	print "\n";
     }
     elsif ($callbackurl =~ /^\//)
@@ -422,7 +422,7 @@ for (my $iteration = 0;
 	{
 	    print STDERR "Error creating $tmpfile: $!\n";
 	}
-	elsif (!print STATUS json_encode ($pipe, { "pretty" => 1 }))
+	elsif (!print STATUS json_encode ($pipe))
 	{
 	    print STDERR "Error writing $tmpfile: $!\n";
 	    close STATUS;
