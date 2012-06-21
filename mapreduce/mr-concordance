@@ -1,9 +1,15 @@
 #!/usr/bin/perl
 
 use strict;
+use Warehouse;
+use Warehouse::Manifest;
+
+my $whc = new Warehouse;
 
 close STDIN;
-open STDOUT, "|bash -c 'set -o pipefail; whput --as-stream --use-filename=concordance.html - | mrs-output'" or die $!;
+if ($ENV{MR_JOB_ID}) {
+    open STDOUT, "|bash -c 'set -o pipefail; whput --as-stream --use-filename=concordance.html - | mrs-output'" or die $!;
+}
 
 my @x;
 for (my $i=0; exists $ENV{"KNOB_X$i"}; $i++)
@@ -11,11 +17,30 @@ for (my $i=0; exists $ENV{"KNOB_X$i"}; $i++)
     push @x, $ENV{"KNOB_X$i"};
     $x[-1] .= ":X$i" if $x[-1] !~ /:/;
 }
+
 my @y;
 for (my $i=0; exists $ENV{"KNOB_Y$i"}; $i++)
 {
     push @y, $ENV{"KNOB_Y$i"};
     $y[-1] .= ":Y$i" if $y[-1] !~ /:/;
+}
+
+for my $XY ('X', 'Y') {
+    if ($ENV{"KNOB_$XY"}) {
+	my $m = new Warehouse::Manifest ('whc' => $whc,
+					 'key' => $ENV{"KNOB_$XY"});
+	$m->rewind;
+	while (my $s = $m->subdir_next) {
+	    $s->rewind;
+	    while (my ($pos, $len, $name) = $s->file_next) {
+		last if !defined $pos;
+		my $z = $ENV{"KNOB_$XY"} . "/" . $s->name . "/$name:$name";
+		$z =~ s{/./}{/}g;
+		if ($XY eq 'X') { push @x, $z; }
+		else { push @y, $z }
+	    }
+	}
+    }
 }
 
 print "<TABLE>";
@@ -133,12 +158,13 @@ sub readsnplist
     $file =~ s/:.*//;
     if ($file =~ /^[0-9a-f]{32}/ && !-e $file)
     {
-	open STDIN, "-|", "whget", "-r", $file, "-" or die "whget: $!";
-	open STDIN, "-|", "gzip", "-cdf" or die "gzip: $!";
+	warn "$file: whget -r {} - | gzip -cdf\n" if $ENV{DEBUG};
+	open STDIN, "-|", "whget -r '$file' - | gzip -cdf" or die "whget|gzip -cdf: $!";
     }
     else
     {
-	open STDIN, "<", $file or die "$file: $!";
+	warn "$file: open\n" if $ENV{DEBUG};
+	open STDIN, "-|", "gzip", "-cdf", $file or die "$file: $!";
     }
     my @snplist;
     while (<STDIN>)
@@ -155,10 +181,27 @@ sub readsnplist
 	       $fields[8] =~ /alleles ([A-Z\/]+)\b/i)
 	{
 	    my ($chr, $pos, $seqbp) = (@fields[0,3], $1);
+	    next unless $seqbp =~ /^[A-Z](\/[A-Z])?$/i;
+	    if ($ENV{'KNOB_RSID_ONLY'}) {
+		while ($fields[8] =~ /[:,]rs(\d+)/g) {
+		    push @snplist, ['rs', $1, fasta2bin ($seqbp)];
+		}
+	    } else {
+		push @snplist, [$chr, $pos, fasta2bin ($seqbp)];
+	    }
+	}
+	elsif ($ENV{'KNOB_RSID_ONLY'} &&
+	       $fields[2] =~ /^[ACGT]$/ &&
+	       $fields[3] =~ /^[ACGT]$/ &&
+	       $fields[0] =~ /^rs(\d+)/)
+	{
+	    # immunochip
+	    my ($chr, $pos, $seqbp) = ('rs', $1, $fields[2] . $fields[3]);
 	    push @snplist, [$chr, $pos, fasta2bin ($seqbp)];
 	}
     }
     close STDIN or die "input: $!";
+    warn "$file: \$#snplist == $#snplist\n" if $ENV{DEBUG};
     return [ sort { $a->[0] cmp $b->[0] || $a->[1] <=> $b->[1] } @snplist ];
 }
 
