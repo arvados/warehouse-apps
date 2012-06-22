@@ -40,6 +40,7 @@ in_pharmgkb in_pharmgkb
 in_gwas in_gwas
 summary_short summary_short
 variant_quality variant_quality
+quality_scores quality_scores
 max_or_disease_name max_or_disease_name
 max_or_or max_or_or
 pph2_score pph2_score
@@ -71,7 +72,18 @@ while (<>)
 		$hit->{$copyto{$_}} = $variant->{$_};
 	    }
 	}
+	if (!exists $variant->{'suff_eval'}) {
+	    $hit->{'suff_eval'} = ($hit->{'qualified_impact'} =~ /insufficiently evaluated/i) ? JSON::False : JSON::True;
+	}
+	if (!exists $variant->{'quality_scores'}) {
+	    $hit->{'quality_scores'} = [map {
+		exists($variant->{'qualityscore_'.$_}) ? $variant->{'qualityscore_'.$_} : '-'
+	    } qw(in_silico in_vitro case_control familial severity treatability penetrance)];
+	    $hit->{'variant_quality'} = join ('', @{$hit->{'quality_scores'}});
+	}
 	my $out = eval { $json->encode ($hit) } || $json->objToJson ($hit);
+	$out =~ s/"JSON::True"/true/g;
+	$out =~ s/"JSON::False"/false/g;
 	print "$out\n";
     } else {
 	print $orig;
