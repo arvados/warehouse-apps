@@ -1,0 +1,85 @@
+#!/usr/bin/env perl
+
+open TABLE, '-|', 'whget', $ENV{KNOB_BEADCHIP_MANIFEST} or die;
+my $section;
+my @columns;
+my %colnum;			# column name -> column index
+my $got = 0;
+while (<TABLE>)
+{
+    if (/^\[(.*)\]/) {
+	$section = $1;
+    }
+    elsif ($section eq 'Assay') {
+	my @row = split /,/;
+	if ($#columns == -1) {
+	    @columns = @row;
+	    for my $i (0..$#columns) {
+		$colnum{$row[$i]} = $i;
+	    }
+	} else {
+	    my $build = $row[$colnum{'GenomeBuild'}];
+	    my $chr = $row[$colnum{'Chr'}];
+	    my $pos = $row[$colnum{'MapInfo'}];
+	    my $strand = $row[$colnum{'IlmnStrand'}];
+	    my $topseq = $row[$colnum{'TopGenomicSeq'}];
+	    my ($alleles) = $topseq =~ /\[-?\/?(.*?)\]/;
+	    for ($strand) { s/TOP/PLUS/; s/BOT/MINUS/; }
+
+	    $chr = 'X' if $chr eq 'XY'; # xxx fixme ... questionable
+	    next if $chr eq 'MT';
+
+	    if ($chr !~ /^(\d+|X|Y)$/ || $pos !~ /^\d+$/ || $strand !~ /^(PLUS|MINUS)$/) {
+		warn "Can't make sense of chr:pos:strand $chr:$pos:$strand in beadchip manifest";
+		next;
+	    }
+	    $chrpos{$row[$colnum{'Name'}]} = "$build:$chr:$pos:$strand:$alleles";
+	    ++$got;
+	}
+    }
+}
+warn "Found $got variants in lookup table manifest\n";
+close TABLE or die "Table reader failed";
+
+print "##genome-build b36\n";
+while (<>)
+{
+    my ($varname, $sample_id, $allele_a, $allele_b, $x) = split;
+    if (!exists $chrpos{$varname}) {
+	warn "Variant id $varname does not appear in lookup table, skipping";
+	next;
+    }
+    my ($build, $chr, $pos, $key_strand, $key_alleles) = split /:/, $chrpos{$varname};
+    if ($build ne '36') {
+	# (downstream tools can't handle build:chr yet)
+	next;
+    }
+    elsif ($allele_a eq '-' || $allele_b eq '-') {
+	# xxx fixme this probably doesn't handle chrX/chrY well
+	next;
+    }
+    else {
+	my $alleles = $allele_a eq $allele_b ? $allele_a : "$allele_a/$allele_b";
+	my $feature = 'SNP';
+	my $startpos = $pos;
+	my $endpos = $pos;
+	if ($varname =~ /-DELETION$/) {
+	    $endpos = $startpos + length($key_alleles) - 1;
+	    $feature = 'INDEL';
+	    next if $alleles eq 'I'; # "no deletion"
+	} elsif ($varname =~ /-INSERTION$/) {
+	    $endpos = $startpos - 1;
+	    $feature = 'INDEL';
+	    next if $alleles eq 'D'; # "no insertion"
+	}
+	if ($alleles =~ s/D/-/g) {
+	    next if $feature ne 'INDEL'; # not clear whether this is a deletion or a lack of insertion
+	}
+	if ($alleles =~ s/I/$key_alleles/) {
+	    next if $feature ne 'INDEL'; # not clear whether this is an insertion or a lack of deletion
+	}
+	print "chr$chr\tbeadchip\t$feature\t$startpos\t$endpos\t.\t+\t.\talleles $alleles;comment $varname--$key_alleles--$allele_a/$allele_b\n";
+	print "chr$chr\tbeadchip\tREF\t$startpos\t$endpos\t.\t+\t.\talleles $key_alleles;comment $varname--$key_alleles--$allele_a/$allele_b\n" if ($feature eq 'INDEL' && $allele_a ne $allele_b);
+    }
+}
+
