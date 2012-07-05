@@ -78,8 +78,14 @@ while (<>)
 	if ($alleles =~ s/I/$key_alleles/) {
 	    next if $feature ne 'INDEL'; # not clear whether this is an insertion or a lack of deletion
 	}
-	print "chr$chr\tbeadchip\t$feature\t$startpos\t$endpos\t.\t+\t.\talleles $alleles;comment $varname--$key_alleles--$allele_a/$allele_b\n";
-	print "chr$chr\tbeadchip\tREF\t$startpos\t$endpos\t.\t+\t.\talleles $key_alleles;comment $varname--$key_alleles--$allele_a/$allele_b\n" if ($feature eq 'INDEL' && $allele_a ne $allele_b);
+	if ($feature ne 'INDEL' && $key_strand eq 'MINUS') {
+	    for ($alleles, $key_alleles) {
+		tr/ACGT/TGCA/;
+		$_ = reverse $_;
+	    }
+	}
+	print "chr$chr\tbeadchip\t$feature\t$startpos\t$endpos\t.\t+\t.\talleles $alleles;beadchip $varname:$chrpos{$varname}--$allele_a/$allele_b\n";
+	print "chr$chr\tbeadchip\tREF\t$startpos\t$endpos\t.\t+\t.\talleles $key_alleles;beadchip $varname:$chrpos{$varname}--$allele_a/$allele_b\n" if ($feature eq 'INDEL' && $allele_a ne $allele_b);
     }
 }
 
