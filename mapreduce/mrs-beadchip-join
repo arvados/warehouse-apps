@@ -21,7 +21,7 @@ while (<TABLE>)
 	    my $build = $row[$colnum{'GenomeBuild'}];
 	    my $chr = $row[$colnum{'Chr'}];
 	    my $pos = $row[$colnum{'MapInfo'}];
-	    my $strand = $row[$colnum{'IlmnStrand'}];
+	    my $strand = $row[$colnum{'SourceStrand'}];
 	    my $topseq = $row[$colnum{'TopGenomicSeq'}];
 	    my ($alleles) = $topseq =~ /\[-?\/?(.*?)\]/;
 	    for ($strand) { s/TOP/PLUS/; s/BOT/MINUS/; }
