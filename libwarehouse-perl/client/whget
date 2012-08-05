@@ -25,6 +25,10 @@ Fetch a directory tree:
        whget -r [options] /locator/[subdir/] -
        whget -r [options] /name/[subdir/] -
 
+Fetch all files from a directory tree, writing them all to one local dir:
+
+       whget [-r] [options] locator/**/ localdir/
+
 Fetch a raw manifest:
 
        whget [options] locator localdestfile
@@ -201,6 +205,9 @@ while (my $s = $m->subdir_next)
 	my $currenthash;
 
 	my $localsubdir = substr ($subdir_name, length $wantsubdir);
+	if ($wantsubdir eq '/**') {
+	    $localsubdir = '';
+	}
 
 	print STDERR "consider: .$subdir_name as $localbase$localsubdir\n"
 	    if $opt{v} >= 3;
