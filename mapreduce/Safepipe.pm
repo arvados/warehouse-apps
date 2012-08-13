@@ -63,7 +63,7 @@ sub readfrom
     {
 	print STDOUT $buf;
     }
-    close STDIN;
+    close STDIN or die "@caller: $!";
     close $lastreadpipe if defined $lastreadpipe;
     while (@children)
     {
@@ -73,7 +73,6 @@ sub readfrom
 	pop @children;
 	delete $command{$pid};
     }
-    close STDIN or die "@caller: $!";
     exit 0;
 }
 
