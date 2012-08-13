@@ -173,7 +173,15 @@ if ($justrawmanifest)
     while (1)
     {
 	$ctx->add ($manifest) if $opt{v};
-	print M $manifest unless $opt{n};
+	unless($opt{n}) {
+	    my $wrote = 0;
+	    my $b;
+	    while ($wrote < length $manifest) {
+		$b = syswrite M, $manifest, length($manifest), $wrote;
+		$wrote += $b if $b;
+		die "Error writing to $localfile: $!" if !defined $b;
+	    }
+	}
 	last if !@manifesthash;
 
 	defined ($manifest = $whc->fetch_block ($manifesthash[0]))
@@ -254,9 +262,15 @@ while (my $s = $m->subdir_next)
 		    $ctx->add ($$dataref) if $opt{v};
 		    $ctxbytes += length $$dataref;
 
-		    print F $$dataref
-			or die "Error writing to $localfile: $!"
-			unless $opt{n};
+		    next if $opt{n};
+
+		    my $wrote = 0;
+		    my $b;
+		    while ($wrote < length $$dataref) {
+			$b = syswrite F, $$dataref, length($$dataref), $wrote;
+			$wrote += $b if $b;
+			die "Error writing to $localfile: $!" if !defined $b;
+		    }
 		}
 
 		close F
