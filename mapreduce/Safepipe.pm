@@ -63,6 +63,8 @@ sub readfrom
     {
 	print STDOUT $buf;
     }
+    close STDIN;
+    close $lastreadpipe if defined $lastreadpipe;
     while (@children)
     {
 	my $pid = wait;
