@@ -49,6 +49,7 @@ sub readfrom
 	    die "$command: $! at $caller[1] line $caller[2].\n";
 	}
 	close "write$n" or die "$!";
+	close $lastreadpipe or die "$!" if $lastreadpipe;
 	$lastreadpipe = "read$n";
 
 	push @children, 1;
