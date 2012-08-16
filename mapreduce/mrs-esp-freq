@@ -7,6 +7,7 @@ require 'getoptlong'
 $opts = {}
 GetoptLong.
   new([ '--output-dict', GetoptLong::NO_ARGUMENT ],
+      [ '--esp-file', GetoptLong::REQUIRED_ARGUMENT ],
       [ '--enable-build-chr-pos-lookup', GetoptLong::NO_ARGUMENT ] ).
   each do |k,v|
   $opts[k] = v
@@ -70,8 +71,13 @@ def read_esp(chromosome)
   allele_count_field = []
 
   build = nil
-  locator = ENV['KNOB_ESP_TARBALL']
-  IO.popen("whget #{shellescape(locator)} - | tar --to-stdout --wildcards -xzf - #{chromarg} 2>/dev/null", 'r').each_line do |line|
+  if $opts['--esp-file']
+    esp_in = File.open($opts['--esp-file'])
+  else
+    locator = ENV['KNOB_ESP_TARBALL']
+    esp_in = IO.popen("whget #{shellescape(locator)} - | tar --to-stdout --wildcards -xzf - #{chromarg} 2>/dev/null", 'r')
+  end
+  esp_in.each_line do |line|
     field = line.split ' '
     if line.match /^\#/
       if (x = field[0].match /^\#base\((.*?)\)/)
@@ -98,28 +104,36 @@ def read_esp(chromosome)
     allele_count.each { |x| allele_tot += x }
     allele_freq = allele_count.map { |x| 1.0 * x / allele_tot } rescue []
 
+    variant_names = []
     if !field[14].match /^(coding-syn|intron|utr-|near-gene-|intergenic)/
       aa = field[15].split ','
       aa.map! { |x| x.capitalize }
       gene = field[12]
       aapos = field[16].split '/'
-      aa_from = $aa_3to1[aa[1]] || aa[1]
-      aa_to = $aa_3to1[aa[0]] || aa[0]
-      variant_name = "#{gene} #{aa_from}#{aapos[0]}#{aa_to}"
+      aa_from = $aa_3to1[aa.last] || aa.last
+      aa.pop
+      aa.each do |aa_to|
+        aa_to = $aa_3to1[aa_to] || aa_to
+        variant_names.push "#{gene} #{aa_from}#{aapos[0]}#{aa_to}"
+      end
     elsif field[1] != 'none'
-      variant_name = field[1]
+      variant_names.push field[1]
     elsif build and $opts['--enable-build-chr-pos-lookup']
-      variant_name = build + ':' + field[0]
+      variant_names.push(build + ':' + field[0])
     else
       next
     end
 
     if $opts['--output-dict']
       chr,pos = field[0].split ':'
-      puts "#{variant_name} chr#{chr} #{pos} #{allele.join ','} #{allele_freq[0]}"
+      allele.zip(allele_freq, variant_names) do |a, af, variant_name|
+        puts "#{variant_name} chr#{chr} #{pos} #{a} #{af}"
+      end
     else
-      $esp_freq[variant_name] = allele_freq[0]
-      $esp_detail[variant_name] = allele_count_field.map { |i,name| name + ':' + field[i] }.join(' ')
+      variant_names.zip(allele_freq) do |variant_name, af|
+        $esp_freq[variant_name] = af
+        $esp_detail[variant_name] = allele_count_field.map { |i,name| name + ':' + field[i] }.join(' ')
+      end
     end
   end
 end
