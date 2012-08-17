@@ -130,6 +130,11 @@ while (my $s = $m->subdir_next)
 	    ) == 0
 	    or die "genome_analyzer failed: exit $?";
 
+	if ("@what_part" !=~ /--metadata-only/) {
+	    unlink ("./.-out/missing_coding.json");
+	    unlink ("./.-out/metadata.json");
+	}
+
 	Safepipe::readfrom ('main::IN',
 			    "whput -r --as-stream --use-subdir='$subdir' ./.-out/",
 			    'mrs-output')
