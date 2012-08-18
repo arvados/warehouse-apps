@@ -13,15 +13,15 @@ chdir ("out")
     or die "chdir out: $!";
 
 my %dirs;
+my $dir = $ENV{MR_INPUT};
 my $whc = new Warehouse;
 my $m = new Warehouse::Manifest (whc => $whc,
 				 key => $ENV{MR_INPUT0});
 $m->rewind;
 while (my $s = $m->subdir_next)
 {
-    my $dir = $s->name;
-
     if ($ENV{MR_LEVEL} == 0) {
+	my $dir = $s->name;
 	if ($dir !~ /^\.\/[0-9a-f]+-out$/) {
 	    warn "Ignoring stream: $dir";
 	}
@@ -31,7 +31,7 @@ while (my $s = $m->subdir_next)
 	}
 	next;
     }
-    elsif ($dir ne $ENV{MR_INPUT}) {
+    elsif ($s->name ne $dir) {
 	next;
     }
 
@@ -39,13 +39,13 @@ while (my $s = $m->subdir_next)
 	mkdir ($dir) or die "mkdir $dir: $!";
     }
 
-    my $is_metadata = 0;
+    my $is_just_metadata = 1;
     $s->rewind;
     while (my ($pos, $size, $filename) = $s->file_next) {
 	last if !defined $pos;
-	$is_metadata = 1 if $filename eq 'missing_coding.json';
+	$is_just_metadata = 0 if $filename eq 'ns.gff.gz';
     }
-
+ 
     $s->rewind;
     while (my ($pos, $size, $filename) = $s->file_next)
     {
@@ -53,9 +53,11 @@ while (my $s = $m->subdir_next)
 	if ($filename eq 'ns.gff.gz') {
 	    open OUT, "|gzip -cd >>$dir/ns.gff" or die "gzip open: $!";
 	}
-	elsif (($is_metadata && $filename =~ /^(metadata|missing_coding)\.json/)
+	elsif (($is_just_metadata && $filename =~ /^(metadata|missing_coding)\.json/)
 	       ||
-	       (!$is_metadata && $filename =~ /^get-ev(idence|_genes).json/)) {
+	       (!$is_just_metadata && $filename =~ /^get-ev(idence|_genes)(-chr\w+)?.json/)
+	       ||
+	       (!$is_just_metadata && $filename =~ /^(metadata|missing_coding)-chr\w+\.json/)) {
 	    open OUT, ">>", "$dir/$filename";
 	}
 	else {
@@ -70,6 +72,18 @@ while (my $s = $m->subdir_next)
     }
 }
 exit 0 if $ENV{MR_LEVEL} == 0;
+
+if (<./$dir/metadata-chr*.json>) {
+    system ("mrs-get-evidence-merge-metadata ./'$dir'/metadata-chr*.json >./'$dir'/metadata.json") == 0
+	or die "merge-metadata: $!";
+    unlink (<$dir/metadata-chr*.json>);
+
+    for my $missing_coding_file (<$dir/missing_coding-chr*.json>) {
+	my ($chr) = $missing_coding_file =~ /.*(chr\w+)/;
+	system (qq{egrep '"chr": ?"$chr"' $missing_coding_file >> ./'$dir'/missing_coding.json});
+    }
+    unlink (<$dir/missing_coding-chr*.json>);
+}
 
 system ('$GZIP_COMMAND */ns.gff') == 0 or die "gzip: $!";
 Safepipe::readfrom ('main::IN',

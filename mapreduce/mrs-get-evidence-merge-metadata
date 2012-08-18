@@ -1,0 +1,73 @@
+#!/usr/bin/env perl
+# -*- mode: perl; perl-indent-level: 4; indent-tabs-mode: nil; -*-
+
+use JSON;
+my $json = new JSON;
+eval { $json->allow_blessed; }; # new version of JSON
+local $JSON::ConvBlessed = 1; # old version
+
+my $merge = { 'chromosome_metadata' => {} };
+
+ IN:
+    while (<>)
+{
+    my $in = eval { $json->decode ($_) } || $json->jsonToObj ($_);
+
+    my @in_chr = @{$in->{'chromosomes'}};
+    my @dups = grep { exists $merge->{'chromosome_metadata'}->{$_} } @in_chr;
+
+    $merge->{'chromosome_metadata'}->{$in_chr[0]} = $in if @in_chr == 1;
+
+    if (@dups) {
+        warn "Already have metadata for @dups -- ignoring input";
+        next;
+    }
+    map { $merge->{'chromosome_metadata'}->{$_} ||= 1 } @in_chr;
+
+    for my $key (keys %$in) {
+        my $val = $in->{$key};
+        if (ref $val eq 'ARRAY') {
+            if (!exists $merge->{$key}) {
+                $merge->{$key} = [@$val];
+            }
+            elsif ('ARRAY' eq ref $merge->{$key}) {
+                push @{$merge->{$key}}, @$val;
+            }
+            else {
+                $merge->{$key} = [$merge->{$key}, @$val];
+            }
+        }
+        elsif (ref $val) {
+            # ignore hashes (!)
+        }
+        elsif ($val =~ /^\d+$/) {
+            $merge->{$key} += $val;
+        }
+        else {
+            if (!exists $merge->{$key}) {
+                $merge->{$key} = $val;
+            }
+            elsif ($merge->{$key} eq $val) {
+            }
+            else {
+                if (!ref $merge->{$key}) {
+                    $merge->{$key} = [$merge->{$key}, $val];
+                }
+                else {
+                    push @{$merge->{$key}}, $val unless grep { $val eq $_ } @{$merge->{$key}};
+                }
+            }
+        }
+    }
+}
+
+for my $key (keys %$merge) {
+    if ($merge->{$key} =~ /^\d+$/ && $key =~ /^ref_(.*)_num$/) {
+        $merge->{'called_frac_'.$1} = $merge->{'match_num'} / $merge->{$key};
+    }
+}
+
+my $out = eval { $json->encode ($merge) } || $json->objToJson ($merge);
+$out =~ s/"JSON::True"/true/g;
+$out =~ s/"JSON::False"/false/g;
+print "$out\n";

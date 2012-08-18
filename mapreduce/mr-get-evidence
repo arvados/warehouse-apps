@@ -43,9 +43,8 @@ while (my $s = $m->subdir_next)
 	# step for each file in the input.
 	if ($ENV{MR_LEVEL} == 0) {
 	    if ($filename !~ /\.json$/ && $filename ne 'log') {
-		print STDERR "+++mrjobstep 1 $dirindex $fileindex --metadata-only+++\n";
 		for my $chromosome (1..22,'M','X','Y') {
-		    print STDERR "+++mrjobstep 1 $dirindex $fileindex --chromosome chr$chromosome+++\n";
+		    print STDERR "+++mrjobstep 1 $dirindex $fileindex chr$chromosome+++\n";
 		}
 	    }
 	    next;
@@ -53,7 +52,7 @@ while (my $s = $m->subdir_next)
 
 	# If this isn't the file we're supposed to be working on in
 	# this job step, just move along.
-	my ($di, $fi, @what_part) = split (/ /, $ENV{MR_INPUT});
+	my ($di, $fi, $chromosome) = split (/ /, $ENV{MR_INPUT});
 	if ($di != $dirindex ||
 	    $fi != $fileindex) {
 	    next;
@@ -126,14 +125,12 @@ while (my $s = $m->subdir_next)
 	system ("$get_dir/server/genome_analyzer.py",
 		"--genome", "./$filename",
 		"--sort-buffer-size", $sort_buffer_size,
-		@what_part,
+		"--chromosome", $chromosome,
 	    ) == 0
 	    or die "genome_analyzer failed: exit $?";
 
-	if ("@what_part" !=~ /--metadata-only/) {
-	    unlink ("./.-out/missing_coding.json");
-	    unlink ("./.-out/metadata.json");
-	}
+	rename ("./.-out/missing_coding.json", "./.-out/missing_coding-$chromosome.json");
+	rename ("./.-out/metadata.json", "./.-out/metadata-$chromosome.json");
 
 	Safepipe::readfrom ('main::IN',
 			    "whput -r --as-stream --use-subdir='$subdir' ./.-out/",
