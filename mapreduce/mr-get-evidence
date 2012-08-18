@@ -44,7 +44,7 @@ while (my $s = $m->subdir_next)
 	if ($ENV{MR_LEVEL} == 0) {
 	    if ($filename !~ /\.json$/ && $filename ne 'log') {
 		print STDERR "+++mrjobstep 1 $dirindex $fileindex --metadata-only+++\n";
-		for my $chromosome (1..22,'X','Y') {
+		for my $chromosome (1..22,'M','X','Y') {
 		    print STDERR "+++mrjobstep 1 $dirindex $fileindex --chromosome chr$chromosome+++\n";
 		}
 	    }
