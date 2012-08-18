@@ -70,4 +70,5 @@ for my $key (keys %$merge) {
 my $out = eval { $json->encode ($merge) } || $json->objToJson ($merge);
 $out =~ s/"JSON::True"/true/g;
 $out =~ s/"JSON::False"/false/g;
+$out =~ s/([^\\])"(\d+)"/$1$2/g;
 print "$out\n";
