@@ -148,19 +148,24 @@ sub run
     my $c;
     while (($c = $self->{daemon}->accept))
     {
+	# Reconnect to the database server if necessary (e.g.,
+	# database has restarted since my last accept())
+	$self->_reconnect if !$self->{dbh}->ping;
+
 	my $pid = fork();
 	die "fork failed" if !defined $pid;
 	if ($pid)
 	{
-	    # Let my child proc use the database handle I opened
-	    $self->{dbh}->{InactiveDestroy} = 1;
-
-	    # Get a new one now to pass to the next child
-	    $self->_reconnect;
-
-	    # Wait for the next connection
+	    # Parent -- wait for the next connection
 	    next;
 	}
+
+	# Child -- clone the database handle carefully, see
+	# http://www.perlmonks.org/?node_id=594175
+
+	my $newdbh = $self->{dbh}->clone();
+	$self->{dbh}->{InactiveDestroy} = 1;
+	$self->{dbh} = $newdbh;	# dereference old socket, use new
 
 	my $r;
 	while (($r = $c->get_request))
@@ -171,11 +176,6 @@ sub run
 		  " " . $r->method .
 		  " " . (map { s/[^\/\w_]/_/g; $_; } ($r->url->path_query))[0] .
 		  "\n");
-
-	    # My database handle might have been created some time ago
-	    # by my parent proc.  If the database server has restarted
-	    # since then, this will rescue my connection.
-	    $self->_reconnect if !$self->{dbh}->ping;
 
 	    if ($r->method eq "GET" and $r->url->path eq "/list")
 	    {
@@ -633,6 +633,8 @@ sub run
 	}
 	$c->close;
 	exit 0;
+    } continue {
+        $c->close;
     }
 }
 
