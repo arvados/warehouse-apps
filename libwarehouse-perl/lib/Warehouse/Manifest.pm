@@ -83,6 +83,9 @@ sub _init
 	}
 	$self->{data} = \$data;
 	$self->rewind;
+	if ($data !~ m{^\.(/\S+)?( [0-9a-f]{32}\S*)*( \d+:\d+:\S+)+\n}) {
+	    die "Can not parse manifest data: ".$self->{key};
+	}
     }
     return $self;
 }
