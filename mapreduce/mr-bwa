@@ -27,6 +27,11 @@ my $sam_manifest_key = $ENV{KNOB_SAM} or die;
 my $max_mismatches = $ENV{KNOB_MAX_MISMATCHES};
 $max_mismatches = 0.04 unless defined $max_mismatches;
 my $reffile = "$ENV{MR_JOB_TMP}/ref";
+my $concurrency = 4;
+
+if ($ENV{SLURM_CPUS_ON_NODE} > $concurrency) {
+  $concurrency = $ENV{SLURM_CPUS_ON_NODE};
+}
 
 my $bwa_path="$tmp/bwa";
 my $sam_path="$tmp/sam";
@@ -127,16 +132,16 @@ if ($ENV{MR_LEVEL} == 1)
       $saifile2 = "$tmp/${filename2}.sai";
       atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
       atomic_whget("$input_manifest_key$subdir/${filename2}", $readfile2);
-      system("$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
+      system("$bwa_path/bwa aln -t $concurrency -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
        	or die "bwa on $readfile1 failed";
-      system("$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile2 > $saifile2") == 0
+      system("$bwa_path/bwa aln -t $concurrency -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile2 > $saifile2") == 0
        	or die "bwa on $readfile2 failed";
       $bwa_sam_cmd = "$bwa_path/bwa sampe '$reffile/$ref_basename' $saifile1 $saifile2 $readfile1 $readfile2";
     }
     else {
       warn "single-end reads"; 
       atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
-      system("$bwa_path/bwa aln -t 4 -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
+      system("$bwa_path/bwa aln -t $concurrency -n $max_mismatches $aln_flags '$reffile/$ref_basename' $readfile1 > $saifile1") == 0
        	or die "bwa on $readfile1 failed";
       $bwa_sam_cmd = "$bwa_path/bwa samse '$reffile/$ref_basename' $saifile1 $readfile1";
     }
