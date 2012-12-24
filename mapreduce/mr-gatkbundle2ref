@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:extract fasta reference from gatk bundle
+###MR_INPUT:manifest
+###MR_KNOBS:GATK_BUNDLE
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Safeget;
+use Fcntl ':flock';
+
+my $jobstep_tmp = $ENV{MR_JOBSTEP_TMP};
+my $job_tmp = $ENV{MR_JOB_TMP};
+
+my $m = new Warehouse::Manifest(whc => new Warehouse, key => $ENV{MR_INPUT});
+while (my $s = $m->subdir_next) {
+  while (my ($pos, $size, $filename) = $s->file_next) {
+    last if !defined $pos;
+    if ($filename =~ /\.fasta(\.gz)?$/ && $filename !~ /decoy/) {
+      my $outstream = $s->as_string;
+      $outstream =~ s/ \d+:\d+:.*/ $pos:$size:$filename/;
+      print STDERR "+++mrout $outstream+++\n";
+      exit 0;
+    }
+  }
+}
+die "Fatal: Did not find *.fasta.gz in input";
