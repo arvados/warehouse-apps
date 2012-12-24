@@ -18,6 +18,7 @@ WriteMakefile
 		   'client/whintro',
 		   'client/whjob-checkout-and-build',
 		   'client/whless',
+		   'client/whls',
 		   'client/whmount',
 		   'client/whpipeline',
 		   'client/whput',

@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 4; indent-tabs-mode: nil; -*-
+
+=head1 NAME
+
+whls
+
+=head1 SYNOPSIS
+
+  whls [options] manifesthash
+
+List the files in a manifest.
+
+=head1 OPTIONS
+
+  -s
+
+                List file sizes, in KiB.
+
+=head1 SEE ALSO
+
+wh(1p), whput(1p), whget(1p), whless(1p)
+
+=cut
+
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Getopt::Long;
+use Pod::Usage;
+
+my $whc = new Warehouse;
+
+my $helpflag;
+my $sizeflag;
+my @manifesthash;
+
+GetOptions (
+    "s"                         => \$sizeflag,
+    "help"                      => \$helpflag,
+    )
+    or die "Failed to parse command line options.  Try:  $0 --help\n";
+
+if ($helpflag)
+{
+    pod2usage(1);
+}
+
+if (@ARGV != 1 ||
+    grep { !/^[0-9a-f]{32}/ } (@ARGV)) {
+    die "Usage: $0 [--help] [options] HASH\n";
+}
+
+my @out;
+my $sizewidth = 1;
+for my $mhash (@ARGV) {
+    my $mywhc = $whc;
+    if ($mhash =~ /\+K\@([^\+,]+)/) {
+	local $ENV{WAREHOUSE} = $1;
+	$mywhc = new Warehouse;
+    }
+    my $m = new Warehouse::Manifest(whc => $mywhc, key => $mhash);
+    $m->rewind;
+    while (my $s = $m->subdir_next) {
+        while (my ($pos, $size, $name) = $s->file_next) {
+            last if !defined $pos;
+            $size = int(($size+1023) / 1024);
+            $name = $s->name . '/' . $name unless $s->name eq '.';
+            push @out, [$size, $name];
+            $sizewidth = length($size) if $sizewidth < length($size);
+        }
+    }
+}
+for my $out (@out)
+{
+    if ($sizeflag) {
+        printf ("%*d %s\n", $sizewidth, @$out);
+    } else  {
+        print ($out->[1], "\n");
+    }
+}
