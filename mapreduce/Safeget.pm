@@ -73,7 +73,14 @@ sub wh_file
 	close L;
 	return 1;
     }
-    if (0 != system "whget '$data_locator' '$local_file.tmp'")
+    my $sysret;
+    if ($data_locator =~ /\.gz$/ && $local_file !~ /\.gz$/) {
+	$sysret = system "whget '$data_locator' - | gzip -cd > '$local_file.tmp'";
+    }
+    else {
+	$sysret = system "whget '$data_locator' '$local_file.tmp'";
+    }
+    if (0 != $sysret)
     {
 	unlink "$local_file.tmp";
 	close L;
