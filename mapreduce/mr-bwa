@@ -58,7 +58,7 @@ if ($ENV{MR_LEVEL} == 0)
     while (my ($pos, $size, $filename) = $s->file_next) {
       last if !defined $pos;
       next if $filename !~ /(.*)\.(bfq|fq|fastq|fq.gz|fastq.gz)$/;
-      next if $1 =~ /_2$/;
+      next if $1 =~ /_R2_|_2$/;
       $num_inputs++;
     }
   }
@@ -79,7 +79,7 @@ if ($ENV{MR_LEVEL} == 0)
       next if $filename !~ /(.*)\.(bfq|fq|fastq|fq.gz|fastq.gz)$/;
       # Assume _2 are reverse strand in pair-end-reads - next level does not need
       # them passed in.
-      next if $1 =~ /_2$/;
+      next if $1 =~ /_R2_|_2$/;
       push @files, $filename;
       if (scalar(@files) >= $inputs_per_step) {
 	my $filenames = join(',', @files);
@@ -124,10 +124,16 @@ if ($ENV{MR_LEVEL} == 1)
     die "reads are not colorspace but reference is" if !$is_colorspace && $ref_is_colorspace;
     my $aln_flags = $is_colorspace ? "-c" : "";
 
+    my $filename2;
     if ($filename =~ /(.+)_1\.(.+)$/) {
       # assume paired reads
       warn "paired reads"; 
-      my $filename2 = "${1}_2.$2";
+      $filename2 = "${1}_2.$2";
+    } elsif ($filename =~ /_R1_/) {
+      $filename2 = $filename;
+      $filename2 =~ s/_R1_/_R2_/;
+    }
+    if (defined $filename2) {
       $readfile2 = "$tmp/${filename2}";
       $saifile2 = "$tmp/${filename2}.sai";
       atomic_whget("$input_manifest_key$subdir/${filename}", $readfile1);
