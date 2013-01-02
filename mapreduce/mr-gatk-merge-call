@@ -1,0 +1,91 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:preprocess aligned bam files to suit GATK
+###MR_INPUT:manifest
+###MR_KNOBS:GATK_TAR_BZ2
+###MR_KNOBS:GATK_BUNDLE
+###MR_KNOBS:PICARD_ZIP
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Safeget;
+use Fcntl ':flock';
+
+my $jobstep_tmp = $ENV{MR_JOBSTEP_TMP};
+my $job_tmp = $ENV{MR_JOB_TMP};
+
+Safeget::wh_manifest_tree ($ENV{KNOB_PICARD_ZIP}, "$job_tmp/picard");
+die "picard $ENV{MR_PICARD_ZIP}: $!" unless 0 ==
+    system "unzip -d '$jobstep_tmp/picard' '$job_tmp/picard/'*.zip";
+my ($picard_dir) = <$jobstep_tmp/picard/picard-tools-*>;
+
+Safeget::wh_manifest_tree ($ENV{KNOB_GATK_TAR_BZ2}, "$job_tmp/gatk");
+die "gatk $ENV{MR_GATK_TAR_BZ2}: $!" unless 0 ==
+    system "tar -C '$jobstep_tmp' -xjf '$job_tmp/gatk/'*.bz2";
+($main::gatk_dir) = <$jobstep_tmp/GenomeAnalysisTK-*>;
+
+my $concurrency = 0 + `egrep -c ^processor /proc/cpuinfo`;
+if ($ENV{SLURM_CPUS_ON_NODE} > $concurrency) {
+  $concurrency = $ENV{SLURM_CPUS_ON_NODE};
+}
+$concurrency = 1 if $concurrency < 1;
+
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
+$m->rewind;
+my @bamfiles;
+while (my $s = $m->subdir_next) {
+  while (my ($pos, $size, $filename) = $s->file_next) {
+    last if !defined $pos;
+    $filename = $s->name . '/' . $filename unless $s->name eq '.';
+    push @bamfiles, $filename if $filename =~ /\.bam$/;
+  }
+}
+
+for my $part (qw(dict fasta.fai fasta)) {
+  Safeget::wh_file("$ENV{KNOB_GATK_BUNDLE}/human_g1k_v37.$part.gz", "$job_tmp/human_g1k_v37.$part");
+}
+for my $vcf (qw(dbsnp_137 Mills_and_1000G_gold_standard.indels)) {
+  Safeget::wh_file("$ENV{KNOB_GATK_BUNDLE}/$vcf.b37.vcf.gz", "$job_tmp/$vcf.b37.vcf");
+  Safeget::wh_file("$ENV{KNOB_GATK_BUNDLE}/$vcf.b37.vcf.idx.gz", "$job_tmp/$vcf.b37.vcf.idx");
+}
+
+my $inputs = "";
+for my $bam (@bamfiles) {
+  $inputs .= " I=<(whget '$ENV{MR_INPUT0}/$bam') ";
+}
+
+die unless 0 == system("bash", "-c",
+		       "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		       "-jar $picard_dir/MergeSamFiles.jar ".
+		       $inputs.
+		       "O=$jobstep_tmp/merged.bam ".
+		       "QUIET=true ".
+		       "SO=coordinate ".
+		       "USE_THREADING=true ".
+		       "CREATE_INDEX=true ".
+		       "VALIDATION_STRINGENCY=LENIENT ");
+
+unlink "$jobstep_tmp/log.txt";
+my $sysret = system("bash", "-c",
+		    "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		    "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
+		    "-nt $concurrency ".
+		    "-T UnifiedGenotyper ".
+		    "-R $job_tmp/human_g1k_v37.fasta ".
+		    "-I $jobstep_tmp/merged.bam ".
+		    "-o >(tee '$jobstep_tmp/merged.vcf' | mrs-store . merged.vcf > '$jobstep_tmp/outmanifest') ".
+		    "--dbsnp $job_tmp/dbsnp_137.b37.vcf ".
+		    "-metrics UniGenMetrics ".
+		    "-stand_call_conf 50.0 -stand_emit_conf 10.0 -dcov 200 ".
+		    "-A DepthOfCoverage -A AlleleBalance ".
+		    "-glm BOTH ".
+		    "| tee $jobstep_tmp/log.txt >&2 ");
+
+system "mrs-output < '$jobstep_tmp/outmanifest'";
+
+exit 0;
