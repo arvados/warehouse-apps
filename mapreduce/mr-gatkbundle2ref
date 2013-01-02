@@ -16,7 +16,7 @@ use Fcntl ':flock';
 my $jobstep_tmp = $ENV{MR_JOBSTEP_TMP};
 my $job_tmp = $ENV{MR_JOB_TMP};
 
-my $m = new Warehouse::Manifest(whc => new Warehouse, key => $ENV{MR_INPUT});
+my $m = new Warehouse::Manifest(whc => new Warehouse, key => $ENV{KNOB_GATK_BUNDLE});
 while (my $s = $m->subdir_next) {
   while (my ($pos, $size, $filename) = $s->file_next) {
     last if !defined $pos;
