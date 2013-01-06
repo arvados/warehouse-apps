@@ -69,7 +69,7 @@ sub go {
   symlink "/dev/stdin", "$jobstep_tmp/stdin.bam";
 
   open BAM, ">", "$jobstep_tmp/input.bam";
-  open INDEX, "|-", ("java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+  open INDEX, "|-", ("java -Xmx1g -Djava.io.tmpdir='$jobstep_tmp' ".
 		     "-jar $picard_dir/BuildBamIndex.jar ".
 		     "I=$jobstep_tmp/stdin.bam O=$jobstep_tmp/input.bai ".
 		     "VALIDATION_STRINGENCY=LENIENT") or die;
@@ -83,8 +83,7 @@ sub go {
   close BAM or die;
   close INDEX or die;
 
-
-  die unless 0 == system("java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+  die unless 0 == system("java -Xmx2500m -Djava.io.tmpdir='$jobstep_tmp' ".
 			 "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
 			 "-nt $concurrency ".
 			 "-T RealignerTargetCreator ".
@@ -95,16 +94,24 @@ sub go {
 			 "-known $job_tmp/Mills_and_1000G_gold_standard.indels.b37.vcf >&2 ");
 
   die unless 0 == system("bash", "-c",
-			 "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+			 "java -Xmx2500m -Djava.io.tmpdir='$jobstep_tmp' ".
 			 "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
 			 "-T IndelRealigner ".
 			 "-R $job_tmp/human_g1k_v37.fasta ".
 			 "-targetIntervals $jobstep_tmp/intervals.list ".
 			 "-I $jobstep_tmp/input.bam ".
-			 "-o >(mrs-store . '$filename' > '$jobstep_tmp/outmanifest') ".
+			 "-o >(mrs-store . '$filename' > '$jobstep_tmp/outmanifest' ) ".
 			 "-known $job_tmp/dbsnp_137.b37.vcf ".
 			 "-known $job_tmp/Mills_and_1000G_gold_standard.indels.b37.vcf >&2");
-  
+
+  if (0 != system("fuser /dev/stdin")) {
+    warn "fuser does not seem to work; sleeping 1 and hoping for the best";
+    sleep 1;
+  } else {
+    while (0 == system("fuser '$jobstep_tmp/outmanifest'")) {
+      sleep 1;
+    }
+  }
   system "mrs-output < '$jobstep_tmp/outmanifest'";
 }
 

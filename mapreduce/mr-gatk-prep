@@ -63,11 +63,11 @@ sub go {
   close INPUTBAM or die "input.bam: $!";
 
   my $filename_bai = $filename;
-  $filename_bai =~ s/.bam$/bai/;
+  $filename_bai =~ s/\.bam$/.bai/;
 
   Safepipe::readfrom ("main::S",
 
-		      "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "java -Xmx2g -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/FixMateInformation.jar ".
 		      "I=$jobstep_tmp/input.bam O=/dev/stdout ".
 		      "QUIET=true ".
@@ -75,7 +75,7 @@ sub go {
 		      "VALIDATION_STRINGENCY=LENIENT ".
 		      "COMPRESSION_LEVEL=0",
 
-		      "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "java -Xmx2g -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/SortSam.jar ".
 		      "I=/dev/stdin O=/dev/stdout ".
 		      "QUIET=true ".
@@ -83,7 +83,7 @@ sub go {
 		      "VALIDATION_STRINGENCY=LENIENT ".
 		      "COMPRESSION_LEVEL=0",
 
-		      "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "java -Xmx2g -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/ReorderSam.jar ".
 		      "I=/dev/stdin O=/dev/stdout ".
 		      "QUIET=true ".
@@ -91,7 +91,7 @@ sub go {
 		      "VALIDATION_STRINGENCY=LENIENT ".
 		      "COMPRESSION_LEVEL=0",
 
-		      "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "java -Xmx2g -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/AddOrReplaceReadGroups.jar ".
 		      "I=/dev/stdin O=/dev/stdout ".
 		      "QUIET=true ".
