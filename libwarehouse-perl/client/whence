@@ -204,7 +204,7 @@ map {
 } sort keys %depends;
 
 print "\nInputs:\n";
-print map { "$_\n" } sort keys %inputdata;
+print map { "$_\n" } grep { $_ ne 'd41d8cd98f00b204e9800998ecf8427e' } sort keys %inputdata;
 
 
 sub check_loop

@@ -2130,9 +2130,18 @@ sub _refresh_job_list
 		$self->{job_hashref}->{$_->{id}} = $_;
 		$_->{cache_fetched} = time;
 	    }
-	    $self->{job_by_output}->{striphints($_->{outputkey})} = $_ if $_->{outputkey} && $_->{success};
-	    if ($_->{inputkey} && $_->{success}) {
-		my @inputkeys = split(/,/,striphints($_->{inputkey}));
+	    my $inkey = striphints($_->{inputkey});
+	    my $outkey = striphints($_->{outputkey});
+	    if ($_->{outputkey} &&
+		$_->{success} &&
+		$outkey ne 'd41d8cd98f00b204e9800998ecf8427e' &&
+		$outkey ne $inkey) {
+		$self->{job_by_output}->{$outkey} = $_;
+	    }
+	    if ($_->{inputkey} &&
+		$_->{success} &&
+		$inkey ne 'd41d8cd98f00b204e9800998ecf8427e') {
+		my @inputkeys = split(/,/,$inkey);
 		foreach my $ik (@inputkeys) {
 			$self->{job_by_input}->{$ik} = () if (!defined($self->{job_by_input}->{$ik}));
 		    	push(@{$self->{job_by_input}->{$ik}},$_);
