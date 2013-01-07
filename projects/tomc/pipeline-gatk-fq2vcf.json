@@ -1,0 +1,45 @@
+{
+    "id": 1,
+    "steps":
+    [
+	{"name": "bundle2ref", "function": "gatkbundle2ref", "params":
+         [{"name": "GATK_BUNDLE", "data_locator": null},
+	  {"name": "INPUT", "data_locator": "d41d8cd98f00b204e9800998ecf8427e"}],
+	 "max_nodes": 1,
+	 "max_steps_per_node": 1},
+	{"name": "bwa-index", "function": "bwa-index", "params":
+         [{"name": "BWA", "data_locator": null},
+	  {"name": "INPUT", "from_step": 0}],
+	 "max_nodes": 1,
+	 "max_steps_per_node": 1},
+	{"name": "bwa", "function": "bwa", "params":
+         [{"name": "BWA", "data_locator": null},
+ 	  {"name": "SAM", "data_locator": null},
+ 	  {"name": "REFERENCE", "from_step": 1},
+	  {"name": "INPUT", "data_locator": null}],
+	 "max_nodes": 1,
+	 "max_steps_per_node": 1},
+	{"name": "gatk-prep", "function": "gatk-prep", "params":
+         [{"name": "PICARD_ZIP", "data_locator": null},
+ 	  {"name": "GATK_BUNDLE", "data_locator": null},
+	  {"name": "INPUT", "from_step": 2}],
+	 "max_nodes": 1,
+	 "max_steps_per_node": 3},
+	{"name": "gatk-realign", "function": "gatk-realign", "params":
+	 [{"name": "PICARD_ZIP", "data_locator": null},
+	  {"name": "GATK_TAR_BZ2", "data_locator": null},
+ 	  {"name": "GATK_BUNDLE", "data_locator": null},
+	  {"name": "INPUT", "from_step": 3}],
+	 "min_revision": "6b9dbab",
+	 "max_nodes": 1,
+	 "max_steps_per_node": 2},
+	{"name": "gatk-merge-call", "function": "gatk-merge-call", "params":
+         [{"name": "PICARD_ZIP", "data_locator": null},
+ 	  {"name": "GATK_TAR_BZ2", "data_locator": null},
+ 	  {"name": "GATK_BUNDLE", "data_locator": null},
+	  {"name": "INPUT", "from_step": 4}],
+	 "min_revision": "6b9dbab",
+	 "max_nodes": 1,
+	 "max_steps_per_node": 1}
+    ]
+}
