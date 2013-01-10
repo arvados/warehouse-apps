@@ -905,6 +905,11 @@ sub commit_resolve
             $cmd = "git --git-dir='$worktree/.git' rev-list --grep='git-svn-id:.*/trunk\@$svn_revision ' $commit_id_arg";
         }
         else {
+            foreach (`git --git-dir=$worktree/.git branch -a`) {
+                if (m{^[\W]*remotes/origin/(\S+)}m && $1 eq $commitish) {
+                    $commitish = "origin/$commitish";
+                }
+            }
             $cmd = "git --git-dir='$worktree/.git' rev-list --max-count=1 '$commitish'";
         }
         my $commit = `$cmd`;
