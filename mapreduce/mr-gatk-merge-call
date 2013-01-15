@@ -70,21 +70,20 @@ die unless 0 == system("bash", "-c",
 		       "CREATE_INDEX=true ".
 		       "VALIDATION_STRINGENCY=LENIENT ");
 
-unlink "$jobstep_tmp/log.txt";
-my $sysret = system("bash", "-c",
-		    "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
-		    "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
-		    "-nt $concurrency ".
-		    "-T UnifiedGenotyper ".
-		    "-R $job_tmp/human_g1k_v37.fasta ".
-		    "-I $jobstep_tmp/merged.bam ".
-		    "-o >(mrs-store . merged.vcf > '$jobstep_tmp/outmanifest') ".
-		    "--dbsnp $job_tmp/dbsnp_137.b37.vcf ".
-		    "-metrics UniGenMetrics ".
-		    "-stand_call_conf 50.0 -stand_emit_conf 10.0 -dcov 200 ".
-		    "-A DepthOfCoverage -A AlleleBalance ".
-		    "-glm BOTH ".
-		    "| tee $jobstep_tmp/log.txt >&2 ");
+die unless 0 == system("bash", "-c",
+		       "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		       "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
+		       "-nt $concurrency ".
+		       "-T UnifiedGenotyper ".
+		       "-R $job_tmp/human_g1k_v37.fasta ".
+		       "-I $jobstep_tmp/merged.bam ".
+		       "-o >(mrs-store . merged.vcf > '$jobstep_tmp/outmanifest') ".
+		       "--dbsnp $job_tmp/dbsnp_137.b37.vcf ".
+		       "-metrics UniGenMetrics ".
+		       "-stand_call_conf 50.0 -stand_emit_conf 10.0 -dcov 200 ".
+		       "-A DepthOfCoverage -A AlleleBalance ".
+		       "-glm BOTH ".
+		       ">&2 ");
 
 if (0 != system("fuser /dev/stdin")) {
   warn "fuser does not seem to work; sleeping 1 and hoping for the best";
