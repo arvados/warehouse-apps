@@ -14,9 +14,11 @@ use Warehouse::Stream;
 use Safepipe;
 use Safeget;
 use Fcntl ':flock';
+use List::Util qw'min max';
 
 my $jobstep_tmp = $ENV{MR_JOBSTEP_TMP};
 my $job_tmp = $ENV{MR_JOB_TMP};
+my $mem_limit = max($ENV{MR_SLOT_RAM_MB} - 700, 500);
 
 Safeget::wh_manifest_tree ($ENV{KNOB_PICARD_ZIP}, "$job_tmp/picard");
 die "picard $ENV{MR_PICARD_ZIP}: $!" unless 0 ==
@@ -83,7 +85,7 @@ sub go {
   close BAM or die;
   close INDEX or die;
 
-  die unless 0 == system("java -Xmx2500m -Djava.io.tmpdir='$jobstep_tmp' ".
+  die unless 0 == system("java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 			 "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
 			 "-nt $concurrency ".
 			 "-T RealignerTargetCreator ".
@@ -94,7 +96,7 @@ sub go {
 			 "-known $job_tmp/Mills_and_1000G_gold_standard.indels.b37.vcf >&2 ");
 
   die unless 0 == system("bash", "-c",
-			 "java -Xmx2500m -Djava.io.tmpdir='$jobstep_tmp' ".
+			 "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 			 "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
 			 "-T IndelRealigner ".
 			 "-R $job_tmp/human_g1k_v37.fasta ".

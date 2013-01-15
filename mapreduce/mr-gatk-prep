@@ -14,9 +14,11 @@ use Warehouse::Stream;
 use Safepipe;
 use Safeget;
 use Fcntl ':flock';
+use List::Util qw'min max';
 
 my $jobstep_tmp = $ENV{MR_JOBSTEP_TMP};
 my $job_tmp = $ENV{MR_JOB_TMP};
+my $mem_limit = max($ENV{MR_SLOT_RAM_MB} - 700, 500);
 
 Safeget::wh_manifest_tree ($ENV{KNOB_PICARD_ZIP}, "$job_tmp/picard");
 die "picard $ENV{MR_PICARD_ZIP}: $!" unless 0 ==
@@ -67,7 +69,7 @@ sub go {
 
   Safepipe::readfrom ("main::S",
 
-		      "java -Xmx2g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/FixMateInformation.jar ".
 		      "I=$jobstep_tmp/input.bam O=/dev/stdout ".
 		      "QUIET=true ".
@@ -75,7 +77,7 @@ sub go {
 		      "VALIDATION_STRINGENCY=LENIENT ".
 		      "COMPRESSION_LEVEL=0",
 
-		      "java -Xmx2g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/SortSam.jar ".
 		      "I=/dev/stdin O=/dev/stdout ".
 		      "QUIET=true ".
@@ -83,7 +85,7 @@ sub go {
 		      "VALIDATION_STRINGENCY=LENIENT ".
 		      "COMPRESSION_LEVEL=0",
 
-		      "java -Xmx2g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/ReorderSam.jar ".
 		      "I=/dev/stdin O=/dev/stdout ".
 		      "QUIET=true ".
@@ -91,14 +93,14 @@ sub go {
 		      "VALIDATION_STRINGENCY=LENIENT ".
 		      "COMPRESSION_LEVEL=0",
 
-		      "java -Xmx2g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/AddOrReplaceReadGroups.jar ".
 		      "I=/dev/stdin O=/dev/stdout ".
 		      "QUIET=true ".
 		      "RGLB=0 RGPL=$platform RGPU=0 RGSM=0 ".
 		      "VALIDATION_STRINGENCY=LENIENT ",
 
-		      "bash -c \"tee >(java -Xmx1g -Djava.io.tmpdir='$jobstep_tmp' ".
+		      "bash -c \"tee >(java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 		      "-jar $picard_dir/BuildBamIndex.jar ".
 		      "I=/dev/stdin O=$jobstep_tmp/output.bai ".
 		      "QUIET=true ".
