@@ -24,7 +24,7 @@
  	  {"name": "GATK_BUNDLE", "data_locator": null},
 	  {"name": "INPUT", "from_step": 2}],
 	 "max_nodes": 1,
-	 "max_steps_per_node": 3},
+	 "max_steps_per_node": 2},
 	{"name": "gatk-realign", "function": "gatk-realign", "params":
 	 [{"name": "PICARD_ZIP", "data_locator": null},
 	  {"name": "GATK_TAR_BZ2", "data_locator": null},
