@@ -10,8 +10,8 @@ eval {
     my $slots = $ENV{MR_NODE_SLOTS} || 1;
     my ($memtotal) = `cat /proc/meminfo` =~ /MemTotal:\s*(\d+)/;
     $memtotal = 2**23 if $memtotal < 2**18; # assume 8GB if meminfo seems wrong
-    my $megabytes = int(($memtotal<<10)/$slots), int(($memtotal<<10)/$slots);
-    setrlimit(RLIMIT_AS, $megabytes);
+    my $megabytes = int(($memtotal<<10)/$slots);
+    setrlimit(RLIMIT_AS, $megabytes, $megabytes);
     $ENV{MR_SLOT_RAM_MB} = $megabytes;
 };
 
