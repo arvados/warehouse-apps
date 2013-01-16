@@ -292,7 +292,9 @@ sub send_file
     my $buf;
     my $bytes;
     my $totalsize = 0;
+    my $m = Digest::MD5->new;
     while ($bytes = read FILE, $buf, 1048576) {
+	$m->add($buf) if $main::opt{'md5sum'};
 	$whc->write_data ($buf) or die "Warehouse::write_data failed";
 	$totalsize += $bytes;
 	$main::data_bytes_written += $bytes;
@@ -303,6 +305,7 @@ sub send_file
 	die "Read error: $file: $!";
     }
     close FILE or die "Read error: $file: $!";
+    printf STDERR "%s  %s\n", $m->hexdigest, $file if $main::opt{'md5sum'};
     return $totalsize;
 }
 
