@@ -14,9 +14,11 @@ use Warehouse::Stream;
 use Safepipe;
 use Safeget;
 use Fcntl ':flock';
+use List::Util qw'min max';
 
 my $jobstep_tmp = $ENV{MR_JOBSTEP_TMP};
 my $job_tmp = $ENV{MR_JOB_TMP};
+my $mem_limit = max($ENV{MR_SLOT_RAM_MB} - 700, 500);
 
 Safeget::wh_manifest_tree ($ENV{KNOB_PICARD_ZIP}, "$job_tmp/picard");
 die "picard $ENV{MR_PICARD_ZIP}: $!" unless 0 ==
@@ -60,7 +62,7 @@ for my $bam (@bamfiles) {
 }
 
 die unless 0 == system("bash", "-c",
-		       "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		       "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 		       "-jar $picard_dir/MergeSamFiles.jar ".
 		       $inputs.
 		       "O=$jobstep_tmp/merged.bam ".
@@ -71,7 +73,7 @@ die unless 0 == system("bash", "-c",
 		       "VALIDATION_STRINGENCY=LENIENT ");
 
 die unless 0 == system("bash", "-c",
-		       "java -Xmx4g -Djava.io.tmpdir='$jobstep_tmp' ".
+		       "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
 		       "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
 		       "-nt $concurrency ".
 		       "-T UnifiedGenotyper ".
