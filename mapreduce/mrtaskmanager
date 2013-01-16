@@ -8,11 +8,11 @@ eval {
     # limit virtual memory to real mem size if libbsd-resource-perl is installed
     use BSD::Resource;
     my $slots = $ENV{MR_NODE_SLOTS} || 1;
-    my ($memtotal) = `cat /proc/meminfo` =~ /MemTotal:\s*(\d+)/;
-    $memtotal = 2**23 if $memtotal < 2**18; # assume 8GB if meminfo seems wrong
-    my $megabytes = int(($memtotal<<10)/$slots);
-    setrlimit(RLIMIT_AS, $megabytes, $megabytes);
-    $ENV{MR_SLOT_RAM_MB} = $megabytes;
+    my ($kibibytes) = `cat /proc/meminfo` =~ /MemTotal:\s*(\d+)/;
+    $kibibytes = 2**23 if $kibibytes < 2**18; # assume 8GB if meminfo seems wrong
+    my $mebibytes = int($kibibytes/$slots) >> 10;
+    setrlimit(RLIMIT_AS, $mebibytes<<20, $mebibytes<<20);
+    $ENV{MR_SLOT_RAM_MB} = $mebibytes;
 };
 
 $ENV{PATH} = "$ENV{MR_REVISION_INSTALLDIR}/bin"
