@@ -6,6 +6,7 @@
 ###MR_KNOBS:GATK_TAR_BZ2
 ###MR_KNOBS:GATK_BUNDLE
 ###MR_KNOBS:PICARD_ZIP
+###MR_KNOBS:REGIONS
 
 use strict; 
 use Warehouse;
@@ -56,6 +57,12 @@ for my $vcf (qw(dbsnp_137 Mills_and_1000G_gold_standard.indels)) {
   Safeget::wh_file("$ENV{KNOB_GATK_BUNDLE}/$vcf.b37.vcf.idx.gz", "$job_tmp/$vcf.b37.vcf.idx");
 }
 
+my $regions_args = "";
+if ($ENV{KNOB_REGIONS}) {
+  Safeget::wh_file("$ENV{KNOB_REGIONS}", "$jobstep_tmp/regions.bed");
+  $regions_args = "-L $jobstep_tmp/regions.bed ";
+}
+
 my $inputs = "";
 for my $bam (@bamfiles) {
   $inputs .= " I=<(whget '$ENV{MR_INPUT0}/$bam') ";
@@ -82,9 +89,12 @@ die unless 0 == system("bash", "-c",
 		       "-o >(mrs-store . merged.vcf > '$jobstep_tmp/outmanifest') ".
 		       "--dbsnp $job_tmp/dbsnp_137.b37.vcf ".
 		       "-metrics UniGenMetrics ".
-		       "-stand_call_conf 50.0 -stand_emit_conf 10.0 -dcov 200 ".
-		       "-A DepthOfCoverage -A AlleleBalance ".
+		       "-stand_call_conf 40.0 -stand_emit_conf 40.0 -dcov 200 ".
+		       "-A DepthOfCoverage -A AlleleBalance -A QualByDepth ".
+                       "-A HaplotypeScore -A MappingQualityRankSumTest ".
+                       "-A ReadPosRankSumTest -A FisherStrand ".
 		       "-glm BOTH ".
+		       "$regions_args ".
 		       ">&2 ");
 
 if (0 != system("fuser /dev/stdin")) {
