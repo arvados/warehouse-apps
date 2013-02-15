@@ -7,6 +7,7 @@
 ###MR_KNOBS:GATK_BUNDLE
 ###MR_KNOBS:PICARD_ZIP
 ###MR_KNOBS:REGIONS
+###MR_KNOBS:REGION_PADDING
 
 use strict; 
 use Warehouse;
@@ -60,7 +61,10 @@ for my $vcf (qw(dbsnp_137 Mills_and_1000G_gold_standard.indels)) {
 my $regions_args = "";
 if ($ENV{KNOB_REGIONS}) {
   Safeget::wh_file("$ENV{KNOB_REGIONS}", "$jobstep_tmp/regions.bed");
-  $regions_args = "-L $jobstep_tmp/regions.bed ";
+  $regions_args = "--intervals $jobstep_tmp/regions.bed ";
+  if ($ENV{KNOB_REGION_PADDING}) {
+    $regions_args .= "--interval_padding $ENV{KNOB_REGION_PADDING} ";
+  }
 }
 
 my $inputs = "";
