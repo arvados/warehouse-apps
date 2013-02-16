@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+
+# usage: $0 coverage_by_sample_output.txt log_messages.txt
+
+hist = []
+histtot = 0
+IO.foreach(ARGV[0]) do |line|
+  i = line.split.last.to_i
+  next if i < 1
+  hist[i] ||= 0
+  hist[i] += 1
+  histtot += 1
+end
+
+tot = nil
+IO.readlines(ARGV[1]).each do |logline|
+  if (re = logline.match /Processing (\d+) bp from intervals/)
+    tot = re[1].to_i
+  end
+end
+
+hist[0] = tot - histtot
+
+sofar = 0
+hist.each_with_index do |n,i|
+  puts "#{i},#{tot-sofar},#{100.0*(tot-sofar)/tot}"
+  sofar += n if n
+end

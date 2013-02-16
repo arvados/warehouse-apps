@@ -1,0 +1,88 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:bam -> alignment and coverage statistics
+###MR_INPUT:manifest
+###MR_KNOBS:GATK_TAR_BZ2
+###MR_KNOBS:GATK_BUNDLE
+###MR_KNOBS:PICARD_ZIP
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Safeget;
+use Fcntl ':flock';
+use List::Util qw'min max';
+
+my $jobstep_tmp = $ENV{MR_JOBSTEP_TMP};
+my $job_tmp = $ENV{MR_JOB_TMP};
+my $mem_limit = max($ENV{MR_SLOT_RAM_MB} - 700, 500);
+
+Safeget::wh_manifest_tree ($ENV{KNOB_PICARD_ZIP}, "$job_tmp/picard");
+die "picard $ENV{MR_PICARD_ZIP}: $!" unless 0 ==
+    system "unzip -d '$jobstep_tmp/picard' '$job_tmp/picard/'*.zip";
+my ($picard_dir) = <$jobstep_tmp/picard/picard-tools-*>;
+
+Safeget::wh_manifest_tree ($ENV{KNOB_GATK_TAR_BZ2}, "$job_tmp/gatk");
+die "gatk $ENV{MR_GATK_TAR_BZ2}: $!" unless 0 ==
+    system "tar -C '$jobstep_tmp' -xjf '$job_tmp/gatk/'*.bz2";
+($main::gatk_dir) = <$jobstep_tmp/GenomeAnalysisTK-*>;
+
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
+$m->rewind;
+my @bamfiles;
+while (my $s = $m->subdir_next) {
+  while (my ($pos, $size, $filename) = $s->file_next) {
+    last if !defined $pos;
+    $filename = $s->name . '/' . $filename unless $s->name eq '.';
+    push @bamfiles, $filename if $filename =~ /\.bam$/;
+  }
+}
+
+for my $part (qw(dict fasta.fai fasta)) {
+  Safeget::wh_file("$ENV{KNOB_GATK_BUNDLE}/human_g1k_v37.$part.gz", "$job_tmp/human_g1k_v37.$part");
+}
+
+my $inputs = "";
+for my $bam (@bamfiles) {
+  $inputs .= " I=<(whget '$ENV{MR_INPUT0}/$bam') ";
+}
+
+die unless mkdir "$jobstep_tmp/out";
+
+die unless 0 == system("bash", "-c",
+		       "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
+		       "-jar $picard_dir/MergeSamFiles.jar ".
+		       $inputs.
+		       "O=$jobstep_tmp/merged.bam ".
+		       "QUIET=true ".
+		       "SO=coordinate ".
+		       "USE_THREADING=true ".
+		       "CREATE_INDEX=true ".
+		       "VALIDATION_STRINGENCY=LENIENT ");
+
+die unless 0 == system("bash", "-c",
+                       "java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
+                       "-jar $main::gatk_dir/GenomeAnalysisTK.jar ".
+                       "-T CoverageBySample ".
+                       "--log_to_file '$jobstep_tmp/out/log.txt' ".
+                       "-R $job_tmp/human_g1k_v37.fasta ".
+                       "-I $jobstep_tmp/merged.bam ".
+                       "-o >(mrs-gatk-coverage /dev/stdin $jobstep_tmp/out/log.txt > $jobstep_tmp/out/mincoverage_nlocus.csv) ".
+                       "$regions_args ");
+
+if (0 != system("fuser /dev/stdin")) {
+  warn "fuser does not seem to work; sleeping 1 and hoping for the best";
+  sleep 1;
+} else {
+  while (0 == system("fuser '$jobstep_tmp/out/mincoverage_nlocus.csv'")) {
+    sleep 1;
+  }
+}
+
+die unless 0 == system("bash -c 'set -o pipefail; whput -r --as-stream $jobstep_tmp/out | mrs-output'");
+
+exit 0;
