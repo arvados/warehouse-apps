@@ -67,6 +67,15 @@ if ($ENV{KNOB_REGIONS}) {
   }
 }
 
+sub knob_or_default {
+  my ($name, $default) = @_;
+  if (defined $ENV{"KNOB_$name"}) {
+    return $ENV{"KNOB_$name"};
+  } else {
+    return $default;
+  }
+}
+
 my $inputs = "";
 for my $bam (@bamfiles) {
   $inputs .= " I=<(whget '$ENV{MR_INPUT0}/$bam') ";
@@ -93,7 +102,9 @@ die unless 0 == system("bash", "-c",
 		       "-o >(mrs-store . merged.vcf > '$jobstep_tmp/outmanifest') ".
 		       "--dbsnp $job_tmp/dbsnp_137.b37.vcf ".
 		       "-metrics UniGenMetrics ".
-		       "-stand_call_conf 40.0 -stand_emit_conf 40.0 -dcov 200 ".
+		       "-stand_call_conf '".knob_or_default("STAND_CALL_CONF", 30.0)."' ".
+                       "-stand_emit_conf '".knob_or_default("STAND_EMIT_CONF", 30.0)."' ".
+                       "-dcov '".knob_or_default("DOWNSAMPLE_TO_COVERAGE", 200)."' ".
 		       "-A DepthOfCoverage -A AlleleBalance -A QualByDepth ".
                        "-A HaplotypeScore -A MappingQualityRankSumTest ".
                        "-A ReadPosRankSumTest -A FisherStrand ".
