@@ -6,6 +6,8 @@
 ###MR_KNOBS:GATK_TAR_BZ2
 ###MR_KNOBS:GATK_BUNDLE
 ###MR_KNOBS:PICARD_ZIP
+###MR_KNOBS:REGIONS
+###MR_KNOBS:REGION_PADDING
 
 use strict; 
 use Warehouse;
@@ -29,6 +31,15 @@ Safeget::wh_manifest_tree ($ENV{KNOB_GATK_TAR_BZ2}, "$job_tmp/gatk");
 die "gatk $ENV{MR_GATK_TAR_BZ2}: $!" unless 0 ==
     system "tar -C '$jobstep_tmp' -xjf '$job_tmp/gatk/'*.bz2";
 ($main::gatk_dir) = <$jobstep_tmp/GenomeAnalysisTK-*>;
+
+my $regions_args = "";
+if ($ENV{KNOB_REGIONS}) {
+  Safeget::wh_file("$ENV{KNOB_REGIONS}", "$jobstep_tmp/regions.bed");
+  $regions_args = "--intervals $jobstep_tmp/regions.bed ";
+  if ($ENV{KNOB_REGION_PADDING}) {
+    $regions_args .= "--interval_padding $ENV{KNOB_REGION_PADDING} ";
+  }
+}
 
 my $whc = new Warehouse;
 my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
