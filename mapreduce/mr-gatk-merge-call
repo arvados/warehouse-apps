@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # -*- mode: perl; perl-indent-level: 2; -*-
 
-###MR_DESCRIPTION:preprocess aligned bam files to suit GATK
+###MR_DESCRIPTION:merge realigned bam files, call variants
 ###MR_INPUT:manifest
 ###MR_KNOBS:GATK_TAR_BZ2
 ###MR_KNOBS:GATK_BUNDLE
