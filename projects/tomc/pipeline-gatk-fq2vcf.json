@@ -35,6 +35,13 @@
 	 "min_revision": "6b9dbab",
 	 "max_nodes": 1,
 	 "max_steps_per_node": 2},
+	{"name": "gatk-bqsr", "function": "gatk-bqsr", "params":
+	 [{"name": "PICARD_ZIP", "data_locator": null},
+	  {"name": "GATK_TAR_BZ2", "data_locator": null},
+ 	  {"name": "GATK_BUNDLE", "data_locator": null},
+	  {"name": "INPUT", "from_step": 4}],
+	 "max_nodes": 1,
+	 "max_steps_per_node": 2},
 	{"name": "gatk-merge-call", "function": "gatk-merge-call", "params":
          [{"name": "PICARD_ZIP", "data_locator": null},
  	  {"name": "GATK_TAR_BZ2", "data_locator": null},
@@ -44,7 +51,7 @@
  	  {"name": "STAND_CALL_CONF", "optional": true},
  	  {"name": "STAND_EMIT_CONF", "optional": true},
  	  {"name": "DOWNSAMPLE_TO_COVERAGE", "optional": true},
-	  {"name": "INPUT", "from_step": 4}],
+	  {"name": "INPUT", "from_step": 5}],
 	 "min_revision": "6b9dbab",
 	 "max_nodes": 1,
 	 "max_steps_per_node": 1},
@@ -54,7 +61,7 @@
  	  {"name": "GATK_BUNDLE", "data_locator": null},
  	  {"name": "REGIONS", "optional": true},
  	  {"name": "REGION_PADDING", "optional": true},
-	  {"name": "INPUT", "from_step": 4}],
+	  {"name": "INPUT", "from_step": 5}],
 	 "max_nodes": 1,
 	 "max_steps_per_node": 1}
     ]
