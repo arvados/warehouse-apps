@@ -27,6 +27,16 @@ Unmount.
 	Print extra debugging information on stderr.  Implies
 	--no-detach.
 
+  --threaded
+
+	Use multiple threads: better performance, greater risk of
+	bugs.
+
+  --cache-count
+
+        Maximum number of data blocks to keep in LRU cache.  Default
+        is 8.
+
   --help
 
 	Display this page.
@@ -67,15 +77,21 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use Fuse;
 use POSIX qw(ENOENT EAGAIN EINVAL EPERM setsid);
+use threads;
+use threads::shared;
 
 my $debugflag = 0;
 my $helpflag = 0;
 my $nodetachflag = 0;
+my $threadedflag = 0;
+my $cachecount = 8;
 
 GetOptions (
     "debug"			=> \$debugflag,
     "help"			=> \$helpflag,
     "no-detach"			=> \$nodetachflag,
+    "threaded"                  => \$threadedflag,
+    "cache-count=i"             => \$cachecount,
     )
     or die "usage: $0 [options] manifesthash mountpoint (or try --help)\n";
 
@@ -85,6 +101,7 @@ if ($helpflag)
 }
 
 $nodetachflag = 1 if $debugflag;
+$main::debugflag = $debugflag;
 
 @ARGV == 2 or die "usage: $0 [options] manifesthash mountpoint (or try --help)\n";
 my ($manifesthash, $mountpoint) = @ARGV;
@@ -102,6 +119,9 @@ my $m;
 my %fs;
 my @fs;
 
+my $cache = new ThreadableCache(max_count => $cachecount);
+$whc->{local_cache} = $cache;
+
 do { load($manifesthash) == 0 or die } if $manifesthash ne '/';
 map { print STDERR $_."\n" } @fs if $debugflag;
 
@@ -117,9 +137,13 @@ Fuse::main(
     'getdir' => 'main::fuse_getdir',
     'read' => 'main::fuse_read',
     'debug' => $debugflag,
+    'threaded' => $threadedflag,
     );
 
 sub chmanifest {
+    if ($debugflag) {
+        print STDERR "chmanifest ". ${$_[0]} ."\n";
+    }
     return 0 if $manifesthash ne '/';
     my $fnref = shift;
     if ($$fnref =~ s:^/([0-9a-f]{32}[^/]*)::) {
@@ -132,17 +156,31 @@ sub chmanifest {
 }
 
 sub load {
+    print STDERR "load @_\n" if $debugflag;
+
     my $manifesthash = shift;
     return if $loaded eq $manifesthash;
     $m = undef;
     %fs = ();
     @fs = ();
     $loaded = undef;
-    eval {
-	$m = new Warehouse::Manifest ('whc' => $whc,
-				      'key' => $manifesthash);
-    };
-    return -ENOENT() if ($@);
+    {
+        my $dataref = $cache->get($manifesthash);
+        if (defined $dataref) {
+            $m = new Warehouse::Manifest ('whc' => $whc,
+                                          'data' => $dataref);
+        }
+        else {
+            eval {
+                $m = new Warehouse::Manifest ('whc' => $whc,
+                                              'key' => $manifesthash);
+            };
+            warn $@ if $@ && $debugflag;
+            return -ENOENT() if ($@);
+
+            $cache->put($manifesthash, $m->{data});
+        }
+    }
     $m->rewind;
     while (my $s = $m->subdir_next) {
 	my $dir = $s->name;
@@ -241,5 +279,77 @@ sub fuse_read
 	return $buf;
     } else {
 	return -ENOENT();
+    }
+}
+
+
+package ThreadableCache;
+use threads;
+use threads::shared;
+
+%ThreadableCache::cache = ();
+
+sub new
+{
+    my $class = shift;
+    my $self = { @_ };
+    $self->{max_count} ||= 8;
+    bless ($self, $class);
+    share(%ThreadableCache::cache);
+    return $self;
+}
+sub get
+{
+    my $self = shift;
+    my $key = shift;
+    lock(%ThreadableCache::cache);
+    if (defined $ThreadableCache::cache{$key}) {
+        $ThreadableCache::cache{$key}->{atime} = time;
+        if ($main::debugflag) {
+            print STDERR "cache get $key atime ".$ThreadableCache::cache{$key}->{atime}."\n";
+        }
+        return $ThreadableCache::cache{$key}->{data};
+    }
+    else {
+        if ($main::debugflag) {
+            print STDERR "cache miss $key\n";
+        }
+        return undef;
+    }
+}
+sub put
+{
+    my $self = shift;
+    my $key = shift;
+    my $data = shift;
+    lock(%ThreadableCache::cache);
+    if (!defined $ThreadableCache::cache{$key}) {
+        $ThreadableCache::cache{$key} = shared_clone({});
+    }
+    $ThreadableCache::cache{$key}->{data} = shared_clone($data);
+    $ThreadableCache::cache{$key}->{atime} = time;
+    if ($main::debugflag) {
+        print STDERR "cache put $key atime ".$ThreadableCache::cache{$key}->{atime}."\n";
+    }
+    $self->clean;
+}
+sub clean
+{
+    my $self = shift;
+    lock(%ThreadableCache::cache);
+    return if $self->{max_count} >= keys(%ThreadableCache::cache);
+    my @atimes;
+    while (my ($key, $cache) = each %ThreadableCache::cache) {
+        push @atimes, $cache->{atime};
+    }
+    @atimes = reverse sort @atimes;
+    my $too_old = pop @atimes;
+    foreach my $key (keys %ThreadableCache::cache) {
+        if ($ThreadableCache::cache{$key}->{atime} <= $too_old) {
+            if ($main::debugflag) {
+                print STDERR "cache purge $key atime ".$ThreadableCache::cache{$key}->{atime}."\n";
+            }
+            delete $ThreadableCache::cache{$key};
+        }
     }
 }
