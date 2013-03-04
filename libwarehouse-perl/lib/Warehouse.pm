@@ -763,6 +763,22 @@ sub fetch_block
 sub fetch_block_ref
 {
     my $self = shift;
+    if ($self->{local_cache}) {
+        my $dataref = $self->{local_cache}->get($_[0]);
+        return $dataref if $dataref;
+    }
+    my @r = $self->_fetch_block_ref(@_);
+    if ($r[0] && $self->{local_cache}) {
+        $self->{local_cache}->put($_[0], $r[0])
+    }
+    return @r if wantarray;
+    return $r[0];
+}
+
+
+sub _fetch_block_ref
+{
+    my $self = shift;
     my $hash = shift;
     my $verifyflag = ref $_[0] ? undef : shift;
     my $nowarnflag = ref $_[0] ? undef : shift;
@@ -2275,10 +2291,10 @@ sub job_follow_output
     $self->_read_cache;
     $self->_refresh_job_list;
     my $next = $self->{job_by_input}->{striphints($targetjob->{outputkey})};
-		if ($next && $targetjob->{id} && $next->{id} <= $targetjob->{id}) {
+    if ($next && $targetjob->{id} && $next->{id} <= $targetjob->{id}) {
     	printf STDERR ("Found job output id smaller than or equal to job input id - this should never happen. Ignoring result.\n"),
-			return undef;
-		}
+        return undef;
+    }
     return $next if ($next);
     return undef;
 }
