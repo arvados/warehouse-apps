@@ -1,0 +1,81 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 2; -*-
+
+###MR_DESCRIPTION:picard CollectAlignmentSummaryMetrics
+###MR_INPUT:manifest
+###MR_KNOBS:PICARD_ZIP
+###MR_KNOBS:GATK_BUNDLE
+
+use strict; 
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Safepipe;
+use Safeget;
+use Fcntl ':flock';
+use List::Util qw'min max';
+
+my $jobstep_tmp = $ENV{MR_JOBSTEP_TMP};
+my $job_tmp = $ENV{MR_JOB_TMP};
+my $mem_limit = max($ENV{MR_SLOT_RAM_MB} - 700, 500);
+
+Safeget::wh_manifest_tree ($ENV{KNOB_PICARD_ZIP}, "$job_tmp/picard");
+die "picard $ENV{MR_PICARD_ZIP}: $!" unless 0 ==
+    system "unzip -d '$jobstep_tmp/picard' '$job_tmp/picard/'*.zip";
+my ($picard_dir) = <$jobstep_tmp/picard/picard-tools-*>;
+
+my $whc = new Warehouse;
+my $m = new Warehouse::Manifest (whc => $whc, key => $ENV{MR_INPUT0});
+$m->rewind;
+my $i = -1;
+while (my $s = $m->subdir_next) {
+  while (my ($pos, $size, $filename) = $s->file_next) {
+    last if !defined $pos;
+    ++$i;
+    if ($ENV{MR_LEVEL} == 0) {
+      print STDERR "+++mrjobstep 1 $i+++\n" if $filename =~ /\.bam$/;
+    } elsif ($i == $ENV{MR_INPUT}) {
+      go($s, $pos, $size, $filename);
+      exit 0;
+    }
+  }
+}
+if ($ENV{MR_LEVEL} == 0) {
+  print STDERR "+++mrout d41d8cd98f00b204e9800998ecf8427e+++\n";
+  exit 0;
+}
+
+sub go {
+  my ($stream, $pos, $size, $filename) = @_;
+
+  for my $part (qw(dict fasta.fai fasta)) {
+    Safeget::wh_file("$ENV{KNOB_GATK_BUNDLE}/human_g1k_v37.$part.gz", "$job_tmp/human_g1k_v37.$part");
+  }
+
+  my $pid = open STDIN, "-|";
+  die "fork: $!" if !defined $pid;
+
+  if ($pid == 0) {
+    close STDIN;
+    $stream->rewind;
+    $stream->seek ($pos);
+    while (my $dataref = $stream->read_until ($pos + $size))
+    {
+      print $$dataref or die "input: $!";
+    }
+    exit 0;
+  }
+
+  die unless 0 ==
+      system("java -Xmx${mem_limit}m -Djava.io.tmpdir='$jobstep_tmp' ".
+             "-jar $picard_dir/CollectAlignmentSummaryMetrics.jar ".
+             "REFERENCE_SEQUENCE='$job_tmp/human_g1k_v37.fasta' ".
+             "INPUT=/dev/stdin ".
+             "OUTPUT='$jobstep_tmp/$filename.casm.tsv' ".
+             "VALIDATION_STRINGENCY=LENIENT >&2");
+
+  Safepipe::readfrom ("main::S",
+                      "whput --as-stream $jobstep_tmp/$filename.casm.tsv",
+                      "mrs-output");
+  close main::S or die;
+}
