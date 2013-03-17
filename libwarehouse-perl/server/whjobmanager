@@ -119,7 +119,9 @@ else
     qw(mrfunction revision inputkey);
   }
 
-  chomp ($Job->{id} = sprintf ("%d.%d\@%s", time, $$, `hostname`));
+  if (!defined $Job->{id}) {
+    chomp ($Job->{id} = sprintf ("%d.%d\@%s", time, $$, `hostname`));
+  }
   $job_id = $Job->{id};
 }
 
