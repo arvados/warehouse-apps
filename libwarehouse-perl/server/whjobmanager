@@ -702,6 +702,7 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
   $Jobstep->{attempts} ++;
   $Jobstep->{starttime} = time;
   $Jobstep->{node} = $childnode->{name};
+  $Jobstep->{slotindex} = $childslot;
   delete $Jobstep->{stderr};
   delete $Jobstep->{output};
   delete $Jobstep->{finishtime};
@@ -908,9 +909,15 @@ sub reapchildren
     $exitinfo .= " with no output key";
     $exitcode = -1 if $exitcode == 0 && $jobsteps_must_output_keys;
   }
+
+  if ($exitcode == 0 && $Jobstep->{force_fail}) {
+    $exitinfo .= " but recording as failure";
+    $exitcode = -1;
+  }
+
   Log ($jobstepid, "child $pid on $whatslot $exitinfo");
 
-  if ($exitcode != 0)
+  if ($exitcode != 0 || $Jobstep->{force_fail})
   {
     ++$thisround_failed;
     ++$thisround_failed_multiple if $Jobstep->{attempts} > 1;
@@ -926,9 +933,7 @@ sub reapchildren
 	Log ($jobstepid, "blaming failure on suspect node " . $slot[$proc{$pid}->{slot}]->{node}->{name} . " instead of incrementing jobstep attempts");
 	--$Jobstep->{attempts};
       }
-      # Don't start any new jobsteps on this node for 60 seconds
-      $slot[$proc{$pid}->{slot}]->{node}->{hold_until} = 60 + scalar time;
-      Log ($jobstepid, "backing off node " . $slot[$proc{$pid}->{slot}]->{node}->{name} . " for 60 seconds");
+      ban_node_by_slot($proc{$pid}->{slot});
     }
 
     push @jobstep_todo, $jobstepid;
@@ -1090,6 +1095,10 @@ sub preprocess_stderr
     }
     substr $jobstep[$job]->{stderr}, 0, 1+length($line), "";
     Log ($job, "stderr $line");
+    if ($line =~ /srun: error: Node failure on /) {
+      $jobstep[$job]->{force_fail} = 1;
+      ban_node_by_slot($jobstep[$job]->{slotindex});
+    }
   }
 }
 
@@ -1377,7 +1386,9 @@ sub freeze
 		    map
 		    {
 		      $_ . "=" . freezequote ($Jobstep->{$_})
-		    } grep { $_ !~ /^stderr/ } keys %$Jobstep);
+		    } grep {
+                      $_ !~ /^stderr|slotindex|force_fail/
+                    } keys %$Jobstep);
     $freezer->write_data ($str."\n\n");
   }
   if (@jobstep_tomerge)
@@ -1517,4 +1528,12 @@ sub srun
   exec @$args;
   warn "ENV size is ".length(join(" ",%ENV));
   die "exec failed: $!: @$args";
+}
+
+
+sub ban_node_by_slot {
+  # Don't start any new jobsteps on this node for 60 seconds
+  my $slotid = shift;
+  $slot[$slotid]->{node}->{hold_until} = 60 + scalar time;
+  Log (undef, "backing off node " . $slot[$slotid]->{node}->{name} . " for 60 seconds");
 }
