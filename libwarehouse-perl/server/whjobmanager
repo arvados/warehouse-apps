@@ -877,7 +877,7 @@ sub update_progress_stats
   return if !$progress_is_dirty;
   my ($todo, $done, $running) = (scalar @jobstep_todo,
 				 scalar @jobstep_done,
-				 scalar @slot - scalar @freeslot);
+				 scalar @slot - scalar @freeslot - scalar @holdslot);
   dbh_do
       ("update mrjob set steps_todo=?,steps_done=?,steps_running=? where id=?",
        undef,
