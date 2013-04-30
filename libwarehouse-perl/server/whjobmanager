@@ -1096,7 +1096,11 @@ sub preprocess_stderr
     }
     substr $jobstep[$job]->{stderr}, 0, 1+length($line), "";
     Log ($job, "stderr $line");
-    if ($line =~ /srun: error: (Node failure on|Unable to create job step) /) {
+    if ($line =~ /srun: error: (SLURM job $ENV{SLURM_JOBID} has expired) /) {
+      # whoa.
+      $main::please_freeze = 1;
+    }
+    elsif ($line =~ /srun: error: (Node failure on|Unable to create job step) /) {
       $jobstep[$job]->{node_fail} = 1;
       ban_node_by_slot($jobstep[$job]->{slotindex});
     }
