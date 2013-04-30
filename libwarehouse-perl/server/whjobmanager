@@ -910,15 +910,16 @@ sub reapchildren
     $exitcode = -1 if $exitcode == 0 && $jobsteps_must_output_keys;
   }
 
-  if ($exitcode == 0 && $Jobstep->{force_fail}) {
+  if ($exitcode == 0 && $Jobstep->{node_fail}) {
     $exitinfo .= " but recording as failure";
     $exitcode = -1;
   }
 
   Log ($jobstepid, "child $pid on $whatslot $exitinfo");
 
-  if ($exitcode != 0 || $Jobstep->{force_fail})
+  if ($exitcode != 0 || $Jobstep->{node_fail})
   {
+    --$Jobstep->{attempts} if $Jobstep->{node_fail};
     ++$thisround_failed;
     ++$thisround_failed_multiple if $Jobstep->{attempts} > 1;
 
@@ -1095,8 +1096,8 @@ sub preprocess_stderr
     }
     substr $jobstep[$job]->{stderr}, 0, 1+length($line), "";
     Log ($job, "stderr $line");
-    if ($line =~ /srun: error: Node failure on /) {
-      $jobstep[$job]->{force_fail} = 1;
+    if ($line =~ /srun: error: (Node failure on|Unable to create job step) /) {
+      $jobstep[$job]->{node_fail} = 1;
       ban_node_by_slot($jobstep[$job]->{slotindex});
     }
   }
@@ -1387,7 +1388,7 @@ sub freeze
 		    {
 		      $_ . "=" . freezequote ($Jobstep->{$_})
 		    } grep {
-                      $_ !~ /^stderr|slotindex|force_fail/
+                      $_ !~ /^stderr|slotindex|node_fail/
                     } keys %$Jobstep);
     $freezer->write_data ($str."\n\n");
   }
