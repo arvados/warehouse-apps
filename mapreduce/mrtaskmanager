@@ -32,8 +32,8 @@ if (scalar `which pigz` && $? == 0) {
 }
 
 $ENV{TMPDIR} ||= "/tmp";
-$ENV{MR_JOB_TMP} = "$ENV{TMPDIR}/mrcompute/work";
-$ENV{MR_JOBSTEP_TMP} = "$ENV{TMPDIR}/mrcompute/work/$ENV{MR_SLOT}";
+$ENV{MR_JOB_TMP} ||= "$ENV{TMPDIR}/mrcompute/work";
+$ENV{MR_JOBSTEP_TMP} ||= "$ENV{TMPDIR}/mrcompute/work/$ENV{MR_SLOT}";
 if (-d $ENV{MR_JOBSTEP_TMP}) {
   opendir D, $ENV{MR_JOBSTEP_TMP} or die "opendir $ENV{MR_JOBSTEP_TMP}: $!";
   while (my $f = readdir D) {
@@ -54,7 +54,15 @@ foreach (split ("\n", $ENV{MR_KNOBS}))
   my ($k, $v) = split ("=", $_, 2);
   $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1/ges;
   $ENV{"KNOB_$k"} = $v;
+  $ENV{"JOB_PARAMETER_$k"} = $v;
   $ENV{$k} = $v if $k =~ /^DEBUG_/;
+}
+
+foreach (split ("\n", $ENV{TASK_PARAMETERS}))
+{
+  my ($k, $v) = split ("=", $_, 2);
+  $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1/ges;
+  $ENV{"TASK_PARAMETER_$k"} = $v;
 }
 
 $ENV{NOCACHE} ||= $ENV{KNOB_NOCACHE};

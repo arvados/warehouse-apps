@@ -265,6 +265,7 @@ my $jobsteps_must_output_keys = 0;	# becomes 1 when any task outputs a key
 
 grep { $ENV{$1} = $2 if /^(NOCACHE.*?)=(.*)/ } split ("\n", $$Job{knobs});
 $ENV{"MR_JOB_ID"} = $job_id;
+$ENV{"JOB_UUID"} = $job_id;
 
 
 my @jobstep;
@@ -632,14 +633,20 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MR_FUNCTION"} = $Job->{mrfunction};
     $ENV{"MR_INPUT0"} = $Job->{inputkey};
     $ENV{"MR_INPUTKEY"} = $Job->{inputkey};
-    $ENV{"MR_OUTPUTKEY"} = "mrjobstep/$job_id/$level/$id";
-    $ENV{"MR_SLOT"} = $childslotname;
-    $ENV{"MR_JOB_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work";
-    $ENV{"MR_JOBSTEP_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work/".$childslotname;
+    $ENV{"MR_SLOT_NODE"} = $slot[$childslot]->{node}->{name};
+    $ENV{"MR_SLOT_NUMBER"} = $slot[$childslot]->{cpu};
+    $ENV{"MR_SLOT"} = $slot[$childslot]->{cpu}; # deprecated
+    $ENV{"MR_JOB_TMP"} = $ENV{"TMPDIR"}."/job/work";
+    $ENV{"MR_JOBSTEP_TMP"} = $ENV{"TMPDIR"}."/job/work/".$slot[$childslot]->{cpu};
     $ENV{"MR_NODE_SLOTS"} = $slot[$childslot]->{node}->{ncpus};
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
     $ENV{"MOGILEFS_CLASS"} = $main::mogilefs_default_class;
+
+    $ENV{"TASK_UUID"} = $ENV{"JOB_UUID"} . "-" . $id;
+    $ENV{"TASK_QSEQUENCE"} = $id;
+    $ENV{"TASK_SEQUENCE"} = $Jobstep->{level};
+
     $ENV{"GZIP"} = "-n";
 
     my @srunargs = (
