@@ -1246,7 +1246,7 @@ sub fetch_from_keep
 	my $data;
 	my $headers;
 	if ($Warehouse::HTTP::useCurlCmd &&
-	    open F, '-|', 'curl', @method, '--max-time', $self->{timeout}, '--fail', '-s', $url) {
+	    open F, '-|', 'curl', @method, '--connect-timeout', $self->{timeout}, '--max-time', $self->{timeout}, '--fail', '-s', $url) {
 	    $data = "";
 	    my $bytes = 0;
 	    do {
