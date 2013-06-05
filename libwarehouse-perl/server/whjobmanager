@@ -636,8 +636,8 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
     $ENV{"MR_SLOT_NODE"} = $slot[$childslot]->{node}->{name};
     $ENV{"MR_SLOT_NUMBER"} = $slot[$childslot]->{cpu};
     $ENV{"MR_SLOT"} = $slot[$childslot]->{cpu}; # deprecated
-    $ENV{"MR_JOB_TMP"} = $ENV{"TMPDIR"}."/job/work";
-    $ENV{"MR_JOBSTEP_TMP"} = $ENV{"TMPDIR"}."/job/work/".$slot[$childslot]->{cpu};
+    $ENV{"MR_JOB_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work";
+    $ENV{"MR_JOBSTEP_TMP"} = $ENV{"TMPDIR"}."/mrcompute/work/".$slot[$childslot]->{cpu};
     $ENV{"MR_NODE_SLOTS"} = $slot[$childslot]->{node}->{ncpus};
     $ENV{"MOGILEFS_TRACKERS"} = join (",", @main::mogilefs_trackers);
     $ENV{"MOGILEFS_DOMAIN"} = $main::mogilefs_default_domain;
