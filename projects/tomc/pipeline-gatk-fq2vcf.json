@@ -63,6 +63,12 @@
  	  {"name": "REGION_PADDING", "optional": true},
 	  {"name": "INPUT", "from_step": 5}],
 	 "max_nodes": 1,
+	 "max_steps_per_node": 1},
+	{"name": "picard-casm", "function": "picard-casm", "params":
+         [{"name": "PICARD_ZIP", "data_locator": null},
+ 	  {"name": "GATK_BUNDLE", "data_locator": null},
+	  {"name": "INPUT", "from_step": 3}],
+	 "max_nodes": 1,
 	 "max_steps_per_node": 1}
     ]
 }
