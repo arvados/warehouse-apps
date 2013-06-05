@@ -762,7 +762,8 @@ for (my $todo_ptr = 0; $todo_ptr <= $#jobstep_todo; $todo_ptr ++)
       }
     }
     for (my $i=$#holdslot; $i>=0; $i--) {
-      if ($slot[$holdslot[$i]]->{node}->{hold_until} <= scalar time) {
+      if ($slot[$holdslot[$i]]->{node}->{hold_until} &&
+          $slot[$holdslot[$i]]->{node}->{hold_until} <= scalar time) {
 	push @freeslot, (splice @holdslot, $i, 1);
       }
     }
