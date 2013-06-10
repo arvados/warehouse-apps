@@ -77,11 +77,11 @@ cd libwarehouse-perl
 # Now install the new versions of the packages
 cd ..
 set +e
-for dist in hardy lucid maverick natty lenny squeeze
+for dist in hardy lucid maverick natty precise lenny squeeze wheezy
 do
     reprepro -Vb /var/www/apt remove $dist libwarehouse-perl
 done
-for dist in hardy lucid maverick natty lenny squeeze
+for dist in hardy lucid maverick natty precise lenny squeeze wheezy
 do
     reprepro -Vb /var/www/apt include $dist libwarehouse-perl_$newversion*.changes
 done
