@@ -325,12 +325,12 @@ sub _get_configurl
 	    }
 	    else
 	    {
-		warn "Config url $url did not return expected format";
+		die "Config url $url did not return expected format";
 	    }
 	}
 	else
 	{
-	    warn "Config url $url failed: " . $r->status_line;
+	    die "Config url $url failed: " . $r->status_line;
 	}
     }
     return $warehouses->[$idx];
