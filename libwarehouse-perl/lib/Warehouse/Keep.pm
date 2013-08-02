@@ -130,7 +130,7 @@ sub _init
 
     $self->{ChildLifeTime} = 1;
 
-    $Warehouse::Keep::TotalChildren = 32;
+    $Warehouse::Keep::TotalChildren = $ENV{KEEP_MAX_SERVERS} || 32;
     print STDERR "Total children: " . $Warehouse::Keep::TotalChildren . "\n" if ($ENV{DEBUG});
 
     $Warehouse::Keep::children = 0;
