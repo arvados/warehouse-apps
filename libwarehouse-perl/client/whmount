@@ -22,50 +22,52 @@ Unmount.
 
 =head1 OPTIONS
 
-  --debug
+=over 4
 
-	Print extra debugging information on stderr.  Implies
-	--no-detach.
+=item B<--allow-other>
 
-  --threaded
+Allow all users to access the mount. By default, only the invoking
+user can access it. This option works only if the invoking user is
+root, or the C<user_allow_other> option is used in
+F</etc/fuse.conf>.
 
-	Use multiple threads: better performance, greater risk of
-	bugs.
+=item B<--debug>
 
-  --cache-count
+Print extra debugging information on stderr.  Implies --no-detach.
 
-        Maximum number of data blocks to keep in LRU cache.  Default
-        is 8.
+=item B<--threaded>
 
-  --help
+Use multiple threads: better performance, greater risk of bugs.
 
-	Display this page.
+=item B<--cache-count> I<number>
 
-  --no-detach
+Maximum number of data blocks to keep in LRU cache.  Default
+is 8.
 
-	Run in the foreground.  The default behavior is to detach from
-	the parent process.
+=item B<--help>
+
+Display this page.
+
+=item B<--no-detach>
+
+Run in the foreground.  The default behavior is to detach from the
+parent process.
+
+=back
 
 =head1 CAVEATS
 
 Mounts are read-only.
 
-When using "whmount / /mnt", a command like "ls /mnt" will not give
-you a list of available manifests.  The permissions of /mnt are set to
-0111 (executable but not readable) so this shortcoming does not seem
-so confusing to standard filesystem tools.
+When using C<whmount / /mnt>, a command like C<ls /mnt> will not give
+you a list of available manifests.  The permissions of F</mnt> are set
+to 0111 (executable but not readable) so this shortcoming does not
+seem so confusing to standard filesystem tools.
 
 File creation, modification, and access times for files and
 directories are set to the time when whmount was invoked.
 
 Performance is optimized for long sequential reads.
-
-When whmount is invoked as "whmount / ...", it only keeps one manifest
-in memory at a time, and loading a manifest is relatively slow.
-Therefore, if you are doing something that requires alternating
-accesses between two manifests -- for example, comparing the contents
-of two manifests -- it is much more efficient to launch a separate
-whmount process for each manifest.
 
 =cut
 
@@ -80,6 +82,7 @@ use POSIX qw(ENOENT EAGAIN EINVAL EPERM setsid);
 use threads;
 use threads::shared;
 
+my $allowotherflag = 0;
 my $debugflag = 0;
 my $helpflag = 0;
 my $nodetachflag = 0;
@@ -87,6 +90,7 @@ my $threadedflag = 0;
 my $cachecount = 8;
 
 GetOptions (
+    "allow-other"               => \$allowotherflag,
     "debug"			=> \$debugflag,
     "help"			=> \$helpflag,
     "no-detach"			=> \$nodetachflag,
@@ -133,6 +137,7 @@ if (!$nodetachflag) {
 
 Fuse::main(
     'mountpoint' => $mountpoint,
+    'mountopts' => $allowotherflag ? "allow_other" : "",
     'getattr' => 'main::fuse_getattr',
     'getdir' => 'main::fuse_getdir',
     'read' => 'main::fuse_read',
