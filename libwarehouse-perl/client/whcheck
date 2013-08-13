@@ -106,7 +106,6 @@ for my $mhash (@datahash) {
     $main::blocks_on_disk = 0;
     $main::bytes_in_manifest = 0;
     $main::bytes_on_disk = 0;
-    $main::total_blocks_in_manifest = 0;
     $main::total_blocks_in_manifest = scalar split(/,/, $mhash);
 
     if ($mhash =~ /\+K\@([^\+,]+)/) {
@@ -123,7 +122,6 @@ for my $mhash (@manifesthash) {
     $main::bytes_in_manifest = 0;
     $main::bytes_on_disk = 0;
     $main::total_blocks_in_manifest = 0;
-    $main::total_blocks_in_manifest = scalar split(/,/, $mhash);
 
     if ($mhash =~ /\+K\@([^\+,]+)/) {
 	local $ENV{WAREHOUSE} = $1;
