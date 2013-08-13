@@ -17,7 +17,7 @@ while ($ARGV[0] =~ /^--(\S+)(?:=(.*))?/)
 if (@ARGV != 1)
 {
     die <<EOF;
-usage: whence [options] {key|jobid}[\@warehouse]
+usage: whrwhence [options] {key|jobid}[\@warehouse]
 options:
        --skip-thawed     don\'t follow freeze/thaw cycles
        --node-seconds    show total #nodes * seconds allocated to each job
@@ -26,7 +26,6 @@ options:
        --failure-seconds show total slot seconds for failed job steps
        --success-seconds show total slot seconds for successful job steps
        --idle-seconds    show total slot seconds not accounted for by job steps
-       --reverse         do a 'reverse' whence: show which data has been produced from this key/jobid
 EOF
 }
 

@@ -72,6 +72,8 @@ Performance is optimized for long sequential reads.
 =cut
 
 use strict;
+use threads;
+use threads::shared;
 use Getopt::Long;
 use Pod::Usage;
 use Warehouse;
@@ -79,8 +81,6 @@ use Warehouse::Manifest;
 use Warehouse::Stream;
 use Fuse;
 use POSIX qw(ENOENT EAGAIN EINVAL EPERM setsid);
-use threads;
-use threads::shared;
 
 my $allowotherflag = 0;
 my $debugflag = 0;

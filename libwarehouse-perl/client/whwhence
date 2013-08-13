@@ -2,16 +2,16 @@
 
 =head1 NAME
 
-whence - Discover how data sets were computed on the cloud
+whwhence - Discover how data sets were computed on the cloud
 
 =head1 SYNOPSIS
 
- whence [options] jobid[@warehousename]
- whence [options] locator[,locator,...][@warehousename]
+ whwhence [options] jobid[@warehousename]
+ whwhence [options] locator[,locator,...][@warehousename]
 
 =head1 DESCRIPTION
 
-whence(1p) tells you how a given data set was produced, or how it
+whwhence(1p) tells you how a given data set was produced, or how it
 could be recomputed, based on the history of jobs that have run on the
 cloud.  It also provides a list of "source data" locators.
 
@@ -21,7 +21,7 @@ sequence jobs.
 
 =head1 OPERATION
 
-If a data locator is provided, whence(1p) starts by finding a job that
+If a data locator is provided, whwhence(1p) starts by finding a job that
 produced that locator as output.  If a job number is given, the
 specified job will be the first one displayed.
 
@@ -30,20 +30,20 @@ appearing in its knob values -- is added to the set of "source data"
 locators.
 
 If a "source data" locator was produced as the output of a job on the
-cloud, whence(1p) displays the job and removes the locator from the
+cloud, whwhence(1p) displays the job and removes the locator from the
 "source data" set.
 
 When none of the remaining "source data" locators can be found in the
-outputs of any jobs, whence(1p) outputs the remaining "source data"
+outputs of any jobs, whwhence(1p) outputs the remaining "source data"
 locators and stops.
 
 =head1 LIMITATIONS
 
-In many cases, the output of whence(1p) corresponds to an entire
+In many cases, the output of whwhence(1p) corresponds to an entire
 workflow and the "source data" locators really are the inputs to the
 workflow, but this isn't always the case.  For example, if a
 mr-function always outputs a YES or NO output, and a YES answer is
-used as an input to a job you're interested in, whence(1p) is likely
+used as an input to a job you're interested in, whwhence(1p) is likely
 to come up with a way to compute a YES that has nothing to do with the
 workflow that you're interested in, and include lots of irrelevant
 source data as a result.
@@ -55,8 +55,8 @@ source data as a result.
 =item --skip-thawed
 
 Don't follow freeze/thaw cycles.  By default, when encountering a job
-that was started by resuming from a saved state, whence(1p) will also
-display the earlier job whose state was saved.  With this option,
+that was started by resuming from a saved state, whwhence(1p) will
+also display the earlier job whose state was saved.  With this option,
 these earlier portions of the job will be omitted from the output.
 The information required to reproduce the workflow -- inputs, outputs,
 and job configuration -- will be complete either way.

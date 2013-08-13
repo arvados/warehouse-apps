@@ -170,7 +170,7 @@ inspecting data in your terminal.
 whput(1p) copies data from the local filesystem (or stdin) to the
 cloud's storage system.
 
-whence(1p) figures out how a given data object was (or could be)
+whwhence(1p) figures out how a given data object was (or could be)
 computed, based on the history of batch jobs that have run on the
 cloud.
 
