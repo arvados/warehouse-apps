@@ -1,0 +1,174 @@
+#!/usr/bin/perl
+# -*- mode: perl; perl-indent-level: 4; indent-tabs-mode: nil; -*-
+
+=head1 NAME
+
+whtar
+
+=head1 SYNOPSIS
+
+  whtar --create [options] manifesthash ...
+
+Produce on stdout a "tar" stream encoding of the given manifest.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--prefix> I<string>
+
+Prefix pathnames in the tar stream with I<string> followed by a
+forward slash.
+
+=back
+
+=head1 SEE ALSO
+
+whput(1p), whget(1p), whless(1p)
+
+=cut
+
+
+use Warehouse;
+use Warehouse::Manifest;
+use Warehouse::Stream;
+use Getopt::Long;
+use Pod::Usage;
+
+my $whc = new Warehouse;
+
+my $total_bytes_out = 0;
+my $helpflag;
+my $createflag;
+my $prefix = "";
+my @manifesthash;
+
+GetOptions (
+    "help"                      => \$helpflag,
+    "create"                    => \$createflag,
+    "prefix=s"                  => \$prefix,
+    )
+    or die "Failed to parse command line options.  Try:  $0 --help\n";
+
+if ($helpflag)
+{
+    pod2usage(1);
+}
+
+@manifesthash = @ARGV;
+if (!@manifesthash ||
+    !$createflag ||
+    grep { !/^[0-9a-f]{32}/ } @manifesthash) {
+    die "Usage: $0 [--help] --create [options] manifesthash ...\n";
+}
+
+for my $mhash (@manifesthash) {
+    my $m = new Warehouse::Manifest (whc => $whc, key => $mhash);
+    $m->rewind;
+    while (my $s = $m->subdir_next)
+    {
+        my $subdir_name = $s->name;
+        $subdir_name =~ s{$}{/};
+        $subdir_name =~ s{^\.\/}{};
+        $subdir_name = $prefix . '/' . $subdir_name if $prefix ne '';
+        
+	while (my ($pos, $size, $name) = $s->file_next)
+	{
+	    last if !defined $pos;
+            $s->seek ($pos);
+
+            my $tarkey = $subdir_name . $name;
+            my $tarkey_trunc = substr($tarkey, 0, 100);
+            my $tarheader;
+
+            if ($tarkey ne $tarkey_trunc) {
+                $tarheader = "\0" x 512;
+                substr ($tarheader, 0, 13) = '././@LongLink';
+                substr ($tarheader, 100, 7) = sprintf ("%07o", 0); # mode
+                substr ($tarheader, 108, 7) = sprintf ("%07o", 0); # uid
+                substr ($tarheader, 116, 7) = sprintf ("%07o", 0); # gid
+                substr ($tarheader, 124, 12) = sprintf ("%012o", length($tarkey));
+                substr ($tarheader, 136, 12) = sprintf ("%012o", 0);
+                substr ($tarheader, 156, 1) = "L";       # typeflag
+                substr ($tarheader, 257, 5) = "ustar";   # magic
+                substr ($tarheader, 263, 2) = "00";      # version
+                substr ($tarheader, 265, 1) = "0"; # user
+                substr ($tarheader, 297, 1) = "0"; # group
+                substr ($tarheader, 329, 7) = "0000000";
+                substr ($tarheader, 337, 7) = "0000000";
+                substr ($tarheader, 148, 8) = sprintf ("%08o", tarchecksum($tarheader));
+                out(\$tarheader);
+                out(\$tarkey);
+                my $pad = 512 - (length($tarkey) & 511);
+                if ($pad != 512)
+                {
+                    my $padbytes = "\0" x $pad;
+                    out(\$padbytes);
+                }
+            }
+
+            $tarheader = "\0" x 512;
+            substr ($tarheader, 0, length($tarkey_trunc)) = $tarkey_trunc;
+            substr ($tarheader, 100, 7) = sprintf ("%07o", 0644); # mode
+            substr ($tarheader, 108, 7) = sprintf ("%07o", 0); # uid
+            substr ($tarheader, 116, 7) = sprintf ("%07o", 0); # gid
+            if ($size > 0777777777777) {
+                substr ($tarheader, 124, 1) = "\200";
+                substr ($tarheader, 128, 8) = pack "Q>", $size;
+            } else {
+                substr ($tarheader, 124, 12) = sprintf ("%012o", $size);
+            }
+            substr ($tarheader, 136, 12) = sprintf ("%012o", scalar time);
+            substr ($tarheader, 156, 1) = "\0";      # typeflag
+            substr ($tarheader, 257, 5) = "ustar";   # magic
+            substr ($tarheader, 263, 2) = "00";      # version
+            substr ($tarheader, 265, 1) = "0"; # user
+            substr ($tarheader, 297, 1) = "0"; # group
+            substr ($tarheader, 329, 7) = "0000000";
+            substr ($tarheader, 337, 7) = "0000000";
+            substr ($tarheader, 148, 8) = sprintf ("%08o", tarchecksum($tarheader));
+            out(\$tarheader);
+
+            while (my $dataref = $s->read_until ($pos + $size))
+            {
+                out($dataref);
+            }
+
+            my $pad = 512 - ($size & 511);
+            if ($pad != 512)
+            {
+                my $padbytes = "\0" x $pad;
+                out(\$padbytes);
+            }
+        }
+    }
+}
+
+sub tarchecksum
+{
+  my $sum = 0;
+  for (@_)
+  {
+    for (my $i=0; $i<length; $i++)
+    {
+      if ($i >= 148 && $i < 156) { $sum += 32; }
+      else { $sum += ord(substr($_,$i,1)); }
+    }
+  }
+  return $sum;
+}
+
+sub out
+{
+    my $dataref = shift;
+    my $wrote = 0;
+    my $b;
+    while ($wrote < length $$dataref) {
+        $b = syswrite STDOUT, $$dataref, length($$dataref), $wrote;
+        die "Error writing to stdout: $!" if !defined $b;
+        if ($b) {
+            $wrote += $b;
+            $main::total_bytes_out += $b;
+        }
+    }
+}

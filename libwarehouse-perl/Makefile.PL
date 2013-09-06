@@ -24,6 +24,7 @@ WriteMakefile
 		   'client/whput',
 		   'client/whput-n',
 		   'client/whrwhence',
+		   'client/whtar',
 		   'server/memcached-install.sh',
 		   'server/memcached-show-servers.pl',
 		   'server/mogilefs-install.sh',
