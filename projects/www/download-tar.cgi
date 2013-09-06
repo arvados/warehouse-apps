@@ -31,4 +31,7 @@ print $q->header (-type => 'application/x-tar',
                   -attachment => '$collection.tar',
                   -content_length => $content_length,
     );
-exec("whtar --create \"$collection\"");
+
+my $prefix = $collection;
+$prefix =~ s{\+[^,]*}{}g;
+exec("whtar --create --prefix \"$prefix\" \"$collection\"");
