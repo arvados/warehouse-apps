@@ -15,6 +15,11 @@ Produce on stdout a "tar" stream encoding of the given manifest.
 
 =over 4
 
+=item B<--output-length-only>
+
+Instead of the tar stream itself, output the length of the stream in
+bytes (decimal, ASCII, newline-terminated).
+
 =item B<--prefix> I<string>
 
 Prefix pathnames in the tar stream with I<string> followed by a
@@ -40,12 +45,14 @@ my $whc = new Warehouse;
 my $total_bytes_out = 0;
 my $helpflag;
 my $createflag;
+$main::lengthonlyflag = 0;
 my $prefix = "";
 my @manifesthash;
 
 GetOptions (
     "help"                      => \$helpflag,
     "create"                    => \$createflag,
+    "output-length-only"        => \$main::lengthonlyflag,
     "prefix=s"                  => \$prefix,
     )
     or die "Failed to parse command line options.  Try:  $0 --help\n";
@@ -75,7 +82,6 @@ for my $mhash (@manifesthash) {
 	while (my ($pos, $size, $name) = $s->file_next)
 	{
 	    last if !defined $pos;
-            $s->seek ($pos);
 
             my $tarkey = $subdir_name . $name;
             my $tarkey_trunc = substr($tarkey, 0, 100);
@@ -129,9 +135,16 @@ for my $mhash (@manifesthash) {
             substr ($tarheader, 148, 8) = sprintf ("%08o", tarchecksum($tarheader));
             out(\$tarheader);
 
-            while (my $dataref = $s->read_until ($pos + $size))
+            if ($main::lengthonlyflag) {
+                $main::total_bytes_out += $size;
+            }
+            else
             {
-                out($dataref);
+                $s->seek ($pos);
+                while (my $dataref = $s->read_until ($pos + $size))
+                {
+                    out($dataref);
+                }
             }
 
             my $pad = 512 - ($size & 511);
@@ -144,23 +157,33 @@ for my $mhash (@manifesthash) {
     }
 }
 
+if ($lengthonlyflag) 
+{
+    print "$main::total_bytes_out\n";
+}
+
 sub tarchecksum
 {
-  my $sum = 0;
-  for (@_)
-  {
-    for (my $i=0; $i<length; $i++)
+    return 0 if $main::lengthonlyflag;
+    my $sum = 0;
+    for (@_)
     {
-      if ($i >= 148 && $i < 156) { $sum += 32; }
-      else { $sum += ord(substr($_,$i,1)); }
+        for (my $i=0; $i<length; $i++)
+        {
+            if ($i >= 148 && $i < 156) { $sum += 32; }
+            else { $sum += ord(substr($_,$i,1)); }
+        }
     }
-  }
-  return $sum;
+    return $sum;
 }
 
 sub out
 {
     my $dataref = shift;
+    if ($main::lengthonlyflag) {
+        $main::total_bytes_out += length($$dataref);
+        return;
+    }
     my $wrote = 0;
     my $b;
     while ($wrote < length $$dataref) {
