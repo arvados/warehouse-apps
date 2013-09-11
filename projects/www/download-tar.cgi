@@ -28,7 +28,7 @@ my $content_length = `whtar --output-length-only --create $collection`;
 chomp $content_length;
 
 print $q->header (-type => 'application/x-tar',
-                  -attachment => '$collection.tar',
+                  -attachment => "$collection.tar",
                   -content_length => $content_length,
     );
 
