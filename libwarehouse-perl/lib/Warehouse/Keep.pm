@@ -10,6 +10,8 @@ use Digest::MD5 qw(md5_hex);
 use Warehouse;
 use Fcntl ':flock';
 use JSON;
+use Data::UUID;
+use YAML;
 
 use strict;
 
@@ -205,6 +207,15 @@ sub run {
   print STDERR "children at: $Warehouse::Keep::children\n" if ($ENV{DEBUG});
   print STDERR "TotalChildren at: $Warehouse::Keep::TotalChildren\n" if ($ENV{DEBUG});
 
+  # If this warehouse was configured with an API host, then ping it
+  # so it knows about our keeps.
+  $self->{api_host} = $ENV{API_PORT_443_TCP_ADDR};
+  $self->{api_port} = $ENV{API_PORT_443_TCP_PORT};
+  $self->{api_auth_token} = $Warehouse::warehouses->[0]->{api_auth_token};
+  if ($self->{api_host}) {
+      $self->_ping_api_host();
+  }
+
   while (!$Warehouse::Keep::TERM) {
     for (my $i = $Warehouse::Keep::children; $i < $Warehouse::Keep::TotalChildren; $i++ ) {
       $self->NewChild();
@@ -218,6 +229,7 @@ sub run {
         print STDERR " children=$Warehouse::Keep::children\n" if $ENV{DEBUG};
     }
   }
+
 }
 
 sub process 
@@ -904,5 +916,87 @@ sub _is_full
     return 0;
 }
 
+sub _ping_api_host {
+    my $self = shift;
+    my $ping_url = sprintf('https://%s:%s/arvados/v1/keep_disks/ping',
+			   $self->{api_host}, $self->{api_port} || '443');
+
+    my $lwp = LWP::UserAgent->new();
+
+    # verify_hostname is false in development
+    $lwp->ssl_opts(verify_hostname => 0);
+    $lwp->default_header(
+        'Authorization' => "OAuth2 " . $self->{api_auth_token});
+
+    my $dirs = $self->{node_status}->{dirs};
+    for my $d (keys %$dirs) {
+	my $metadata = $self->_get_keep_dir_metadata($d);
+
+	my $ping_request = {
+	    ping_secret      => '',
+	    service_port     => $self->{ListenPort},
+	    service_ssl_flag => 'false',
+	};
+	while (my ($key, $val) = each %$metadata) {
+	    $ping_request->{$key} = $val;
+	}
+
+	# ping the api host
+	my $result = $lwp->post($ping_url, $ping_request);
+	if ($result->is_success) {
+	    my $ping_response = JSON::from_json( $result->decoded_content );
+	    if (! $metadata->{node_uuid}) {
+		$metadata->{node_uuid} = $ping_response->{uuid};
+		$metadata->{dirty} = 1;
+	    }
+	    if (! $metadata->{ping_secret}) {
+		$metadata->{ping_secret} = $ping_response->{ping_secret};
+		$metadata->{dirty} = 1;
+	    }
+	} else {
+	    printf STDERR "ping to %s failed: %s\n", (
+		$self->{api_host}, $result->status_line);
+	}
+
+	$self->_save_keep_dir_metadata($d, $metadata) if $metadata->{dirty};
+    }
+}
+
+sub _get_keep_dir_metadata {
+    my $self = shift;
+    my $dir = shift;
+    my $metadata;
+
+    # First retrieve any cached metadata in the directory.
+    if (-f "$dir/.metadata.yml") {
+	$metadata = YAML::LoadFile("$dir/.metadata.yml");
+    }
+
+    # If we don't have a filesystem_uuid (no metadata, or
+    # it could not be read) try to get it from blkid.
+    if (! $metadata->{filesystem_uuid}) {
+	my @df = `df $dir`;
+	my ($dev) = split /\s+/, $df[1], 2;
+	my $uuid = `blkid -s UUID -o value $dev`;
+	# If we still don't have a uuid (e.g. running
+	# inside a LXC container), make one up.
+	if (!$uuid) {
+	    $uuid = Data::UUID->to_string( Data::UUID->create() );
+	}
+	chomp ($metadata->{filesystem_uuid} = $uuid);
+	$metadata->{dirty} = 1;   # write this to disk when we're done
+    }
+
+    return $metadata;
+}
+
+sub _save_keep_dir_metadata {
+    my $self = shift;
+    my $dir = shift;
+    my $metadata = shift;
+
+    delete $metadata->{dirty};
+    YAML::DumpFile("$dir/.metadata.yml", $metadata);
+}
 
 1;
