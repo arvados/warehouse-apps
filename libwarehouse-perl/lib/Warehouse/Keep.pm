@@ -250,6 +250,15 @@ sub process
     	{
     	    if ($r->url->path =~ /^\/index(\/([0-9a-f]{0,32}))?$/)
     	    {
+                if (!defined $Warehouse::keep_controller_ip ||
+                    $c->peerhost() ne $Warehouse::keep_controller_ip)
+                {
+                    my $resp = HTTP::Response->new
+                        (401, "Unauthorized",
+                         [], "Only the controller can do that.\n");
+                    $c->send_response ($resp);
+                    last;
+                }
     		_index_callback_init ($self, $2);
     		$c->send_response (HTTP::Response->new
 				   (200, "OK", [],
