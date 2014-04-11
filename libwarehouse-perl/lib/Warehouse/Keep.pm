@@ -582,7 +582,7 @@ sub _index_callback
 	}
 
 	# descend into subdirs using _scandir()
-	if ($file =~ /^[0-9a-f]{0,31}/ &&
+	if ($file =~ /^[0-9a-f]{1,31}$/ &&
 	    -d "$_callback_dir/$file") {
 	    my $index = "";
 	    $_callback_self->_scandir ("$_callback_dir/$file", \$index);
